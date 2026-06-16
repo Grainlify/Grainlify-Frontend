@@ -47,8 +47,8 @@ async function apiRequest<T>(
     console.log("API Request - API_BASE_URL:", API_BASE_URL);
     console.log("API Request - endpoint:", endpoint);
   }
-  const requestHeaders: HeadersInit = {
-    ...headers,
+  const requestHeaders: Record<string, string> = {
+    ...(headers as Record<string, string>),
   };
 
   // Avoid forcing CORS preflight for simple GET/HEAD requests by only setting
@@ -60,7 +60,7 @@ async function apiRequest<T>(
   } else if (
     method !== "GET" &&
     method !== "HEAD" &&
-    !("Content-Type" in (requestHeaders as any))
+    !("Content-Type" in requestHeaders)
   ) {
     // Non-GET/HEAD without an explicit content-type: default to JSON for our API.
     requestHeaders["Content-Type"] = "application/json";
@@ -351,6 +351,11 @@ export const updateProfile = (data: {
   location?: string;
   website?: string;
   bio?: string;
+  telegram?: string;
+  linkedin?: string;
+  whatsapp?: string;
+  twitter?: string;
+  discord?: string;
 }) =>
   apiRequest<{ message: string }>("/profile/update", {
     method: "PUT",

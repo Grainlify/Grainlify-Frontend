@@ -97,7 +97,7 @@ export function AuthCallbackPage() {
 
         // Login with the token
         console.log('Attempting login with token...');
-        await login(token);
+        await login(token!);
         console.log('Login successful! Auth state should update shortly...');
         setIsProcessing(false);
         // The redirect will happen via the useEffect watching isAuthenticated
