@@ -27,20 +27,16 @@ export function SignInPage() {
     }
   }, [navigate]);
 
-  const handleGithubSign = async () => {
-        setLoading(true);
-            try {
-                    const provider = new GithubAuthProvider();
-                            console.log("sign in false ",false)
-                                    const github1 = await signInWithPopup(auth, provider);
-                                            console.log("Redirecting to :", github1);
-                                                    // subject to github login
-                                                            window.location.href = github1;
-
-                                                                } catch (error) {
-                                                                        console.log(error);
-                                                                            }
-                                                                            };
+  const handleGitHubSignIn = async () => {
+    setIsRedirecting(true);
+    try {
+      const loginUrl = await getGitHubLoginUrl();
+      window.location.href = loginUrl;
+    } catch (error) {
+      console.error('Failed to get GitHub login URL:', error);
+      setIsRedirecting(false);
+    }
+  };
 
   
 
