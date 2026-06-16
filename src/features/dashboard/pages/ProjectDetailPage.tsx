@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ExternalLink, Copy, Circle, ArrowLeft, GitPullRequest } from 'lucide-react';
@@ -143,20 +144,20 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
 
     const load = async () => {
       if (!projectId) {
-        console.warn('ProjectDetailPage: No projectId provided');
+        logger.warn('ProjectDetailPage: No projectId provided');
         setIsLoading(false);
         return;
       }
       setIsLoading(true);
       try {
-        console.log('ProjectDetailPage: Fetching project data for ID:', projectId);
+        logger.debug('ProjectDetailPage: Fetching project data for ID:', projectId);
         const [p, i, pr] = await Promise.all([
           getPublicProject(projectId),
           getPublicProjectIssues(projectId),
           getPublicProjectPRs(projectId),
         ]);
         if (cancelled) return;
-        console.log('ProjectDetailPage: Data fetched successfully', {
+        logger.debug('ProjectDetailPage: Data fetched successfully', {
           project: p,
           issuesCount: i?.issues?.length || 0,
           prsCount: pr?.prs?.length || 0,
@@ -167,7 +168,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         setIsLoading(false);
       } catch (e) {
         if (cancelled) return;
-        console.error('ProjectDetailPage: Error loading project data', e);
+        logger.error('ProjectDetailPage: Error loading project data', e);
         // Keep loading state true to show skeleton forever when backend is down
         // Don't set isLoading to false - keep showing skeleton
       }

@@ -1,3 +1,4 @@
+import { logger } from '../../shared/utils/logger';
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -313,7 +314,7 @@ export function Dashboard() {
       setActiveRole("admin");
       handleNavigation("admin");
     } catch (error) {
-      console.error("Admin authentication failed:", error);
+      logger.error("Admin authentication failed:", error);
       // Keep UI clean: show a simple message; avoid browser alert spam.
       // The ModalInput will remain so user can retry.
       setAdminPassword("");

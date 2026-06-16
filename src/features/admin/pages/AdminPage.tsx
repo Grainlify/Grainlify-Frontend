@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { Shield, Globe, Plus, Sparkles, Trash2, ExternalLink, Calendar, Pencil, X } from 'lucide-react';
@@ -235,7 +236,7 @@ export function AdminPage() {
       const response = await getAdminEcosystems();
       setEcosystems(response.ecosystems || []);
     } catch (error) {
-      console.error('Failed to fetch ecosystems:', error);
+      logger.error('Failed to fetch ecosystems:', error);
       setEcosystems([]);
       setErrorMessage(error instanceof Error ? error.message : 'Failed to load ecosystems.');
     } finally {
@@ -375,7 +376,7 @@ export function AdminPage() {
       setDeleteConfirm(null);
       toast.success('Ecosystem deleted successfully');
     } catch (error) {
-      console.error('Failed to delete ecosystem:', error);
+      logger.error('Failed to delete ecosystem:', error);
       const msg = error instanceof Error ? error.message : 'Failed to delete ecosystem. Make sure it has no associated projects.';
       setErrorMessage(msg);
       toast.error(msg);
@@ -439,7 +440,7 @@ export function AdminPage() {
       // Dispatch event to update other pages
       window.dispatchEvent(new CustomEvent('ecosystems-updated'));
     } catch (error) {
-      console.error('Failed to create ecosystem:', error);
+      logger.error('Failed to create ecosystem:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Failed to create ecosystem. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -484,7 +485,7 @@ export function AdminPage() {
         technologies: detail.technologies ?? null,
       };
     } catch (err) {
-      console.error('Failed to load ecosystem for edit:', err);
+      logger.error('Failed to load ecosystem for edit:', err);
       toast.error('Failed to load ecosystem details');
       setEditingEcosystem(null);
       return;
@@ -574,7 +575,7 @@ export function AdminPage() {
       // Dispatch event to update other pages
       window.dispatchEvent(new CustomEvent('ecosystems-updated'));
     } catch (error) {
-      console.error('Failed to update ecosystem:', error);
+      logger.error('Failed to update ecosystem:', error);
       const msg = error instanceof Error ? error.message : 'Failed to update ecosystem. Please try again.';
       setErrorMessage(msg);
       toast.error(msg);

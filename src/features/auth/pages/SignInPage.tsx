@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
@@ -31,14 +32,14 @@ export function SignInPage() {
         setLoading(true);
             try {
                     const provider = new GithubAuthProvider();
-                            console.log("sign in false ",false)
+                            logger.debug("sign in false ",false)
                                     const github1 = await signInWithPopup(auth, provider);
-                                            console.log("Redirecting to :", github1);
+                                            logger.debug("Redirecting to :", github1);
                                                     // subject to github login
                                                             window.location.href = github1;
 
                                                                 } catch (error) {
-                                                                        console.log(error);
+                                                                        logger.debug(error);
                                                                             }
                                                                             };
 

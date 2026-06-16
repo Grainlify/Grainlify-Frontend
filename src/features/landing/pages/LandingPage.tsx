@@ -16,6 +16,7 @@ import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useLandingStats } from "../../../shared/hooks/useLandingStats";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { logger } from "../../../shared/utils/logger";
 
 export function LandingPage() {
   const { theme } = useTheme();
@@ -27,13 +28,12 @@ export function LandingPage() {
     const token = params.get("token");
     const github = params.get("github");
 
-    console.log("LandingPage - Checking for token in URL");
-    console.log("LandingPage - Current URL:", window.location.href);
-    console.log("LandingPage - Token found:", token ? "Yes" : "No");
-    console.log("LandingPage - GitHub username:", github);
+    logger.debug("LandingPage - Checking for token in URL");
+    logger.debug("LandingPage - Token found:", token ? "Yes" : "No");
+    logger.debug("LandingPage - GitHub username check:", github ? "Present" : "Missing");
 
     if (token) {
-      console.log("LandingPage - Redirecting to /auth/callback with token");
+      logger.debug("LandingPage - Redirecting to /auth/callback");
       // If there's a token in the URL, redirect to the proper callback handler
       navigate(`/auth/callback?token=${token}`, { replace: true });
     }

@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
@@ -22,10 +23,10 @@ export function SignUpPage() {
 
   const handleGitHubSignUp = () => {
     if (isRedirecting) return;
-    console.log('Sign up button clicked');
+    logger.debug('Sign up button clicked');
     setIsRedirecting(true);
     const githubUrl = getGitHubLoginUrl();
-    console.log('Redirecting to:', githubUrl);
+    logger.debug('Redirecting to:', githubUrl);
     // Redirect to GitHub OAuth
     window.location.href = githubUrl;
   };

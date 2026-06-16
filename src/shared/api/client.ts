@@ -42,11 +42,6 @@ async function apiRequest<T>(
   const { requiresAuth = false, headers = {}, ...fetchOptions } = options;
 
   const url = `${API_BASE_URL}${endpoint}`;
-  if (endpoint === "/ecosystems") {
-    console.log("API Request - URL:", url);
-    console.log("API Request - API_BASE_URL:", API_BASE_URL);
-    console.log("API Request - endpoint:", endpoint);
-  }
   const requestHeaders: HeadersInit = {
     ...headers,
   };
@@ -76,18 +71,10 @@ async function apiRequest<T>(
 
   let response: Response;
   try {
-    if (endpoint === "/ecosystems") {
-      console.log("API Request - Making fetch call to:", url);
-      console.log("API Request - Headers:", requestHeaders);
-    }
     response = await fetch(url, {
       ...fetchOptions,
       headers: requestHeaders,
     });
-    if (endpoint === "/ecosystems") {
-      console.log("API Request - Response status:", response.status);
-      console.log("API Request - Response ok:", response.ok);
-    }
   } catch (err) {
     // Network error (CORS, connection refused, etc.)
     if (err instanceof TypeError && err.message.includes("fetch")) {
@@ -136,9 +123,6 @@ async function apiRequest<T>(
   // Parse JSON response
   try {
     const jsonData = await response.json();
-    if (endpoint === "/ecosystems") {
-      console.log("API Request - Parsed JSON response:", jsonData);
-    }
     return jsonData;
   } catch (err) {
     // If response is empty or not JSON, return empty array for list endpoints
