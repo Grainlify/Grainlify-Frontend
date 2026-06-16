@@ -3,7 +3,27 @@ import { AuthProvider, useAuth } from "../shared/contexts/AuthContext";
 import { ThemeProvider } from "../shared/contexts/ThemeContext";
 import { LandingPage } from "../features/landing";
 import { SignInPage, SignUpPage, AuthCallbackPage } from "../features/auth";
-import { Dashboard } from "../features/dashboard";
+import { DashboardLayout } from "../features/dashboard/DashboardLayout";
+import { DiscoverPage } from "../features/dashboard/pages/DiscoverPage";
+import { BrowsePage } from "../features/dashboard/pages/BrowsePage";
+import { ContributorsPage } from "../features/dashboard/pages/ContributorsPage";
+import { ProfilePage } from "../features/dashboard/pages/ProfilePage";
+import { DataPage } from "../features/dashboard/pages/DataPage";
+import { LeaderboardPage } from "../features/leaderboard/pages/LeaderboardPage";
+import { BlogPage } from "../features/blog/pages/BlogPage";
+import { SettingsPage } from "../features/settings/pages/SettingsPage";
+import { AdminPage } from "../features/admin/pages/AdminPage";
+import {
+  OpenSourceWeekPageRoute,
+  OpenSourceWeekDetailPageRoute,
+  EcosystemsPageRoute,
+  EcosystemDetailPageRoute,
+  MaintainersPageRoute,
+  ProjectDetailPageRoute,
+  IssueDetailPageRoute,
+  SearchPageRoute,
+} from "../features/dashboard/routeWrappers";
+import { NotFoundPage } from "../shared/components/NotFoundPage";
 import Toast from "../shared/components/Toast";
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -33,10 +53,30 @@ export default function App() {
                 path="/dashboard"
                 element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <DashboardLayout />
                   </ProtectedRoute>
                 }
-              />
+              >
+                <Route index element={<Navigate to="/dashboard/discover" replace />} />
+                <Route path="discover" element={<DiscoverPage />} />
+                <Route path="browse" element={<BrowsePage />} />
+                <Route path="open-source-week" element={<OpenSourceWeekPageRoute />} />
+                <Route path="open-source-week/:eventId" element={<OpenSourceWeekDetailPageRoute />} />
+                <Route path="ecosystems" element={<EcosystemsPageRoute />} />
+                <Route path="ecosystems/:ecosystemId" element={<EcosystemDetailPageRoute />} />
+                <Route path="contributors" element={<ContributorsPage />} />
+                <Route path="maintainers" element={<MaintainersPageRoute />} />
+                <Route path="profile" element={<ProfilePage />} />
+                <Route path="data" element={<DataPage />} />
+                <Route path="projects/:projectId" element={<ProjectDetailPageRoute />} />
+                <Route path="projects/:projectId/issues/:issueId" element={<IssueDetailPageRoute />} />
+                <Route path="leaderboard" element={<LeaderboardPage />} />
+                <Route path="blog" element={<BlogPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route path="admin" element={<AdminPage />} />
+                <Route path="search" element={<SearchPageRoute />} />
+              </Route>
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <Toast />
           </div>
