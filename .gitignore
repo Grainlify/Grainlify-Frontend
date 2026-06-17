@@ -120,18 +120,8 @@ Thumbs.db
 sw.js
 workbox-*.js
 precache-manifest.*.js
-
-
-
-
-
-
-
-
-
-
-
-
+# Playwright test results
+test-results/
 
 
 
