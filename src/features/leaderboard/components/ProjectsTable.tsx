@@ -1,7 +1,7 @@
 import { TrendingUp, TrendingDown, Minus, Award } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ProjectData, FilterType } from '../types';
-import { getAvatarGradient } from '../data/leaderboardData';
+import { getAvatarGradient } from "../utils/gradients";
 
 interface ProjectsTableProps {
   data: ProjectData[];
