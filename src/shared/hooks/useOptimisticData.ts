@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { logger } from '../../shared/utils/logger';
+import { useState, useCallback, useRef } from 'react';
 
 interface CacheEntry<T> {
   data: T;
@@ -105,6 +107,8 @@ export function useOptimisticData<T>(
         }
 
         console.error('Failed to fetch data:', err);
+      } catch (err) {
+        logger.error('Failed to fetch data:', err);
         
         const isNetworkError =
           err instanceof TypeError ||

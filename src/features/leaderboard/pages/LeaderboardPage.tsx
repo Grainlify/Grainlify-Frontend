@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState, useEffect } from "react";
 import { LeaderboardType, FilterType, Petal, LeaderData, ProjectData } from "../types";
 import { getLeaderboard, getRecommendedProjects } from "../../../shared/api/client";
@@ -73,7 +74,7 @@ export function LeaderboardPage() {
           setHasMore(data.length === 10); // If we got 10 items, there might be more
           setIsLoading(false);
         } catch (err) {
-          console.error("Failed to fetch leaderboard:", err);
+          logger.error("Failed to fetch leaderboard:", err);
           setLeaderboardData([]);
           setIsLoading(false); // Set loading to false to show empty state instead of skeleton
         }
@@ -167,7 +168,7 @@ export function LeaderboardPage() {
       setOffset(nextOffset);
       setHasMore(data.length === 10); // If we got less than 10, no more data
     } catch (err) {
-      console.error("Failed to load more leaderboard:", err);
+      logger.error("Failed to load more leaderboard:", err);
       setHasMore(false);
     } finally {
       setIsLoadingMore(false);

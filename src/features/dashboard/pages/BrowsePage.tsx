@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { X } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useState, useEffect } from "react";
@@ -165,7 +166,7 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
 
         setEcosystems(activeEcosystems);
       } catch (err) {
-        console.error("BrowsePage: Failed to fetch ecosystems:", err);
+        logger.error("BrowsePage: Failed to fetch ecosystems:", err);
         // Fallback to empty array on error
         setEcosystems([]);
       } finally {
@@ -227,7 +228,7 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
 
           const response = await getPublicProjects(params);
 
-          console.log('BrowsePage: API response received', { response });
+          logger.debug('BrowsePage: API response received', { response });
 
           // Handle response - check if it's valid
           let projectsArray: any[] = [];
@@ -237,7 +238,7 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
             // Handle case where API returns array directly
             projectsArray = response;
           } else {
-            console.warn('BrowsePage: Unexpected response format', response);
+            logger.warn('BrowsePage: Unexpected response format', response);
             projectsArray = [];
           }
 
@@ -261,10 +262,10 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
               };
             });
 
-          console.log('BrowsePage: Mapped projects', { count: mappedProjects.length });
+          logger.debug('BrowsePage: Mapped projects', { count: mappedProjects.length });
           return mappedProjects;
         } catch (err) {
-          console.error('BrowsePage: Failed to fetch projects:', err);
+          logger.error('BrowsePage: Failed to fetch projects:', err);
           throw err; // Re-throw to let the hook handle the error
         }
       });

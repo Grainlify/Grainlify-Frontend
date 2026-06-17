@@ -44,11 +44,6 @@ async function apiRequest<T>(
   const { requiresAuth = false, headers = {}, ...fetchOptions } = options;
 
   const url = `${API_BASE_URL}${endpoint}`;
-  if (endpoint === "/ecosystems") {
-    console.log("API Request - URL:", url);
-    console.log("API Request - API_BASE_URL:", API_BASE_URL);
-    console.log("API Request - endpoint:", endpoint);
-  }
   const requestHeaders: HeadersInit = {
     ...headers,
   };
@@ -62,7 +57,7 @@ async function apiRequest<T>(
   } else if (
     method !== "GET" &&
     method !== "HEAD" &&
-    !("Content-Type" in (requestHeaders as any))
+    !("Content-Type" in requestHeaders)
   ) {
     // Non-GET/HEAD without an explicit content-type: default to JSON for our API.
     requestHeaders["Content-Type"] = "application/json";
@@ -78,18 +73,10 @@ async function apiRequest<T>(
 
   let response: Response;
   try {
-    if (endpoint === "/ecosystems") {
-      console.log("API Request - Making fetch call to:", url);
-      console.log("API Request - Headers:", requestHeaders);
-    }
     response = await fetch(url, {
       ...fetchOptions,
       headers: requestHeaders,
     });
-    if (endpoint === "/ecosystems") {
-      console.log("API Request - Response status:", response.status);
-      console.log("API Request - Response ok:", response.ok);
-    }
   } catch (err) {
     // Network error (CORS, connection refused, etc.)
     if (err instanceof TypeError && err.message.includes("fetch")) {
@@ -138,9 +125,6 @@ async function apiRequest<T>(
   // Parse JSON response
   try {
     const jsonData = await response.json();
-    if (endpoint === "/ecosystems") {
-      console.log("API Request - Parsed JSON response:", jsonData);
-    }
     return jsonData;
   } catch (err) {
     // If response is empty or not JSON, return empty array for list endpoints
@@ -353,6 +337,11 @@ export const updateProfile = (data: {
   location?: string;
   website?: string;
   bio?: string;
+  telegram?: string;
+  linkedin?: string;
+  whatsapp?: string;
+  twitter?: string;
+  discord?: string;
 }) =>
   apiRequest<{ message: string }>("/profile/update", {
     method: "PUT",

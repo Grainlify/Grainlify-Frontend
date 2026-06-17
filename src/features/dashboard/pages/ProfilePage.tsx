@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronDown, Award, Briefcase, GitPullRequest, FolderGit2, Trophy, Github, Code, Globe, Sparkles, TrendingUp, Star, Users, GitFork, DollarSign, GitMerge, Calendar, ChevronRight, Filter, Circle, Eye, Crown, Link, ArrowLeft, Medal, Shield, LucideIcon } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -123,7 +124,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
         }
         setProfileData(data);
       } catch (error) {
-        if (isSameView(requestedUserId, requestedLogin)) console.error('Failed to fetch profile:', error);
+        if (isSameView(requestedUserId, requestedLogin)) logger.error('Failed to fetch profile:', error);
       } finally {
         if (isSameView(requestedUserId, requestedLogin)) setIsLoadingProfile(false);
       }
@@ -154,7 +155,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
         }));
         setProjects(contributedProjects);
       } catch (error) {
-        if (isSameView(requestedUserId, requestedLogin)) console.error('Failed to fetch projects:', error);
+        if (isSameView(requestedUserId, requestedLogin)) logger.error('Failed to fetch projects:', error);
       } finally {
         if (isSameView(requestedUserId, requestedLogin)) setIsLoadingProjects(false);
       }
@@ -184,7 +185,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
           contributors_count: 0,
         })));
       } catch (error) {
-        if (isSameView(requestedUserId, requestedLogin)) console.error('Failed to fetch projects led:', error);
+        if (isSameView(requestedUserId, requestedLogin)) logger.error('Failed to fetch projects led:', error);
       } finally {
         if (isSameView(requestedUserId, requestedLogin)) setIsLoadingProjectsLed(false);
       }
@@ -204,7 +205,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
         if (!isSameView(requestedUserId, requestedLogin)) return;
         setContributionCalendar(data.calendar || []);
       } catch (error) {
-        if (isSameView(requestedUserId, requestedLogin)) console.error('Failed to fetch calendar:', error);
+        if (isSameView(requestedUserId, requestedLogin)) logger.error('Failed to fetch calendar:', error);
       } finally {
         if (isSameView(requestedUserId, requestedLogin)) setIsLoadingCalendar(false);
       }
@@ -233,7 +234,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
         });
         setExpandedMonths(monthsObj);
       } catch (error) {
-        if (isSameView(requestedUserId, requestedLogin)) console.error('Failed to fetch activity:', error);
+        if (isSameView(requestedUserId, requestedLogin)) logger.error('Failed to fetch activity:', error);
       } finally {
         if (isSameView(requestedUserId, requestedLogin)) setIsLoadingActivity(false);
       }

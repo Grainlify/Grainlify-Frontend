@@ -1,3 +1,4 @@
+import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect } from 'react';
 import { Search, Loader2, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
@@ -66,7 +67,7 @@ export function PullRequestsTab({ selectedProjects, onRefresh }: PullRequestsTab
             projectName: project.github_full_name,
           }));
         } catch (err) {
-          console.error(`Failed to fetch PRs for ${project.github_full_name}:`, err);
+          logger.error(`Failed to fetch PRs for ${project.github_full_name}:`, err);
           return [];
         }
       });
