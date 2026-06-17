@@ -1,3 +1,4 @@
+import { logger } from '../../shared/utils/logger';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -77,7 +78,7 @@ export function DashboardComplete() {
       // Refresh page to update auth context with new role
       window.location.reload();
     } catch (error) {
-      console.error('Admin authentication failed:', error);
+      logger.error('Admin authentication failed:', error);
       alert(error instanceof Error ? error.message : 'Invalid password. Please try again.');
       setAdminPassword('');
     } finally {
@@ -896,10 +897,10 @@ function OpenSourceWeekPage() {
 }
 
 function EcosystemsPage() {
-  console.log('=== EcosystemsPage FUNCTION CALLED ===');
-  console.log('EcosystemsPage component rendered');
+  logger.debug('=== EcosystemsPage FUNCTION CALLED ===');
+  logger.debug('EcosystemsPage component rendered');
   const { theme } = useTheme();
-  console.log('Theme:', theme);
+  logger.debug('Theme:', theme);
   const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -913,16 +914,16 @@ function EcosystemsPage() {
 
   // Fetch ecosystems function
   const fetchEcosystems = async () => {
-    console.log('fetchEcosystems function called');
+    logger.debug('fetchEcosystems function called');
     setIsLoading(true);
     try {
       const { getEcosystems } = await import('../../shared/api/client');
-      console.log('Fetching ecosystems from API...');
+      logger.debug('Fetching ecosystems from API...');
       const response = await getEcosystems();
-      console.log('Ecosystems API response:', response);
-      console.log('Response type:', typeof response);
-      console.log('Response.ecosystems:', response?.ecosystems);
-      console.log('Is array?', Array.isArray(response?.ecosystems));
+      logger.debug('Ecosystems API response:', response);
+      logger.debug('Response type:', typeof response);
+      logger.debug('Response.ecosystems:', response?.ecosystems);
+      logger.debug('Is array?', Array.isArray(response?.ecosystems));
       
       // Handle different response structures
       let ecosystemsArray: any[] = [];
@@ -930,26 +931,26 @@ function EcosystemsPage() {
       if (response && Array.isArray(response)) {
         // Response is directly an array
         ecosystemsArray = response;
-        console.log('Response is direct array');
+        logger.debug('Response is direct array');
       } else if (response && response.ecosystems && Array.isArray(response.ecosystems)) {
         // Response has ecosystems property
         ecosystemsArray = response.ecosystems;
-        console.log('Response has ecosystems property');
+        logger.debug('Response has ecosystems property');
       } else if (response && typeof response === 'object') {
         // Try to find any array property
         const keys = Object.keys(response);
-        console.log('Response keys:', keys);
+        logger.debug('Response keys:', keys);
         for (const key of keys) {
           if (Array.isArray((response as any)[key])) {
             ecosystemsArray = (response as any)[key];
-            console.log(`Found array in key: ${key}`);
+            logger.debug(`Found array in key: ${key}`);
             break;
           }
         }
       }
       
       if (ecosystemsArray.length === 0) {
-        console.warn('No ecosystems found in response:', response);
+        logger.warn('No ecosystems found in response:', response);
         setEcosystems([]);
         setIsLoading(false);
         return;
@@ -981,11 +982,11 @@ function EcosystemsPage() {
           languages: [] // Can be populated later if needed
         };
       });
-      console.log('Transformed ecosystems:', transformed);
+      logger.debug('Transformed ecosystems:', transformed);
       setEcosystems(transformed);
     } catch (error) {
-      console.error('Failed to fetch ecosystems:', error);
-      console.error('Error details:', error instanceof Error ? error.message : error);
+      logger.error('Failed to fetch ecosystems:', error);
+      logger.error('Error details:', error instanceof Error ? error.message : error);
       setEcosystems([]);
     } finally {
       setIsLoading(false);
@@ -994,13 +995,13 @@ function EcosystemsPage() {
 
   // Fetch ecosystems on mount and when updated
   useEffect(() => {
-    console.log('EcosystemsPage useEffect running');
-    console.log('Calling fetchEcosystems...');
+    logger.debug('EcosystemsPage useEffect running');
+    logger.debug('Calling fetchEcosystems...');
     fetchEcosystems();
     
     // Listen for ecosystem updates
     const handleUpdate = () => {
-      console.log('Ecosystems updated event received');
+      logger.debug('Ecosystems updated event received');
       fetchEcosystems();
     };
     window.addEventListener('ecosystems-updated', handleUpdate);
@@ -1013,7 +1014,7 @@ function EcosystemsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle form submission here
-    console.log('Form data:', formData);
+    logger.debug('Form data:', formData);
     setShowAddModal(false);
     // Reset form
     setFormData({
@@ -1036,7 +1037,7 @@ function EcosystemsPage() {
   const handleRequestSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle request submission
-    console.log('Request data:', requestData);
+    logger.debug('Request data:', requestData);
     setShowRequestModal(false);
     // Reset form
     setRequestData({
@@ -1190,7 +1191,7 @@ function EcosystemsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredEcosystems.map((ecosystem) => {
-            console.log('Rendering ecosystem:', ecosystem);
+            logger.debug('Rendering ecosystem:', ecosystem);
             return (
           <div
             key={ecosystem.id}
@@ -1623,7 +1624,7 @@ function AdminPage() {
       // Optionally refresh the page to show new ecosystem
       // window.location.reload();
     } catch (error) {
-      console.error('Failed to create ecosystem:', error);
+      logger.error('Failed to create ecosystem:', error);
       alert(error instanceof Error ? error.message : 'Failed to create ecosystem. Please try again.');
     } finally {
       setIsSubmitting(false);

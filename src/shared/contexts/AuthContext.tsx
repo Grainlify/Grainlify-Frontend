@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getCurrentUser, getAuthToken, setAuthToken, removeAuthToken } from '../api/client';
+import { logger } from '../utils/logger';
 
 export type UserRole = 'contributor' | 'maintainer' | 'admin' | null;
 
@@ -37,38 +38,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     const token = getAuthToken();
-    console.log('AuthContext - Checking authentication on mount');
-    console.log('AuthContext - Token found:', token ? 'Yes' : 'No');
+    logger.debug('AuthContext - Checking authentication on mount');
+    logger.debug('AuthContext - Token found:', token ? 'Yes' : 'No');
 
     if (token) {
       try {
-        console.log('AuthContext - Fetching user profile...');
+        logger.debug('AuthContext - Fetching user profile...');
         const userData = await getCurrentUser();
-        console.log('AuthContext - User profile:', userData);
+        logger.debug('AuthContext - User profile received for ID:', userData.id);
         setUser(userData);
         setUserRole(userData.role as UserRole);
         setUserId(userData.id);
-        console.log('AuthContext - User authenticated:', {
+        logger.info('AuthContext - User authenticated', {
           role: userData.role,
-          id: userData.id,
-          githubLogin: userData.github?.login
+          id: userData.id
         });
       } catch (error) {
         // Token is invalid, remove it
-        console.error('AuthContext - Auth check failed:', error);
+        logger.error('AuthContext - Auth check failed:', error instanceof Error ? error.message : error);
         removeAuthToken();
         setUser(null);
         setUserRole(null);
         setUserId(null);
       }
     } else {
-      console.log('AuthContext - No token found, user not authenticated');
+      logger.debug('AuthContext - No token found, user not authenticated');
       setUser(null);
       setUserRole(null);
       setUserId(null);
     }
     setIsLoading(false);
-    console.log('AuthContext - Loading complete');
+    logger.debug('AuthContext - Loading complete');
   };
 
   // Check for existing token on mount
@@ -111,25 +111,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (token: string) => {
-    console.log('AuthContext - login() called with token');
+    logger.debug('AuthContext - login() called');
     setAuthToken(token);
-    console.log('AuthContext - Token saved to localStorage');
+    logger.debug('AuthContext - Token saved to localStorage');
 
     try {
-      console.log('AuthContext - Fetching user profile after login...');
+      logger.debug('AuthContext - Fetching user profile after login...');
       const userData = await getCurrentUser();
-      console.log('AuthContext - User profile received:', userData);
+      logger.debug('AuthContext - User profile received for ID:', userData.id);
       setUser(userData);
       setUserRole(userData.role as UserRole);
       setUserId(userData.id);
-      console.log('AuthContext - Login successful:', {
-        role: userData.role,
-        id: userData.id,
-        isAuthenticated: true,
-        githubLogin: userData.github?.login
-      });
+      logger.info('AuthContext - Login successful for ID:', userData.id);
     } catch (error) {
-      console.error('AuthContext - Login failed:', error);
+      logger.error('AuthContext - Login failed:', error instanceof Error ? error.message : error);
       removeAuthToken();
       throw error;
     }

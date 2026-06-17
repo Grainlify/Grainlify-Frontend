@@ -1,7 +1,8 @@
+import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Loader2, AlertCircle, Info, ChevronDown, MessageSquare } from 'lucide-react';
 import { BillingProfile, BillingProfileType, BillingProfileStatus, ProfileDetailTabType, PaymentMethod, Invoice } from '../../types';
-import { initialBillingProfiles } from '../../data/billingProfilesData';
+import { getBillingProfiles } from "../../../../shared/api/client";
 import { sampleInvoices } from '../../data/invoicesData';
 import { BillingProfileCard } from './BillingProfileCard';
 import { PaymentMethodsTab } from './PaymentMethodsTab';
@@ -126,7 +127,10 @@ function ProfileTypeSelect({
 export function BillingTab() {
   const { theme } = useTheme();
   const { profiles, setProfiles, addProfile, updateProfile } = useBillingProfiles();
-  const [isLoading, setIsLoading] = useState(false);
+  const useMock = import.meta.env.VITE_USE_MOCK_DATA === "true";
+  const [isLoading, setIsLoading] = useState(!useMock);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+
   const [selectedProfile, setSelectedProfile] = useState<BillingProfile | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [profileName, setProfileName] = useState('');
@@ -134,6 +138,10 @@ export function BillingTab() {
   const [detailTab, setDetailTab] = useState<ProfileDetailTabType>('general');
   const [isVerifying, setIsVerifying] = useState(false);
   const [kycStatus, setKycStatus] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isCheckingKYC, setIsCheckingKYC] = useState(false);
+  const [kycWindowOpened, setKycWindowOpened] = useState(false);
+
   const [isCheckingKYC, setIsCheckingKYC] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
@@ -165,9 +173,22 @@ export function BillingTab() {
   };
 
   // Check KYC status on component mount and when selected profile changes
+  // Fetch billing profiles on mount when not using mock data
+  useEffect(() => {
+    if (!useMock) {
+      setLoadingProfiles(true);
+      getBillingProfiles()
+        .then((data) => {
+          setProfiles(data);
+        })
+        .catch((err) => console.error('Failed to fetch billing profiles:', err))
+        .finally(() => setLoadingProfiles(false));
+    }
+  }, [useMock]);
+
+  // Existing KYC effect stays unchanged
   useEffect(() => {
     if (selectedProfile) {
-      // Check KYC status for missing-verification profiles or verified profiles without data
       if (selectedProfile.status === 'missing-verification' ||
         (selectedProfile.status === 'verified' && !selectedProfile.firstName)) {
         checkKYCStatus();
@@ -187,7 +208,7 @@ export function BillingTab() {
         updateProfileWithKYCData(extracted);
       }
     } catch (error) {
-      console.error('Failed to check KYC status:', error);
+      logger.error('Failed to check KYC status:', error);
       setErrorMessage("VerificationFailed: Connection to the identity server failed. Please try again.");
     } finally {
       setIsCheckingKYC(false);
@@ -260,7 +281,7 @@ export function BillingTab() {
               setKycWindowOpened(false);
             }
           } catch (error) {
-            console.error('Failed to poll KYC status:', error);
+            logger.error('Failed to poll KYC status:', error);
             setErrorMessage("Connection lost. We're having trouble checking your verification status. Please refresh the page.");
           }
         }, 3000); // Poll every 3 seconds
@@ -272,7 +293,7 @@ export function BillingTab() {
         }, 5 * 60 * 1000);
       }
     } catch (error) {
-      console.error('Failed to start KYC verification:', error);
+      logger.error('Failed to start KYC verification:', error);
       setErrorMessage("Could not start verification. Please try again later.");
       setIsVerifying(false);
       setKycWindowOpened(false);
@@ -331,7 +352,7 @@ export function BillingTab() {
     setSelectedProfile(updatedProfile);
   };
 
-  if (isLoading) {
+  if (isLoading || loadingProfiles) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <SkeletonLoader className="h-[180px]" />

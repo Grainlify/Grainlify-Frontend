@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
@@ -27,13 +28,13 @@ export function SignInPage() {
     }
   }, [navigate]);
 
-  const handleGitHubSignIn = () => {
+  const handleGitHubSignIn = async () => {
+    setIsRedirecting(true);
     try {
-      setIsRedirecting(true);
-      const url = getGitHubLoginUrl();
-      window.location.href = url;
+      const loginUrl = await getGitHubLoginUrl();
+      window.location.href = loginUrl;
     } catch (error) {
-      console.log(error);
+      logger.error('Failed to get GitHub login URL:', error);
       setIsRedirecting(false);
     }
   };

@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { BillingProfile } from '../types';
 
@@ -19,7 +20,7 @@ function loadProfilesFromStorage(): BillingProfile[] {
       return JSON.parse(stored);
     }
   } catch (error) {
-    console.error('Failed to load billing profiles from storage:', error);
+    logger.error('Failed to load billing profiles from storage:', error);
   }
   return [];
 }
@@ -28,7 +29,7 @@ function saveProfilesToStorage(profiles: BillingProfile[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
   } catch (error) {
-    console.error('Failed to save billing profiles to storage:', error);
+    logger.error('Failed to save billing profiles to storage:', error);
   }
 }
 

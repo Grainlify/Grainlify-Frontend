@@ -4,6 +4,8 @@
  */
 
 import { API_BASE_URL } from "../config/api";
+import { BillingProfile } from "../../features/settings/types";
+import { BlogPost } from "../../features/blog/types";
 
 // Token management
 export const getAuthToken = (): string | null => {
@@ -42,13 +44,8 @@ async function apiRequest<T>(
   const { requiresAuth = false, headers = {}, ...fetchOptions } = options;
 
   const url = `${API_BASE_URL}${endpoint}`;
-  if (endpoint === "/ecosystems") {
-    console.log("API Request - URL:", url);
-    console.log("API Request - API_BASE_URL:", API_BASE_URL);
-    console.log("API Request - endpoint:", endpoint);
-  }
-  const requestHeaders: Record<string, string> = {
-    ...(headers as Record<string, string>),
+  const requestHeaders: HeadersInit = {
+    ...headers,
   };
 
   // Avoid forcing CORS preflight for simple GET/HEAD requests by only setting
@@ -76,18 +73,10 @@ async function apiRequest<T>(
 
   let response: Response;
   try {
-    if (endpoint === "/ecosystems") {
-      console.log("API Request - Making fetch call to:", url);
-      console.log("API Request - Headers:", requestHeaders);
-    }
     response = await fetch(url, {
       ...fetchOptions,
       headers: requestHeaders,
     });
-    if (endpoint === "/ecosystems") {
-      console.log("API Request - Response status:", response.status);
-      console.log("API Request - Response ok:", response.ok);
-    }
   } catch (err) {
     // Network error (CORS, connection refused, etc.)
     if (err instanceof TypeError && err.message.includes("fetch")) {
@@ -136,9 +125,6 @@ async function apiRequest<T>(
   // Parse JSON response
   try {
     const jsonData = await response.json();
-    if (endpoint === "/ecosystems") {
-      console.log("API Request - Parsed JSON response:", jsonData);
-    }
     return jsonData;
   } catch (err) {
     // If response is empty or not JSON, return empty array for list endpoints
@@ -778,7 +764,13 @@ export const getKYCStatus = () =>
     extracted?: any;
   }>("/auth/kyc/status", { requiresAuth: true });
 
-// My Projects (for maintainers)
+export const getBillingProfiles = () =>
+  apiRequest<BillingProfile[]>("/billing/profiles", { requiresAuth: true });
+
+export const getBlogPosts = () =>
+  apiRequest<BlogPost[]>("/blog/posts", { requiresAuth: false });
+
+
 export const getMyProjects = () =>
   apiRequest<
     Array<{

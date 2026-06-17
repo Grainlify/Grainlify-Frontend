@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { logger } from '../../../shared/utils/logger';
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -17,10 +18,10 @@ export function AuthCallbackPage() {
       const returnTo = sessionStorage.getItem('authReturnTo');
       sessionStorage.removeItem('authReturnTo');
       if (returnTo && returnTo.startsWith('/dashboard')) {
-        console.log('User is authenticated, redirecting to', returnTo);
+        logger.info('User is authenticated, redirecting to', returnTo);
         navigate(returnTo, { replace: true });
       } else {
-        console.log('User is authenticated, redirecting to dashboard...');
+        logger.info('User is authenticated, redirecting to dashboard...');
         navigate('/dashboard', { replace: true });
       }
     }
@@ -68,27 +69,28 @@ export function AuthCallbackPage() {
         const github = params.get('github');
         const errorParam = params.get('error');
 
-        console.log('OAuth Callback - URL:', window.location.href);
-        console.log('OAuth Callback - Token:', token ? 'Present' : 'Missing');
-        console.log('OAuth Callback - GitHub Username:', github);
-        console.log('OAuth Callback - Error:', errorParam);
+        logger.debug('OAuth Callback - Processing callback URL');
+        logger.debug('OAuth Callback - Token present:', !!token);
+        logger.debug('OAuth Callback - GitHub username present:', !!github);
+        if (errorParam) {
+          logger.warn('OAuth Callback - Error param:', errorParam);
+        }
 
         if (errorParam) {
-          console.error('OAuth Error:', errorParam);
+          logger.error('OAuth Error:', errorParam);
           if (errorParam === 'access_denied') {
-                setError('Login was cancelled. Please try again.');
-                } else {
-                    setError(errorParam || 'An unexpected error occurred');
-                    }
+            setError('Login was cancelled. Please try again.');
+          } else {
+            setError(errorParam || 'An unexpected error occurred');
           }
           setIsProcessing(false);
           // Redirect to signin after 3 seconds
           setTimeout(() => navigate('/signin'), 3000);
           return;
-        
+        }
 
         if (!token) {
-          console.error('No token found in URL');
+          logger.error('No token found in URL');
           setError('No authentication token received');
           setIsProcessing(false);
           setTimeout(() => navigate('/signin'), 3000);
@@ -96,13 +98,13 @@ export function AuthCallbackPage() {
         }
 
         // Login with the token
-        console.log('Attempting login with token...');
-        await login(token!);
-        console.log('Login successful! Auth state should update shortly...');
+        logger.debug('Attempting login...');
+        await login(token);
+        logger.debug('Login successful! Auth state should update shortly...');
         setIsProcessing(false);
         // The redirect will happen via the useEffect watching isAuthenticated
       } catch (err) {
-        console.error('Authentication failed:', err);
+        logger.error('Authentication failed:', err instanceof Error ? err.message : err);
         setError(err instanceof Error ? err.message : 'Authentication failed');
         setIsProcessing(false);
         setTimeout(() => navigate('/signin'), 3000);

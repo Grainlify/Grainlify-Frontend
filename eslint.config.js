@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules'] },
+  { ignores: ['dist', 'node_modules', 'coverage'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -22,6 +22,15 @@ export default tseslint.config(
       'react-hooks/exhaustive-deps': 'warn',
       'no-useless-escape': 'warn',
       'no-unsafe-finally': 'warn',
+      // Keep PII-safe logging guard: disallow direct console usage (use guarded logger)
+      'no-console': 'error',
+    },
+  },
+  {
+    // The guarded logger intentionally wraps the console API.
+    files: ['src/shared/utils/logger.ts'],
+    rules: {
+      'no-console': 'off',
     },
   },
   prettier,

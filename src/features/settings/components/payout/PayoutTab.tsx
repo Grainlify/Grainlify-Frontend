@@ -1,3 +1,4 @@
+import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect } from 'react';
 import { Info } from 'lucide-react';
 import { SkeletonLoader } from '../shared/SkeletonLoader';
@@ -28,7 +29,7 @@ const [errorMessage, setErrorMessage] = useState<string | null>(null);
         const response = await getProjectsContributed();
         setProjects(response || []);
       } catch (error) {
-        console.error('Failed to fetch projects:', error);
+        logger.error('Failed to fetch projects:', error);
         setErrorMessage("Failed to load projects. Please try again later.");
         setProjects([]);
       } finally {
@@ -48,7 +49,7 @@ const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSave = () => {
     // TODO: Implement save to backend
-    console.log('Saving payout preferences:', projectMappings);
+    logger.debug('Saving payout preferences:', projectMappings);
   };
 
   const getProjectInitial = (fullName: string) => {

@@ -1,3 +1,4 @@
+import { logger } from '../../shared/utils/logger';
 import { Bell } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 import { useState, useEffect } from "react";
@@ -26,7 +27,7 @@ export function NotificationsDropdown({showMobileNav}:NotificationsDropdownProp)
         // setNotificationCount(data.count ?? 0);
         setNotificationCount(0);
       } catch (error) {
-        console.error("Failed to fetch notification count:", error);
+        logger.error("Failed to fetch notification count:", error);
         setNotificationCount(0);
       }
     };
