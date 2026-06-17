@@ -1,142 +1,196 @@
 # Backend API Integration
 
-This document describes the frontend integration with the Patchwork backend API.
+This document describes how the Grainlify frontend integrates with the Patchwork backend API.
 
-## Backend URL
+## Configuration
 
-**Current Backend:** `http://7nonainmv1.loclx.io`
+### Backend URL
 
-To change the backend URL, edit `/src/shared/config/api.ts`:
+The backend URL is configured via environment variables and centralized in `src/shared/config/api.ts`:
 
 ```typescript
-export const API_BASE_URL = 'http://your-backend-url';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export const FRONTEND_BASE_URL = import.meta.env.VITE_FRONTEND_BASE_URL || window.location.origin;
+```
+
+**Never hardcode the backend URL.** Always use the `VITE_API_BASE_URL` environment variable.
+
+Set the backend URL in your `.env` file:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8080
+VITE_FRONTEND_BASE_URL=http://localhost:5173
+```
+
+For production, update `.env` or configure environment variables in your deployment platform:
+
+```bash
+VITE_API_BASE_URL=https://api.grainlify.com
+VITE_FRONTEND_BASE_URL=https://grainlify.com
 ```
 
 ## Authentication Flow
 
-The application uses **GitHub OAuth** for authentication. There is no traditional email/password signup or signin.
+### GitHub OAuth
 
-### How It Works
+Grainlify uses **GitHub OAuth** for authentication. There is no email/password authentication.
 
-1. **User Clicks "Sign In/Sign Up"**
-   - Both signin and signup redirect to the same GitHub OAuth flow
-   - No role selection is needed upfront - roles are assigned by the backend
+#### Flow Diagram
 
-2. **GitHub OAuth Flow**
-   - User is redirected to `http://7nonainmv1.loclx.io/auth/github/login/start`
-   - User authorizes Grainlify on GitHub
-   - GitHub redirects back to backend's callback endpoint
-   - Backend processes OAuth and redirects to frontend: `/auth/callback?token=<jwt_token>`
+```
+1. User clicks "Sign In" or "Sign Up"
+   ↓
+2. Frontend redirects to: {VITE_API_BASE_URL}/auth/github/login/start
+   ↓
+3. Backend redirects to GitHub OAuth
+   ↓
+4. User authorizes Grainlify
+   ↓
+5. GitHub redirects to backend callback
+   ↓
+6. Backend processes OAuth and redirects to: {VITE_FRONTEND_BASE_URL}/auth/callback?token=<jwt>
+   ↓
+7. Frontend extracts token, stores in localStorage, fetches user info
+   ↓
+8. User is redirected to /dashboard
+```
 
-3. **Frontend Callback Handling**
-   - The `/auth/callback` route extracts the JWT token from URL
-   - Token is stored in localStorage as `patchwork_jwt`
-   - User info is fetched from `/me` endpoint
-   - User is redirected to `/dashboard`
+#### Implementation
 
-4. **Authenticated Requests**
-   - All subsequent API calls include: `Authorization: Bearer <jwt_token>`
-   - If token expires (401 response), user is redirected to signin
+**Sign In/Sign Up Pages** (`src/features/auth/pages/SignInPage.tsx`, `SignUpPage.tsx`)
+- Both redirect to the same GitHub OAuth flow
+- No role selection needed upfront (backend assigns roles)
 
-### Authentication State
+**OAuth Callback Handler** (`src/features/auth/pages/AuthCallbackPage.tsx`)
+- Extracts JWT from URL query parameter: `?token=<jwt>`
+- Stores token in localStorage as `patchwork_jwt`
+- Calls `login(token)` from AuthContext
+- Redirects to `/dashboard`
 
-The `AuthContext` manages authentication state:
+**Authentication Context** (`src/app/contexts/AuthContext.tsx`)
+- Manages auth state: `isAuthenticated`, `userRole`, `userId`
+- Provides `login(token)` and `logout()` methods
+- Fetches user info from `/me` endpoint after login
 
-- **`isAuthenticated`** - Whether user is logged in
-- **`isLoading`** - Whether auth state is being checked
-- **`userRole`** - User's role (contributor, maintainer, admin)
-- **`userId`** - User's UUID
-- **`login(token)`** - Store token and fetch user info
-- **`logout()`** - Clear token and user state
+### Token Storage
+
+JWT tokens are stored in **localStorage** with the key `patchwork_jwt`:
+
+```typescript
+// Store token
+localStorage.setItem('patchwork_jwt', token);
+
+// Retrieve token
+const token = localStorage.getItem('patchwork_jwt');
+
+// Clear token
+localStorage.removeItem('patchwork_jwt');
+```
+
+**Security Considerations:**
+- ⚠️ localStorage is vulnerable to XSS attacks
+- ✅ Suitable for development and prototyping
+- ⚠️ For production, consider httpOnly cookies
+- ✅ Never log or expose tokens in console
+- ✅ Clear tokens on logout
+
+### Authenticated Requests
+
+All authenticated API requests include the JWT in the Authorization header:
+
+```typescript
+Authorization: Bearer <jwt_token>
+```
+
+The API client (`src/shared/api/client.ts`) automatically includes this header:
+
+```typescript
+const token = localStorage.getItem('patchwork_jwt');
+const response = await fetch(`${API_BASE_URL}/endpoint`, {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  },
+});
+```
+
+### Token Expiration
+
+If the backend returns `401 Unauthorized`:
+- Token is expired or invalid
+- Frontend clears the token
+- User is redirected to sign-in page
 
 ## API Client
 
-All API calls are centralized in `/src/shared/api/client.ts`.
+All API calls are centralized in `src/shared/api/client.ts`.
 
 ### Example Usage
 
 ```typescript
-import { getCurrentUser, getUserProfile } from '@/shared/api/client';
+import { getCurrentUser, getUserProfile, getPublicProjects } from '@/shared/api/client';
 
-// Get current user (requires authentication)
+// Get current authenticated user
 const user = await getCurrentUser();
-console.log(user.id, user.role);
+console.log(user.id, user.role); // UUID, 'contributor' | 'maintainer' | 'admin'
 
-// Get user profile
+// Get user profile with contributions
 const profile = await getUserProfile();
-console.log(profile.contributions_count);
+console.log(profile.contributions_count, profile.languages);
+
+// Get public projects with filters
+const projects = await getPublicProjects({
+  language: 'TypeScript',
+  ecosystem: 'Starknet',
+  limit: 20,
+});
 ```
 
-### Available API Methods
+### Available Endpoints
 
 #### Authentication
-- `getCurrentUser()` - Get current user info (id, role)
-- `getGitHubLoginUrl()` - Get GitHub OAuth URL
-- `getGitHubStatus()` - Check if GitHub account is linked
+- `getCurrentUser()` → Get current user info (id, role)
+- `getGitHubLoginUrl()` → Get GitHub OAuth start URL
+- `getGitHubStatus()` → Check if GitHub account is linked
 
 #### User Profile
-- `getUserProfile()` - Get contributions, languages, ecosystems
-- `getProfileCalendar()` - Get 365-day contribution calendar
-- `getProfileActivity(limit, offset)` - Get paginated activity feed
+- `getUserProfile()` → Get contributions, languages, ecosystems
+- `getProfileCalendar()` → Get 365-day contribution calendar
+- `getProfileActivity(limit, offset)` → Get paginated activity feed
 
 #### Projects
-- `getPublicProjects(params)` - Get filtered list of projects
-- `getProjectFilters()` - Get available filters (languages, tags, etc.)
-- `getMyProjects()` - Get projects owned by user (maintainers)
-- `createProject(data)` - Create a new project
-- `verifyProject(id)` - Verify project ownership
-- `syncProject(id)` - Sync project data from GitHub
+- `getPublicProjects(params)` → Get filtered project list
+- `getProjectFilters()` → Get available filters (languages, tags, ecosystems)
+- `getMyProjects()` → Get projects owned by user (maintainers only)
+- `createProject(data)` → Create a new project
+- `verifyProject(id)` → Verify project ownership
+- `syncProject(id)` → Sync project data from GitHub
 
 #### Ecosystems
-- `getEcosystems()` - Get list of ecosystems
+- `getEcosystems()` → Get list of ecosystems
 
 #### KYC
-- `startKYCVerification()` - Start KYC verification session
-- `getKYCStatus()` - Get KYC verification status
-
-## File Structure
-
-```
-/src/shared/
-├── api/
-│   ├── client.ts          # API client with all endpoints
-│   └── index.ts           # Exports
-├── config/
-│   └── api.ts             # API configuration (base URL)
-└── contexts/
-    └── AuthContext.tsx    # Authentication state management
-
-/src/app/pages/
-├── AuthCallbackPage.tsx   # OAuth callback handler
-└── ...
-
-/src/features/auth/pages/
-├── SignInPage.tsx         # GitHub OAuth signin
-└── SignUpPage.tsx         # GitHub OAuth signup
-```
-
-## Token Storage
-
-JWT tokens are stored in **localStorage** with the key `patchwork_jwt`.
-
-⚠️ **Important Security Note:**
-- This is suitable for development and prototyping
-- For production, consider using httpOnly cookies for better security
-- Never expose sensitive data in the JWT payload
+- `startKYCVerification()` → Start KYC verification session
+- `getKYCStatus()` → Get KYC verification status
 
 ## Error Handling
 
-The API client automatically handles common errors:
+The API client automatically handles errors:
 
-- **401 Unauthorized** - Token expired/invalid → Clears token and redirects to signin
-- **Other errors** - Throws error with message from backend
+**401 Unauthorized** - Token expired/invalid
+```typescript
+// Automatically clears token and redirects to sign-in
+localStorage.removeItem('patchwork_jwt');
+window.location.href = '/auth/signin';
+```
 
-Example:
+**Other Errors** - Throws error with backend message
 ```typescript
 try {
   const profile = await getUserProfile();
 } catch (error) {
-  console.error(error.message); // "Authentication failed. Please sign in again."
+  console.error(error.message); // Backend error message
+  // Handle error (show toast, etc.)
 }
 ```
 
@@ -144,56 +198,139 @@ try {
 
 The backend must allow requests from your frontend domain.
 
-For development, make sure the backend allows:
-- `http://localhost:5173` (or your Vite dev server port)
+**Development:**
+- Backend should allow `http://localhost:5173` (or your Vite dev server port)
 - Or configure CORS to allow all origins (development only)
 
-## Next Steps
+**Production:**
+- Backend should allow `https://your-frontend-domain.com`
+- Use specific origins, not wildcard (`*`)
 
-### To Complete Integration:
+## File Structure
 
-1. ✅ **Authentication** - Implemented (GitHub OAuth)
-2. ⬜ **Profile Pages** - Fetch real data from `/profile` endpoints
-3. ⬜ **Projects Browsing** - Fetch from `/projects` endpoint
-4. ⬜ **Ecosystems** - Fetch from `/ecosystems` endpoint
-5. ⬜ **Maintainer Dashboard** - Fetch from `/projects/mine` endpoint
-6. ⬜ **KYC Verification** - Integrate KYC flow
-7. ⬜ **Admin Panel** - Implement admin endpoints (if user is admin)
+```
+/src
+├── shared/
+│   ├── api/
+│   │   ├── client.ts          # API client with all endpoints
+│   │   └── index.ts           # Exports
+│   └── config/
+│       └── api.ts             # API configuration (VITE_API_BASE_URL)
+├── app/
+│   └── contexts/
+│       └── AuthContext.tsx    # Authentication state management
+└── features/
+    └── auth/
+        └── pages/
+            ├── AuthCallbackPage.tsx   # OAuth callback handler
+            ├── SignInPage.tsx         # GitHub OAuth sign-in
+            └── SignUpPage.tsx         # GitHub OAuth sign-up
+```
 
-### Testing Authentication:
+## Environment Variables
 
-1. Start your frontend: `npm run dev`
-2. Click "Sign In" or "Sign Up"
-3. You'll be redirected to GitHub OAuth
-4. After authorization, you'll be redirected back to `/auth/callback`
-5. The app will extract the token and log you in
-6. You'll be redirected to `/dashboard`
+All environment variables must use the `VITE_` prefix to be exposed to the browser.
+
+**.env**
+```bash
+# Backend API base URL (required)
+VITE_API_BASE_URL=http://localhost:8080
+
+# Frontend base URL (optional, defaults to window.location.origin)
+VITE_FRONTEND_BASE_URL=http://localhost:5173
+```
+
+**src/shared/config/api.ts**
+```typescript
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export const FRONTEND_BASE_URL = import.meta.env.VITE_FRONTEND_BASE_URL || window.location.origin;
+```
+
+## Security Best Practices
+
+### Frontend (Current Implementation)
+
+✅ **Do:**
+- Store JWT in localStorage as `patchwork_jwt`
+- Clear token on 401 response
+- Never log tokens to console
+- Use HTTPS in production
+- Validate token presence before authenticated requests
+
+⚠️ **Security Considerations:**
+- localStorage is vulnerable to XSS attacks
+- JWT payload is readable (don't store sensitive data)
+- Tokens persist across browser sessions (no automatic expiry on close)
+
+### Backend (Required)
+
+The backend must:
+- ✅ Keep OAuth client secrets secure (never expose to frontend)
+- ✅ Set appropriate JWT expiration times
+- ✅ Validate JWTs on every request
+- ✅ Use HTTPS in production
+- ✅ Configure CORS appropriately
+- ✅ Never expose `ADMIN_BOOTSTRAP_TOKEN` to frontend
+
+### Production Recommendations
+
+For production deployments, consider:
+- Using httpOnly cookies instead of localStorage
+- Implementing refresh token rotation
+- Adding CSRF protection
+- Setting up rate limiting
+- Enabling security headers (CSP, HSTS, etc.)
 
 ## Troubleshooting
 
 ### "Authentication failed" error
-- Check if backend is running at the configured URL
-- Verify CORS is configured correctly
-- Check browser console for detailed errors
+- ✅ Check backend is running at `VITE_API_BASE_URL`
+- ✅ Verify CORS is configured correctly
+- ✅ Check browser console for detailed errors
+- ✅ Ensure `.env` file exists and is loaded
 
 ### OAuth redirect not working
-- Verify backend's `PUBLIC_BASE_URL` includes your frontend URL
-- Check that `/auth/callback` route is registered in your app
+- ✅ Verify backend's `PUBLIC_BASE_URL` includes your frontend URL
+- ✅ Check `/auth/callback` route is registered in React Router
+- ✅ Ensure GitHub OAuth app callback URL matches backend callback
 
 ### Token expires immediately
-- Check backend's JWT expiration settings
-- Verify token is being stored correctly in localStorage
+- ✅ Check backend's JWT expiration settings
+- ✅ Verify token is stored correctly in localStorage
+- ✅ Check browser console for 401 responses
 
-## Environment Variables (Optional)
+### CORS errors
+- ✅ Backend must allow requests from `VITE_FRONTEND_BASE_URL`
+- ✅ Check backend CORS configuration includes your frontend domain
+- ✅ Verify preflight OPTIONS requests are handled
 
-For better configuration management, you can use environment variables:
+## Next Steps
 
-```env
-# .env.local
-VITE_API_BASE_URL=http://7nonainmv1.loclx.io
-```
+### Integration Checklist
 
-Then update `/src/shared/config/api.ts`:
-```typescript
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-```
+- ✅ Authentication (GitHub OAuth)
+- ✅ Profile pages with real API data
+- ✅ Projects browsing with filters
+- ✅ Ecosystems integration
+- ✅ Maintainer dashboard
+- ⬜ KYC verification flow
+- ⬜ Admin panel (admin role)
+- ⬜ Real-time notifications (WebSocket/SSE)
+- ⬜ Payment processing integration
+
+### Testing Authentication
+
+1. Start backend: Ensure it's running at `VITE_API_BASE_URL`
+2. Start frontend: `pnpm run dev`
+3. Click "Sign In" or "Sign Up"
+4. Authorize on GitHub
+5. Verify redirect to `/auth/callback` with token
+6. Verify redirect to `/dashboard`
+7. Check localStorage contains `patchwork_jwt`
+8. Verify API requests include Authorization header
+
+## Additional Resources
+
+- [Vite Environment Variables](https://vite.dev/guide/env-and-mode.html)
+- [GitHub OAuth Documentation](https://docs.github.com/en/developers/apps/building-oauth-apps)
+- [JWT Best Practices](https://tools.ietf.org/html/rfc8725)

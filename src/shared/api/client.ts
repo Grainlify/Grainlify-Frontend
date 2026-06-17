@@ -4,6 +4,8 @@
  */
 
 import { API_BASE_URL } from "../config/api";
+import { BillingProfile } from "../../features/settings/types";
+import { BlogPost } from "../../features/blog/types";
 
 // Token management
 export const getAuthToken = (): string | null => {
@@ -757,7 +759,13 @@ export const getKYCStatus = () =>
     extracted?: any;
   }>("/auth/kyc/status", { requiresAuth: true });
 
-// My Projects (for maintainers)
+export const getBillingProfiles = () =>
+  apiRequest<BillingProfile[]>("/billing/profiles", { requiresAuth: true });
+
+export const getBlogPosts = () =>
+  apiRequest<BlogPost[]>("/blog/posts", { requiresAuth: false });
+
+
 export const getMyProjects = () =>
   apiRequest<
     Array<{
