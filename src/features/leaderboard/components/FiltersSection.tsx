@@ -3,6 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { getEcosystems } from "../../../shared/api/client";
 import { FilterType } from "../types";
+import { useOptimisticData } from "../../../shared/hooks/useOptimisticData";
 
 interface FiltersSectionProps {
   activeFilter: FilterType;
@@ -38,8 +39,17 @@ export function FiltersSection({
   const [ecosystemOptions, setEcosystemOptions] = useState<EcosystemOption[]>([
     { label: "All Ecosystems", value: "all" },
   ]);
-  const [loading, setLoading] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  const cacheKey = `ecosystems-${activeFilter}-${selectedEcosystem.value}`;
+  const {
+    data: cachedEcosystems,
+    isLoading: loading,
+    fetchData: fetchEcosystemsData,
+  } = useOptimisticData<{ ecosystems: any[] }>(
+    { ecosystems: [] },
+    { cacheDuration: 30000, cacheKey }
+  );
 
   // Define filter options
   const filterOptions: FilterOption[] = [
@@ -57,31 +67,26 @@ export function FiltersSection({
   };
 
   useEffect(() => {
-    const fetchEcosystems = async () => {
-      try {
-        setLoading(true);
-        const data = await getEcosystems();
+    fetchEcosystemsData(async () => {
+      return await getEcosystems();
+    });
+  }, [fetchEcosystemsData]);
 
-        const activeEcosystems = data.ecosystems
-          .filter((e) => e.status === "active")
-          .map((e) => ({
-            label: e.name,
-            value: e.slug,
-          }));
+  useEffect(() => {
+    if (cachedEcosystems && cachedEcosystems.ecosystems) {
+      const activeEcosystems = cachedEcosystems.ecosystems
+        .filter((e: any) => e.status === "active")
+        .map((e: any) => ({
+          label: e.name,
+          value: e.slug,
+        }));
 
-        setEcosystemOptions([
-          { label: "All Ecosystems", value: "all" },
-          ...activeEcosystems,
-        ]);
-      } catch (err) {
-        console.error("Failed to fetch ecosystems:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEcosystems();
-  }, []);
+      setEcosystemOptions([
+        { label: "All Ecosystems", value: "all" },
+        ...activeEcosystems,
+      ]);
+    }
+  }, [cachedEcosystems]);
 
   return (
     <div
