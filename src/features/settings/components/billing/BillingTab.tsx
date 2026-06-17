@@ -1,3 +1,4 @@
+import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Loader2, AlertCircle, Info, ChevronDown, MessageSquare } from 'lucide-react';
 import { BillingProfile, BillingProfileType, BillingProfileStatus, ProfileDetailTabType, PaymentMethod, Invoice } from '../../types';
@@ -207,7 +208,7 @@ export function BillingTab() {
         updateProfileWithKYCData(extracted);
       }
     } catch (error) {
-      console.error('Failed to check KYC status:', error);
+      logger.error('Failed to check KYC status:', error);
       setErrorMessage("VerificationFailed: Connection to the identity server failed. Please try again.");
     } finally {
       setIsCheckingKYC(false);
@@ -280,7 +281,7 @@ export function BillingTab() {
               setKycWindowOpened(false);
             }
           } catch (error) {
-            console.error('Failed to poll KYC status:', error);
+            logger.error('Failed to poll KYC status:', error);
             setErrorMessage("Connection lost. We're having trouble checking your verification status. Please refresh the page.");
           }
         }, 3000); // Poll every 3 seconds
@@ -292,7 +293,7 @@ export function BillingTab() {
         }, 5 * 60 * 1000);
       }
     } catch (error) {
-      console.error('Failed to start KYC verification:', error);
+      logger.error('Failed to start KYC verification:', error);
       setErrorMessage("Could not start verification. Please try again later.");
       setIsVerifying(false);
       setKycWindowOpened(false);

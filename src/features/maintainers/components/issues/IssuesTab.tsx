@@ -1,3 +1,4 @@
+import { logger } from '../../../../shared/utils/logger';
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { X, ExternalLink, User, ChevronDown, Plus, Award, Users, Star, CheckCircle, MessageSquare, Filter, Search, Loader2 } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
@@ -138,19 +139,19 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
   // Helper function to format time ago (memoized)
   const formatTimeAgo = useCallback((dateString: string | null): string => {
     if (!dateString) {
-      console.warn('Missing date string for time ago formatting');
+      logger.warn('Missing date string for time ago formatting');
       return 'Unknown';
     }
 
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
-        console.warn('Invalid date string:', dateString);
+        logger.warn('Invalid date string:', dateString);
         return 'Unknown';
       }
       return formatDistanceToNow(date, { addSuffix: true });
     } catch (err) {
-      console.warn('Error formatting date:', dateString, err);
+      logger.warn('Error formatting date:', dateString, err);
       return 'Unknown';
     }
   }, []);
@@ -179,7 +180,7 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
             projectId: project.id,
           }));
         } catch (err) {
-          console.error(`Failed to fetch issues for ${project.github_full_name}:`, err);
+          logger.error(`Failed to fetch issues for ${project.github_full_name}:`, err);
           return [];
         }
       });
@@ -197,7 +198,7 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
       setIssues(flattenedIssues);
       setIsLoadingIssues(false);
     } catch (err) {
-      console.error('Failed to load issues:', err);
+      logger.error('Failed to load issues:', err);
       // Keep loading state true to show skeleton forever when backend is down
       setIssues([]);
       // Don't set isLoadingIssues to false - keep showing skeleton

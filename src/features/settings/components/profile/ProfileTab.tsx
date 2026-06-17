@@ -1,3 +1,4 @@
+import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect, useRef } from 'react';
 import { Github, User, Upload, Link as LinkIcon } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
@@ -147,7 +148,7 @@ export function ProfileTab() {
           discord: di,
         });
       } catch (error) {
-        console.error('Failed to fetch user data:', error);
+        logger.error('Failed to fetch user data:', error);
         toast.error('Failed to fetch user data. Please try again.');
       } finally {
         setIsLoading(false);
@@ -172,7 +173,7 @@ export function ProfileTab() {
         toast.success('GitHub profile synced successfully!');
       }
     } catch (error) {
-      console.error('Failed to resync GitHub profile:', error);
+      logger.error('Failed to resync GitHub profile:', error);
       toast.error('Failed to resync GitHub profile. Please try again.');
     } finally {
       setIsResyncing(false);
@@ -225,7 +226,7 @@ export function ProfileTab() {
       }
       toast.success('Profile picture updated successfully!');
     } catch (error) {
-      console.error('Failed to update avatar:', error);
+      logger.error('Failed to update avatar:', error);
       toast.error('Failed to update avatar. Please try again.');
     } finally {
       setIsSaving(false);
@@ -284,7 +285,7 @@ export function ProfileTab() {
 
       toast.success('Profile updated successfully!');
     } catch (error) {
-      console.error('Failed to update profile:', error);
+      logger.error('Failed to update profile:', error);
       toast.error('Failed to update profile. Please try again.');
     } finally {
       setIsSaving(false);

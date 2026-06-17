@@ -1,3 +1,4 @@
+import { logger } from '../../../../shared/utils/logger';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Eye, FileText, GitPullRequest, GitMerge } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
@@ -62,7 +63,7 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
               projectName: project.github_full_name,
             }));
           } catch (err) {
-            console.error(`Failed to fetch issues for ${project.github_full_name}:`, err);
+            logger.error(`Failed to fetch issues for ${project.github_full_name}:`, err);
             return [];
           }
         })),
@@ -74,7 +75,7 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
               projectName: project.github_full_name,
             }));
           } catch (err) {
-            console.error(`Failed to fetch PRs for ${project.github_full_name}:`, err);
+            logger.error(`Failed to fetch PRs for ${project.github_full_name}:`, err);
             return [];
           }
         })),
@@ -100,7 +101,7 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
       setPrs(allPRs);
       setIsLoading(false);
     } catch (err) {
-      console.error('Failed to load dashboard data:', err);
+      logger.error('Failed to load dashboard data:', err);
       // Keep loading state true to show skeleton forever when backend is down
       // Don't set isLoading to false - keep showing skeleton
     }

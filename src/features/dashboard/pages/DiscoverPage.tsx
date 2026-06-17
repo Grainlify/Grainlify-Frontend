@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { Heart, Star, GitFork, ArrowUpRight, Target, Zap } from "lucide-react";
 import { IssueCard } from "../../../shared/components/ui/IssueCard";
@@ -198,11 +199,11 @@ export function DiscoverPage({
     const loadRecommendedProjects = async () => {
       await fetchProjects(async () => {
         const response = await getRecommendedProjects(8);
-        console.log("DiscoverPage: Recommended projects response", response);
+        logger.debug("DiscoverPage: Recommended projects response", response);
 
         // Handle response - check if it exists and has projects array
         if (!response) {
-          console.warn("DiscoverPage: No response received");
+          logger.warn("DiscoverPage: No response received");
           return [];
         }
 
@@ -211,7 +212,7 @@ export function DiscoverPage({
           response.projects || (Array.isArray(response) ? response : []);
 
         if (!Array.isArray(projectsArray)) {
-          console.error(
+          logger.error(
             "DiscoverPage: Invalid response format - projects is not an array",
             response,
           );
@@ -241,7 +242,7 @@ export function DiscoverPage({
           };
         });
 
-        console.log("DiscoverPage: Mapped projects", mappedProjects);
+        logger.debug("DiscoverPage: Mapped projects", mappedProjects);
         return mappedProjects;
       });
     };
@@ -286,7 +287,7 @@ export function DiscoverPage({
             }
           } catch (err) {
             // If fetching issues fails, continue to next project
-            console.warn(`Failed to fetch issues for project ${project.id}:`, err);
+            logger.warn(`Failed to fetch issues for project ${project.id}:`, err);
             continue;
           }
         }

@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
@@ -33,7 +34,7 @@ export function SignInPage() {
       const loginUrl = await getGitHubLoginUrl();
       window.location.href = loginUrl;
     } catch (error) {
-      console.error('Failed to get GitHub login URL:', error);
+      logger.error('Failed to get GitHub login URL:', error);
       setIsRedirecting(false);
     }
   };

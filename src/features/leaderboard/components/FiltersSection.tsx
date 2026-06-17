@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
@@ -74,7 +75,7 @@ export function FiltersSection({
           ...activeEcosystems,
         ]);
       } catch (err) {
-        console.error("Failed to fetch ecosystems:", err);
+        logger.error("Failed to fetch ecosystems:", err);
       } finally {
         setLoading(false);
       }
