@@ -6,7 +6,6 @@ describe('Guarded Logger', () => {
   let consoleInfoSpy: any;
   let consoleWarnSpy: any;
   let consoleErrorSpy: any;
-  const originalProd = import.meta.env.PROD;
 
   beforeEach(() => {
     consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
@@ -17,21 +16,15 @@ describe('Guarded Logger', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    // Reset import.meta.env.PROD to original value
-    Object.defineProperty(import.meta.env, 'PROD', {
-      value: originalProd,
-      configurable: true,
-      writable: true
-    });
+    // Restore env stubs. `import.meta.env.PROD` is a read-only data descriptor in
+    // this Vitest version, so it must be overridden via `vi.stubEnv` rather than
+    // `Object.defineProperty` (which throws on the non-configurable property).
+    vi.unstubAllEnvs();
   });
 
   describe('when in development (PROD is false)', () => {
     beforeEach(() => {
-      Object.defineProperty(import.meta.env, 'PROD', {
-        value: false,
-        configurable: true,
-        writable: true
-      });
+      vi.stubEnv('PROD', false);
     });
 
     it('should call console.debug when logger.debug is called', () => {
@@ -57,11 +50,7 @@ describe('Guarded Logger', () => {
 
   describe('when in production (PROD is true)', () => {
     beforeEach(() => {
-      Object.defineProperty(import.meta.env, 'PROD', {
-        value: true,
-        configurable: true,
-        writable: true
-      });
+      vi.stubEnv('PROD', true);
     });
 
     it('should NOT call console.debug when logger.debug is called', () => {
