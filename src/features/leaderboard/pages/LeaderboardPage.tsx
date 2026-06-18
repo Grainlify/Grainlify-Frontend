@@ -1,7 +1,8 @@
 import { logger } from '../../../shared/utils/logger';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { LeaderboardType, FilterType, Petal, LeaderData, ProjectData } from "../types";
 import { getLeaderboard, getRecommendedProjects } from "../../../shared/api/client";
+import { clampLimit, clampOffset, hasMoreByPageSize } from "../../../shared/utils/pagination";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { FallingPetals } from "../components/FallingPetals";
 import { LeaderboardTypeToggle } from "../components/LeaderboardTypeToggle";
@@ -14,6 +15,34 @@ import { ProjectsTable } from "../components/ProjectsTable";
 import { LeaderboardStyles } from "../components/LeaderboardStyles";
 import { ContributorsPodiumSkeleton } from "../components/ContributorsPodiumSkeleton";
 import { ContributorsTableSkeleton } from "../components/ContributorsTableSkeleton";
+
+/**
+ * Number of contributors requested per leaderboard page.
+ *
+ * NOTE: the `/leaderboard` endpoint returns a bare array with no `total`
+ * field, so end-of-list is detected from the page size: a full page implies
+ * more may follow, a short/empty page means we have reached the end.
+ */
+const LEADERBOARD_PAGE_SIZE = 10;
+
+/** Transform a raw leaderboard API row into the UI {@link LeaderData} shape. */
+function transformLeader(
+  item: Awaited<ReturnType<typeof getLeaderboard>>[number],
+): LeaderData {
+  return {
+    rank: item.rank,
+    rank_tier: item.rank_tier,
+    rank_tier_name: item.rank_tier_name,
+    username: item.username,
+    avatar: item.avatar || `https://github.com/${item.username}.png?size=200`,
+    user_id: item.user_id || "",
+    score: item.score,
+    trend: item.trend,
+    trendValue: item.trendValue,
+    contributions: item.contributions,
+    ecosystems: item.ecosystems || [],
+  };
+}
 
 export function LeaderboardPage() {
   const { theme } = useTheme();
@@ -31,9 +60,15 @@ export function LeaderboardPage() {
   const [projectsData, setProjectsData] = useState<ProjectData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  /** Offset (start index) of the last loaded contributors page. */
   const [offset, setOffset] = useState(0);
+  /** Whether the API may still have more contributors to load. */
   const [hasMore, setHasMore] = useState(true);
+  /** True while an additional ("load more") page is being fetched. */
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // Synchronous guard so a rapid double-click of "Load more" cannot start two
+  // concurrent requests before `isLoadingMore` state has flushed.
+  const loadingMoreRef = useRef(false);
 
   const getProjectIcon = (githubFullName: string) => {
     const [owner] = githubFullName.split("/");
@@ -46,36 +81,26 @@ export function LeaderboardPage() {
     const fetchLeaderboard = async () => {
       if (leaderboardType === "contributors") {
         setIsLoading(true);
-        setOffset(0); // Reset offset when switching types
+        // Changing leaderboard type / filter / ecosystem resets pagination.
+        setOffset(0);
+        setHasMore(true);
+        const limit = clampLimit(LEADERBOARD_PAGE_SIZE);
         try {
           const data = await getLeaderboard(
-            10,
+            limit,
             0,
             selectedEcosystem.value !== "all"
               ? selectedEcosystem.value
               : undefined,
           );
-          // Transform API data to match LeaderData type
-          const transformedData: LeaderData[] = data.map((item) => ({
-            rank: item.rank,
-            rank_tier: item.rank_tier,
-            rank_tier_name: item.rank_tier_name,
-            username: item.username,
-            avatar:
-              item.avatar || `https://github.com/${item.username}.png?size=200`,
-            user_id: item.user_id || "",
-            score: item.score,
-            trend: item.trend,
-            trendValue: item.trendValue,
-            contributions: item.contributions,
-            ecosystems: item.ecosystems || [],
-          }));
-          setLeaderboardData(transformedData);
-          setHasMore(data.length === 10); // If we got 10 items, there might be more
+          setLeaderboardData(data.map(transformLeader));
+          // A full first page implies more may exist; a short page is the end.
+          setHasMore(hasMoreByPageSize(data.length, limit));
           setIsLoading(false);
         } catch (err) {
           logger.error("Failed to fetch leaderboard:", err);
           setLeaderboardData([]);
+          setHasMore(false);
           setIsLoading(false); // Set loading to false to show empty state instead of skeleton
         }
       } else {
@@ -129,48 +154,39 @@ export function LeaderboardPage() {
     };
   }, [leaderboardType]);
 
-  // Load more leaderboard data
+  /**
+   * Append the next page of contributors to the leaderboard.
+   *
+   * Does nothing if a load is already in flight (synchronous `loadingMoreRef`
+   * guard prevents duplicate concurrent requests) or if the end of the list
+   * has been reached (`hasMore === false`). Paging values are clamped before
+   * being sent to the API.
+   */
   const loadMore = async () => {
-    if (isLoadingMore || !hasMore) return;
+    if (loadingMoreRef.current || isLoadingMore || !hasMore) return;
 
+    loadingMoreRef.current = true;
     setIsLoadingMore(true);
+    const limit = clampLimit(LEADERBOARD_PAGE_SIZE);
+    const nextOffset = clampOffset(offset + limit);
     try {
-      const nextOffset = offset + 10;
       const data = await getLeaderboard(
-        10,
+        limit,
         nextOffset,
         selectedEcosystem.value !== "all" ? selectedEcosystem.value : undefined,
       );
 
-      if (data.length === 0) {
-        setHasMore(false);
-        setIsLoadingMore(false);
-        return;
+      if (data.length > 0) {
+        setLeaderboardData((prev) => [...prev, ...data.map(transformLeader)]);
+        setOffset(nextOffset);
       }
-
-      // Transform and append new data
-      const transformedData: LeaderData[] = data.map((item) => ({
-        rank: item.rank,
-        rank_tier: item.rank_tier,
-        rank_tier_name: item.rank_tier_name,
-        username: item.username,
-        avatar:
-          item.avatar || `https://github.com/${item.username}.png?size=200`,
-        user_id: item.user_id || "",
-        score: item.score,
-        trend: item.trend,
-        trendValue: item.trendValue,
-        contributions: item.contributions,
-        ecosystems: item.ecosystems || [],
-      }));
-
-      setLeaderboardData((prev) => [...prev, ...transformedData]);
-      setOffset(nextOffset);
-      setHasMore(data.length === 10); // If we got less than 10, no more data
+      // Disable "Load more" once a short/empty page signals the end of list.
+      setHasMore(hasMoreByPageSize(data.length, limit));
     } catch (err) {
       logger.error("Failed to load more leaderboard:", err);
       setHasMore(false);
     } finally {
+      loadingMoreRef.current = false;
       setIsLoadingMore(false);
     }
   };
@@ -323,8 +339,8 @@ export function LeaderboardPage() {
                   window.location.href = `/dashboard?tab=profile&user=${identifier}`;
                 }}
               />
-              {hasMore && (
-                <div className="flex justify-center mt-6">
+              <div className="flex justify-center mt-6">
+                {hasMore ? (
                   <button
                     onClick={loadMore}
                     disabled={isLoadingMore}
@@ -336,11 +352,21 @@ export function LeaderboardPage() {
                         Loading...
                       </>
                     ) : (
-                      "View All"
+                      "Load more"
                     )}
                   </button>
-                </div>
-              )}
+                ) : (
+                  leaderboardData.length > 0 && (
+                    <p
+                      className={`text-[13px] font-medium transition-colors ${
+                        theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                      }`}
+                    >
+                      You&apos;ve reached the end of the leaderboard.
+                    </p>
+                  )
+                )}
+              </div>
             </>
           )}
         </>
