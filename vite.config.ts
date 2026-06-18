@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -25,7 +25,7 @@ export default defineConfig({
     // jsdom gives component tests a DOM; node-only tests still work under it.
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/test-setup.ts', './src/test/setup.ts'],
     css: false,
     coverage: {
       provider: 'v8',

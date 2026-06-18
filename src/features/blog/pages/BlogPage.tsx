@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { BlogPost } from "../types";
-import { getBlogPosts } from "../../shared/api/client";
+import { getBlogPosts } from "../../../shared/api/client";
+import { BlogHero } from "../components/BlogHero";
+import { FeaturedPost } from "../components/FeaturedPost";
+import { BlogArticle } from "../components/BlogArticle";
+import { RecentPostsGrid } from "../components/RecentPostsGrid";
+import { BlogStyles } from "../components/BlogStyles";
+import { featuredPost as mockFeaturedPost, recentPosts as mockRecentPosts } from "../data/blogPosts";
 
 export function BlogPage() {
   const useMock = import.meta.env.VITE_USE_MOCK_DATA === "true";
@@ -13,19 +19,23 @@ export function BlogPage() {
       setLoading(true);
       getBlogPosts()
         .then((posts) => {
-          if (posts.length > 0) {
+          if (posts && posts.length > 0) {
             setFeaturedPost(posts[0]);
             setRecentPosts(posts.slice(1));
+          } else {
+            setFeaturedPost(mockFeaturedPost);
+            setRecentPosts(mockRecentPosts);
           }
         })
-        .catch((err) => console.error("Failed to fetch blog posts:", err))
+        .catch((err) => {
+          console.error("Failed to fetch blog posts, using mock fallback:", err);
+          setFeaturedPost(mockFeaturedPost);
+          setRecentPosts(mockRecentPosts);
+        })
         .finally(() => setLoading(false));
     } else {
-      // Use static imports as fallback
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { featuredPost, recentPosts } = require('../data/blogPosts');
-      setFeaturedPost(featuredPost);
-      setRecentPosts(recentPosts);
+      setFeaturedPost(mockFeaturedPost);
+      setRecentPosts(mockRecentPosts);
     }
   }, [useMock]);
 

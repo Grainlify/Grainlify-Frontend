@@ -24,6 +24,7 @@ import {
   SearchPageRoute,
 } from "../features/dashboard/routeWrappers";
 import { NotFoundPage } from "../shared/components/NotFoundPage";
+import { RoleGuard } from "../shared/components/RoleGuard";
 import Toast from "../shared/components/Toast";
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -65,7 +66,7 @@ export default function App() {
                 <Route path="ecosystems" element={<EcosystemsPageRoute />} />
                 <Route path="ecosystems/:ecosystemId" element={<EcosystemDetailPageRoute />} />
                 <Route path="contributors" element={<ContributorsPage />} />
-                <Route path="maintainers" element={<MaintainersPageRoute />} />
+                <Route path="maintainers" element={<RoleGuard allow={['maintainer', 'admin']}><MaintainersPageRoute /></RoleGuard>} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="data" element={<DataPage />} />
                 <Route path="projects/:projectId" element={<ProjectDetailPageRoute />} />
@@ -73,7 +74,7 @@ export default function App() {
                 <Route path="leaderboard" element={<LeaderboardPage />} />
                 <Route path="blog" element={<BlogPage />} />
                 <Route path="settings" element={<SettingsPage />} />
-                <Route path="admin" element={<AdminPage />} />
+                <Route path="admin" element={<RoleGuard allow={['admin']}><AdminPage /></RoleGuard>} />
                 <Route path="search" element={<SearchPageRoute />} />
               </Route>
               <Route path="*" element={<NotFoundPage />} />

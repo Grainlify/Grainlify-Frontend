@@ -334,3 +334,36 @@ For production deployments, consider:
 - [Vite Environment Variables](https://vite.dev/guide/env-and-mode.html)
 - [GitHub OAuth Documentation](https://docs.github.com/en/developers/apps/building-oauth-apps)
 - [JWT Best Practices](https://tools.ietf.org/html/rfc8725)
+
+## Roles & Access
+
+### Role Model
+
+The backend issues a JWT whose payload includes the user's `role` field. The frontend reads this via `AuthContext` and exposes it as `userRole` (type `'contributor' | 'maintainer' | 'admin' | null`).
+
+| Role | Permitted views |
+|------|----------------|
+| `contributor` | All standard dashboard pages |
+| `maintainer` | All contributor views + Maintainers dashboard (`/dashboard/maintainers`) |
+| `admin` | All maintainer views + Admin panel (`/dashboard/admin`) + Data page |
+
+### Client-Side Guard (`RoleGuard`)
+
+`src/shared/components/RoleGuard.tsx` provides a `<RoleGuard allow={[...roles]}>` component that renders children only when the current `userRole` is listed in `allow`. Unauthorized roles see a themed "Access Restricted" state.
+
+```tsx
+// Only admins can reach this subtree
+<RoleGuard allow={['admin']}>
+  <AdminPage />
+</RoleGuard>
+
+// Maintainers and admins
+<RoleGuard allow={['maintainer', 'admin']}>
+  <MaintainersPage />
+</RoleGuard>
+```
+
+### ⚠️ Security Note
+
+**Client-side role checks are a UX guard only.** They prevent accidental navigation to wrong views and surface clear "no access" states, but they do not constitute a security boundary. The backend must independently enforce authorization on every admin/maintainer endpoint — do not rely on the frontend guard to protect sensitive data or mutations.
+

@@ -548,9 +548,8 @@ export function DashboardLayout() {
               type="password"
               placeholder="Enter admin password"
               value={adminPassword}
-              onChange={(value) => setAdminPassword(value)}
+              onChange={(value) => setAdminPassword(value || "")}
               required
-              autoFocus
             />
             <p
               className={`text-xs ${darkTheme ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}

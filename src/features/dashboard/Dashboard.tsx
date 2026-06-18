@@ -40,6 +40,7 @@ import { LanguageIcon } from "../../shared/components/LanguageIcon";
 import { UserProfileDropdown } from "../../shared/components/UserProfileDropdown";
 import { NotificationsDropdown } from "../../shared/components/NotificationsDropdown";
 import { RoleSwitcher } from "../../shared/components/RoleSwitcher";
+import { RoleGuard } from "../../shared/components/RoleGuard";
 import {
   Modal,
   ModalFooter,
@@ -674,6 +675,13 @@ export function Dashboard() {
               showMobileNav={!!showMobileNav}
               closeMobileNav={closeMobileNav}
               onRoleChange={handleRoleChange}
+              availableRoles={
+                userRole === 'admin'
+                  ? ['contributor', 'maintainer', 'admin']
+                  : userRole === 'maintainer'
+                  ? ['contributor', 'maintainer']
+                  : ['contributor']
+              }
             />
 
             {/* Theme Toggle - Separate Pill Button (animated) */}
@@ -865,6 +873,7 @@ export function Dashboard() {
                 )}
                 {currentPage === "admin" && adminAuthenticated && <AdminPage />}
                 {currentPage === "admin" && !adminAuthenticated && (
+                  <RoleGuard allow={['admin']}>
                   <div className="flex items-center justify-center min-h-[60vh]">
                     <div
                       className={`text-center p-8 rounded-[24px] backdrop-blur-[40px] border ${
@@ -890,6 +899,7 @@ export function Dashboard() {
                       </button>
                     </div>
                   </div>
+                  </RoleGuard>
                 )}
                 {currentPage === "search" && (
                   <SearchPage
