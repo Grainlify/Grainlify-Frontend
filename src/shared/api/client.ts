@@ -44,8 +44,8 @@ async function apiRequest<T>(
   const { requiresAuth = false, headers = {}, ...fetchOptions } = options;
 
   const url = `${API_BASE_URL}${endpoint}`;
-  const requestHeaders: HeadersInit = {
-    ...headers,
+  const requestHeaders: Record<string, string> = {
+    ...headers as Record<string, string>,
   };
 
   // Avoid forcing CORS preflight for simple GET/HEAD requests by only setting

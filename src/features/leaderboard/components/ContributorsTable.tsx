@@ -1,7 +1,7 @@
 import { TrendingUp, TrendingDown, Minus, Award } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { LeaderData, FilterType } from "../types";
-import { getAvatarGradient } from "../utils/gradients";
+import { getAvatarGradient } from "../data/leaderboardData";
 
 interface ContributorsTableProps {
   data: LeaderData[];

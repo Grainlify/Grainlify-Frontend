@@ -92,12 +92,13 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
   });
 
   // Use optimistic data hook for projects with 30-second cache
+  const cacheKey = JSON.stringify(selectedFilters);
   const {
     data: projects,
     isLoading,
     hasError,
     fetchData: fetchProjects,
-  } = useOptimisticData<Project[]>([], { cacheDuration: 30000 });
+  } = useOptimisticData<Project[]>([], { cacheDuration: 30000, cacheKey });
 
   const [ecosystems, setEcosystems] = useState<Array<{ name: string }>>([]);
   const [isLoadingEcosystems, setIsLoadingEcosystems] = useState(true);

@@ -142,11 +142,6 @@ export function BillingTab() {
   const [isCheckingKYC, setIsCheckingKYC] = useState(false);
   const [kycWindowOpened, setKycWindowOpened] = useState(false);
 
-  const [isCheckingKYC, setIsCheckingKYC] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
-  const [kycWindowOpened, setKycWindowOpened] = useState(false);
-
   const handleCreateProfile = () => {
     if (!profileName.trim()) return;
 
