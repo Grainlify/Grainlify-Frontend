@@ -1,35 +1,30 @@
 import { Shield, Users, Code, Lock } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { useEffect , useState} from 'react';
+
+type RoleSwitcherRole = 'contributor' | 'maintainer' | 'admin';
 
 interface RoleSwitcherProps {
-  currentRole: 'contributor' | 'maintainer' | 'admin';
-  onRoleChange: (role: 'contributor' | 'maintainer' | 'admin') => void;
+  currentRole: RoleSwitcherRole;
+  onRoleChange: (role: RoleSwitcherRole) => void;
   showMobileNav: boolean;
   isSmallDevice: boolean;
-  closeMobileNav:()=>void
+  closeMobileNav: () => void;
+  /** Subset of roles to display. Defaults to all three roles when omitted. */
+  availableRoles?: RoleSwitcherRole[];
 }
 
-export function RoleSwitcher({ currentRole, onRoleChange , showMobileNav , isSmallDevice, closeMobileNav}: RoleSwitcherProps) {
+export function RoleSwitcher({ currentRole, onRoleChange, showMobileNav, isSmallDevice, closeMobileNav, availableRoles }: RoleSwitcherProps) {
   const { theme } = useTheme();
 
-  const roles = [
-    {
-      id: 'contributor' as const,
-      label: 'CONTRIBUTOR',
-      icon: Code,
-    },
-    {
-      id: 'maintainer' as const,
-      label: 'MAINTAINER',
-      icon: Users,
-    },
-    {
-      id: 'admin' as const,
-      label: 'ADMIN',
-      icon: Shield,
-    },
+  const allRoles = [
+    { id: 'contributor' as const, label: 'CONTRIBUTOR', icon: Code },
+    { id: 'maintainer' as const, label: 'MAINTAINER', icon: Users },
+    { id: 'admin' as const, label: 'ADMIN', icon: Shield },
   ];
+
+  const roles = availableRoles
+    ? allRoles.filter((r) => availableRoles.includes(r.id))
+    : allRoles;
 
   return (
     <div 

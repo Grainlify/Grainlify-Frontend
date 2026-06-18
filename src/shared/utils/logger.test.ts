@@ -1,11 +1,12 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { logger } from './logger';
 
 describe('Guarded Logger', () => {
-  let consoleDebugSpy: any;
-  let consoleInfoSpy: any;
-  let consoleWarnSpy: any;
-  let consoleErrorSpy: any;
+  let consoleDebugSpy: ReturnType<typeof vi.spyOn>;
+  let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
@@ -24,7 +25,7 @@ describe('Guarded Logger', () => {
 
   describe('when in development (PROD is false)', () => {
     beforeEach(() => {
-      vi.stubEnv('PROD', false);
+      vi.stubEnv('PROD', false as unknown as string);
     });
 
     it('should call console.debug when logger.debug is called', () => {
@@ -50,7 +51,7 @@ describe('Guarded Logger', () => {
 
   describe('when in production (PROD is true)', () => {
     beforeEach(() => {
-      vi.stubEnv('PROD', true);
+      vi.stubEnv('PROD', true as unknown as string);
     });
 
     it('should NOT call console.debug when logger.debug is called', () => {
