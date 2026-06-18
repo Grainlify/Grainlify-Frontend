@@ -285,6 +285,7 @@ export function DashboardLayout() {
                   <Link
                     key={item.id}
                     to={item.path}
+                    aria-current={isActive ? "page" : undefined}
                     className={`group w-full flex items-center rounded-[12px] transition-all duration-300 ${
                       isSidebarCollapsed
                         ? "justify-center px-0 h-[49px]"
