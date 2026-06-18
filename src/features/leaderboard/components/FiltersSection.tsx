@@ -1,5 +1,5 @@
 import { logger } from '../../../shared/utils/logger';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { getEcosystems } from "../../../shared/api/client";
@@ -99,11 +99,17 @@ export function FiltersSection({
         {/* Filter Dropdown Button */}
         <div className="relative z-[100]">
           <button
+            aria-haspopup="listbox"
+            aria-expanded={showFilterDropdown}
             onClick={() => {
               setShowFilterDropdown(!showFilterDropdown);
-              // Close ecosystem dropdown if it's open
               if (showDropdown) {
                 onToggleDropdown();
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && showFilterDropdown) {
+                setShowFilterDropdown(false);
               }
             }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] backdrop-blur-[30px] border hover:scale-105 transition-all duration-300 ${
@@ -126,12 +132,18 @@ export function FiltersSection({
             />
           </button>
           {showFilterDropdown && (
-            <div className={`absolute right-0 mt-2 w-[220px] border-2 border-white/30 rounded-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden z-[100] animate-dropdown-in ${
-              theme === "dark" ? "bg-[#2d2820]/95" : "bg-white/95"
-            }`}>
+            <div
+              role="listbox"
+              aria-label="Filter options"
+              className={`absolute right-0 mt-2 w-[220px] border-2 border-white/30 rounded-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden z-[100] animate-dropdown-in ${
+                theme === "dark" ? "bg-[#2d2820]/95" : "bg-white/95"
+              }`}
+            >
               {filterOptions.map((option) => (
                 <button
                   key={option.value}
+                  role="option"
+                  aria-selected={activeFilter === option.value}
                   onClick={() => {
                     onFilterChange(option.value);
                     setShowFilterDropdown(false);
@@ -152,11 +164,17 @@ export function FiltersSection({
         {/* Ecosystem Dropdown Button */}
         <div className="relative z-[100]">
           <button
+            aria-haspopup="listbox"
+            aria-expanded={showDropdown}
             onClick={() => {
               onToggleDropdown();
-              // Close filter dropdown if it's open
               if (showFilterDropdown) {
                 setShowFilterDropdown(false);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && showDropdown) {
+                onToggleDropdown();
               }
             }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] backdrop-blur-[30px] border hover:scale-105 transition-all duration-300 ${
@@ -179,9 +197,13 @@ export function FiltersSection({
             />
           </button>
           {showDropdown && (
-            <div className={`absolute right-0 mt-2 w-[200px] border-2 border-white/30 rounded-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden z-[100] animate-dropdown-in ${
-              theme === "dark" ? "bg-[#2d2820]/95" : "bg-white/95"
-            }`}>
+            <div
+              role="listbox"
+              aria-label="Ecosystems"
+              className={`absolute right-0 mt-2 w-[200px] border-2 border-white/30 rounded-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden z-[100] animate-dropdown-in ${
+                theme === "dark" ? "bg-[#2d2820]/95" : "bg-white/95"
+              }`}
+            >
               {loading ? (
                 <div className="px-4 py-3 flex justify-center">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -190,6 +212,8 @@ export function FiltersSection({
                 ecosystemOptions.map((eco, index) => (
                   <button
                     key={eco.value}
+                    role="option"
+                    aria-selected={selectedEcosystem.value === eco.value}
                     onClick={() => {
                       onEcosystemChange({ label: eco.label, value: eco.value });
                       onToggleDropdown();
