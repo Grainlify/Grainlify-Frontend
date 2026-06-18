@@ -215,6 +215,46 @@ body.modal-open aside {
   transition: filter 0.2s ease, opacity 0.2s ease;
 }
 
+/*
+ * Accessible focus indicator.
+ *
+ * Keyboard users get a clearly visible brand-gold ring on any interactive
+ * element. `:where()` keeps the selector at zero specificity so component-level
+ * `focus-visible:ring-*` utilities can still override it, and `:focus-visible`
+ * ensures the ring only appears for keyboard interaction, not mouse clicks.
+ * A lighter gold is used in dark mode for adequate contrast in both themes.
+ */
+:where(
+  a[href],
+  button,
+  input,
+  select,
+  textarea,
+  [tabindex],
+  [role='option'],
+  [role='menuitem'],
+  [role='dialog']
+):focus-visible {
+  outline: 2px solid #c9983a;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.dark
+  :where(
+    a[href],
+    button,
+    input,
+    select,
+    textarea,
+    [tabindex],
+    [role='option'],
+    [role='menuitem'],
+    [role='dialog']
+  ):focus-visible {
+  outline-color: #e8c571;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

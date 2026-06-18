@@ -1,7 +1,8 @@
-import React, { ReactNode, useState, useRef, useEffect } from 'react';
+import React, { ReactNode, useId } from 'react';
 import { X, ChevronDown, Check } from 'lucide-react';
 import * as Select from '@radix-ui/react-select';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useFocusTrap } from '../../utils/focusTrap';
 
 interface ModalProps {
   isOpen: boolean;
@@ -14,6 +15,11 @@ interface ModalProps {
   maxHeight?: boolean;
   footer?: ReactNode;
   dimBackdrop?: boolean;
+  /**
+   * Accessible name used when no visible `title` is provided. Ignored when
+   * `title` is set (the title is referenced via `aria-labelledby` instead).
+   */
+  ariaLabel?: string;
 }
 
 const widthClasses = {
@@ -23,6 +29,19 @@ const widthClasses = {
   xl: 'w-[95vw] sm:w-[650px]'
 };
 
+/**
+ * Accessible modal dialog.
+ *
+ * Accessibility contract:
+ * - Renders `role="dialog"` with `aria-modal="true"`.
+ * - Labelled via `aria-labelledby` (pointing at the rendered `title`) or, when
+ *   no title is given, via `aria-label` (`ariaLabel`, defaulting to "Dialog").
+ * - While open, keyboard focus is trapped inside the dialog and cycles with
+ *   <kbd>Tab</kbd>/<kbd>Shift</kbd>+<kbd>Tab</kbd> (see {@link useFocusTrap}).
+ * - <kbd>Escape</kbd> and a backdrop click both invoke `onClose`.
+ * - On close, focus is returned to the element that was focused before opening
+ *   (typically the trigger).
+ */
 export function Modal({
   isOpen,
   onClose,
@@ -33,10 +52,14 @@ export function Modal({
   showCloseButton = true,
   maxHeight = false,
   footer,
-  dimBackdrop = true
+  dimBackdrop = true,
+  ariaLabel
 }: ModalProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const titleId = useId();
+
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, { onEscape: onClose });
 
   React.useEffect(() => {
     if (isOpen) {
@@ -57,7 +80,13 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className={`rounded-[16px] md:rounded-[24px] border-2 shadow-[0_20px_60px_rgba(0,0,0,0.3)] ${widthClasses[width]} max-w-[95vw] sm:max-w-[90vw] max-h-[90vh] flex flex-col transition-all animate-in zoom-in-95 duration-200 ${isDark
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        aria-label={title ? undefined : (ariaLabel ?? 'Dialog')}
+        tabIndex={-1}
+        className={`rounded-[16px] md:rounded-[24px] border-2 shadow-[0_20px_60px_rgba(0,0,0,0.3)] focus:outline-none ${widthClasses[width]} max-w-[95vw] sm:max-w-[90vw] max-h-[90vh] flex flex-col transition-all animate-in zoom-in-95 duration-200 ${isDark
           ? 'bg-[#3a3228] border-white/30'
           : 'bg-[#d4c5b0] border-white/40'
           }`}
@@ -75,7 +104,7 @@ export function Modal({
                 </div>
               )}
               {title && (
-                <h3 className={`text-[16px] md:text-[18px] font-bold transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                <h3 id={titleId} className={`text-[16px] md:text-[18px] font-bold transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                   }`}>
                   {title}
                 </h3>
@@ -83,8 +112,10 @@ export function Modal({
             </div>
             {showCloseButton && (
               <button
+                type="button"
                 onClick={onClose}
-                className={`p-2 rounded-[10px] transition-all hover:scale-110 flex-shrink-0 ${isDark
+                aria-label="Close dialog"
+                className={`p-2 rounded-[10px] transition-all hover:scale-110 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#c9983a] ${isDark
                   ? 'hover:bg-white/[0.1] text-[#e8c571] hover:text-[#f5d98a]'
                   : 'hover:bg-black/[0.05] text-[#8b6f3a] hover:text-[#c9983a]'
                   }`}
