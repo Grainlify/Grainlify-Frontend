@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
@@ -19,5 +20,16 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
     dedupe: ['react', 'react-dom'],
+  },
+  test: {
+    // jsdom gives component tests a DOM; node-only tests still work under it.
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    css: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary'],
+    },
   },
 })
