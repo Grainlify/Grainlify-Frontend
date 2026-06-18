@@ -1,7 +1,7 @@
 import { logger } from '../../../shared/utils/logger';
 import { X } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Dropdown } from "../../../shared/components/ui/Dropdown";
 import { ProjectCard, Project } from "../components/ProjectCard";
 import { ProjectCardSkeleton } from "../components/ProjectCardSkeleton";
@@ -10,12 +10,19 @@ import {
   isValidProject,
   getRepoName,
 } from "../../../shared/utils/projectFilter";
-
-import { useOptimisticData } from "../../../shared/hooks/useOptimisticData";
+import {
+  DEFAULT_PAGE_LIMIT,
+  clampLimit,
+  clampOffset,
+  hasMoreByPageSize,
+} from "../../../shared/utils/pagination";
 
 interface BrowsePageProps {
   onProjectClick?: (id: string) => void;
 }
+
+/** Number of projects requested per page. */
+const PAGE_SIZE = DEFAULT_PAGE_LIMIT;
 
 // Helper function to format numbers (e.g., 1234 -> "1.2K", 1234567 -> "1.2M")
 const formatNumber = (num: number): string => {
@@ -73,6 +80,64 @@ const truncateDescription = (
   return firstLine;
 };
 
+/** Selected filters keyed by filter group. */
+type SelectedFilters = { [key: string]: string[] };
+
+/**
+ * Build the `getPublicProjects` query params from the currently selected
+ * filters. The API accepts a single value for language/ecosystem/category and
+ * a comma-separated list for tags.
+ */
+const buildFilterParams = (
+  selectedFilters: SelectedFilters,
+): {
+  language?: string;
+  ecosystem?: string;
+  category?: string;
+  tags?: string;
+} => {
+  const params: {
+    language?: string;
+    ecosystem?: string;
+    category?: string;
+    tags?: string;
+  } = {};
+  if (selectedFilters.languages.length > 0) {
+    params.language = selectedFilters.languages[0];
+  }
+  if (selectedFilters.ecosystems.length > 0) {
+    params.ecosystem = selectedFilters.ecosystems[0];
+  }
+  if (selectedFilters.categories.length > 0) {
+    params.category = selectedFilters.categories[0];
+  }
+  if (selectedFilters.tags.length > 0) {
+    params.tags = selectedFilters.tags.join(",");
+  }
+  return params;
+};
+
+/** Map a raw API project payload onto the UI {@link Project} shape. */
+const mapApiProjects = (projectsArray: any[]): Project[] =>
+  projectsArray.filter(isValidProject).map((p) => {
+    const repoName = getRepoName(p.github_full_name);
+    return {
+      id: p.id || `project-${repoName}`,
+      name: repoName,
+      icon: getProjectIcon(p.github_full_name),
+      stars: formatNumber(p.stars_count || 0),
+      forks: formatNumber(p.forks_count || 0),
+      contributors: p.contributors_count || 0,
+      openIssues: p.open_issues_count || 0,
+      prs: p.open_prs_count || 0,
+      description:
+        truncateDescription(p.description) ||
+        `${p.language || "Project"} repository${p.category ? ` - ${p.category}` : ""}`,
+      tags: Array.isArray(p.tags) ? p.tags : [],
+      color: getProjectColor(repoName),
+    };
+  });
+
 export function BrowsePage({ onProjectClick }: BrowsePageProps) {
   const { theme } = useTheme();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -91,13 +156,28 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
     tags: [],
   });
 
-  // Use optimistic data hook for projects with 30-second cache
-  const {
-    data: projects,
-    isLoading,
-    hasError,
-    fetchData: fetchProjects,
-  } = useOptimisticData<Project[]>([], { cacheDuration: 30000 });
+  // --- Pagination state ---------------------------------------------------
+  /** Projects accumulated across all loaded pages for the current filters. */
+  const [projects, setProjects] = useState<Project[]>([]);
+  /** Total number of projects available for the current filters (from API). */
+  const [total, setTotal] = useState(0);
+  /** Whether the API indicates more pages remain to be loaded. */
+  const [hasMore, setHasMore] = useState(false);
+  /** True while the very first page for the current filters is loading. */
+  const [isLoading, setIsLoading] = useState(true);
+  /** True while an additional ("load more") page is being fetched. */
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  /** True when the most recent fetch failed. */
+  const [hasError, setHasError] = useState(false);
+
+  // Offset (start index) of the NEXT page to request. Tracked in a ref so the
+  // value is always current inside async callbacks without re-creating them.
+  const offsetRef = useRef(0);
+  // Synchronous guard so rapid double-clicks of "Load more" cannot fire two
+  // concurrent requests (state updates are async and would race).
+  const loadingMoreRef = useRef(false);
+  // Monotonic request id; responses from a superseded filter set are ignored.
+  const requestSeqRef = useRef(0);
 
   const [ecosystems, setEcosystems] = useState<Array<{ name: string }>>([]);
   const [isLoadingEcosystems, setIsLoadingEcosystems] = useState(true);
@@ -199,79 +279,107 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
     );
   };
 
-  // Fetch projects from API
-  useEffect(() => {
-    const loadProjects = async () => {
-      await fetchProjects(async () => {
-        try {
-          const params: {
-            language?: string;
-            ecosystem?: string;
-            category?: string;
-            tags?: string;
-          } = {};
+  /**
+   * Load a page of projects for the current filters.
+   *
+   * @param reset - When `true`, start a fresh result set at offset 0 (used on
+   *   mount and whenever filters change). When `false`, append the next page
+   *   ("Load more"). Concurrent "load more" calls are ignored so a double click
+   *   never issues two simultaneous requests.
+   */
+  const loadProjects = useCallback(
+    async (reset: boolean) => {
+      // Guard against duplicate concurrent "load more" requests.
+      if (!reset && loadingMoreRef.current) return;
 
-          // Apply filters
-          if (selectedFilters.languages.length > 0) {
-            params.language = selectedFilters.languages[0]; // API supports single language
-          }
-          if (selectedFilters.ecosystems.length > 0) {
-            params.ecosystem = selectedFilters.ecosystems[0]; // API supports single ecosystem
-          }
-          if (selectedFilters.categories.length > 0) {
-            params.category = selectedFilters.categories[0]; // API supports single category
-          }
-          if (selectedFilters.tags.length > 0) {
-            params.tags = selectedFilters.tags.join(','); // API supports comma-separated tags
-          }
+      const seq = ++requestSeqRef.current;
 
-          const response = await getPublicProjects(params);
+      if (reset) {
+        offsetRef.current = 0;
+        setIsLoading(true);
+        setHasError(false);
+      } else {
+        loadingMoreRef.current = true;
+        setIsLoadingMore(true);
+      }
 
-          logger.debug('BrowsePage: API response received', { response });
+      // Clamp paging values to safe bounds before they reach the API so
+      // user-influenced state can never request an abusive page/offset.
+      const limit = clampLimit(PAGE_SIZE);
+      const offset = clampOffset(reset ? 0 : offsetRef.current);
 
-          // Handle response - check if it's valid
-          let projectsArray: any[] = [];
-          if (response && response.projects && Array.isArray(response.projects)) {
-            projectsArray = response.projects;
-          } else if (Array.isArray(response)) {
-            // Handle case where API returns array directly
-            projectsArray = response;
-          } else {
-            logger.warn('BrowsePage: Unexpected response format', response);
-            projectsArray = [];
-          }
+      try {
+        const response = await getPublicProjects({
+          ...buildFilterParams(selectedFilters),
+          limit,
+          offset,
+        });
 
-          // Map API response to Project interface
-          const mappedProjects: Project[] = projectsArray
-            .filter(isValidProject)
-            .map((p) => {
-              const repoName = getRepoName(p.github_full_name);
-              return {
-                id: p.id || `project-${Date.now()}-${Math.random()}`, // Fallback ID if missing
-                name: repoName,
-                icon: getProjectIcon(p.github_full_name),
-                stars: formatNumber(p.stars_count || 0),
-                forks: formatNumber(p.forks_count || 0),
-                contributors: p.contributors_count || 0,
-                openIssues: p.open_issues_count || 0,
-                prs: p.open_prs_count || 0,
-                description: truncateDescription(p.description) || `${p.language || 'Project'} repository${p.category ? ` - ${p.category}` : ''}`,
-                tags: Array.isArray(p.tags) ? p.tags : [],
-                color: getProjectColor(repoName),
-              };
-            });
+        // A newer request (e.g. filters changed) has superseded this one.
+        if (seq !== requestSeqRef.current) return;
 
-          logger.debug('BrowsePage: Mapped projects', { count: mappedProjects.length });
-          return mappedProjects;
-        } catch (err) {
-          logger.error('BrowsePage: Failed to fetch projects:', err);
-          throw err; // Re-throw to let the hook handle the error
+        logger.debug("BrowsePage: API response received", { response });
+
+        let projectsArray: any[] = [];
+        if (response && Array.isArray(response.projects)) {
+          projectsArray = response.projects;
+        } else if (Array.isArray(response)) {
+          projectsArray = response;
+        } else {
+          logger.warn("BrowsePage: Unexpected response format", response);
         }
-      });
-    };
 
-    loadProjects();
-  }, [selectedFilters, fetchProjects]);
+        const received = projectsArray.length;
+        const mapped = mapApiProjects(projectsArray);
+        const apiTotal =
+          response && typeof (response as any).total === "number"
+            ? (response as any).total
+            : undefined;
+
+        // Advance the cursor by the raw page size received (not the mapped
+        // count, which may be smaller after filtering invalid repos).
+        const nextOffset = offset + received;
+        offsetRef.current = nextOffset;
+
+        // More pages remain only if the last page was full AND (when the API
+        // reports a total) we have not yet reached it.
+        const more =
+          hasMoreByPageSize(received, limit) &&
+          (apiTotal != null ? nextOffset < apiTotal : true);
+
+        setProjects((prev) => (reset ? mapped : [...prev, ...mapped]));
+        setTotal(apiTotal ?? 0);
+        setHasMore(more);
+      } catch (err) {
+        if (seq !== requestSeqRef.current) return;
+        logger.error("BrowsePage: Failed to fetch projects:", err);
+        setHasError(true);
+        if (reset) setProjects([]);
+        setHasMore(false);
+      } finally {
+        if (seq === requestSeqRef.current) {
+          if (reset) {
+            setIsLoading(false);
+          } else {
+            setIsLoadingMore(false);
+          }
+        }
+        if (!reset) loadingMoreRef.current = false;
+      }
+    },
+    [selectedFilters],
+  );
+
+  /** Public handler for the "Load more" button. */
+  const handleLoadMore = useCallback(() => {
+    void loadProjects(false);
+  }, [loadProjects]);
+
+  // (Re)load the first page whenever the filters change. Changing filters
+  // resets pagination back to offset 0 via loadProjects(reset = true).
+  useEffect(() => {
+    void loadProjects(true);
+  }, [loadProjects]);
 
   return (
     <div className="space-y-6">
@@ -338,21 +446,65 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
               : "bg-white/[0.15] border-white/25 text-[#7a6b5a]"
           }`}
         >
-          <p className="text-[16px] font-semibold">No projects found</p>
+          <p className="text-[16px] font-semibold">
+            {hasError ? "Couldn't load projects" : "No projects found"}
+          </p>
           <p className="text-[14px] mt-2">
-            Try adjusting your filters or check back later.
+            {hasError
+              ? "Something went wrong while loading projects. Please try again."
+              : "Try adjusting your filters or check back later."}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-          {projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onClick={onProjectClick}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+            {projects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onClick={onProjectClick}
+              />
+            ))}
+          </div>
+
+          {/* Pagination footer */}
+          <div className="flex flex-col items-center gap-3 mt-6">
+            {total > 0 && (
+              <p
+                className={`text-[13px] ${
+                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                }`}
+              >
+                Showing {projects.length} of {total} projects
+              </p>
+            )}
+
+            {hasMore ? (
+              <button
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className={`px-6 py-3 rounded-[14px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[14px] shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+              >
+                {isLoadingMore ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load more"
+                )}
+              </button>
+            ) : (
+              <p
+                className={`text-[13px] font-medium ${
+                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                }`}
+              >
+                You&apos;ve reached the end of the list.
+              </p>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
