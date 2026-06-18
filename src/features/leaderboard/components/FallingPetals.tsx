@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Petal } from '../types';
 
 interface FallingPetalsProps {
@@ -5,6 +6,18 @@ interface FallingPetalsProps {
 }
 
 export function FallingPetals({ petals }: FallingPetalsProps) {
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  if (reducedMotion) return null;
+
   return (
     <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none z-10 overflow-hidden">
       {petals.map((petal) => (
@@ -18,7 +31,6 @@ export function FallingPetals({ petals }: FallingPetalsProps) {
             transform: `scale(${petal.size})`,
           }}
         >
-          {/* Golden Flower Petal */}
           <svg
             width="24"
             height="24"

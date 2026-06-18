@@ -171,6 +171,13 @@ export function LeaderboardStyles() {
         animation: falling linear infinite;
       }
       
+      @media (prefers-reduced-motion: reduce) {
+        .falling-petal {
+          animation: none;
+          display: none;
+        }
+      }
+      
       @keyframes ray-rotate {
         0%, 100% { transform: rotate(0deg); }
         50% { transform: rotate(360deg); }
