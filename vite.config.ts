@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
@@ -19,5 +20,23 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
     dedupe: ['react', 'react-dom'],
+  },
+  test: {
+    // Default to the lightweight `node` environment; component/hook tests opt
+    // into jsdom per-file with a `// @vitest-environment jsdom` docblock.
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    css: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: [
+        'src/shared/components/ui/Modal.tsx',
+        'src/shared/components/GlassDropdown.tsx',
+        'src/shared/components/FilterDropdown.tsx',
+        'src/shared/components/SearchModal.tsx',
+        'src/shared/utils/focusTrap.ts',
+      ],
+    },
   },
 })
