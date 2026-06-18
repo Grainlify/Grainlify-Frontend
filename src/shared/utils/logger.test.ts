@@ -25,7 +25,7 @@ describe('Guarded Logger', () => {
 
   describe('when in development (PROD is false)', () => {
     beforeEach(() => {
-      vi.stubEnv('PROD', false as unknown as string);
+      vi.stubEnv('PROD', false);
     });
 
     it('should call console.debug when logger.debug is called', () => {
@@ -51,7 +51,7 @@ describe('Guarded Logger', () => {
 
   describe('when in production (PROD is true)', () => {
     beforeEach(() => {
-      vi.stubEnv('PROD', true as unknown as string);
+      vi.stubEnv('PROD', true);
     });
 
     it('should NOT call console.debug when logger.debug is called', () => {

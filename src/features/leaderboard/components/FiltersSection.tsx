@@ -81,23 +81,6 @@ export function FiltersSection({
           label: e.name,
           value: e.slug,
         }));
-        const activeEcosystems = data.ecosystems
-          .filter((e) => e.status === "active")
-          .map((e) => ({
-            label: e.name,
-            value: e.slug,
-          }));
-
-        setEcosystemOptions([
-          { label: "All Ecosystems", value: "all" },
-          ...activeEcosystems,
-        ]);
-      } catch (err) {
-        logger.error("Failed to fetch ecosystems:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
 
       setEcosystemOptions([
         { label: "All Ecosystems", value: "all" },
