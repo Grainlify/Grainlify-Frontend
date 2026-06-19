@@ -29,7 +29,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test-setup.ts', './src/test/setup.ts'],
     css: false,
-    exclude: ['e2e/**'],
+    exclude: ['e2e/**', 'node_modules/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'html'],
