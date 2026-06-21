@@ -37,6 +37,22 @@
  * @module shared/config/api
  */
 
+function stripTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, '');
+}
+
+function validateEnv(): void {
+  const { VITE_API_BASE_URL } = import.meta.env;
+  if (!VITE_API_BASE_URL && import.meta.env.DEV) {
+    throw new Error(
+      'VITE_API_BASE_URL is not set. Please add it to your .env file. ' +
+      'See .env.example for reference.',
+    );
+  }
+}
+
+validateEnv();
+
 /**
  * Backend API base URL
  * 
@@ -60,7 +76,9 @@
  * @constant
  * @type {string}
  */
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export const API_BASE_URL = stripTrailingSlash(
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+);
 
 /**
  * Frontend base URL
@@ -81,7 +99,9 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localho
  * @constant
  * @type {string}
  */
-export const FRONTEND_BASE_URL = import.meta.env.VITE_FRONTEND_BASE_URL || window.location.origin;
+export const FRONTEND_BASE_URL = stripTrailingSlash(
+  import.meta.env.VITE_FRONTEND_BASE_URL || window.location.origin,
+);
 
 /**
  * OAuth callback URL
