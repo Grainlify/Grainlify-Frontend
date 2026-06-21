@@ -766,6 +766,32 @@ export const getKYCStatus = () =>
 export const getBillingProfiles = () =>
   apiRequest<BillingProfile[]>("/billing/profiles", { requiresAuth: true });
 
+/** A single project-to-billing-profile assignment. */
+export type PayoutMappingEntry = {
+  project_id: string;
+  billing_profile_id: number | null;
+};
+
+/**
+ * Fetches the authenticated user's persisted payout mappings.
+ * Returns an empty array when none have been saved yet.
+ */
+export const getPayoutMappings = () =>
+  apiRequest<PayoutMappingEntry[]>("/profile/payout-mappings", {
+    requiresAuth: true,
+  });
+
+/**
+ * Persists project-to-billing-profile payout mappings for the authenticated user.
+ * Requires a valid session; omitting auth is blocked at the API layer.
+ */
+export const savePayoutMappings = (mappings: PayoutMappingEntry[]) =>
+  apiRequest<{ ok: boolean }>("/profile/payout-mappings", {
+    requiresAuth: true,
+    method: "PUT",
+    body: JSON.stringify({ mappings }),
+  });
+
 export const getBlogPosts = () =>
   apiRequest<BlogPost[]>("/blog/posts", { requiresAuth: false });
 
