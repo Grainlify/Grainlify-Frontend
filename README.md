@@ -144,11 +144,25 @@ pnpm run test:coverage
 
 ### Test Coverage
 
-The project maintains a **95% coverage threshold** for:
+The project enforces a **95% coverage threshold** for:
 - Lines
 - Functions
 - Branches
 - Statements
+
+These thresholds are configured in `vitest.config.ts` and are enforced in CI via the `test:coverage` step — the build fails automatically when any threshold is breached.
+
+The following are excluded from coverage measurement:
+- `src/app/components/ui/` — vendored shadcn/ui components
+- `src/imports/` — Figma-generated files
+- Test files, type declarations, and the app entry point
+
+| Metric | Threshold | Baseline |
+|--------|-----------|---------|
+| Lines | 95% | see CI run |
+| Functions | 95% | see CI run |
+| Branches | 95% | see CI run |
+| Statements | 95% | see CI run |
 
 Coverage reports are generated in the `coverage/` directory. Open `coverage/index.html` in a browser to view detailed coverage metrics.
 
