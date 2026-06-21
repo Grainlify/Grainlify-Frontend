@@ -1,6 +1,5 @@
 /**
  * API Client for Patchwork Backend
- * Base URL: http://7nonainmv1.loclx.io
  */
 
 import { API_BASE_URL } from "../config/api";
