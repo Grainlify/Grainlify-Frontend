@@ -4,6 +4,61 @@ import * as React from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Calendar } from "../../../app/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { Button } from "./button";
+import { cn } from "../../../app/components/ui/utils";
+
+/**
+ * DatePicker component
+ * @accessibility Supports keyboard navigation (Enter/Space to open, Escape to close).
+ * Focus is trapped within the calendar and returns to trigger upon selection.
+ */
+export const DatePicker = ({ date, setDate }: { date?: Date; setDate: (d: Date) => void }) => {
+  const [open, setOpen] = React.useState(false);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+
+  const handleSelect = (newDate: Date | undefined) => {
+    if (newDate) {
+      setDate(newDate);
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          ref={triggerRef}
+          variant={"outline"}
+          aria-label="Select date"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          className={cn("w-[280px] justify-start text-left font-normal")}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {date ? format(date, "PPP") : <span>Pick a date</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent 
+        className="w-auto p-0" 
+        onEscapeKeyDown={() => { setOpen(false); triggerRef.current?.focus(); }}
+      >
+        <Calendar 
+          mode="single" 
+          selected={date} 
+          onSelect={handleSelect} 
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
+};"use client";
+
+import * as React from "react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "../../../app/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../app/components/ui/popover";
 import { useTheme } from "../../contexts/ThemeContext";
 import { cn } from "../../../app/components/ui/utils";
