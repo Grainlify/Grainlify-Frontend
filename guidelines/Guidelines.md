@@ -1,3 +1,17 @@
+# Dependency Update Policy
+
+- Dependabot checks root npm/pnpm dependencies weekly on Monday at 09:00 UTC.
+- Production and development dependency updates are grouped separately to reduce
+  pull request noise while keeping review scopes clear.
+- GitHub Actions updates are configured for the same weekly window and will
+  start producing pull requests when workflow files are added under
+  `.github/workflows/`.
+- Do not auto-merge major dependency updates without a manual review and at
+  least the relevant typecheck, lint, test, or build command for the touched
+  package area.
+- Prefer small follow-up fixes over broad dependency sweeps when an update
+  exposes unrelated type or lint failures.
+
 **Add your own guidelines here**
 <!--
 
