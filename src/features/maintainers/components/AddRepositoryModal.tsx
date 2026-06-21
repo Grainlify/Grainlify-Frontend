@@ -4,6 +4,57 @@ import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { createProject, getEcosystems } from '../../../shared/api/client';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 
+const GITHUB_FULL_NAME_MAX_LENGTH = 140;
+
+/**
+ * GitHub-compatible owner/repo validator.
+ *
+ * Owners follow GitHub login rules: alphanumerics or single hyphens, no leading
+ * or trailing hyphen, up to 39 characters. Repository names may contain
+ * alphanumerics, dots, underscores, and hyphens, up to 100 characters.
+ */
+const GITHUB_OWNER_REPO_PATTERN =
+  /^([A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38})\/([A-Za-z0-9._-]{1,100})$/;
+
+function normalizeRepositoryName(value: string) {
+  return value.trim();
+}
+
+function validateRepositoryName(value: string) {
+  const normalized = normalizeRepositoryName(value);
+
+  if (!normalized) {
+    return {
+      normalized,
+      error: 'Repository name is required (format: owner/repo)',
+    };
+  }
+
+  if (normalized.length > GITHUB_FULL_NAME_MAX_LENGTH) {
+    return {
+      normalized,
+      error: 'Repository name must be 140 characters or fewer',
+    };
+  }
+
+  if (!normalized.includes('/')) {
+    return {
+      normalized,
+      error: 'Repository name must be in format: owner/repo',
+    };
+  }
+
+  if (!GITHUB_OWNER_REPO_PATTERN.test(normalized)) {
+    return {
+      normalized,
+      error:
+        'Use owner/repo with a valid GitHub owner and repository name. Owners use letters, numbers, and single hyphens; repositories may also use dots and underscores.',
+    };
+  }
+
+  return { normalized, error: null };
+}
+
 interface AddRepositoryModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -24,6 +75,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
   const [isLoadingEcosystems, setIsLoadingEcosystems] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [repositoryNameError, setRepositoryNameError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   // Load ecosystems on mount
@@ -49,16 +101,12 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setRepositoryNameError(null);
     setSuccess(false);
 
-    // Validation
-    if (!githubFullName.trim()) {
-      setError('Repository name is required (format: owner/repo)');
-      return;
-    }
-
-    if (!githubFullName.includes('/')) {
-      setError('Repository name must be in format: owner/repo');
+    const repositoryValidation = validateRepositoryName(githubFullName);
+    if (repositoryValidation.error) {
+      setRepositoryNameError(repositoryValidation.error);
       return;
     }
 
@@ -76,7 +124,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
         .filter(tag => tag.length > 0);
 
       await createProject({
-        github_full_name: githubFullName.trim(),
+        github_full_name: repositoryValidation.normalized,
         ecosystem_name: ecosystemName,
         language: language.trim() || undefined,
         tags: tagsArray.length > 0 ? tagsArray : undefined,
@@ -108,6 +156,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
   const handleClose = () => {
     if (!isSubmitting) {
       setError(null);
+      setRepositoryNameError(null);
       setSuccess(false);
       setGithubFullName('');
       setEcosystemName('');
@@ -160,7 +209,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Error Message */}
           {error && (
-            <div className={`flex items-center gap-3 p-4 rounded-[12px] border-2 ${
+            <div role="alert" aria-live="assertive" className={`flex items-center gap-3 p-4 rounded-[12px] border-2 ${
               darkTheme
                 ? 'bg-red-500/10 border-red-500/30 text-red-400'
                 : 'bg-red-100 border-red-300 text-red-700'
@@ -184,34 +233,53 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
 
           {/* Repository Name */}
           <div>
-            <label className={`block text-[14px] font-semibold mb-2 transition-colors ${
+            <label htmlFor="repository-name" className={`block text-[14px] font-semibold mb-2 transition-colors ${
               darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
             }`}>
               Repository Name <span className="text-red-500">*</span>
             </label>
             <input
+              id="repository-name"
               type="text"
               value={githubFullName}
-              onChange={(e) => setGithubFullName(e.target.value)}
+              onChange={(e) => {
+                setGithubFullName(e.target.value);
+                setRepositoryNameError(null);
+              }}
               placeholder="owner/repo (e.g., facebook/react)"
               disabled={isSubmitting}
+              maxLength={GITHUB_FULL_NAME_MAX_LENGTH}
+              aria-required="true"
+              aria-invalid={repositoryNameError ? 'true' : 'false'}
+              aria-describedby={`repository-name-help${repositoryNameError ? ' repository-name-error' : ''}`}
               className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
                 darkTheme
                   ? 'bg-white/10 border-white/20 text-[#e8dfd0] placeholder:text-[#b8a898] focus:border-[#c9983a] focus:bg-white/15'
                   : 'bg-white/40 border-white/50 text-[#2d2820] placeholder:text-[#7a6b5a] focus:border-[#c9983a] focus:bg-white/60'
               } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-              required
             />
-            <p className={`mt-1.5 text-[12px] transition-colors ${
+            <p id="repository-name-help" className={`mt-1.5 text-[12px] transition-colors ${
               darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
             }`}>
-              Enter the full repository name in format: owner/repository
+              Enter owner/repository. Owners may use letters, numbers, and single hyphens; repositories may also use dots, underscores, and hyphens.
             </p>
+            {repositoryNameError && (
+              <p
+                id="repository-name-error"
+                role="alert"
+                aria-live="assertive"
+                className={`mt-1.5 text-[12px] font-semibold ${
+                  darkTheme ? 'text-red-400' : 'text-red-700'
+                }`}
+              >
+                {repositoryNameError}
+              </p>
+            )}
           </div>
 
           {/* Ecosystem */}
           <div>
-            <label className={`block text-[14px] font-semibold mb-2 transition-colors ${
+            <label htmlFor="ecosystem-name" className={`block text-[14px] font-semibold mb-2 transition-colors ${
               darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
             }`}>
               Ecosystem <span className="text-red-500">*</span>
@@ -220,6 +288,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
               <SkeletonLoader className="h-12 w-full rounded-[12px]" />
             ) : (
               <select
+                id="ecosystem-name"
                 value={ecosystemName}
                 onChange={(e) => setEcosystemName(e.target.value)}
                 disabled={isSubmitting || ecosystems.length === 0}
