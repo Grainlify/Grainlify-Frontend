@@ -33,11 +33,25 @@ export const removeAuthToken = (): void => {
 };
 
 // API request helper
-interface ApiRequestOptions extends RequestInit {
+/**
+ * Options for API requests extending standard RequestInit
+ * @interface ApiRequestOptions
+ * @property {boolean} [requiresAuth] - Whether the request requires authentication token
+ */
+export interface ApiRequestOptions extends RequestInit {
   requiresAuth?: boolean;
 }
 
-async function apiRequest<T>(
+/**
+ * Core API request helper that handles authentication, headers, and error handling
+ * @template T - The expected response type
+ * @param {string} endpoint - API endpoint path (will be prefixed with API_BASE_URL)
+ * @param {ApiRequestOptions} options - Request options including auth requirements
+ * @returns {Promise<T>} Parsed JSON response
+ * @throws {Error} On network failures, authentication errors, or non-2xx responses
+ * @internal This function is exported for testing purposes
+ */
+export async function apiRequest<T>(
   endpoint: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
