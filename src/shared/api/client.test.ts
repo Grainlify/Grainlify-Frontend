@@ -30,7 +30,7 @@ function createMockResponse(status: number, body: unknown, ok?: boolean) {
 }
 
 function mockFetch(status: number, body: unknown, ok?: boolean) {
-  globalThis.fetch = vi.fn((_url: string, _init?: RequestInit) =>
+  globalThis.fetch = vi.fn((_url: RequestInfo | URL, _init?: RequestInit) =>
     Promise.resolve(createMockResponse(status, body, ok)),
   );
 }
@@ -42,7 +42,7 @@ function mockFetchNetworkError() {
 }
 
 function mockFetchJsonError() {
-  globalThis.fetch = vi.fn((_url: string, _init?: RequestInit) =>
+  globalThis.fetch = vi.fn((_url: RequestInfo | URL, _init?: RequestInit) =>
     Promise.resolve({
       ok: true,
       status: 200,
