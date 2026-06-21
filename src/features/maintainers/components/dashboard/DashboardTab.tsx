@@ -23,9 +23,10 @@ interface DashboardTabProps {
   isLoadingProjects?: boolean;
   onRefresh?: () => void;
   onNavigateToIssue?: (issueId: string, projectId: string) => void;
+  onNavigateToPR?: (prId: string, projectFullName: string) => void;
 }
 
-export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRefresh, onNavigateToIssue }: DashboardTabProps) {
+export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRefresh, onNavigateToIssue, onNavigateToPR }: DashboardTabProps) {
   const { theme } = useTheme();
   const [issues, setIssues] = useState<any[]>([]);
   const [prs, setPrs] = useState<any[]>([]);
@@ -243,6 +244,7 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
         type: 'pr',
         number: pr.number,
         title: pr.title,
+        projectName: pr.projectName,
         label: pr.merged ? 'Merged' : pr.state === 'open' ? 'Open' : 'Closed',
         timeAgo: pr.updated_at
           ? formatTimeAgo(new Date(pr.updated_at))
@@ -356,6 +358,8 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
                         onClick={() => {
                           if (activity.type === 'issue' && activity.projectId && onNavigateToIssue) {
                             onNavigateToIssue(activity.id.toString(), activity.projectId);
+                          } else if (activity.type === 'pr' && activity.projectName && onNavigateToPR) {
+                            onNavigateToPR(activity.id.toString(), activity.projectName);
                           }
                         }}
                       />
