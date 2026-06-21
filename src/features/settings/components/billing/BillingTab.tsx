@@ -1,7 +1,8 @@
 import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Loader2, AlertCircle, Info, ChevronDown, MessageSquare } from 'lucide-react';
-import { BillingProfile, BillingProfileType, BillingProfileStatus, ProfileDetailTabType, PaymentMethod } from '../../types';
+import { toast } from 'sonner';
+import { BillingProfile, BillingProfileType, BillingProfileStatus, ProfileDetailTabType, PaymentMethod, Invoice } from '../../types';
 import { getBillingProfiles } from "../../../../shared/api/client";
 import { sampleInvoices } from '../../data/invoicesData';
 import { BillingProfileCard } from './BillingProfileCard';
@@ -149,7 +150,12 @@ export function BillingTab() {
     if (profileType === 'individual') {
       const existingIndividual = profiles.find(p => p.type === 'individual');
       if (existingIndividual) {
-        alert('An individual billing profile already exists. You can only create one individual profile.');
+        /**
+         * Error Path: Block duplicate individual profiles.
+         * Uses sonner toast instead of native alert to ensure screen readers announce
+         * the error properly without blocking the main thread, maintaining visual consistency.
+         */
+        toast.error('An individual billing profile already exists. You can only create one individual profile.');
         return;
       }
     }
@@ -856,7 +862,6 @@ export function BillingTab() {
                 </button>
                 <button
                   onClick={handleCreateProfile}
-                  disabled={profileType === 'individual' && profiles.some(p => p.type === 'individual')}
                   className="flex-1 px-6 py-3 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[14px] shadow-[0_4px_16px_rgba(162,121,44,0.3)] hover:shadow-[0_6px_20px_rgba(162,121,44,0.4)] transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Create

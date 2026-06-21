@@ -4,6 +4,39 @@ import { Plus, Trash2, Wallet, Copy, CheckCircle2, Star, X } from 'lucide-react'
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { PaymentMethod, EcosystemType, CryptoType } from '../../types';
 
+/**
+ * Validates a Stellar wallet address format.
+ *
+ * Stellar addresses are base32-encoded using characters A-Z and 2-7:
+ * - Ed25519 public keys: 56 characters, starting with 'G'
+ * - Muxed accounts: 69 characters, starting with 'M'
+ * - Contract accounts: 56 characters, starting with 'C'
+ *
+ * @param address - Raw wallet address input (will be trimmed before validation)
+ * @returns An error message string if invalid, or `null` if the address is valid
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function validateWalletAddress(address: string): string | null {
+  const trimmed = address.trim();
+  if (!trimmed) return null;
+
+  const prefix = trimmed[0];
+  if (!['G', 'M', 'C'].includes(prefix)) {
+    return 'Wallet address must start with G, M, or C';
+  }
+
+  const expectedLength = prefix === 'M' ? 69 : 56;
+  if (trimmed.length !== expectedLength) {
+    return `Wallet address must be exactly ${expectedLength} characters`;
+  }
+
+  if (!/^[A-Z2-7]+$/.test(trimmed)) {
+    return 'Wallet address contains invalid characters (only A-Z and 2-7 allowed)';
+  }
+
+  return null;
+}
+
 interface PaymentMethodsTabProps {
   paymentMethods: PaymentMethod[];
   onAddPaymentMethod: (method: PaymentMethod) => void;
@@ -22,25 +55,36 @@ export function PaymentMethodsTab({
   const selectedEcosystem: EcosystemType = 'stellar';
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoType>('usdc');
   const [walletAddress, setWalletAddress] = useState('');
+  const [walletAddressError, setWalletAddressError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const getAvailableCryptos = (): CryptoType[] => ['usdc', 'usdt', 'xlm'];
 
   const handleAddPaymentMethod = () => {
-    if (!walletAddress.trim()) return;
+    const trimmed = walletAddress.trim();
+    if (!trimmed) return;
+
+    const error = validateWalletAddress(trimmed);
+    if (error) {
+      setWalletAddressError(error);
+      return;
+    }
+
+    setWalletAddressError(null);
 
     const newMethod: PaymentMethod = {
       id: Date.now(),
       ecosystem: selectedEcosystem,
       cryptoType: selectedCrypto,
-      walletAddress: walletAddress,
-      isDefault: paymentMethods.length === 0, // First one is default
+      walletAddress: trimmed,
+      isDefault: paymentMethods.length === 0,
       createdAt: new Date().toISOString(),
     };
 
     onAddPaymentMethod(newMethod);
     setShowAddModal(false);
     setWalletAddress('');
+    setWalletAddressError(null);
     setSelectedCrypto('usdc');
   };
 
@@ -218,7 +262,10 @@ export function PaymentMethodsTab({
                 theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
               }`}>Add Payment Method</h3>
               <button 
-                onClick={() => setShowAddModal(false)} 
+                onClick={() => {
+                  setShowAddModal(false);
+                  setWalletAddressError(null);
+                }}
                 className={`w-8 h-8 rounded-[10px] backdrop-blur-[20px] border flex items-center justify-center transition-all ${
                   theme === 'dark'
                     ? 'bg-white/[0.1] hover:bg-white/[0.15] border-white/20'
@@ -272,14 +319,24 @@ export function PaymentMethodsTab({
                 <input
                   type="text"
                   value={walletAddress}
-                  onChange={(e) => setWalletAddress(e.target.value)}
+                  onChange={(e) => {
+                    setWalletAddress(e.target.value);
+                    if (walletAddressError) setWalletAddressError(null);
+                  }}
                   placeholder={`Enter your ${getCryptoLabel(selectedCrypto)} wallet address`}
                   className={`w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none text-[14px] font-mono transition-all ${
                     theme === 'dark'
                       ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#8a7e70]/50 focus:border-[#c9983a]/40'
                       : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]/50 focus:bg-white/[0.2] focus:border-[#c9983a]/40'
                   }`}
+                  aria-invalid={walletAddressError ? true : undefined}
+                  aria-describedby={walletAddressError ? 'wallet-address-error' : undefined}
                 />
+                {walletAddressError && (
+                  <p id="wallet-address-error" role="alert" className="text-[12px] mt-1 text-red-500">
+                    {walletAddressError}
+                  </p>
+                )}
                 <p className={`text-[12px] mt-2 transition-colors ${
                   theme === 'dark' ? 'text-[#8a7e70]' : 'text-[#9a8b7a]'
                 }`}>
@@ -290,7 +347,10 @@ export function PaymentMethodsTab({
 
             <div className="flex items-center gap-3 mt-6">
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setWalletAddressError(null);
+                }}
                 className={`flex-1 px-6 py-3 rounded-[12px] backdrop-blur-[30px] border font-medium text-[14px] transition-all ${
                   theme === 'dark'
                     ? 'bg-white/[0.08] border-white/20 text-[#d4c5b0] hover:bg-white/[0.12]'
@@ -301,7 +361,7 @@ export function PaymentMethodsTab({
               </button>
               <button
                 onClick={handleAddPaymentMethod}
-                disabled={!walletAddress.trim()}
+                disabled={!walletAddress.trim() || !!walletAddressError}
                 className="flex-1 px-6 py-3 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[14px] shadow-[0_4px_16px_rgba(162,121,44,0.3)] hover:shadow-[0_6px_20px_rgba(162,121,44,0.4)] transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Wallet
