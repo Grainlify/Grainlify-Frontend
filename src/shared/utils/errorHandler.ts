@@ -8,7 +8,7 @@ export function getUserFriendlyError(error: unknown): string {
 
   const errorMessage = error instanceof Error ? error.message : String(error);
 
-  // Network errors
+  /** Network errors: connectivity failures should not expose transport details. */
   if (
     errorMessage.includes('Network error') ||
     errorMessage.includes('fetch') ||
@@ -18,7 +18,7 @@ export function getUserFriendlyError(error: unknown): string {
     return 'Unable to connect to the server. Please check your internet connection and try again.';
   }
 
-  // Authentication errors
+  /** Authentication errors: expired or invalid sessions should prompt re-authentication. */
   if (
     errorMessage.includes('Authentication failed') ||
     errorMessage.includes('Unauthorized') ||
@@ -27,7 +27,7 @@ export function getUserFriendlyError(error: unknown): string {
     return 'Your session has expired. Please sign in again.';
   }
 
-  // Server errors
+  /** Server errors: backend failures should be reported without leaking internals. */
   if (
     errorMessage.includes('500') ||
     errorMessage.includes('Internal Server Error') ||
@@ -36,7 +36,7 @@ export function getUserFriendlyError(error: unknown): string {
     return 'Our servers are experiencing issues. Please try again in a few moments.';
   }
 
-  // Not found errors
+  /** Not-found errors: missing resources should get a stable user-facing message. */
   if (
     errorMessage.includes('404') ||
     errorMessage.includes('Not Found') ||
@@ -45,7 +45,7 @@ export function getUserFriendlyError(error: unknown): string {
     return 'The requested resource could not be found.';
   }
 
-  // Timeout errors
+  /** Timeout errors: slow requests should guide users to retry. */
   if (
     errorMessage.includes('timeout') ||
     errorMessage.includes('Timeout') ||
@@ -54,7 +54,7 @@ export function getUserFriendlyError(error: unknown): string {
     return 'The request took too long. Please try again.';
   }
 
-  // Invalid response format
+  /** Invalid response errors: malformed API responses should remain generic. */
   if (
     errorMessage.includes('Invalid response') ||
     errorMessage.includes('Invalid response format')
@@ -62,7 +62,7 @@ export function getUserFriendlyError(error: unknown): string {
     return 'We received an unexpected response from the server. Please try again.';
   }
 
-  // Generic API errors
+  /** Generic API errors: failed requests should avoid raw request details. */
   if (
     errorMessage.includes('API request failed') ||
     errorMessage.includes('request failed')
