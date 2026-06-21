@@ -1,4 +1,3 @@
-import { logger } from '../../shared/utils/logger';
 import { Bell } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 import { useState, useEffect } from "react";
@@ -10,30 +9,34 @@ import {
 } from "../../app/components/ui/dropdown-menu";
 
 interface NotificationsDropdownProp {
-     showMobileNav: boolean; 
-     closeMobileNav:() => void; 
+     showMobileNav: boolean;
+     closeMobileNav:() => void;
+     /**
+      * Seed value for the unread badge. The notifications API is not wired up
+      * yet, so the count defaults to 0 (badge hidden). This is also the hook
+      * tests use to render the badge in a known unread state.
+      */
+     initialUnreadCount?: number;
 }
-export function NotificationsDropdown({showMobileNav}:NotificationsDropdownProp) {
+export function NotificationsDropdown({showMobileNav, initialUnreadCount = 0}:NotificationsDropdownProp) {
   const { theme } = useTheme();
   const darkTheme = theme === "dark";
-  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(initialUnreadCount);
 
-  // Use real count when notifications API is available; until then show 0 (badge hidden)
+  // Keep the badge in sync with the seeded count. When the notifications API is
+  // wired up, replace this with the fetched count (wrap the async call in
+  // try/catch and fall back to 0 on failure).
   useEffect(() => {
-    const fetchNotificationCount = async () => {
-      try {
-        // When backend provides GET /notifications/count or similar, wire it here:
-        // const data = await getNotificationCount();
-        // setNotificationCount(data.count ?? 0);
-        setNotificationCount(0);
-      } catch (error) {
-        logger.error("Failed to fetch notification count:", error);
-        setNotificationCount(0);
-      }
-    };
+    setNotificationCount(initialUnreadCount);
+  }, [initialUnreadCount]);
 
-    fetchNotificationCount();
-  }, []);
+  // Opening the dropdown means the user has seen their notifications, so clear
+  // the unread badge ("mark as read on open").
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      setNotificationCount(0);
+    }
+  };
 
   // Format count for display (99+ for counts over 99)
   const formatCount = (count: number): string => {
@@ -41,9 +44,14 @@ export function NotificationsDropdown({showMobileNav}:NotificationsDropdownProp)
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <button
+          aria-label={
+            notificationCount > 0
+              ? `Notifications, ${notificationCount} unread`
+              : "Notifications"
+          }
           className={`h-[46px] w-[46px] rounded-full relative items-center justify-center backdrop-blur-[40px] transition-all hover:scale-105 shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] ${
             darkTheme ? "bg-[#2d2820] " : "bg-[#d4c5b0] "
           }
