@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from 'react'
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ErrorBoundary } from './ErrorBoundary'
 import { logger } from '../utils/logger'
@@ -117,6 +117,16 @@ describe('ErrorBoundary', () => {
 
     await waitFor(() => expect(screen.getByText('Recovered child')).toBeInTheDocument())
     expect(screen.queryByRole('heading', { name: 'Something went wrong' })).not.toBeInTheDocument()
+  })
+
+  it('keeps the home navigation action available from the fallback', () => {
+    renderWithTheme(
+      <ErrorBoundary>
+        <FailingChild />
+      </ErrorBoundary>
+    )
+
+    expect(() => fireEvent.click(screen.getByRole('button', { name: 'Go to Home' }))).not.toThrow()
   })
 
   it('does not expose error details in production fallback UI', () => {
