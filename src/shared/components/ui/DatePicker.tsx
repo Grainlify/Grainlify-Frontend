@@ -18,6 +18,37 @@ interface DatePickerProps {
   error?: string | null; // ADDED: Error message support
 }
 
+const LOCAL_CALENDAR_HOUR = 12;
+
+/**
+ * DatePicker treats `YYYY-MM-DD` as a local calendar day. Using local noon
+ * avoids UTC-midnight and DST boundaries shifting the rendered date.
+ */
+export function parseDatePickerValue(value: string) {
+  if (!value) return undefined;
+
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return undefined;
+
+  const parsedDate = new Date(year, month - 1, day, LOCAL_CALENDAR_HOUR);
+  if (
+    parsedDate.getFullYear() !== year ||
+    parsedDate.getMonth() !== month - 1 ||
+    parsedDate.getDate() !== day
+  ) {
+    return undefined;
+  }
+
+  return parsedDate;
+}
+
+/**
+ * Formats a selected local calendar day without converting it through UTC.
+ */
+export function formatDatePickerValue(date: Date) {
+  return format(date, "yyyy-MM-dd");
+}
+
 export function DatePicker({
   label,
   value,
@@ -33,24 +64,16 @@ export function DatePicker({
   // ADDED: Check if there's an error
   const isError = !!error;
 
-  // Parse the date value (YYYY-MM-DD format)
-  // Parse as UTC to avoid timezone issues
+  // Parse and format on the same local-calendar basis to avoid off-by-one days.
   const date = React.useMemo(() => {
-    if (!value) return undefined;
-    try {
-      const [year, month, day] = value.split('-').map(Number);
-      if (isNaN(year) || isNaN(month) || isNaN(day)) return undefined;
-      return new Date(Date.UTC(year, month - 1, day));
-    } catch {
-      return undefined;
-    }
+    return parseDatePickerValue(value);
   }, [value]);
 
   // Handle date selection
   const handleSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
       // Format as YYYY-MM-DD
-      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+      const formattedDate = formatDatePickerValue(selectedDate);
       onChange(formattedDate);
       setOpen(false);
     }
