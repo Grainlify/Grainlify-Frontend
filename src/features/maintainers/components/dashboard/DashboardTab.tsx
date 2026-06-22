@@ -23,9 +23,10 @@ interface DashboardTabProps {
   isLoadingProjects?: boolean;
   onRefresh?: () => void;
   onNavigateToIssue?: (issueId: string, projectId: string) => void;
+  onNavigateToPR?: (prId: string) => void;
 }
 
-export function DashboardTab({ selectedProjects, isLoadingProjects = false, onNavigateToIssue }: DashboardTabProps) {
+export function DashboardTab({ selectedProjects, isLoadingProjects = false, onNavigateToIssue, onNavigateToPR }: DashboardTabProps) {
   const { theme } = useTheme();
   const [issues, setIssues] = useState<any[]>([]);
   const [prs, setPrs] = useState<any[]>([]);
@@ -34,6 +35,22 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onNa
 
   // Show loading when parent is loading projects OR when we're loading dashboard data
   const showLoading = isLoadingProjects || isLoading;
+
+  /**
+   * Return a navigation handler only when the activity row has a valid destination.
+   * Issue activities require a project destination. PR activities require a PR navigator.
+   */
+  const getActivityClickHandler = (activity: Activity) => {
+    if (activity.type === 'issue' && activity.projectId && onNavigateToIssue) {
+      return () => onNavigateToIssue(activity.id.toString(), activity.projectId);
+    }
+
+    if (activity.type === 'pr' && onNavigateToPR) {
+      return () => onNavigateToPR(activity.id.toString());
+    }
+
+    return undefined;
+  };
 
   // Fetch data from selected projects (only when parent has finished loading and we have projects)
   useEffect(() => {
@@ -353,11 +370,7 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onNa
                         key={activity.id}
                         activity={activity}
                         index={idx}
-                        onClick={() => {
-                          if (activity.type === 'issue' && activity.projectId && onNavigateToIssue) {
-                            onNavigateToIssue(activity.id.toString(), activity.projectId);
-                          }
-                        }}
+                        onClick={getActivityClickHandler(activity)}
                       />
                     ))
                   )}
