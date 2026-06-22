@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import * as React from "react";
 import { DatePicker, parseUtcDate, formatUtcDate } from "./DatePicker";
 import { renderWithTheme } from "../../../test/renderWithTheme";
 

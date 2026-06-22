@@ -5,3 +5,4 @@ export { FilterDropdown } from './FilterDropdown';
 export { GlassDropdown } from './GlassDropdown';
 export { RoleGuard } from './RoleGuard';
 export type { RoleGuardProps, AllowedRole } from './RoleGuard';
+export { ScrollToTop } from './ScrollToTop';

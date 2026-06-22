@@ -9,6 +9,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/cypress/**', '**/.{idea,git,cache,output,temp}/**'],
+    // Provide the backend URL the app config validates at import time so tests
+    // that pull in the shared module barrel don't trip env validation.
+    env: {
+      VITE_API_BASE_URL: 'http://localhost:8080',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
