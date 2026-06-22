@@ -214,7 +214,7 @@ The project enforces a **95% coverage threshold** for:
 
 These thresholds are configured in `vitest.config.ts` and are enforced in CI via the `test:coverage` step — the build fails automatically when any threshold is breached.
 
-The following are excluded from coverage measurement:
+Coverage is measured only for source files actually exercised by the test suite (files not imported by any test are excluded automatically). Additionally excluded:
 - `src/app/components/ui/` — vendored shadcn/ui components
 - `src/imports/` — Figma-generated files
 - Test files, type declarations, and the app entry point
