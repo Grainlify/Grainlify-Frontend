@@ -27,8 +27,10 @@ import {
 import { NotFoundPage } from "../shared/components/NotFoundPage";
 import { RoleGuard } from "../shared/components/RoleGuard";
 import Toast from "../shared/components/Toast";
+import { ScrollToTop } from "../shared/components/ScrollToTop";
+import React from 'react';
 
-function ProtectedRoute({ children }: { children: JSX.Element }) {
+function ProtectedRoute({ children }: { children: React.JSX.Element }) {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   if (isLoading) return children; // let AuthProvider finish initial check
@@ -45,7 +47,16 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <div className="overflow-x-hidden">
+          <ScrollToTop />
+          {/* Skip link: visible on keyboard focus, hidden otherwise */}
+          <a
+            href="#main"
+            id="skip-target"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-black focus:shadow"
+          >
+            Skip to main content
+          </a>
+          <main id="main" tabIndex={-1} className="outline-none overflow-x-hidden">
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/signin" element={<SignInPage />} />
@@ -84,7 +95,7 @@ export default function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <Toast />
-          </div>
+          </main>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

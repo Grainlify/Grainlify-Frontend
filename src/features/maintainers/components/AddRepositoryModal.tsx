@@ -4,6 +4,75 @@ import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { createProject, getEcosystems } from '../../../shared/api/client';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 
+/**
+ * Regex matching GitHub username rules:
+ * - Alphanumeric characters and single hyphens.
+ * - Cannot start or end with a hyphen.
+ * - Maximum length of 39 characters.
+ */
+const GITHUB_OWNER_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/;
+
+/**
+ * Regex matching GitHub repository name rules:
+ * - Alphanumeric characters, hyphens, underscores, and periods.
+ * - Cannot be "." or "..".
+ * - Maximum length of 100 characters.
+ */
+const GITHUB_REPO_REGEX = /^[a-zA-Z0-9._-]{1,100}$/;
+
+/**
+ * Validates a GitHub repository identifier format (owner/repo).
+ *
+ * Rules:
+ * - Owner: Alphanumeric and single hyphens, 1-39 characters, no leading/trailing hyphen.
+ * - Repo: Alphanumeric, hyphens, underscores, and periods, 1-100 characters, cannot be "." or "..".
+ *
+ * @param value - The raw repository name input
+ * @returns An error message string if invalid, or null if valid
+ */
+export const validateRepoFormat = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'Repository name is required (format: owner/repo)';
+  }
+
+  if (trimmed.length > 140) {
+    return 'Repository identifier is too long (maximum 140 characters)';
+  }
+
+  if (!trimmed.includes('/')) {
+    return 'Repository name must be in format: owner/repo';
+  }
+
+  const parts = trimmed.split('/');
+  if (parts.length !== 2) {
+    return 'Repository name must contain exactly one slash in format: owner/repo';
+  }
+
+  const [owner, repo] = parts;
+
+  if (!owner) {
+    return 'Owner segment cannot be empty';
+  }
+  if (!repo) {
+    return 'Repository segment cannot be empty';
+  }
+
+  if (!GITHUB_OWNER_REGEX.test(owner)) {
+    return 'Owner name must contain only alphanumeric characters and single hyphens, and cannot start or end with a hyphen (max 39 characters)';
+  }
+
+  if (repo === '.' || repo === '..') {
+    return 'Repository name cannot be "." or ".."';
+  }
+
+  if (!GITHUB_REPO_REGEX.test(repo)) {
+    return 'Repository name must contain only alphanumeric characters, hyphens, underscores, and periods (max 100 characters)';
+  }
+
+  return null;
+};
+
 interface AddRepositoryModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -24,6 +93,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
   const [isLoadingEcosystems, setIsLoadingEcosystems] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputError, setInputError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   // Load ecosystems on mount
@@ -49,16 +119,13 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setInputError(null);
     setSuccess(false);
 
     // Validation
-    if (!githubFullName.trim()) {
-      setError('Repository name is required (format: owner/repo)');
-      return;
-    }
-
-    if (!githubFullName.includes('/')) {
-      setError('Repository name must be in format: owner/repo');
+    const validationError = validateRepoFormat(githubFullName);
+    if (validationError) {
+      setInputError(validationError);
       return;
     }
 
@@ -87,6 +154,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
       
       // Reset form
       setGithubFullName('');
+      setInputError(null);
       setEcosystemName('');
       setLanguage('');
       setTags('');
@@ -108,6 +176,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
   const handleClose = () => {
     if (!isSubmitting) {
       setError(null);
+      setInputError(null);
       setSuccess(false);
       setGithubFullName('');
       setEcosystemName('');
@@ -184,28 +253,64 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
 
           {/* Repository Name */}
           <div>
-            <label className={`block text-[14px] font-semibold mb-2 transition-colors ${
-              darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-            }`}>
+            <label 
+              htmlFor="github-fullname-input"
+              className={`block text-[14px] font-semibold mb-2 transition-colors ${
+                darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+              }`}
+            >
               Repository Name <span className="text-red-500">*</span>
             </label>
             <input
+              id="github-fullname-input"
               type="text"
               value={githubFullName}
-              onChange={(e) => setGithubFullName(e.target.value)}
+              onChange={(e) => {
+                setGithubFullName(e.target.value);
+                if (inputError) {
+                  setInputError(null);
+                }
+              }}
+              onBlur={() => {
+                const validationError = validateRepoFormat(githubFullName);
+                setInputError(validationError);
+              }}
               placeholder="owner/repo (e.g., facebook/react)"
               disabled={isSubmitting}
+              maxLength={140}
+              aria-invalid={!!inputError}
+              aria-describedby={inputError ? "github-fullname-error" : "github-fullname-help"}
               className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
                 darkTheme
                   ? 'bg-white/10 border-white/20 text-[#e8dfd0] placeholder:text-[#b8a898] focus:border-[#c9983a] focus:bg-white/15'
                   : 'bg-white/40 border-white/50 text-[#2d2820] placeholder:text-[#7a6b5a] focus:border-[#c9983a] focus:bg-white/60'
-              } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''} ${
+                inputError
+                  ? darkTheme
+                    ? 'border-red-500/50 focus:border-red-500'
+                    : 'border-red-400 focus:border-red-500'
+                  : ''
+              }`}
               required
             />
-            <p className={`mt-1.5 text-[12px] transition-colors ${
-              darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-            }`}>
-              Enter the full repository name in format: owner/repository
+            {inputError && (
+              <p
+                id="github-fullname-error"
+                role="alert"
+                className={`mt-1.5 text-[12px] font-medium transition-colors ${
+                  darkTheme ? 'text-red-400' : 'text-red-600'
+                }`}
+              >
+                {inputError}
+              </p>
+            )}
+            <p 
+              id="github-fullname-help"
+              className={`mt-1.5 text-[12px] transition-colors ${
+                darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              Enter the full repository name in format: owner/repository. Owner name can contain letters, numbers, and hyphens (max 39 characters, no leading/trailing/consecutive hyphens). Repository name can contain letters, numbers, hyphens, underscores, and periods (max 100 characters).
             </p>
           </div>
 
