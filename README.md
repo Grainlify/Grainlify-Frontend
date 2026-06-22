@@ -217,6 +217,29 @@ Contributions are welcome! Please ensure your changes:
 - Support both light and dark themes
 - Are responsive across device sizes
 
+### Dependency Management
+
+This project uses [Dependabot](https://docs.github.com/en/code-security/dependabot) to automate dependency updates. Configuration lives in [`.github/dependabot.yml`](./.github/dependabot.yml).
+
+**Update Schedule:**
+- PRs are opened **every Monday at 09:00 UTC**
+- **npm** (pnpm) packages from the root `package.json`
+- **GitHub Actions** from `.github/workflows/` (activates when workflows are added)
+
+**Grouping Strategy:**
+- Related packages (Radix UI, MUI/Emotion, testing tools, linting, React core, build tooling) are grouped into single PRs
+- All patch-level updates across unrelated packages are batched together
+- Major version bumps always arrive as individual PRs for careful review
+
+**Reviewing a Dependabot PR:**
+1. Check the PR description for release notes and changelog links
+2. Verify CI passes (lint, typecheck, tests, bundle size)
+3. Merge if all checks are green and the changelog shows no breaking changes
+
+**Pinned Dependencies:**
+- `vite` is pinned to 6.3.x via `pnpm.overrides` — Dependabot will not propose upgrades beyond this range
+- `@types/react` and `@types/react-dom` are pinned to v18 via `pnpm.overrides` — Dependabot will not propose v19+
+
 ## Security Notes
 
 - **JWT Storage**: Tokens are stored in `localStorage` under the key `patchwork_jwt`
