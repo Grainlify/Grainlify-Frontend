@@ -63,7 +63,7 @@ export interface UseFocusTrapOptions {
    * Element to focus when the trap activates. When omitted the first focusable
    * descendant is used, falling back to the container itself.
    */
-  initialFocusRef?: RefObject<HTMLElement | null>;
+  initialFocusRef?: RefObject<HTMLElement>;
   /**
    * Whether focus is restored to the previously focused element when the trap
    * deactivates (default `true`). This is the "return focus to trigger"
@@ -96,7 +96,7 @@ export interface UseFocusTrapOptions {
 export function useFocusTrap<T extends HTMLElement = HTMLElement>(
   isActive: boolean,
   options: UseFocusTrapOptions = {},
-): RefObject<T | null> {
+): RefObject<T> {
   const { onEscape, initialFocusRef, returnFocus = true } = options;
   const containerRef = useRef<T>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
