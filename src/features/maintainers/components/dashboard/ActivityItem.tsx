@@ -8,8 +8,34 @@ interface ActivityItemProps {
   onClick?: () => void;
 }
 
+/**
+ * ActivityItem
+ *
+ * Navigation behaviour:
+ * - The row is interactive only when an `onClick` handler is provided by the parent.
+ * - When interactive, the element gets `role="button"`, `tabIndex=0`, and supports
+ *   keyboard activation via Enter and Space (calls `onClick`).
+ * - Parent components should supply `onClick` only when there is a valid destination
+ *   (e.g. issues -> Issues view, PRs -> Pull Requests view). If no destination exists,
+ *   omit `onClick` to render a non-interactive row.
+ */
 export function ActivityItem({ activity, index, onClick }: ActivityItemProps) {
   const { theme } = useTheme();
+
+  /**
+   * Activity rows are optionally interactive.
+   * When an onClick handler is provided, the row behaves like a button
+   * and supports Enter/Space activation for keyboard users.
+   */
+  const isClickable = Boolean(onClick);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!isClickable) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick?.();
+    }
+  };
 
   const getPRIconColor = () => {
     if (activity.type !== 'pr') return '';
@@ -28,8 +54,11 @@ export function ActivityItem({ activity, index, onClick }: ActivityItemProps) {
 
   return (
     <div
-      onClick={onClick}
-      className={`backdrop-blur-[25px] rounded-[14px] border p-4 hover:border-[#c9983a]/30 transition-all duration-300 group/item cursor-pointer ${theme === 'dark'
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onClick={isClickable ? onClick : undefined}
+      onKeyDown={handleKeyDown}
+      className={`backdrop-blur-[25px] rounded-[14px] border p-4 hover:border-[#c9983a]/30 transition-all duration-300 group/item ${isClickable ? 'cursor-pointer' : 'cursor-default'} ${theme === 'dark'
           ? 'bg-white/[0.08] border-white/10 hover:bg-white/[0.12]'
           : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.22]'
         }`}

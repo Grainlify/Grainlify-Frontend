@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider, useAuth } from "../shared/contexts/AuthContext";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "../shared/contexts/AuthContext";
 import { ThemeProvider } from "../shared/contexts/ThemeContext";
 import { LandingPage } from "../features/landing";
 import { SignInPage, SignUpPage, AuthCallbackPage } from "../features/auth";
@@ -26,21 +26,19 @@ import {
 } from "../features/dashboard/routeWrappers";
 import { NotFoundPage } from "../shared/components/NotFoundPage";
 import { RoleGuard } from "../shared/components/RoleGuard";
+import { AuthGuard } from "../shared/components/AuthGuard";
 import Toast from "../shared/components/Toast";
 import { I18nProvider } from "../shared/i18n";
 import { ScrollToTop } from "../shared/components/ScrollToTop";
 import React from 'react';
 
-function ProtectedRoute({ children }: { children: React.JSX.Element }) {
-  const { isAuthenticated, isLoading } = useAuth();
-  const location = useLocation();
-  if (isLoading) return children; // let AuthProvider finish initial check
-  if (!isAuthenticated) {
-    const returnTo = location.pathname + (location.search || "");
-    const signinUrl = returnTo ? `/signin?returnTo=${encodeURIComponent(returnTo)}` : "/signin";
-    return <Navigate to={signinUrl} replace />;
-  }
-  return children;
+/**
+ * Applies the three-state authentication boundary to protected routes.
+ * Loading renders only the guard fallback, authenticated renders the route,
+ * and unauthenticated redirects to sign in while preserving `returnTo`.
+ */
+export function ProtectedRoute({ children }: { children: React.JSX.Element }) {
+  return <AuthGuard>{children}</AuthGuard>;
 }
 
 export default function App() {
