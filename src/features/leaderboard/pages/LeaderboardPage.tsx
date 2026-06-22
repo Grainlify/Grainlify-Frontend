@@ -130,6 +130,7 @@ export function LeaderboardPage() {
             const activity =
               openIssues > 10 ? "Very High" : openIssues > 5 ? "High" : openIssues > 2 ? "Medium" : "Low";
             return {
+              id: p.id,
               rank: idx + 1,
               name: repoName,
               logo: getProjectIcon(p.github_full_name),
