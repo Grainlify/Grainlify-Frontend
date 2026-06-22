@@ -1,4 +1,5 @@
-import { test as base } from '@playwright/test';
+/* eslint-disable react-hooks/rules-of-hooks */
+import { test as base, Route } from '@playwright/test';
 
 /**
  * Interface representing mock user profile details.
@@ -15,7 +16,8 @@ export interface MockUser {
 }
 
 /**
- * Fixture options and helpers for setting up mocked E2E authentication.
+ * Fixture options and helpers for setting up mocked E2E authentication,
+ * browse data, and leaderboard data.
  */
 export interface AuthFixtures {
   /**
@@ -23,10 +25,41 @@ export interface AuthFixtures {
    * Stubs out `/me` profile check, stats, and recommended projects.
    */
   setupMockAuth: (user?: MockUser) => Promise<void>;
+  /**
+   * Helper to mock the browse page API endpoints: ecosystems and
+   * paginated projects list.
+   * @param options.totalProjects - Total projects available (default 30).
+   */
+  setupMockBrowse: (options?: { totalProjects?: number }) => Promise<void>;
 }
 
 /**
- * Custom Playwright test fixture to allow stubbing of the backend auth state.
+ * Build a single entry in the projects array returned by the mock browse API.
+ */
+function buildMockProject(index: number) {
+  return {
+    id: `proj-${index}`,
+    github_full_name: `owner/project-${index}`,
+    language: 'TypeScript',
+    tags: ['e2e', 'test'],
+    category: 'Testing',
+    stars_count: index * 10,
+    forks_count: index * 2,
+    contributors_count: index,
+    open_issues_count: index % 5,
+    open_prs_count: index % 3,
+    ecosystem_name: 'Test Ecosystem',
+    ecosystem_slug: 'test-ecosystem',
+    description: `E2e test project number ${index}`,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+
+/**
+ * Custom Playwright test fixture to allow stubbing of the backend auth state,
+ * browse pagination, and leaderboard data.
  */
 export const test = base.extend<AuthFixtures>({
   setupMockAuth: async ({ page }, use) => {
@@ -42,7 +75,6 @@ export const test = base.extend<AuthFixtures>({
     };
 
     const setupMockAuthFn = async (user: MockUser = defaultUser) => {
-      // Intercept profile fetch /me
       await page.route('**/me', async (route) => {
         await route.fulfill({
           status: 200,
@@ -51,7 +83,6 @@ export const test = base.extend<AuthFixtures>({
         });
       });
 
-      // Intercept landing stats
       await page.route('**/stats/landing', async (route) => {
         await route.fulfill({
           status: 200,
@@ -64,7 +95,6 @@ export const test = base.extend<AuthFixtures>({
         });
       });
 
-      // Intercept recommended projects for the dashboard discover page
       await page.route('**/projects/recommended*', async (route) => {
         await route.fulfill({
           status: 200,
@@ -92,7 +122,6 @@ export const test = base.extend<AuthFixtures>({
         });
       });
 
-      // Intercept issues for the discover page
       await page.route('**/projects/proj-1/issues/public', async (route) => {
         await route.fulfill({
           status: 200,
@@ -118,6 +147,56 @@ export const test = base.extend<AuthFixtures>({
     };
 
     await use(setupMockAuthFn);
+  },
+
+  setupMockBrowse: async ({ page }, use) => {
+    const setupMockBrowseFn = async (options?: { totalProjects?: number }) => {
+      const total = options?.totalProjects ?? 30;
+
+      await page.route('**/ecosystems', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ecosystems: [
+              {
+                id: 'eco-1',
+                slug: 'test-ecosystem',
+                name: 'Test Ecosystem',
+                description: 'A test ecosystem for e2e',
+                logo_url: null,
+                website_url: null,
+                status: 'active',
+                project_count: total,
+                user_count: 100,
+                created_at: '2026-01-01T00:00:00Z',
+                updated_at: '2026-01-01T00:00:00Z',
+              },
+            ],
+          }),
+        });
+      });
+
+      await page.route(/\/projects\?/, async (route) => {
+        const url = new URL(route.request().url());
+        const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+        const limit = parseInt(url.searchParams.get('limit') || '12', 10);
+
+        const remaining = Math.max(0, total - offset);
+        const count = Math.min(limit, remaining);
+        const projects = Array.from({ length: count }, (_, i) =>
+          buildMockProject(offset + i + 1),
+        );
+
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ projects, total, limit, offset }),
+        });
+      });
+    };
+
+    await use(setupMockBrowseFn);
   },
 });
 
