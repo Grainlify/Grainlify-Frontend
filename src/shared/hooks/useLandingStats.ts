@@ -17,6 +17,20 @@ const formatUSD = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
+/**
+ * Fetches landing-page statistics on mount and exposes loading/data/error state.
+ *
+ * @returns An object containing:
+ * - `stats` – the raw API payload, or `null` while loading or after a failure.
+ * - `display` – formatted strings ready for rendering; all fields are `'—'` when `stats` is `null`.
+ * - `isLoading` – `true` until the request settles (success or failure).
+ * - `error` – populated with the caught `Error.message` on failure (or `'Failed to load stats'`
+ *   for non-`Error` rejections); `null` on success. Callers are responsible for surfacing this
+ *   to the user — the hook does not re-throw.
+ *
+ * @remarks Unmounting during a pending request is safe: an `isMounted` flag prevents
+ * stale state updates after the component is removed from the tree.
+ */
 export function useLandingStats() {
   const [stats, setStats] = useState<LandingStats | null>(null);
   const [error, setError] = useState<string | null>(null);
