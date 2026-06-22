@@ -44,5 +44,3 @@ describe('useDebouncedValue Hook', () => {
     expect(result.current).toBe('abc'); // The latest one wins
   });
 });
-pnpm run test
-

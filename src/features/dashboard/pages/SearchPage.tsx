@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, ArrowRight, X, FileText, FolderGit2, User, ChevronLeft } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { useDebouncedValue } from '../../../shared/hooks/useDebouncedValue';
 
 interface SearchPageProps {
   onBack: () => void;
@@ -22,6 +23,9 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const darkTheme = theme === 'dark';
+
+  // Debounce the query so filtering only runs once the user pauses typing.
+  const debouncedQuery = useDebouncedValue(searchQuery, 300);
 
   const searchSuggestions = [
     "Terminal-based markdown editors worth checking out",
@@ -54,12 +58,12 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
   };
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (!debouncedQuery.trim()) {
       setSearchResults([]);
       return;
     }
 
-    const query = searchQuery.toLowerCase();
+    const query = debouncedQuery.toLowerCase();
     const results: SearchResult[] = [];
 
     // Search issues
@@ -102,7 +106,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
     });
 
     setSearchResults(results);
-  }, [searchQuery]);
+  }, [debouncedQuery]);
 
   const handleResultClick = (result: SearchResult) => {
     if (result.type === 'issue') {
@@ -301,97 +305,6 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
                   <span className={`text-left text-[14px] transition-colors ${
                     darkTheme ? 'text-[#d4c5b0]' : 'text-[#6b5d4d]'
                   }`}>
-import React, { useState, useEffect } from 'react';
-import { useDebouncedValue } from '../../../shared/hooks/useDebouncedValue';
-import { searchProjects } from '../../../shared/api/client';
-import { ProjectSkeleton } from '../components/ProjectSkeleton';
-
-export const SearchPage: React.FC = () => {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Debounce the query input by 300ms
-  const debouncedQuery = useDebouncedValue(query, 300);
-
-  useEffect(() => {
-    if (!debouncedQuery.trim()) {
-      setResults([]);
-      setIsLoading(false);
-      return;
-    }
-
-    // Set up AbortController for request cancellation
-    const abortController = new AbortController();
-    
-    async function fetchSearch() {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const data = await searchProjects(debouncedQuery, { signal: abortController.signal });
-        
-        // Security Rule: Only mutate state if this request hasn't been aborted
-        if (!abortController.signal.aborted) {
-          setResults(data);
-        }
-      } catch (err: any) {
-        if (err.name === 'AbortError') return; // Silent discard for aborted requests
-        
-        if (!abortController.signal.aborted) {
-          setError(err.message || 'An error occurred during your search.');
-        }
-      } finally {
-        if (!abortController.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    fetchSearch();
-
-    // Cleanup: Aborts the active fetch when user types a new character
-    return () => {
-      abortController.abort();
-    };
-  }, [debouncedQuery]);
-
-  return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Discover Projects</h1>
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search by keywords, language, or ecosystem..."
-        className="w-full p-3 rounded-lg border bg-background/50 backdrop-blur-md"
-      />
-
-      <div className="mt-6">
-        {isLoading && (
-          <div className="space-y-4">
-            <ProjectSkeleton />
-            <ProjectSkeleton />
-          </div>
-        )}
-
-        {!isLoading && error && <p className="text-destructive">{error}</p>}
-
-        {!isLoading && !error && results.length === 0 && debouncedQuery && (
-          <p className="text-muted-foreground">No projects found matching "{debouncedQuery}"</p>
-        )}
-
-        {!isLoading && !error && results.map((project) => (
-          <div key={project.id} className="p-4 mb-3 border rounded-xl glassmorphism">
-            <h2 className="font-semibold">{project.name}</h2>
-            <p className="text-sm text-muted-foreground">{project.description}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
                     {suggestion}
                   </span>
                   <ArrowRight className={`w-4 h-4 ml-3 flex-shrink-0 transition-all group-hover:translate-x-1 ${
