@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown, Minus, Award } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ProjectData, FilterType } from '../types';
 import { getAvatarGradient } from "../data/leaderboardData";
@@ -18,6 +19,28 @@ const getTrendIcon = (trend: 'up' | 'down' | 'same') => {
 function isLogoUrl(logo: string): boolean {
   return typeof logo === 'string' && (logo.startsWith('http://') || logo.startsWith('https://'));
 }
+
+/**
+ * Build the in-app route to a project's detail page.
+ *
+ * Mirrors how {@link ProjectDetailPage} is reached elsewhere (e.g. the ecosystem
+ * detail view), which navigates to `/dashboard/projects/:projectId` keyed by the
+ * project's stable `id`. The id is URL-encoded defensively even though it
+ * originates from our own API.
+ *
+ * @param id - The project's stable identifier, or `undefined` for seed rows that
+ *   have no id.
+ * @returns The detail route, or `undefined` when there is no id to link to — the
+ *   caller renders a non-navigating control in that case rather than pointing an
+ *   anchor at `/dashboard/projects/undefined`.
+ */
+function projectDetailPath(id: string | undefined): string | undefined {
+  return id ? `/dashboard/projects/${encodeURIComponent(id)}` : undefined;
+}
+
+/** Shared visual styling for the "View Project" call-to-action. */
+const VIEW_PROJECT_CLASSES =
+  'inline-block px-4 py-2 rounded-[10px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white text-[12px] font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 border border-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent';
 
 export function ProjectsTable({ data, activeFilter, isLoaded }: ProjectsTableProps) {
   const { theme } = useTheme();
@@ -48,7 +71,9 @@ export function ProjectsTable({ data, activeFilter, isLoaded }: ProjectsTablePro
 
       {/* Table Rows */}
       <div className="divide-y divide-white/10">
-        {data.map((project, index) => (
+        {data.map((project, index) => {
+          const detailPath = projectDetailPath(project.id);
+          return (
           <div
             key={project.rank}
             className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group"
@@ -116,7 +141,10 @@ export function ProjectsTable({ data, activeFilter, isLoaded }: ProjectsTablePro
             </div>
 
             {/* Action */}
-            <div className="col-span-3 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-all duration-300 gap-2">
+            {/* `group-focus-within` keeps this column visible when the "View
+                Project" control receives keyboard focus, so its focus ring is
+                never hidden behind the hover-only reveal. */}
+            <div className="col-span-3 flex items-center justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-300 gap-2">
               {project.activity && (
                 <div className={`px-3 py-1.5 rounded-[8px] text-[11px] font-semibold ${
                   project.activity === 'Very High' ? 'bg-green-500/20 text-green-700 border border-green-500/30' :
@@ -127,12 +155,29 @@ export function ProjectsTable({ data, activeFilter, isLoaded }: ProjectsTablePro
                   {project.activity}
                 </div>
               )}
-              <button className="px-4 py-2 rounded-[10px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white text-[12px] font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 border border-white/10">
-                View Project
-              </button>
+              {detailPath ? (
+                <Link
+                  to={detailPath}
+                  aria-label={`View ${project.name} project details`}
+                  className={VIEW_PROJECT_CLASSES}
+                >
+                  View Project
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  title="Project details are unavailable"
+                  className={`${VIEW_PROJECT_CLASSES} opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-md`}
+                >
+                  View Project
+                </button>
+              )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
