@@ -270,6 +270,36 @@ The frontend communicates with the Patchwork backend API. All API configuration 
 
 See [API_INTEGRATION.md](./API_INTEGRATION.md) for detailed API documentation.
 
+## E2E Testing
+
+Playwright end-to-end tests are located in `e2e/`. Tests use `page.route()` to mock backend API responses for deterministic runs without a live backend.
+
+### Running tests
+
+```bash
+pnpm run test:e2e
+```
+
+### Test structure
+
+| File | What it covers |
+|------|---------------|
+| `auth.spec.ts` | Sign-in page, OAuth callback redirect, access-denied error |
+| `routing.spec.ts` | Landing page render, unauthenticated redirect, 404 page |
+| `leaderboard.spec.ts` | Contributor table + podium render, load-more pagination, end-of-list, empty state, projects tab |
+| `browse-pagination.spec.ts` | Project grid render, load-more pagination, end-of-list, empty state, showing counter |
+| `search.spec.ts` | Search input, dynamic results, empty results, clear button, suggestion pills |
+
+### Fixtures
+
+Custom test fixtures in `e2e/fixtures.ts` provide:
+
+- **`setupMockAuth`** — mocks `/me`, `/stats/landing`, `/projects/recommended`, and issue endpoints
+- **`setupMockBrowse`** — mocks `/ecosystems` and `/projects` (paginated list) for the browse page
+- **`setupMockLeaderboard`** — mocks `/leaderboard` (paginated array) for the leaderboard page
+
+All fixtures use synthetic data and fake tokens only. No real credentials are ever used.
+
 ## Contributing
 
 Contributions are welcome! Please ensure your changes:

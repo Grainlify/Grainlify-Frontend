@@ -5,16 +5,36 @@ import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ArrowLeft, Github } from 'lucide-react';
 import { getGitHubLoginUrl } from '../../../shared/api/client';
 
+const AUTH_RETURN_TO_KEY = 'authReturnTo';
+
+/**
+ * Lifecycle for auth return targets:
+ * `/signin?returnTo=...` stores only internal dashboard paths, `/auth/callback`
+ * consumes and clears them, and revisiting sign-in clears abandoned attempts.
+ */
+function isValidAuthReturnTo(returnTo: string | null): returnTo is string {
+  if (!returnTo || returnTo.startsWith('//')) return false;
+  return (
+    returnTo === '/dashboard' ||
+    returnTo.startsWith('/dashboard/') ||
+    returnTo.startsWith('/dashboard?') ||
+    returnTo.startsWith('/dashboard#')
+  );
+}
+
 export function SignInPage() {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Persist returnTo so after OAuth we can redirect back to the intended page (e.g. dashboard?tab=browse&project=...&issue=...)
+  // Persist returnTo so after OAuth we can redirect back to the intended page.
   useEffect(() => {
+    sessionStorage.removeItem(AUTH_RETURN_TO_KEY);
     const params = new URLSearchParams(window.location.search);
     const returnTo = params.get('returnTo');
-    if (returnTo) sessionStorage.setItem('authReturnTo', returnTo);
+    if (isValidAuthReturnTo(returnTo)) {
+      sessionStorage.setItem(AUTH_RETURN_TO_KEY, returnTo);
+    }
   }, []);
 
   // Check for OAuth callback token in URL (fallback for wrong redirect URL)

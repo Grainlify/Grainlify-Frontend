@@ -1,74 +1,110 @@
-import { logger } from '../../../shared/utils/logger';
-import React, { useState, useEffect } from 'react';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { Search, Globe, Plus, ArrowUpRight, Sparkles, Send } from 'lucide-react';
-import { Modal, ModalFooter, ModalButton, ModalInput, ModalSelect } from '../../../shared/components/ui/Modal';
-import { getEcosystems } from '../../../shared/api/client';
+import { logger } from '../../../shared/utils/logger'
+import React, { useState, useEffect } from 'react'
+import { toast } from 'sonner'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { Search, Globe, Plus, ArrowUpRight, Sparkles, Send } from 'lucide-react'
+import {
+  Modal,
+  ModalFooter,
+  ModalButton,
+  ModalInput,
+  ModalSelect,
+} from '../../../shared/components/ui/Modal'
+import { getEcosystems, createEcosystem, requestEcosystem } from '../../../shared/api/client'
+
+// ---------------------------------------------------------------------------
+// Security helpers
+// ---------------------------------------------------------------------------
+
+/** Maximum byte lengths for user-supplied strings. */
+const FIELD_LIMITS = {
+  name: 120,
+  description: 2_000,
+  websiteUrl: 2_048,
+  userName: 120,
+  userEmail: 254,
+  reason: 2_000,
+  additionalInfo: 1_000,
+} as const
+
+/**
+ * Trims whitespace and hard-caps a string to `maxLength` characters.
+ * Prevents oversized payloads and potential stored-content abuse.
+ */
+function sanitize(value: string, maxLength: number): string {
+  return value.trim().slice(0, maxLength)
+}
 
 interface EcosystemsPageProps {
-  onEcosystemClick: (id: string, name: string, description?: string | null, logoUrl?: string | null) => void;
+  onEcosystemClick: (
+    id: string,
+    name: string,
+    description?: string | null,
+    logoUrl?: string | null
+  ) => void
 }
 
 export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
-  logger.debug('=== EcosystemsPage (features/dashboard) FUNCTION CALLED ===');
-  const { theme } = useTheme();
-  const [showAddModal, setShowAddModal] = useState(false);
+  logger.debug('=== EcosystemsPage (features/dashboard) FUNCTION CALLED ===')
+  const { theme } = useTheme()
+  const [showAddModal, setShowAddModal] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     status: 'active',
-    websiteUrl: ''
-  });
-  const [ecosystems, setEcosystems] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-
+    websiteUrl: '',
+  })
+  const [formErrors, setFormErrors] = useState<{ name?: string; description?: string }>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [ecosystems, setEcosystems] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
   // Fetch ecosystems function
   const fetchEcosystems = async () => {
-    logger.debug('fetchEcosystems function called');
-    setIsLoading(true);
+    logger.debug('fetchEcosystems function called')
+    setIsLoading(true)
     try {
-      logger.debug('Fetching ecosystems from API...');
-      const response = await getEcosystems();
-      logger.debug('Ecosystems API response:', response);
-      logger.debug('Response type:', typeof response);
-      logger.debug('Response.ecosystems:', response?.ecosystems);
-      logger.debug('Is array?', Array.isArray(response?.ecosystems));
-      
+      logger.debug('Fetching ecosystems from API...')
+      const response = await getEcosystems()
+      logger.debug('Ecosystems API response:', response)
+      logger.debug('Response type:', typeof response)
+      logger.debug('Response.ecosystems:', response?.ecosystems)
+      logger.debug('Is array?', Array.isArray(response?.ecosystems))
+
       // Handle different response structures
-      let ecosystemsArray: any[] = [];
-      
+      let ecosystemsArray: any[] = []
+
       if (response && Array.isArray(response)) {
         // Response is directly an array
-        ecosystemsArray = response;
-        logger.debug('Response is direct array');
+        ecosystemsArray = response
+        logger.debug('Response is direct array')
       } else if (response && response.ecosystems && Array.isArray(response.ecosystems)) {
         // Response has ecosystems property
-        ecosystemsArray = response.ecosystems;
-        logger.debug('Response has ecosystems property');
+        ecosystemsArray = response.ecosystems
+        logger.debug('Response has ecosystems property')
       } else if (response && typeof response === 'object') {
         // Try to find any array property
-        const keys = Object.keys(response);
-        logger.debug('Response keys:', keys);
+        const keys = Object.keys(response)
+        logger.debug('Response keys:', keys)
         for (const key of keys) {
           if (Array.isArray((response as any)[key])) {
-            ecosystemsArray = (response as any)[key];
-            logger.debug(`Found array in key: ${key}`);
-            break;
+            ecosystemsArray = (response as any)[key]
+            logger.debug(`Found array in key: ${key}`)
+            break
           }
         }
       }
-      
+
       if (ecosystemsArray.length === 0) {
-        logger.warn('No ecosystems found in response:', response);
-        setEcosystems([]);
-        setIsLoading(false);
-        return;
+        logger.warn('No ecosystems found in response:', response)
+        setEcosystems([])
+        setIsLoading(false)
+        return
       }
-      
+
       // Transform API response to match UI format
       const transformed = ecosystemsArray.map((eco: any) => {
-        const firstLetter = eco.name ? eco.name.charAt(0).toUpperCase() : '?';
+        const firstLetter = eco.name ? eco.name.charAt(0).toUpperCase() : '?'
         const colors = [
           'from-[#c9983a] to-[#a67c2e]',
           'from-[#8b5cf6] to-[#7c3aed]',
@@ -76,8 +112,8 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
           'from-[#10b981] to-[#059669]',
           'from-[#f59e0b] to-[#d97706]',
           'from-[#ef4444] to-[#dc2626]',
-        ];
-        const colorIndex = eco.name ? eco.name.length % colors.length : 0;
+        ]
+        const colorIndex = eco.name ? eco.name.length % colors.length : 0
         return {
           id: eco.id,
           name: eco.name || 'Unnamed Ecosystem',
@@ -90,99 +126,170 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
           status: eco.status || 'active',
           letter: firstLetter,
           color: colors[colorIndex],
-          languages: [] // Can be populated later if needed
-        };
-      });
-      logger.debug('Transformed ecosystems:', transformed);
-      setEcosystems(transformed);
+          languages: [], // Can be populated later if needed
+        }
+      })
+      logger.debug('Transformed ecosystems:', transformed)
+      setEcosystems(transformed)
     } catch (error) {
-      logger.error('Failed to fetch ecosystems:', error);
-      logger.error('Error details:', error instanceof Error ? error.message : error);
-      setEcosystems([]);
+      logger.error('Failed to fetch ecosystems:', error)
+      logger.error('Error details:', error instanceof Error ? error.message : error)
+      setEcosystems([])
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   // Fetch ecosystems on mount and when updated
   useEffect(() => {
-    logger.debug('EcosystemsPage useEffect running');
-    logger.debug('Calling fetchEcosystems...');
-    fetchEcosystems();
-    
+    logger.debug('EcosystemsPage useEffect running')
+    logger.debug('Calling fetchEcosystems...')
+    fetchEcosystems()
+
     // Listen for ecosystem updates
     const handleUpdate = () => {
-      logger.debug('Ecosystems updated event received');
-      fetchEcosystems();
-    };
-    window.addEventListener('ecosystems-updated', handleUpdate);
-    
+      logger.debug('Ecosystems updated event received')
+      fetchEcosystems()
+    }
+    window.addEventListener('ecosystems-updated', handleUpdate)
+
     return () => {
-      window.removeEventListener('ecosystems-updated', handleUpdate);
-    };
-  }, []);
+      window.removeEventListener('ecosystems-updated', handleUpdate)
+    }
+  }, [])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission here
-    logger.debug('Form data:', formData);
-    setShowAddModal(false);
-    // Reset form
-    setFormData({
-      name: '',
-      description: '',
-      status: 'active',
-      websiteUrl: ''
-    });
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-  const [showRequestModal, setShowRequestModal] = useState(false);
+    // Client-side validation
+    const name = sanitize(formData.name, FIELD_LIMITS.name)
+    const description = sanitize(formData.description, FIELD_LIMITS.description)
+    const errors: { name?: string; description?: string } = {}
+    if (!name) errors.name = 'Ecosystem name is required.'
+    if (!description) errors.description = 'Description is required.'
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      return
+    }
+    setFormErrors({})
+
+    setIsSubmitting(true)
+    try {
+      await createEcosystem({
+        name,
+        description,
+        status: formData.status as 'active' | 'inactive',
+        website_url: sanitize(formData.websiteUrl, FIELD_LIMITS.websiteUrl) || undefined,
+      })
+      toast.success('Ecosystem added successfully!')
+      setShowAddModal(false)
+      setFormData({ name: '', description: '', status: 'active', websiteUrl: '' })
+      // Refresh the list so the newly created ecosystem appears immediately.
+      fetchEcosystems()
+    } catch (error) {
+      logger.error('Failed to create ecosystem:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to add ecosystem.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const [showRequestModal, setShowRequestModal] = useState(false)
   const [requestData, setRequestData] = useState({
     userName: '',
     userEmail: '',
     ecosystemName: '',
     reason: '',
-    additionalInfo: ''
-  });
+    additionalInfo: '',
+  })
+  const [requestErrors, setRequestErrors] = useState<{
+    userName?: string
+    userEmail?: string
+    ecosystemName?: string
+    reason?: string
+  }>({})
+  const [isRequestSubmitting, setIsRequestSubmitting] = useState(false)
 
-  const handleRequestSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle request submission
-    logger.debug('Request data:', requestData);
-    setShowRequestModal(false);
-    // Reset form
-    setRequestData({
-      userName: '',
-      userEmail: '',
-      ecosystemName: '',
-      reason: '',
-      additionalInfo: ''
-    });
-  };
+  const handleRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Client-side validation
+    const userName = sanitize(requestData.userName, FIELD_LIMITS.userName)
+    const userEmail = sanitize(requestData.userEmail, FIELD_LIMITS.userEmail)
+    const ecosystemName = sanitize(requestData.ecosystemName, FIELD_LIMITS.name)
+    const reason = sanitize(requestData.reason, FIELD_LIMITS.reason)
+    const additionalInfo = sanitize(requestData.additionalInfo, FIELD_LIMITS.additionalInfo)
+
+    const errors: typeof requestErrors = {}
+    if (!userName) errors.userName = 'Your name is required.'
+    if (!userEmail) errors.userEmail = 'Your email is required.'
+    if (!ecosystemName) errors.ecosystemName = 'Ecosystem name is required.'
+    if (!reason) errors.reason = 'Please tell us why you want this ecosystem added.'
+    if (Object.keys(errors).length > 0) {
+      setRequestErrors(errors)
+      return
+    }
+    setRequestErrors({})
+
+    setIsRequestSubmitting(true)
+    try {
+      await requestEcosystem({
+        user_name: userName,
+        user_email: userEmail,
+        ecosystem_name: ecosystemName,
+        reason,
+        additional_info: additionalInfo || undefined,
+      })
+      toast.success('Request submitted! The admin will review it shortly.')
+      setShowRequestModal(false)
+      setRequestData({
+        userName: '',
+        userEmail: '',
+        ecosystemName: '',
+        reason: '',
+        additionalInfo: '',
+      })
+    } catch (error) {
+      logger.error('Failed to submit ecosystem request:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to submit request.')
+    } finally {
+      setIsRequestSubmitting(false)
+    }
+  }
 
   // Filter ecosystems based on search query
-  const filteredEcosystems = ecosystems.filter(eco =>
-    eco.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (eco.description && eco.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredEcosystems = ecosystems.filter(
+    (eco) =>
+      eco.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (eco.description && eco.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
 
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Header Section */}
-      <div className={`backdrop-blur-[40px] bg-gradient-to-br rounded-[20px] md:rounded-[28px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 md:p-10 transition-colors ${
-        theme === 'dark'
-          ? 'from-white/[0.08] to-white/[0.04] border-white/10'
-          : 'from-white/[0.15] to-white/[0.08] border-white/20'
-      }`}>
+      <div
+        className={`backdrop-blur-[40px] bg-gradient-to-br rounded-[20px] md:rounded-[28px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 md:p-10 transition-colors ${
+          theme === 'dark'
+            ? 'from-white/[0.08] to-white/[0.04] border-white/10'
+            : 'from-white/[0.15] to-white/[0.08] border-white/20'
+        }`}
+      >
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div className="flex-1">
-            <h1 className={`text-[24px] md:text-[36px] font-bold mb-2 md:mb-3 transition-colors ${
-              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-            }`}>Explore Ecosystems</h1>
-            <p className={`text-[14px] md:text-[16px] max-w-3xl transition-colors ${
-              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-            }`}>
-              Discover a wide range of projects shaping the future of open source, each driving revolutionary change.
+            <h1
+              className={`text-[24px] md:text-[36px] font-bold mb-2 md:mb-3 transition-colors ${
+                theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+              }`}
+            >
+              Explore Ecosystems
+            </h1>
+            <p
+              className={`text-[14px] md:text-[16px] max-w-3xl transition-colors ${
+                theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              Discover a wide range of projects shaping the future of open source, each driving
+              revolutionary change.
             </p>
           </div>
           <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-[#c9983a] to-[#a67c2e] flex items-center justify-center shadow-[0_8px_24px_rgba(162,121,44,0.3)] border border-white/15 flex-shrink-0">
@@ -193,9 +300,11 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
 
       {/* Search Bar */}
       <div className="relative">
-        <Search className={`absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 z-10 pointer-events-none transition-colors ${
-          theme === 'dark' ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
-        }`} />
+        <Search
+          className={`absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 z-10 pointer-events-none transition-colors ${
+            theme === 'dark' ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
+          }`}
+        />
         <input
           type="text"
           placeholder="Search ecosystems..."
@@ -223,57 +332,75 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
             >
               {/* Icon */}
               <div className="flex items-start justify-between mb-4 md:mb-5">
-                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-[12px] md:rounded-[14px] ${
-                  theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                }`} />
+                <div
+                  className={`w-12 h-12 md:w-14 md:h-14 rounded-[12px] md:rounded-[14px] ${
+                    theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                  }`}
+                />
               </div>
 
               {/* Title */}
-              <div className={`h-5 w-2/3 rounded ${
-                theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-              }`} />
+              <div
+                className={`h-5 w-2/3 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`}
+              />
 
               {/* Stats */}
               <div className="flex items-center gap-6 mt-4 mb-4">
                 <div className="flex-1">
-                  <div className={`h-3 w-16 rounded ${
-                    theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                  }`} />
-                  <div className={`h-6 w-10 rounded mt-2 ${
-                    theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                  }`} />
+                  <div
+                    className={`h-3 w-16 rounded ${
+                      theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                    }`}
+                  />
+                  <div
+                    className={`h-6 w-10 rounded mt-2 ${
+                      theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                    }`}
+                  />
                 </div>
                 <div className="flex-1">
-                  <div className={`h-3 w-24 rounded ${
-                    theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                  }`} />
-                  <div className={`h-6 w-10 rounded mt-2 ${
-                    theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                  }`} />
+                  <div
+                    className={`h-3 w-24 rounded ${
+                      theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                    }`}
+                  />
+                  <div
+                    className={`h-6 w-10 rounded mt-2 ${
+                      theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                    }`}
+                  />
                 </div>
               </div>
 
               {/* Description */}
-              <div className={`h-3 w-full rounded ${
-                theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-              }`} />
-              <div className={`h-3 w-5/6 rounded mt-2 ${
-                theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-              }`} />
+              <div
+                className={`h-3 w-full rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`}
+              />
+              <div
+                className={`h-3 w-5/6 rounded mt-2 ${
+                  theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                }`}
+              />
 
               {/* Footer */}
               <div className="mt-4">
-                <div className={`h-4 w-28 rounded ${
-                  theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                }`} />
+                <div
+                  className={`h-4 w-28 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`}
+                />
               </div>
             </div>
           ))}
         </div>
       ) : filteredEcosystems.length === 0 ? (
-        <div className={`text-center py-8 md:py-12 px-4 ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
-          <p className={`text-[14px] md:text-[16px] ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
-            {searchQuery ? 'No ecosystems found matching your search.' : 'No ecosystems available yet.'}
+        <div
+          className={`text-center py-8 md:py-12 px-4 ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+        >
+          <p
+            className={`text-[14px] md:text-[16px] ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+          >
+            {searchQuery
+              ? 'No ecosystems found matching your search.'
+              : 'No ecosystems available yet.'}
           </p>
           {!isLoading && ecosystems.length > 0 && (
             <div className="mt-2 text-[11px] md:text-xs opacity-70">
@@ -284,118 +411,160 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {filteredEcosystems.map((ecosystem) => {
-            logger.debug('Rendering ecosystem:', ecosystem);
+            logger.debug('Rendering ecosystem:', ecosystem)
             return (
-          <div
-            key={ecosystem.id}
-            onClick={() => onEcosystemClick(ecosystem.id, ecosystem.name, ecosystem.description, ecosystem.logo_url)}
-            className={`backdrop-blur-[30px] rounded-[16px] md:rounded-[20px] border p-4 md:p-6 transition-all cursor-pointer group touch-manipulation ${
-              theme === 'dark'
-                ? 'bg-white/[0.08] border-white/10 hover:bg-white/[0.12] hover:shadow-[0_8px_24px_rgba(201,152,58,0.15)] active:bg-white/[0.15]'
-                : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] active:bg-white/[0.25]'
-            }`}
-          >
-            {/* Header with Icon */}
-            <div className="flex items-start justify-between mb-4 md:mb-5">
-              <div className={`w-12 h-12 md:w-14 md:h-14 rounded-[12px] md:rounded-[14px] flex items-center justify-center shadow-lg border border-white/20 overflow-hidden ${ecosystem.logo_url ? 'bg-white' : `bg-gradient-to-br ${ecosystem.color}`}`}>
-                {ecosystem.logo_url ? (
-                  <img
-                    src={ecosystem.logo_url}
-                    alt={`${ecosystem.name} logo`}
-                    className="w-full h-full object-cover"
-                    onError={(event) => {
-                      (event.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <span className="text-white text-[20px] md:text-[24px] font-bold">
-                    {ecosystem.letter}
-                  </span>
-                )}
-              </div>
-            </div>
+              <div
+                key={ecosystem.id}
+                onClick={() =>
+                  onEcosystemClick(
+                    ecosystem.id,
+                    ecosystem.name,
+                    ecosystem.description,
+                    ecosystem.logo_url
+                  )
+                }
+                className={`backdrop-blur-[30px] rounded-[16px] md:rounded-[20px] border p-4 md:p-6 transition-all cursor-pointer group touch-manipulation ${
+                  theme === 'dark'
+                    ? 'bg-white/[0.08] border-white/10 hover:bg-white/[0.12] hover:shadow-[0_8px_24px_rgba(201,152,58,0.15)] active:bg-white/[0.15]'
+                    : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] active:bg-white/[0.25]'
+                }`}
+              >
+                {/* Header with Icon */}
+                <div className="flex items-start justify-between mb-4 md:mb-5">
+                  <div
+                    className={`w-12 h-12 md:w-14 md:h-14 rounded-[12px] md:rounded-[14px] flex items-center justify-center shadow-lg border border-white/20 overflow-hidden ${ecosystem.logo_url ? 'bg-white' : `bg-gradient-to-br ${ecosystem.color}`}`}
+                  >
+                    {ecosystem.logo_url ? (
+                      <img
+                        src={ecosystem.logo_url}
+                        alt={`${ecosystem.name} logo`}
+                        className="w-full h-full object-cover"
+                        onError={(event) => {
+                          ;(event.target as HTMLImageElement).style.display = 'none'
+                        }}
+                      />
+                    ) : (
+                      <span className="text-white text-[20px] md:text-[24px] font-bold">
+                        {ecosystem.letter}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-            {/* Title */}
-            <h3 className={`text-[16px] md:text-[18px] font-bold mb-2 transition-colors ${
-              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-            }`}>{ecosystem.name}</h3>
-
-            {/* Stats */}
-            <div className="flex items-center gap-4 md:gap-6 mb-3 md:mb-4">
-              <div>
-                <div className={`text-[10px] md:text-[11px] mb-0.5 transition-colors ${
-                  theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                }`}>Projects</div>
-                <div className={`text-[18px] md:text-[20px] font-bold transition-colors ${
-                  theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                }`}>{ecosystem.projects}</div>
-              </div>
-              <div>
-                <div className={`text-[10px] md:text-[11px] mb-0.5 transition-colors ${
-                  theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                }`}>Contributors</div>
-                <div className={`text-[18px] md:text-[20px] font-bold transition-colors ${
-                  theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                }`}>{ecosystem.contributors}</div>
-              </div>
-            </div>
-
-            {/* Description */}
-            <p className={`text-[12px] md:text-[13px] mb-4 md:mb-5 leading-relaxed transition-colors ${
-              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-            }`}>
-              {ecosystem.description}
-            </p>
-
-            {/* Website Link */}
-            {ecosystem.website_url && (
-              <div className="flex items-center gap-2 mt-3 md:mt-4">
-                <Globe className={`w-4 h-4 ${theme === 'dark' ? 'text-[#c9983a]' : 'text-[#8b6f3a]'}`} />
-                <a
-                  href={ecosystem.website_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className={`text-[11px] md:text-[12px] hover:underline transition-colors touch-manipulation ${
-                    theme === 'dark' ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
+                {/* Title */}
+                <h3
+                  className={`text-[16px] md:text-[18px] font-bold mb-2 transition-colors ${
+                    theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
                   }`}
                 >
-                  Visit Website
-                </a>
+                  {ecosystem.name}
+                </h3>
+
+                {/* Stats */}
+                <div className="flex items-center gap-4 md:gap-6 mb-3 md:mb-4">
+                  <div>
+                    <div
+                      className={`text-[10px] md:text-[11px] mb-0.5 transition-colors ${
+                        theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                      }`}
+                    >
+                      Projects
+                    </div>
+                    <div
+                      className={`text-[18px] md:text-[20px] font-bold transition-colors ${
+                        theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                      }`}
+                    >
+                      {ecosystem.projects}
+                    </div>
+                  </div>
+                  <div>
+                    <div
+                      className={`text-[10px] md:text-[11px] mb-0.5 transition-colors ${
+                        theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                      }`}
+                    >
+                      Contributors
+                    </div>
+                    <div
+                      className={`text-[18px] md:text-[20px] font-bold transition-colors ${
+                        theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                      }`}
+                    >
+                      {ecosystem.contributors}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <p
+                  className={`text-[12px] md:text-[13px] mb-4 md:mb-5 leading-relaxed transition-colors ${
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                  }`}
+                >
+                  {ecosystem.description}
+                </p>
+
+                {/* Website Link */}
+                {ecosystem.website_url && (
+                  <div className="flex items-center gap-2 mt-3 md:mt-4">
+                    <Globe
+                      className={`w-4 h-4 ${theme === 'dark' ? 'text-[#c9983a]' : 'text-[#8b6f3a]'}`}
+                    />
+                    <a
+                      href={ecosystem.website_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className={`text-[11px] md:text-[12px] hover:underline transition-colors touch-manipulation ${
+                        theme === 'dark' ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
+                      }`}
+                    >
+                      Visit Website
+                    </a>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-            );
+            )
           })}
         </div>
       )}
 
       {/* Request Ecosystem Section */}
-      <div className={`backdrop-blur-[40px] bg-gradient-to-br rounded-[20px] md:rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 md:p-10 transition-all overflow-hidden relative ${
-        theme === 'dark'
-          ? 'from-white/[0.08] to-white/[0.04] border-white/10'
-          : 'from-white/[0.15] to-white/[0.08] border-white/20'
-      }`}>
+      <div
+        className={`backdrop-blur-[40px] bg-gradient-to-br rounded-[20px] md:rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 md:p-10 transition-all overflow-hidden relative ${
+          theme === 'dark'
+            ? 'from-white/[0.08] to-white/[0.04] border-white/10'
+            : 'from-white/[0.15] to-white/[0.08] border-white/20'
+        }`}
+      >
         {/* Decorative gradient circles */}
         <div className="absolute -top-20 -right-20 w-40 h-40 md:w-60 md:h-60 bg-gradient-to-br from-[#c9983a]/20 to-transparent rounded-full blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-40 h-40 md:w-60 md:h-60 bg-gradient-to-br from-[#c9983a]/10 to-transparent rounded-full blur-3xl"></div>
-        
+
         <div className="relative z-10">
           <div className="text-center max-w-2xl mx-auto">
             <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-[#c9983a] to-[#a67c2e] shadow-[0_8px_24px_rgba(162,121,44,0.4)] mb-4 md:mb-6 border border-white/15">
               <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-white" />
             </div>
-            
-            <h3 className={`text-[22px] md:text-[28px] font-bold mb-3 md:mb-4 transition-colors ${
-              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-            }`}>Missing Your Ecosystem?</h3>
-            
-            <p className={`text-[14px] md:text-[16px] mb-5 md:mb-6 leading-relaxed transition-colors ${
-              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-            }`}>
-              Don't see your ecosystem in the list? No worries! Request the admin to add it to our platform.
+
+            <h3
+              className={`text-[22px] md:text-[28px] font-bold mb-3 md:mb-4 transition-colors ${
+                theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+              }`}
+            >
+              Missing Your Ecosystem?
+            </h3>
+
+            <p
+              className={`text-[14px] md:text-[16px] mb-5 md:mb-6 leading-relaxed transition-colors ${
+                theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              Don't see your ecosystem in the list? No worries! Request the admin to add it to our
+              platform.
             </p>
-            
+
             <button
               onClick={() => setShowRequestModal(true)}
               className="group px-5 md:px-8 py-3 md:py-4 bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white rounded-[12px] md:rounded-[16px] font-semibold text-[13px] md:text-[15px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_10px_30px_rgba(162,121,44,0.5)] transition-all flex items-center justify-center gap-2 md:gap-3 mx-auto border border-white/10 hover:scale-105 active:scale-100 touch-manipulation min-h-[44px] w-full sm:w-auto"
@@ -423,6 +592,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
               onChange={(value) => setFormData({ ...formData, name: value })}
               placeholder="e.g., Web3 Ecosystem"
               required
+              error={formErrors.name}
             />
 
             <ModalInput
@@ -432,6 +602,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
               placeholder="Describe the ecosystem..."
               rows={4}
               required
+              error={formErrors.description}
             />
 
             <ModalSelect
@@ -440,7 +611,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
               onChange={(value) => setFormData({ ...formData, status: value })}
               options={[
                 { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' }
+                { value: 'inactive', label: 'Inactive' },
               ]}
             />
 
@@ -455,11 +626,18 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
           </div>
 
           <ModalFooter>
-            <ModalButton onClick={() => setShowAddModal(false)} variant="secondary">
+            <ModalButton
+              onClick={() => {
+                setShowAddModal(false)
+                setFormErrors({})
+              }}
+              variant="secondary"
+              disabled={isSubmitting}
+            >
               Cancel
             </ModalButton>
-            <ModalButton type="submit" variant="primary">
-              Add Ecosystem
+            <ModalButton type="submit" variant="primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Adding…' : 'Add Ecosystem'}
             </ModalButton>
           </ModalFooter>
         </form>
@@ -474,9 +652,13 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
         width="lg"
         maxHeight
       >
-        <p className={`text-[13px] md:text-[14px] mb-4 md:mb-6 transition-colors ${
-          theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-        }`}>Fill out the form below and we'll review your request</p>
+        <p
+          className={`text-[13px] md:text-[14px] mb-4 md:mb-6 transition-colors ${
+            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+          }`}
+        >
+          Fill out the form below and we'll review your request
+        </p>
 
         <form onSubmit={handleRequestSubmit}>
           <div className="space-y-4">
@@ -487,6 +669,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
                 onChange={(value) => setRequestData({ ...requestData, userName: value })}
                 placeholder="John Doe"
                 required
+                error={requestErrors.userName}
               />
 
               <ModalInput
@@ -496,6 +679,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
                 onChange={(value) => setRequestData({ ...requestData, userEmail: value })}
                 placeholder="john@example.com"
                 required
+                error={requestErrors.userEmail}
               />
             </div>
 
@@ -505,6 +689,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
               onChange={(value) => setRequestData({ ...requestData, ecosystemName: value })}
               placeholder="e.g., Web3 Ecosystem"
               required
+              error={requestErrors.ecosystemName}
             />
 
             <ModalInput
@@ -514,6 +699,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
               placeholder="Tell us why this ecosystem would be valuable to the community..."
               rows={4}
               required
+              error={requestErrors.reason}
             />
 
             <ModalInput
@@ -526,16 +712,22 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
           </div>
 
           <ModalFooter>
-            <ModalButton onClick={() => setShowRequestModal(false)}>
+            <ModalButton
+              onClick={() => {
+                setShowRequestModal(false)
+                setRequestErrors({})
+              }}
+              disabled={isRequestSubmitting}
+            >
               Cancel
             </ModalButton>
-            <ModalButton type="submit" variant="primary">
+            <ModalButton type="submit" variant="primary" disabled={isRequestSubmitting}>
               <Send className="w-4 h-4" />
-              Submit Request
+              {isRequestSubmitting ? 'Submitting…' : 'Submit Request'}
             </ModalButton>
           </ModalFooter>
         </form>
       </Modal>
     </div>
-  );
+  )
 }

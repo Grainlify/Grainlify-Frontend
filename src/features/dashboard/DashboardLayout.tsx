@@ -2,13 +2,11 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation, Outlet } from "react-router-dom";
 import {
   Search,
-  Bell,
   Compass,
   Grid3x3,
   Calendar,
   Globe,
   Users,
-  FolderGit2,
   Trophy,
   Database,
   FileText,
@@ -36,7 +34,7 @@ import { bootstrapAdmin } from "../../shared/api/client";
 import { useTranslation } from "../../shared/i18n";
 
 export function DashboardLayout() {
-  const { userRole, logout, login } = useAuth();
+  const { login } = useAuth();
   const { t } = useTranslation();
   const { theme, setThemeFromAnimation } = useTheme();
   const location = useLocation();
@@ -61,7 +59,7 @@ export function DashboardLayout() {
   const [adminAuthenticated, setAdminAuthenticated] = useState(() => {
     return sessionStorage.getItem("admin_authenticated") === "true";
   });
-  const [pendingAdminTarget, setPendingAdminTarget] = useState<"nav" | "role" | null>(null);
+  const [_pendingAdminTarget, setPendingAdminTarget] = useState<"nav" | "role" | null>(null);
 
   useEffect(() => { 
     const handleResize = () => {
@@ -97,26 +95,12 @@ export function DashboardLayout() {
     setMobileMenuOpen(false);
   };
 
-  const handleLogout = () => {
-    logout();
-    setAdminAuthenticated(false);
-    sessionStorage.removeItem("admin_authenticated");
-    navigate("/");
-  };
 
   const openAdminAuthModal = (target: "nav" | "role") => {
     setPendingAdminTarget(target);
     setShowAdminPasswordModal(true);
   };
 
-  const handleAdminClick = () => {
-    if (adminAuthenticated) {
-      setActiveRole("admin");
-      handleNavigation("admin");
-      return;
-    }
-    openAdminAuthModal("nav");
-  };
 
   const handleAdminPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,6 +116,7 @@ export function DashboardLayout() {
       setActiveRole("admin");
       handleNavigation("admin");
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("Admin authentication failed:", error);
       setAdminPassword("");
     } finally {
