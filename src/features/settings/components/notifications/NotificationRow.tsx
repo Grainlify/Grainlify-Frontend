@@ -33,10 +33,18 @@ export function NotificationRow({
         }`}>{description}</div>
       </div>
       <div className="flex justify-center">
-        <ToggleSwitch enabled={emailEnabled} onChange={onEmailChange} />
+        <ToggleSwitch
+          enabled={emailEnabled}
+          onChange={onEmailChange}
+          aria-label={`Email notifications for ${title}`}
+        />
       </div>
       <div className="flex justify-center">
-        <ToggleSwitch enabled={weeklyEnabled} onChange={onWeeklyChange} />
+        <ToggleSwitch
+          enabled={weeklyEnabled}
+          onChange={onWeeklyChange}
+          aria-label={`Weekly summary email for ${title}`}
+        />
       </div>
     </div>
   );

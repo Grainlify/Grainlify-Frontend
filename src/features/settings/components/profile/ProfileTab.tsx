@@ -1,9 +1,11 @@
 import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect, useRef } from 'react';
+import { useForm } from 'react-hook-form';
 import { Github, User, Upload, Link as LinkIcon } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { getCurrentUser, updateProfile, updateAvatar, resyncGitHubProfile } from '../../../../shared/api/client';
 import { toast } from 'sonner';
+import { validateUrl } from '../../../../shared/utils/validation';
 
 interface CurrentUser {
   id: string;
@@ -30,6 +32,19 @@ interface CurrentUser {
   };
 }
 
+interface ProfileFormData {
+  firstName: string;
+  lastName: string;
+  location: string;
+  website: string;
+  bio: string;
+  telegram: string;
+  linkedin: string;
+  whatsapp: string;
+  twitter: string;
+  discord: string;
+}
+
 export function ProfileTab() {
   const { theme } = useTheme();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -38,42 +53,28 @@ export function ProfileTab() {
   const [isResyncing, setIsResyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form state
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [location, setLocation] = useState('');
-  const [website, setWebsite] = useState('');
-  const [bio, setBio] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [telegram, setTelegram] = useState('');
-  const [linkedin, setLinkedin] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [twitter, setTwitter] = useState('');
-  const [discord, setDiscord] = useState('');
-  const [initialValues, setInitialValues] = useState({
-    firstName: '',
-    lastName: '',
-    location: '',
-    website: '',
-    bio: '',
-    telegram: '',
-    linkedin: '',
-    whatsapp: '',
-    twitter: '',
-    discord: '',
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty, isValid },
+  } = useForm<ProfileFormData>({
+    mode: 'onBlur',
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      location: '',
+      website: '',
+      bio: '',
+      telegram: '',
+      linkedin: '',
+      whatsapp: '',
+      twitter: '',
+      discord: '',
+    },
   });
 
-  const isDirty =
-    firstName !== initialValues.firstName ||
-    lastName !== initialValues.lastName ||
-    location !== initialValues.location ||
-    website !== initialValues.website ||
-    bio !== initialValues.bio ||
-    telegram !== initialValues.telegram ||
-    linkedin !== initialValues.linkedin ||
-    whatsapp !== initialValues.whatsapp ||
-    twitter !== initialValues.twitter ||
-    discord !== initialValues.discord;
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   useEffect(() => {
     const fetchUser = async () => {
       setIsLoading(true);
@@ -81,8 +82,7 @@ export function ProfileTab() {
         const user = await getCurrentUser();
         setCurrentUser(user);
 
-        // Prefill form fields from database (preferred) or GitHub data
-        // Use database values first, then fallback to GitHub
+        // Derive first/last name from database or GitHub
         let fName = '';
         if (user.first_name) {
           fName = user.first_name;
@@ -92,7 +92,6 @@ export function ProfileTab() {
             fName = nameParts[0];
           }
         }
-        setFirstName(fName);
 
         let lName = '';
         if (user.last_name) {
@@ -103,7 +102,6 @@ export function ProfileTab() {
             lName = nameParts.slice(1).join(' ');
           }
         }
-        setLastName(lName);
 
         // Set avatar URL (database avatar_url takes precedence)
         if (user.avatar_url) {
@@ -112,30 +110,16 @@ export function ProfileTab() {
           setAvatarUrl(user.github.avatar_url);
         }
 
-        // Use database values if available, otherwise use GitHub
         const loc = user.location || user.github?.location || '';
         const web = user.website || user.github?.website || '';
         const b = user.bio || user.github?.bio || '';
-
-        setLocation(loc);
-        setWebsite(web);
-        setBio(b);
-
-        // Set social links from database
         const tel = user.telegram || '';
         const li = user.linkedin || '';
         const wa = user.whatsapp || '';
         const tw = user.twitter || '';
         const di = user.discord || '';
 
-        setTelegram(tel);
-        setLinkedin(li);
-        setWhatsapp(wa);
-        setTwitter(tw);
-        setDiscord(di);
-
-        // Set initial values for dirty check
-        setInitialValues({
+        reset({
           firstName: fName,
           lastName: lName,
           location: loc,
@@ -155,7 +139,7 @@ export function ProfileTab() {
       }
     };
     fetchUser();
-  }, []);
+  }, [reset]);
 
   const handleResync = async () => {
     setIsResyncing(true);
@@ -233,55 +217,52 @@ export function ProfileTab() {
     }
   };
 
-  const handleSave = async () => {
+  const onSubmit = async (data: ProfileFormData) => {
     setIsSaving(true);
     try {
       await updateProfile({
-        first_name: firstName || undefined,
-        last_name: lastName || undefined,
-        location: location || undefined,
-        website: website || undefined,
-        bio: bio || undefined,
-        telegram: telegram || undefined,
-        linkedin: linkedin || undefined,
-        whatsapp: whatsapp || undefined,
-        twitter: twitter || undefined,
-        discord: discord || undefined,
+        first_name: data.firstName || undefined,
+        last_name: data.lastName || undefined,
+        location: data.location || undefined,
+        website: data.website || undefined,
+        bio: data.bio || undefined,
+        telegram: data.telegram || undefined,
+        linkedin: data.linkedin || undefined,
+        whatsapp: data.whatsapp || undefined,
+        twitter: data.twitter || undefined,
+        discord: data.discord || undefined,
       });
       // Refetch user data to get updated profile
       const user = await getCurrentUser();
       setCurrentUser(user);
 
-      // Update form fields with saved data from database
-      setFirstName(user.first_name || '');
-      setLastName(user.last_name || '');
-      setLocation(user.location || user.github?.location || '');
-      setWebsite(user.website || user.github?.website || '');
-      setBio(user.bio || user.github?.bio || '');
-      setTelegram(user.telegram || '');
-      setLinkedin(user.linkedin || '');
-      setWhatsapp(user.whatsapp || '');
-      setTwitter(user.twitter || '');
-      setDiscord(user.discord || '');
+      const loc = user.location || user.github?.location || '';
+      const web = user.website || user.github?.website || '';
+      const b = user.bio || user.github?.bio || '';
+      const tel = user.telegram || '';
+      const li = user.linkedin || '';
+      const wa = user.whatsapp || '';
+      const tw = user.twitter || '';
+      const di = user.discord || '';
+
+      reset({
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        location: loc,
+        website: web,
+        bio: b,
+        telegram: tel,
+        linkedin: li,
+        whatsapp: wa,
+        twitter: tw,
+        discord: di,
+      });
+
       if (user.avatar_url) {
         setAvatarUrl(user.avatar_url);
       } else if (user.github?.avatar_url) {
         setAvatarUrl(user.github.avatar_url);
       }
-
-      // Update initial values after successful save
-      setInitialValues({
-        firstName: user.first_name || '',
-        lastName: user.last_name || '',
-        location: user.location || user.github?.location || '',
-        website: user.website || user.github?.website || '',
-        bio: user.bio || user.github?.bio || '',
-        telegram: user.telegram || '',
-        linkedin: user.linkedin || '',
-        whatsapp: user.whatsapp || '',
-        twitter: user.twitter || '',
-        discord: user.discord || '',
-      });
 
       toast.success('Profile updated successfully!');
     } catch (error) {
@@ -419,8 +400,7 @@ export function ProfileTab() {
             <input
               type="text"
               placeholder="Enter your first name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              {...register('firstName')}
               className={`w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                 ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
                 : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
@@ -435,8 +415,7 @@ export function ProfileTab() {
             <input
               type="text"
               placeholder="Enter your last name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
+              {...register('lastName')}
               className={`w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                 ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
                 : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
@@ -451,8 +430,7 @@ export function ProfileTab() {
             <input
               type="text"
               placeholder="Enter your location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              {...register('location')}
               className={`w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                 ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
                 : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
@@ -467,13 +445,15 @@ export function ProfileTab() {
             <input
               type="text"
               placeholder="Enter your website"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
+              {...register('website', { validate: validateUrl })}
               className={`w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                 ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
                 : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
-                }`}
+                } ${errors.website ? 'border-red-500/50' : ''}`}
             />
+            {errors.website && (
+              <p className="mt-1.5 text-[12px] text-red-500">{errors.website.message}</p>
+            )}
           </div>
         </div>
 
@@ -484,8 +464,7 @@ export function ProfileTab() {
           <textarea
             placeholder="Enter your bio"
             rows={4}
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
+            {...register('bio')}
             className={`w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] resize-none ${theme === 'dark'
               ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
               : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
@@ -514,8 +493,7 @@ export function ProfileTab() {
             <div className="relative">
               <input
                 type="text"
-                value={telegram}
-                onChange={(e) => setTelegram(e.target.value)}
+                {...register('telegram')}
                 placeholder="Enter your telegram handle"
                 className={`w-full px-4 py-3 pr-10 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                   ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
@@ -534,8 +512,7 @@ export function ProfileTab() {
             <div className="relative">
               <input
                 type="text"
-                value={linkedin}
-                onChange={(e) => setLinkedin(e.target.value)}
+                {...register('linkedin')}
                 placeholder="Enter your linkedin handle"
                 className={`w-full px-4 py-3 pr-10 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                   ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
@@ -554,8 +531,7 @@ export function ProfileTab() {
             <div className="relative">
               <input
                 type="text"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
+                {...register('whatsapp')}
                 placeholder="Enter your whatsApp handle"
                 className={`w-full px-4 py-3 pr-10 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                   ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
@@ -574,8 +550,7 @@ export function ProfileTab() {
             <div className="relative">
               <input
                 type="text"
-                value={twitter}
-                onChange={(e) => setTwitter(e.target.value)}
+                {...register('twitter')}
                 placeholder="Enter your twitter handle"
                 className={`w-full px-4 py-3 pr-10 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                   ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
@@ -594,8 +569,7 @@ export function ProfileTab() {
             <div className="relative">
               <input
                 type="text"
-                value={discord}
-                onChange={(e) => setDiscord(e.target.value)}
+                {...register('discord')}
                 placeholder="Enter your discord handle"
                 className={`w-full px-4 py-3 pr-10 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                   ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
@@ -612,8 +586,8 @@ export function ProfileTab() {
       {/* Save Button */}
       <div className="flex justify-end">
         <button
-          onClick={handleSave}
-          disabled={isSaving || !isDirty}
+          onClick={handleSubmit(onSubmit)}
+          disabled={isSaving || !isDirty || !isValid}
           className={`px-8 py-3 rounded-[16px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[15px] shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {isSaving ? 'Saving...' : 'Save'}

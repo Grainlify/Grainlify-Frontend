@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { createProject, getEcosystems } from '../../../shared/api/client';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
+import { validateRepoName, validateRequired } from '../../../shared/utils/validation';
 
 interface AddRepositoryModalProps {
   isOpen: boolean;
@@ -10,15 +12,41 @@ interface AddRepositoryModalProps {
   onSuccess: () => void;
 }
 
+interface FormData {
+  githubFullName: string;
+  ecosystemName: string;
+  language: string;
+  tags: string;
+  category: string;
+}
+
 export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepositoryModalProps) {
   const { theme } = useTheme();
   const darkTheme = theme === 'dark';
 
-  const [githubFullName, setGithubFullName] = useState('');
-  const [ecosystemName, setEcosystemName] = useState('');
-  const [language, setLanguage] = useState('');
-  const [tags, setTags] = useState('');
-  const [category, setCategory] = useState('');
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    trigger,
+    formState: { errors, isValid },
+  } = useForm<FormData>({
+    mode: 'onChange',
+    defaultValues: {
+      githubFullName: '',
+      ecosystemName: '',
+      language: '',
+      tags: '',
+      category: '',
+    },
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      trigger();
+    }
+  }, [isOpen, trigger]);
 
   const [ecosystems, setEcosystems] = useState<Array<{ name: string; slug: string }>>([]);
   const [isLoadingEcosystems, setIsLoadingEcosystems] = useState(false);
@@ -46,53 +74,28 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: FormData) => {
     setError(null);
     setSuccess(false);
-
-    // Validation
-    if (!githubFullName.trim()) {
-      setError('Repository name is required (format: owner/repo)');
-      return;
-    }
-
-    if (!githubFullName.includes('/')) {
-      setError('Repository name must be in format: owner/repo');
-      return;
-    }
-
-    if (!ecosystemName) {
-      setError('Ecosystem is required');
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      const tagsArray = tags
+      const tagsArray = data.tags
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
 
       await createProject({
-        github_full_name: githubFullName.trim(),
-        ecosystem_name: ecosystemName,
-        language: language.trim() || undefined,
+        github_full_name: data.githubFullName.trim(),
+        ecosystem_name: data.ecosystemName,
+        language: data.language.trim() || undefined,
         tags: tagsArray.length > 0 ? tagsArray : undefined,
-        category: category.trim() || undefined,
+        category: data.category.trim() || undefined,
       });
 
       setSuccess(true);
-      
-      // Reset form
-      setGithubFullName('');
-      setEcosystemName('');
-      setLanguage('');
-      setTags('');
-      setCategory('');
+      reset();
 
-      // Close modal after 1.5 seconds and refresh projects
       setTimeout(() => {
         onSuccess();
         onClose();
@@ -109,11 +112,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
     if (!isSubmitting) {
       setError(null);
       setSuccess(false);
-      setGithubFullName('');
-      setEcosystemName('');
-      setLanguage('');
-      setTags('');
-      setCategory('');
+      reset();
       onClose();
     }
   };
@@ -157,7 +156,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
           {/* Error Message */}
           {error && (
             <div className={`flex items-center gap-3 p-4 rounded-[12px] border-2 ${
@@ -184,28 +183,47 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
 
           {/* Repository Name */}
           <div>
-            <label className={`block text-[14px] font-semibold mb-2 transition-colors ${
-              darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-            }`}>
+            <label 
+              htmlFor="github-fullname-input"
+              className={`block text-[14px] font-semibold mb-2 transition-colors ${
+                darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+              }`}
+            >
               Repository Name <span className="text-red-500">*</span>
             </label>
             <input
+              id="github-fullname-input"
               type="text"
-              value={githubFullName}
-              onChange={(e) => setGithubFullName(e.target.value)}
+              {...register('githubFullName', { validate: validateRepoName })}
               placeholder="owner/repo (e.g., facebook/react)"
               disabled={isSubmitting}
+              maxLength={140}
+              aria-invalid={!!errors.githubFullName}
+              aria-describedby={errors.githubFullName ? "github-fullname-error" : "github-fullname-help"}
               className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
                 darkTheme
                   ? 'bg-white/10 border-white/20 text-[#e8dfd0] placeholder:text-[#b8a898] focus:border-[#c9983a] focus:bg-white/15'
                   : 'bg-white/40 border-white/50 text-[#2d2820] placeholder:text-[#7a6b5a] focus:border-[#c9983a] focus:bg-white/60'
-              } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-              required
+              } ${errors.githubFullName ? 'border-red-500/50' : ''} ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
-            <p className={`mt-1.5 text-[12px] transition-colors ${
-              darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-            }`}>
-              Enter the full repository name in format: owner/repository
+            {errors.githubFullName && (
+              <p
+                id="github-fullname-error"
+                role="alert"
+                className={`mt-1.5 text-[12px] font-medium transition-colors ${
+                  darkTheme ? 'text-red-400' : 'text-red-600'
+                }`}
+              >
+                {errors.githubFullName.message}
+              </p>
+            )}
+            <p
+              id="github-fullname-help"
+              className={`mt-1.5 text-[12px] transition-colors ${
+                darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              Enter the full repository name in format: owner/repository. Owner name can contain letters, numbers, and hyphens (max 39 characters, no leading/trailing/consecutive hyphens). Repository name can contain letters, numbers, hyphens, underscores, and periods (max 100 characters).
             </p>
           </div>
 
@@ -219,24 +237,32 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
             {isLoadingEcosystems ? (
               <SkeletonLoader className="h-12 w-full rounded-[12px]" />
             ) : (
-              <select
-                value={ecosystemName}
-                onChange={(e) => setEcosystemName(e.target.value)}
-                disabled={isSubmitting || ecosystems.length === 0}
-                className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
-                  darkTheme
-                    ? 'bg-white/10 border-white/20 text-[#e8dfd0] focus:border-[#c9983a] focus:bg-white/15'
-                    : 'bg-white/40 border-white/50 text-[#2d2820] focus:border-[#c9983a] focus:bg-white/60'
-                } ${isSubmitting || ecosystems.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                required
-              >
-                <option value="">Select an ecosystem</option>
-                {ecosystems.map((eco) => (
-                  <option key={eco.slug} value={eco.name}>
-                    {eco.name}
-                  </option>
-                ))}
-              </select>
+              <Controller
+                name="ecosystemName"
+                control={control}
+                rules={{ validate: (v) => validateRequired(v, 'Ecosystem') }}
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    disabled={isSubmitting || ecosystems.length === 0}
+                    className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
+                      darkTheme
+                        ? 'bg-white/10 border-white/20 text-[#e8dfd0] focus:border-[#c9983a] focus:bg-white/15'
+                        : 'bg-white/40 border-white/50 text-[#2d2820] focus:border-[#c9983a] focus:bg-white/60'
+                    } ${errors.ecosystemName ? 'border-red-500/50' : ''} ${isSubmitting || ecosystems.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <option value="">Select an ecosystem</option>
+                    {ecosystems.map((eco) => (
+                      <option key={eco.slug} value={eco.name}>
+                        {eco.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              />
+            )}
+            {errors.ecosystemName && (
+              <p className="mt-1.5 text-[12px] text-red-500">{errors.ecosystemName.message}</p>
             )}
           </div>
 
@@ -249,8 +275,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
             </label>
             <input
               type="text"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
+              {...register('language')}
               placeholder="e.g., TypeScript, Go, Python"
               disabled={isSubmitting}
               className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
@@ -270,8 +295,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
             </label>
             <input
               type="text"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
+              {...register('tags')}
               placeholder="Comma-separated: good first issue, help wanted"
               disabled={isSubmitting}
               className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
@@ -296,8 +320,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
             </label>
             <input
               type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              {...register('category')}
               placeholder="e.g., Frontend, Backend, Full Stack"
               disabled={isSubmitting}
               className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
@@ -324,7 +347,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || success}
+              disabled={isSubmitting || success || !isValid}
               className={`flex-1 px-5 py-3 rounded-[12px] border-2 font-semibold text-[14px] transition-all ${
                 darkTheme
                   ? 'bg-gradient-to-br from-[#c9983a]/40 to-[#d4af37]/30 border-[#c9983a]/70 text-[#fef5e7] hover:from-[#c9983a]/50 hover:to-[#d4af37]/40 shadow-[0_4px_16px_rgba(201,152,58,0.4)]'

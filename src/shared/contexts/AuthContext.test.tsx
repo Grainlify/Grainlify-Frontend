@@ -75,6 +75,19 @@ describe('AuthProvider + useAuth', () => {
     expect(result.current.user).toBeNull();
   });
 
+  it('does not authenticate from a token before the user state resolves', async () => {
+    localStorage.setItem('patchwork_jwt', 'unverified-jwt');
+    mockGetCurrentUser.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: AuthProvider,
+    });
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.user).toBeNull();
+    expect(result.current.isAuthenticated).toBe(false);
+  });
+
   it('resolves to unauthenticated when no token is stored', async () => {
     const { result } = renderHook(() => useAuth(), {
       wrapper: AuthProvider,

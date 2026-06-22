@@ -1,0 +1,137 @@
+# ──────────────────────────────────────────────
+# Dependabot Configuration
+# ──────────────────────────────────────────────
+# Automates dependency updates for:
+#   • npm (pnpm) packages — root package.json
+#   • GitHub Actions — .github/workflows/*.yml
+#
+# Update Policy (see README.md § Contributing):
+#   • Weekly PRs every Monday at 09:00 UTC
+#   • Grouped updates to keep PR noise low
+#   • Patch updates auto-grouped per ecosystem
+#   • Major updates flagged individually for review
+# ──────────────────────────────────────────────
+
+version: 2
+updates:
+
+  # ── npm ecosystem (pnpm) ────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    versioning-strategy: "increase"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    # Limit open PRs so reviewers aren't overwhelmed
+    open-pull-requests-limit: 10
+    # Labels help triage bot PRs in the project board
+    labels:
+      - "dependencies"
+      - "npm"
+    # Group related packages to cut down on PR count
+    groups:
+      # ── Radix UI primitives shipped as a suite ──
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # ── MUI + Emotion (themed components) ──
+      mui:
+        patterns:
+          - "@mui/*"
+          - "@emotion/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # ── Testing toolchain ──
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "@testing-library/*"
+          - "jsdom"
+          - "@playwright/test"
+        update-types:
+          - "minor"
+          - "patch"
+      # ── ESLint + Prettier + TypeScript tooling ──
+      linting:
+        patterns:
+          - "eslint"
+          - "@eslint/*"
+          - "eslint-*"
+          - "prettier"
+          - "typescript"
+          - "typescript-eslint"
+          - "@typescript-eslint/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # ── React ecosystem (react, react-dom, types) ──
+      react-core:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types:
+          - "minor"
+          - "patch"
+      # ── Build tooling (Vite, plugins, Tailwind) ──
+      build-tooling:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "tailwindcss"
+          - "@tailwindcss/*"
+          - "rollup-plugin-visualizer"
+          - "cross-env"
+        update-types:
+          - "minor"
+          - "patch"
+      # ── All other patch updates ──
+      patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+    # Ignore certain packages that have constraints
+    ignore:
+      # Vite is pinned to 6.3.5 via pnpm overrides
+      - dependency-name: "vite"
+        versions: [">=6.3.6"]
+      # @types/react is pinned to 18 via pnpm overrides
+      - dependency-name: "@types/react"
+        versions: [">=19.0.0"]
+      - dependency-name: "@types/react-dom"
+        versions: [">=19.0.0"]
+
+  # ── GitHub Actions ─────────────────────────
+  # Activates automatically when .github/workflows/ exist.
+  # Kept here so Dependabot starts scanning the moment CI
+  # workflows are added.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

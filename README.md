@@ -109,6 +109,68 @@ All authenticated API requests include: `Authorization: Bearer <jwt>`
     └── types/              # Shared TypeScript types
 ```
 
+## Internationalization (i18n)
+
+The app uses [`react-intl`](https://formatjs.io/docs/react-intl/) for i18n. The
+provider, message catalog, and helpers live in [`src/shared/i18n/`](./src/shared/i18n).
+
+### How it is wired
+
+- **Provider**: `<I18nProvider>` is mounted once at the very top of the tree —
+  **above the router** — in [`src/app/App.tsx`](./src/app/App.tsx), so every route
+  can translate.
+- **Catalog**: [`src/shared/i18n/messages.ts`](./src/shared/i18n/messages.ts) holds
+  the English (`en`) catalog, a flat map of dot-namespaced keys. `en` is the base
+  locale and the single source of truth. Keys are namespaced per surface to avoid
+  collisions — e.g. `landingNav.*` (landing navbar) vs `dashboardNav.*` (dashboard
+  sidebar).
+- **Locale-aware formatting**: number/currency formatting reads the active locale
+  from the provider — see [`useLandingStats`](./src/shared/hooks/useLandingStats.ts),
+  which feeds `intl.locale` into `Intl.NumberFormat`.
+
+### Usage
+
+Two interchangeable conventions:
+
+```tsx
+// 1. useTranslation() — type-checked `t(id)`, ideal for string values / arrays.
+import { useTranslation } from '../shared/i18n'
+
+const { t } = useTranslation()
+const label = t('dashboardNav.discover') // 'Discover'
+```
+
+```tsx
+// 2. <FormattedMessage> — ideal for inline JSX.
+import { FormattedMessage } from 'react-intl'
+
+;<FormattedMessage id="landingNav.features" />
+```
+
+`t(id)` only accepts keys that exist in the catalog (`MessageId`), so a typo is a
+**compile-time error** rather than a silent missing translation.
+
+### Adding a key (and English fallback)
+
+1. Add `'namespace.key': 'English text'` to the `en` catalog in
+   [`messages.ts`](./src/shared/i18n/messages.ts). The `MessageId` type updates
+   automatically.
+2. Use it via `t('namespace.key')` or `<FormattedMessage id="namespace.key" />`.
+3. **Fallback**: future locales are layered on top of `en` by `resolveMessages()`
+   (`{ ...en, ...localeCatalog }`), so any key missing from another locale
+   transparently falls back to its English value. `en` must therefore stay
+   complete. Non-fatal `MISSING_TRANSLATION` errors are swallowed by the provider's
+   error policy ([`errors.ts`](./src/shared/i18n/errors.ts)).
+
+### Security: interpolation is text-only
+
+Interpolated values are rendered by react-intl as **React text nodes**, never as
+HTML. The `t()` helper's `values` are typed to primitives only, and the app does
+**not** use rich-text/HTML message interpolation or `dangerouslySetInnerHTML` for
+translations. Untrusted input passed as a placeholder can therefore only ever
+become inert text. This is verified by an anti-injection test in
+[`i18n.test.tsx`](./src/shared/i18n/i18n.test.tsx).
+
 ## Available Scripts
 
 | Command | Description |
@@ -222,6 +284,36 @@ The frontend communicates with the Patchwork backend API. All API configuration 
 
 See [API_INTEGRATION.md](./API_INTEGRATION.md) for detailed API documentation.
 
+## E2E Testing
+
+Playwright end-to-end tests are located in `e2e/`. Tests use `page.route()` to mock backend API responses for deterministic runs without a live backend.
+
+### Running tests
+
+```bash
+pnpm run test:e2e
+```
+
+### Test structure
+
+| File | What it covers |
+|------|---------------|
+| `auth.spec.ts` | Sign-in page, OAuth callback redirect, access-denied error |
+| `routing.spec.ts` | Landing page render, unauthenticated redirect, 404 page |
+| `leaderboard.spec.ts` | Contributor table + podium render, load-more pagination, end-of-list, empty state, projects tab |
+| `browse-pagination.spec.ts` | Project grid render, load-more pagination, end-of-list, empty state, showing counter |
+| `search.spec.ts` | Search input, dynamic results, empty results, clear button, suggestion pills |
+
+### Fixtures
+
+Custom test fixtures in `e2e/fixtures.ts` provide:
+
+- **`setupMockAuth`** — mocks `/me`, `/stats/landing`, `/projects/recommended`, and issue endpoints
+- **`setupMockBrowse`** — mocks `/ecosystems` and `/projects` (paginated list) for the browse page
+- **`setupMockLeaderboard`** — mocks `/leaderboard` (paginated array) for the leaderboard page
+
+All fixtures use synthetic data and fake tokens only. No real credentials are ever used.
+
 ## Contributing
 
 Contributions are welcome! Please ensure your changes:
@@ -230,6 +322,29 @@ Contributions are welcome! Please ensure your changes:
 - Maintain the glassmorphism design language
 - Support both light and dark themes
 - Are responsive across device sizes
+
+### Dependency Management
+
+This project uses [Dependabot](https://docs.github.com/en/code-security/dependabot) to automate dependency updates. Configuration lives in [`.github/dependabot.yml`](./.github/dependabot.yml).
+
+**Update Schedule:**
+- PRs are opened **every Monday at 09:00 UTC**
+- **npm** (pnpm) packages from the root `package.json`
+- **GitHub Actions** from `.github/workflows/` (activates when workflows are added)
+
+**Grouping Strategy:**
+- Related packages (Radix UI, MUI/Emotion, testing tools, linting, React core, build tooling) are grouped into single PRs
+- All patch-level updates across unrelated packages are batched together
+- Major version bumps always arrive as individual PRs for careful review
+
+**Reviewing a Dependabot PR:**
+1. Check the PR description for release notes and changelog links
+2. Verify CI passes (lint, typecheck, tests, bundle size)
+3. Merge if all checks are green and the changelog shows no breaking changes
+
+**Pinned Dependencies:**
+- `vite` is pinned to 6.3.x via `pnpm.overrides` — Dependabot will not propose upgrades beyond this range
+- `@types/react` and `@types/react-dom` are pinned to v18 via `pnpm.overrides` — Dependabot will not propose v19+
 
 ## Security Notes
 
@@ -252,6 +367,21 @@ We monitor the size of the compiled **main chunk** (`dist/assets/index-*.js`). I
 
 - **Baseline Main Chunk Size**: `1,732.13 KB` (approx. `1.77 MB` raw, `464.52 KB` gzipped)
 - **Main Chunk Size Budget**: `1,800 KB`
+
+### Vendor code splitting
+
+`react-intl` (added for [i18n](#internationalization-i18n)) and its `@formatjs` /
+`intl-messageformat` dependencies are split into a dedicated `i18n-vendor-*.js`
+chunk via `manualChunks` in [`vite.config.ts`](./vite.config.ts). `react-intl` is
+a stable dependency that changes far less often than feature code, so isolating it
+keeps the main `index-*.js` chunk lean and improves long-term caching.
+
+> **Note on what this does and does not do:** code splitting reorganizes the
+> output into separate chunks — it does **not** reduce the total bytes the browser
+> downloads on first load (the provider is mounted at the app root). Its benefit is
+> better caching and keeping the *measured* main chunk (`index-*.js`) within budget.
+> After adding i18n the main chunk is `~1,738 KB` (within the `1,800 KB` budget),
+> with `react-intl` (`~69 KB`) living in the `i18n-vendor` chunk.
 
 ### Running Local Analysis
 
