@@ -259,6 +259,34 @@ export const getProfileActivity = (limit = 50, offset = 0, userId?: string, logi
   }>(`/profile/activity?${params.toString()}`, { requiresAuth: true })
 }
 
+export type ProfileReward = {
+  id: string | number
+  date?: string | null
+  created_at?: string | null
+  awarded_at?: string | null
+  project_name?: string | null
+  project?: string | null
+  project_logo?: string | null
+  owner_avatar_url?: string | null
+  contributor_login?: string | null
+  from?: string | null
+  contribution_title?: string | null
+  contribution?: string | null
+  amount?: number | string | null
+  currency?: string | null
+  status?: string | null
+}
+
+/**
+ * Fetch the authenticated user's reward history.
+ *
+ * @returns Reward records for the current profile. The UI normalizes nullable
+ * fields defensively before rendering so incomplete API rows cannot leak
+ * placeholder text such as `"undefined"` into the rewards table.
+ */
+export const getProfileRewards = () =>
+  apiRequest<{ rewards: ProfileReward[] }>('/profile/rewards', { requiresAuth: true })
+
 export const getProjectsContributed = (userId?: string, login?: string) => {
   const params = new URLSearchParams()
   if (userId) params.append('user_id', userId)
