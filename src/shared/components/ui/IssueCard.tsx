@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { GitBranch, Users, Circle } from 'lucide-react';
+import { Users, Circle } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { LanguageIcon } from '../LanguageIcon';
 
@@ -28,7 +28,6 @@ export interface IssueCardProps {
 }
 
 export function IssueCard({
-  id,
   number,
   title,
   repository,
@@ -38,7 +37,6 @@ export function IssueCard({
   tags = [],
   isSelected = false,
   onClick,
-  icon,
   showTags = false,
   description,
   language,
@@ -185,8 +183,13 @@ export function IssueCard({
       {showTags && tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {tags.map((tag, idx) => (
+            /**
+             * Key uses the tag value (normalised to lowercase) so React can
+             * track each chip across reorders/filters without losing DOM state.
+             * A positional suffix handles the rare case of duplicate tag strings.
+             */
             <span
-              key={idx}
+              key={`${tag.toLowerCase()}-${idx}`}
               className={`px-2 py-1 rounded-[6px] text-[10px] font-bold backdrop-blur-[20px] border border-white/25 transition-colors ${
                 isDark ? 'bg-white/[0.08] text-[#d4d4d4]' : 'bg-white/[0.08] text-[#4a3f2f]'
               }`}

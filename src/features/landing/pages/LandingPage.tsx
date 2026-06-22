@@ -1,5 +1,6 @@
 import { Navbar } from "../components/Navbar";
 import { Hero } from "../components/Hero";
+import { ImageWithFallback } from "../components/ImageWithFallback";
 import {
   Code,
   GitBranch,
@@ -220,21 +221,17 @@ function HowItWorks() {
             <div key={index} className="relative">
               {/* Connector Line (desktop) */}
               {index < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-16 left-full w-full h-0.5 bg-gradient-to-r from-[#c9983a]/50 to-transparent" />
+                <div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-[#c9983a]/30 to-transparent" />
               )}
 
-              <div
-                className={`backdrop-blur-[40px] border rounded-[24px] p-8 transition-all hover:border-[#c9983a]/30 hover:shadow-[0_12px_36px_rgba(201,152,58,0.15)] ${
-                  theme === "dark"
-                    ? "bg-white/[0.08] border-white/15 hover:bg-white/[0.12]"
-                    : "bg-white/[0.15] border-white/25 hover:bg-white/[0.2]"
-                }`}
-              >
-                <div className="text-6xl font-bold bg-gradient-to-r from-[#c9983a] to-[#d4af37] bg-clip-text text-transparent mb-6">
-                  {step.number}
+              <div className="text-center">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/15 border border-[#c9983a]/30 flex items-center justify-center mx-auto mb-6 shadow-[0_4px_12px_rgba(201,152,58,0.15)]">
+                  <span className="text-2xl font-bold text-[#c9983a]">
+                    {step.number}
+                  </span>
                 </div>
                 <h3
-                  className={`text-2xl font-semibold mb-4 transition-colors ${
+                  className={`text-xl font-semibold mb-3 transition-colors ${
                     theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
                   }`}
                 >
@@ -286,7 +283,7 @@ function WhyChooseUs() {
               Why Choose Grainlify?
             </h2>
             <p
-              className={`text-xl mb-10 transition-colors ${
+              className={`text-xl mb-8 transition-colors ${
                 theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
               }`}
             >
@@ -296,32 +293,24 @@ function WhyChooseUs() {
 
             <div className="space-y-4">
               {benefits.map((benefit, index) => (
-                <div key={index} className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-[#c9983a] to-[#d4af37] flex items-center justify-center mt-1 shadow-[0_2px_8px_rgba(201,152,58,0.4)]">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <p
+                <div key={index} className="flex items-start space-x-3">
+                  <CheckCircle className="w-6 h-6 text-[#c9983a] mt-0.5 flex-shrink-0" />
+                  <span
                     className={`transition-colors ${
                       theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
                     }`}
                   >
                     {benefit}
-                  </p>
+                  </span>
                 </div>
               ))}
             </div>
 
-            <div className="mt-10 flex items-center space-x-8">
+            <div className="mt-8 flex space-x-8">
               <div>
+                <div className="text-3xl font-bold text-[#c9983a]">98%</div>
                 <div
-                  className={`text-4xl font-bold transition-colors ${
-                    theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-                  }`}
-                >
-                  98%
-                </div>
-                <div
-                  className={`transition-colors ${
+                  className={`text-sm transition-colors ${
                     theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
                   }`}
                 >
@@ -329,15 +318,9 @@ function WhyChooseUs() {
                 </div>
               </div>
               <div>
+                <div className="text-3xl font-bold text-[#c9983a]">24/7</div>
                 <div
-                  className={`text-4xl font-bold transition-colors ${
-                    theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-                  }`}
-                >
-                  24/7
-                </div>
-                <div
-                  className={`transition-colors ${
+                  className={`text-sm transition-colors ${
                     theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
                   }`}
                 >
@@ -348,63 +331,60 @@ function WhyChooseUs() {
           </div>
 
           {/* Right: Visual Element */}
-          <div className="relative">
-            <div
-              className={`backdrop-blur-[40px] border rounded-[28px] p-8 relative overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.08)] ${
-                theme === "dark"
-                  ? "bg-white/[0.08] border-white/15"
-                  : "bg-white/[0.15] border-white/25"
-              }`}
-            >
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#c9983a]/20 rounded-full blur-3xl" />
-              <div className="relative space-y-6">
-                {[
-                  {
-                    icon: TrendingUp,
-                    label: "Growing Ecosystem",
-                    value: "+45%",
-                  },
-                  {
-                    icon: Users,
-                    label: "Active Users",
-                    value: display.contributors,
-                  },
-                  {
-                    icon: Award,
-                    label: "Projects Funded",
-                    value: display.activeProjects,
-                  },
-                ].map((item, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center space-x-4 backdrop-blur-[25px] border rounded-[16px] p-4 transition-all hover:border-[#c9983a]/30 ${
-                      theme === "dark"
-                        ? "bg-white/[0.06] border-white/10 hover:bg-white/[0.1]"
-                        : "bg-white/[0.12] border-white/20 hover:bg-white/[0.18]"
+          <div
+            className={`backdrop-blur-[40px] border rounded-[24px] p-8 ${
+              theme === "dark"
+                ? "bg-white/[0.08] border-white/15"
+                : "bg-white/[0.15] border-white/25"
+            }`}
+          >
+            <div className="grid grid-cols-1 gap-6">
+              {[
+                {
+                  icon: TrendingUp,
+                  label: "Growing Ecosystem",
+                  value: "+45%",
+                },
+                {
+                  icon: Users,
+                  label: "Active Users",
+                  value: display.contributors,
+                },
+                {
+                  icon: Award,
+                  label: "Projects Funded",
+                  value: display.activeProjects,
+                },
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center justify-between p-4 rounded-[16px] ${
+                    theme === "dark"
+                      ? "bg-white/[0.05]"
+                      : "bg-white/[0.1]"
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <item.icon className="w-5 h-5 text-[#c9983a]" />
+                    <span
+                      className={`transition-colors ${
+                        theme === "dark"
+                          ? "text-[#b8a898]"
+                          : "text-[#7a6b5a]"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                  <span
+                    className={`font-semibold transition-colors ${
+                      theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
                     }`}
                   >
-                    <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/15 border border-[#c9983a]/30 flex items-center justify-center shadow-[0_4px_12px_rgba(201,152,58,0.15)]">
-                      <item.icon className="w-6 h-6 text-[#c9983a]" />
-                    </div>
-                    <div className="flex-1">
-                      <div
-                        className={`text-sm transition-colors ${
-                          theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                        }`}
-                      >
-                        {item.label}
-                      </div>
-                      <div
-                        className={`text-xl font-semibold transition-colors ${
-                          theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-                        }`}
-                      >
-                        {item.value}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    {item.value}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -504,9 +484,11 @@ function Testimonials() {
 
               {/* Author */}
               <div className="flex items-center space-x-4">
-                <img
+                <ImageWithFallback
                   src={testimonial.avatar}
-                  alt={testimonial.name}
+                  alt={`${testimonial.name}, ${testimonial.role}`}
+                  loading="lazy"
+                  decoding="async"
                   className="w-12 h-12 rounded-full object-cover border-2 border-[#c9983a]/30"
                 />
                 <div>
@@ -641,7 +623,7 @@ function Footer() {
                 theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
               }`}
             >
-              Resources
+              Support
             </h4>
             <div className="space-y-2">
               <a
@@ -658,7 +640,7 @@ function Footer() {
                   theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
                 }`}
               >
-                Support
+                Help Center
               </a>
               <a
                 href="#"
@@ -666,19 +648,20 @@ function Footer() {
                   theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
                 }`}
               >
-                Terms
+                Contact
               </a>
             </div>
           </div>
         </div>
 
-        {/* Bottom */}
         <div
-          className={`pt-8 border-t border-white/20 text-center transition-colors ${
-            theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+          className={`pt-8 border-t text-center transition-colors ${
+            theme === "dark"
+              ? "border-white/10 text-[#b8a898]"
+              : "border-white/20 text-[#7a6b5a]"
           }`}
         >
-          <p>&copy; 2024 Grainlify. All rights reserved.</p>
+          <p>© 2024 Grainlify. All rights reserved.</p>
         </div>
       </div>
     </footer>

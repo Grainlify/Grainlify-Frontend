@@ -15,9 +15,55 @@ interface DatePickerProps {
   placeholder?: string;
   required?: boolean;
   className?: string;
-  error?: string | null; // ADDED: Error message support
+  error?: string | null;
 }
 
+/**
+ * Helper to parse a YYYY-MM-DD string into a UTC Date object.
+ * Returns undefined if the string is empty or invalid.
+ *
+ * @param value The date string in YYYY-MM-DD format
+ */
+export function parseUtcDate(value: string): Date | undefined {
+  if (!value) return undefined;
+  const [year, month, day] = value.split('-').map(Number);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return undefined;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+/**
+ * Helper to format a UTC Date object using date-fns format.
+ * To avoid DST/timezone offset transitions shifting the day,
+ * we map the UTC date digits to a local Date object at noon (12:00:00).
+ *
+ * @param date The Date object in UTC to format
+ * @param formatStr The date-fns format template string
+ */
+export function formatUtcDate(date: Date, formatStr: string): string {
+  const localNoonDate = new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    12, // Noon avoids timezone offset DST shift boundaries
+    0,
+    0
+  );
+  return format(localNoonDate, formatStr);
+}
+
+/**
+ * DatePicker component designed to prevent off-by-one day errors in non-UTC timezones.
+ * 
+ * ## Timezone Convention
+ * Input parsing and display formatting use a consistent UTC basis.
+ * - Value: Passed as a `YYYY-MM-DD` string, representing the date in UTC.
+ * - Parse: Parsed using `Date.UTC` to construct a UTC Date object.
+ * - Display: Formatted by mapping UTC date parts to a local Date object at noon, preventing
+ *   local timezone offset calculations (like `date-fns` format) from shifting the date across
+ *   day/DST boundaries.
+ * - Calendar selection: Highlights the correct day by passing a local Date object mapped to the UTC
+ *   digits at noon, and formats the selected local Date back to `YYYY-MM-DD` in local time.
+ */
 export function DatePicker({
   label,
   value,
@@ -25,41 +71,44 @@ export function DatePicker({
   placeholder = "Pick a date",
   required = false,
   className = "",
-  error // ADDED
+  error
 }: DatePickerProps) {
   const { theme } = useTheme();
   const [open, setOpen] = React.useState(false);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
 
-  // ADDED: Check if there's an error
   const isError = !!error;
 
-  // Parse the date value (YYYY-MM-DD format)
-  // Parse as UTC to avoid timezone issues
-  const date = React.useMemo(() => {
-    if (!value) return undefined;
-    try {
-      const [year, month, day] = value.split('-').map(Number);
-      if (isNaN(year) || isNaN(month) || isNaN(day)) return undefined;
-      return new Date(Date.UTC(year, month - 1, day));
-    } catch {
-      return undefined;
-    }
-  }, [value]);
+  // Parse the YYYY-MM-DD value into a UTC Date object
+  const date = React.useMemo(() => parseUtcDate(value), [value]);
+
+  // Construct local date at noon for the calendar select highlight
+  const calendarSelected = React.useMemo(() => {
+    if (!date) return undefined;
+    return new Date(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      12 // Noon prevents shifting to previous/next day during DST changes
+    );
+  }, [date]);
+
+  // Format the date for display
+  const displayValue = date ? formatUtcDate(date, "MMM dd, yyyy") : "";
 
   // Handle date selection
   const handleSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
-      // Format as YYYY-MM-DD
+      // selectedDate is a local Date object from react-day-picker.
+      // Format to YYYY-MM-DD locally to preserve calendar date digits.
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
       onChange(formattedDate);
       setOpen(false);
+      triggerRef.current?.focus();
     }
   };
 
-  // Format date for display
-  const displayValue = date ? format(date, "MMM dd, yyyy") : "";
-
-  // UPDATED: Input styling matching ModalInput with error support
+  // Input styling matching ModalInput with error support
   const inputClasses = `w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none transition-all text-[14px] flex items-center justify-between ${
     isError
       ? theme === 'dark'
@@ -70,7 +119,7 @@ export function DatePicker({
         : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a] focus:bg-white/[0.2] focus:border-[#c9983a]/30'
   } ${className}`;
 
-  // Popover content styling for theme - using theme colors
+  // Popover content styling for theme
   const popoverContentClasses = theme === 'dark'
     ? 'bg-[#1a1512] border-[#b8a898]/30 backdrop-blur-[30px] text-[#f5f5f5]'
     : 'bg-white/[0.4] border-[#c9983a]/20 backdrop-blur-[30px] text-[#2d2820]';
@@ -139,9 +188,11 @@ export function DatePicker({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
+            ref={triggerRef}
             type="button"
             className={inputClasses}
             onClick={() => setOpen(!open)}
+            aria-expanded={open}
           >
             <span className={displayValue ? "" : `text-[14px] ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
               {displayValue || placeholder}
@@ -149,10 +200,17 @@ export function DatePicker({
             <CalendarIcon className={`h-4 w-4 ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`} />
           </button>
         </PopoverTrigger>
-        <PopoverContent className={cn("w-auto p-0 z-[10001]", popoverContentClasses)} align="start">
+        <PopoverContent 
+          className={cn("w-auto p-0 z-[10001]", popoverContentClasses)} 
+          align="start"
+          onEscapeKeyDown={() => {
+            setOpen(false);
+            triggerRef.current?.focus();
+          }}
+        >
           <Calendar
             mode="single"
-            selected={date}
+            selected={calendarSelected}
             onSelect={handleSelect}
             initialFocus
             classNames={calendarClassNames}
@@ -160,7 +218,6 @@ export function DatePicker({
         </PopoverContent>
       </Popover>
       
-      {/* ADDED: Error message display */}
       {isError && (
         <p className={`text-[12px] mt-1.5 transition-colors ${
           theme === 'dark' ? 'text-red-400' : 'text-red-600'
