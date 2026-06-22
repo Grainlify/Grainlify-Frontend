@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
-
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { getMyProjects, getPublicProject } from '../../../shared/api/client';
 import { IssuesTab } from '../../maintainers/components/issues/IssuesTab';
@@ -24,49 +23,54 @@ export function IssueDetailPage({ issueId, projectId, onClose }: IssueDetailPage
   const isDark = theme === 'dark';
 
   const [project, setProject] = useState<null | Awaited<ReturnType<typeof getPublicProject>>>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [myProjects, setMyProjects] = useState<ProjectForIssues[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<null | { message: string; notFound?: boolean }>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        const [p, mine] = await Promise.all([
-          projectId ? getPublicProject(projectId) : Promise.resolve(null as any),
-          getMyProjects(),
-        ]);
-        if (cancelled) return;
-        if (projectId) setProject(p);
-        setMyProjects(
-          (Array.isArray(mine) ? mine : []).map((x) => ({
-            id: x.id,
-            github_full_name: x.github_full_name,
-            status: x.status,
-          }))
-        );
-      } finally {
-        if (cancelled) return;
-        setIsLoading(false);
+  const fetchData = useCallback(async () => {
+    if (!projectId) {
+      setError({ message: 'Project ID missing' });
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [p, mine] = await Promise.all([
+        getPublicProject(projectId),
+        getMyProjects(),
+      ]);
+      setProject(p);
+      setMyProjects(
+        (Array.isArray(mine) ? mine : []).map((x) => ({
+          id: x.id,
+          github_full_name: x.github_full_name,
+          status: x.status,
+        }))
+      );
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 404) {
+        setError({ message: 'Project not found', notFound: true });
+      } else {
+        setError({ message: 'Failed to load project data. Please try again.' });
       }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
+    } finally {
+      setIsLoading(false);
+    }
   }, [projectId]);
 
-  // Include the current project so contributors (who have no "my projects") still see the issue
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   const selectedProjects = useMemo((): ProjectForIssues[] => {
-    const current: ProjectForIssues | null = project
+    const current = project
       ? { id: project.id, github_full_name: project.github_full_name, status: 'verified' }
       : null;
     const others = myProjects.filter((m) => !current || m.id !== current.id);
     return current ? [current, ...others] : others;
   }, [project, myProjects]);
-
 
   return (
     <div className="space-y-4">
@@ -92,11 +96,7 @@ export function IssueDetailPage({ issueId, projectId, onClose }: IssueDetailPage
               ))}
             </div>
           </div>
-          <div
-            className={`flex-1 rounded-[24px] border overflow-hidden ${
-              isDark ? 'bg-[#2d2820]/[0.4] border-white/10' : 'bg-white/[0.12] border-white/20'
-            }`}
-          >
+          <div className="flex-1 rounded-[24px] border overflow-hidden">
             <div className="p-8 space-y-4">
               <SkeletonLoader className="h-8 w-3/4 rounded-[10px]" />
               <SkeletonLoader className="h-4 w-full rounded-[10px]" />
@@ -104,6 +104,19 @@ export function IssueDetailPage({ issueId, projectId, onClose }: IssueDetailPage
               <SkeletonLoader className="h-24 w-full rounded-[12px]" />
             </div>
           </div>
+        </div>
+      ) : error ? (
+        <div role="alert" className={`p-4 rounded-md ${error.notFound ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`)}>
+          <p className="mb-2">{error.message}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              fetchData();
+            }}
+            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+          >
+            Retry
+          </button>
         </div>
       ) : (
         <IssuesTab
@@ -117,5 +130,3 @@ export function IssueDetailPage({ issueId, projectId, onClose }: IssueDetailPage
     </div>
   );
 }
-
-
