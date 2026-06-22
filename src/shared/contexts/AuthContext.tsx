@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userRole,
         userId,
         user,
-        isAuthenticated: !!user && !!getAuthToken(),
+        isAuthenticated: user !== null,
         isLoading,
         login,
         logout,
