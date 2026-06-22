@@ -2,20 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { getRepoName, isValidProject } from './projectFilter';
 
 describe('getRepoName', () => {
-  it('extracts repo name from owner/repo format', () => {
-    expect(getRepoName('owner/my-repo')).toBe('my-repo');
-  });
-
-  it('handles multi-level paths', () => {
-    expect(getRepoName('org/team/repo')).toBe('team');
-  });
-
-  it('returns input when there is no slash', () => {
-    expect(getRepoName('standalone')).toBe('standalone');
-  });
-
-  it('handles empty string', () => {
-    expect(getRepoName('')).toBe('');
+  it.each([
+    ['owner/my-repo', 'my-repo'],
+    ['org/team/repo', 'team'],
+    ['standalone', 'standalone'],
+    ['', ''],
+    ['/leading-slash', 'leading-slash'],
+    ['owner/', ''],
+    ['owner/repo/extra', 'repo'],
+  ])('extracts "%s" as "%s"', (fullName, expected) => {
+    expect(getRepoName(fullName)).toBe(expected);
   });
 });
 
@@ -30,25 +26,20 @@ describe('isValidProject', () => {
     expect(isValidProject(project)).toBe(false);
   });
 
-  it('rejects null', () => {
-    expect(isValidProject(null)).toBe(false);
-  });
-
-  it('rejects undefined', () => {
-    expect(isValidProject(undefined)).toBe(false);
-  });
-
-  it('rejects project without id', () => {
-    const project = { github_full_name: 'owner/repo' };
+  it.each([
+    ['null project', null],
+    ['undefined project', undefined],
+    ['missing id', { github_full_name: 'owner/repo' }],
+    ['empty id', { id: '', github_full_name: 'owner/repo' }],
+    ['missing github_full_name', { id: '123' }],
+    ['empty github_full_name', { id: '123', github_full_name: '' }],
+    ['empty object', {}],
+  ])('rejects %s', (_name, project) => {
     expect(isValidProject(project)).toBe(false);
   });
 
-  it('rejects project without github_full_name', () => {
-    const project = { id: '123' };
+  it('rejects .github repo case-insensitively', () => {
+    const project = { id: '789', github_full_name: 'owner/.GitHub' };
     expect(isValidProject(project)).toBe(false);
-  });
-
-  it('rejects empty object', () => {
-    expect(isValidProject({})).toBe(false);
   });
 });

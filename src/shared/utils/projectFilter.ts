@@ -12,7 +12,7 @@ export function isValidProject(project: any): boolean {
   const repoName = getRepoName(project.github_full_name);
 
   // Exclude special GitHub repositories
-  if (repoName === ".github") {
+  if (repoName.toLowerCase() === ".github") {
     return false;
   }
 
