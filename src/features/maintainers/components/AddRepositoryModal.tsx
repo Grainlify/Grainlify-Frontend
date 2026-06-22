@@ -183,16 +183,23 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
 
           {/* Repository Name */}
           <div>
-            <label className={`block text-[14px] font-semibold mb-2 transition-colors ${
-              darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-            }`}>
+            <label 
+              htmlFor="github-fullname-input"
+              className={`block text-[14px] font-semibold mb-2 transition-colors ${
+                darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+              }`}
+            >
               Repository Name <span className="text-red-500">*</span>
             </label>
             <input
+              id="github-fullname-input"
               type="text"
               {...register('githubFullName', { validate: validateRepoName })}
               placeholder="owner/repo (e.g., facebook/react)"
               disabled={isSubmitting}
+              maxLength={140}
+              aria-invalid={!!errors.githubFullName}
+              aria-describedby={errors.githubFullName ? "github-fullname-error" : "github-fullname-help"}
               className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
                 darkTheme
                   ? 'bg-white/10 border-white/20 text-[#e8dfd0] placeholder:text-[#b8a898] focus:border-[#c9983a] focus:bg-white/15'
@@ -200,15 +207,24 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
               } ${errors.githubFullName ? 'border-red-500/50' : ''} ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
             {errors.githubFullName && (
-              <p className="mt-1.5 text-[12px] text-red-500">{errors.githubFullName.message}</p>
-            )}
-            {!errors.githubFullName && (
-              <p className={`mt-1.5 text-[12px] transition-colors ${
-                darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-              }`}>
-                Enter the full repository name in format: owner/repository
+              <p
+                id="github-fullname-error"
+                role="alert"
+                className={`mt-1.5 text-[12px] font-medium transition-colors ${
+                  darkTheme ? 'text-red-400' : 'text-red-600'
+                }`}
+              >
+                {errors.githubFullName.message}
               </p>
             )}
+            <p
+              id="github-fullname-help"
+              className={`mt-1.5 text-[12px] transition-colors ${
+                darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              Enter the full repository name in format: owner/repository. Owner name can contain letters, numbers, and hyphens (max 39 characters, no leading/trailing/consecutive hyphens). Repository name can contain letters, numbers, hyphens, underscores, and periods (max 100 characters).
+            </p>
           </div>
 
           {/* Ecosystem */}

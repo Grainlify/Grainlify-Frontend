@@ -33,6 +33,27 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Isolate react-intl (and its @formatjs / intl-messageformat deps) into a
+        // dedicated vendor chunk. react-intl is a stable dependency, so splitting
+        // it out keeps the app's main `index-*.js` chunk lean and improves
+        // long-term caching — the vendor chunk changes far less often than feature
+        // code. This also keeps the measured main chunk within the CI bundle
+        // budget after adding i18n. See README "Bundle Size and Analysis".
+        manualChunks(id) {
+          if (
+            id.includes('react-intl') ||
+            id.includes('@formatjs') ||
+            id.includes('intl-messageformat')
+          ) {
+            return 'i18n-vendor'
+          }
+        },
+      },
+    },
+  },
   test: {
     // jsdom gives component tests a DOM; node-only tests still work under it.
     // Tests can still opt into a different environment per-file via a

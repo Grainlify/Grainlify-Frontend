@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, ArrowRight, X, FileText, FolderGit2, User, ChevronLeft } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { useDebouncedValue } from '../../../shared/hooks/useDebouncedValue';
 
 interface SearchPageProps {
   onBack: () => void;
@@ -22,6 +23,9 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const darkTheme = theme === 'dark';
+
+  // Debounce the query so filtering only runs once the user pauses typing.
+  const debouncedQuery = useDebouncedValue(searchQuery, 300);
 
   const searchSuggestions = [
     "Terminal-based markdown editors worth checking out",
@@ -54,12 +58,12 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
   };
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (!debouncedQuery.trim()) {
       setSearchResults([]);
       return;
     }
 
-    const query = searchQuery.toLowerCase();
+    const query = debouncedQuery.toLowerCase();
     const results: SearchResult[] = [];
 
     // Search issues
@@ -102,7 +106,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
     });
 
     setSearchResults(results);
-  }, [searchQuery]);
+  }, [debouncedQuery]);
 
   const handleResultClick = (result: SearchResult) => {
     if (result.type === 'issue') {
