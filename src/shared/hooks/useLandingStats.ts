@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { getLandingStats, type LandingStats } from '../api/client';
+import { useTranslation } from '../i18n';
 
 type LandingStatsDisplay = {
   activeProjects: string;
@@ -8,16 +9,19 @@ type LandingStatsDisplay = {
   grantsDistributed: string;
 };
 
-const formatCount = (n: number) => n.toLocaleString();
+/** Formats an integer count using the active locale's grouping separators. */
+const formatCount = (n: number, locale: string) => n.toLocaleString(locale);
 
-const formatUSD = (n: number) =>
-  new Intl.NumberFormat('en-US', {
+/** Formats a USD amount as whole-dollar currency for the active locale. */
+const formatUSD = (n: number, locale: string) =>
+  new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,
   }).format(n);
 
 export function useLandingStats() {
+  const { locale } = useTranslation();
   const [stats, setStats] = useState<LandingStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,11 +60,11 @@ export function useLandingStats() {
     }
 
     return {
-      activeProjects: formatCount(stats.active_projects),
-      contributors: formatCount(stats.contributors),
-      grantsDistributed: formatUSD(stats.grants_distributed_usd),
+      activeProjects: formatCount(stats.active_projects, locale),
+      contributors: formatCount(stats.contributors, locale),
+      grantsDistributed: formatUSD(stats.grants_distributed_usd, locale),
     };
-  }, [stats]);
+  }, [stats, locale]);
 
   return { stats, display, isLoading, error };
 }

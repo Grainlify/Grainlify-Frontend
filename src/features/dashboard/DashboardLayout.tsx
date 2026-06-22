@@ -33,9 +33,11 @@ import {
   ModalInput,
 } from "../../shared/components/ui/Modal";
 import { bootstrapAdmin } from "../../shared/api/client";
+import { useTranslation } from "../../shared/i18n";
 
 export function DashboardLayout() {
   const { userRole, logout, login } = useAuth();
+  const { t } = useTranslation();
   const { theme, setThemeFromAnimation } = useTheme();
   const location = useLocation();
   const { ref: themeToggleRef, toggleSwitchTheme } = useModeAnimation({
@@ -164,18 +166,18 @@ export function DashboardLayout() {
 
   // Role-based navigation items
   const navItems = [
-    { id: "discover", icon: Compass, label: "Discover", path: "/dashboard/discover" },
-    { id: "browse", icon: Grid3x3, label: "Browse", path: "/dashboard/browse" },
-    { id: "osw", icon: Calendar, label: "Open-Source Week", path: "/dashboard/open-source-week" },
-    { id: "ecosystems", icon: Globe, label: "Ecosystems", path: "/dashboard/ecosystems" },
+    { id: "discover", icon: Compass, label: t("dashboardNav.discover"), path: "/dashboard/discover" },
+    { id: "browse", icon: Grid3x3, label: t("dashboardNav.browse"), path: "/dashboard/browse" },
+    { id: "osw", icon: Calendar, label: t("dashboardNav.openSourceWeek"), path: "/dashboard/open-source-week" },
+    { id: "ecosystems", icon: Globe, label: t("dashboardNav.ecosystems"), path: "/dashboard/ecosystems" },
     activeRole === "maintainer" || activeRole === "admin"
-      ? { id: "maintainers", icon: Users, label: "Maintainers", path: "/dashboard/maintainers" }
-      : { id: "contributors", icon: Users, label: "Contributors", path: "/dashboard/contributors" },
+      ? { id: "maintainers", icon: Users, label: t("dashboardNav.maintainers"), path: "/dashboard/maintainers" }
+      : { id: "contributors", icon: Users, label: t("dashboardNav.contributors"), path: "/dashboard/contributors" },
     ...(activeRole === "admin"
-      ? [{ id: "data", icon: Database, label: "Data", path: "/dashboard/data" }]
+      ? [{ id: "data", icon: Database, label: t("dashboardNav.data"), path: "/dashboard/data" }]
       : []),
-    { id: "leaderboard", icon: Trophy, label: "Leaderboard", path: "/dashboard/leaderboard" },
-    { id: "blog", icon: FileText, label: "Grainlify Blog", path: "/dashboard/blog" },
+    { id: "leaderboard", icon: Trophy, label: t("dashboardNav.leaderboard"), path: "/dashboard/leaderboard" },
+    { id: "blog", icon: FileText, label: t("dashboardNav.blog"), path: "/dashboard/blog" },
   ];
 
   const darkTheme = theme === "dark";

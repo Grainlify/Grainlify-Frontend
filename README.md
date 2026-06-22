@@ -109,6 +109,68 @@ All authenticated API requests include: `Authorization: Bearer <jwt>`
     └── types/              # Shared TypeScript types
 ```
 
+## Internationalization (i18n)
+
+The app uses [`react-intl`](https://formatjs.io/docs/react-intl/) for i18n. The
+provider, message catalog, and helpers live in [`src/shared/i18n/`](./src/shared/i18n).
+
+### How it is wired
+
+- **Provider**: `<I18nProvider>` is mounted once at the very top of the tree —
+  **above the router** — in [`src/app/App.tsx`](./src/app/App.tsx), so every route
+  can translate.
+- **Catalog**: [`src/shared/i18n/messages.ts`](./src/shared/i18n/messages.ts) holds
+  the English (`en`) catalog, a flat map of dot-namespaced keys. `en` is the base
+  locale and the single source of truth. Keys are namespaced per surface to avoid
+  collisions — e.g. `landingNav.*` (landing navbar) vs `dashboardNav.*` (dashboard
+  sidebar).
+- **Locale-aware formatting**: number/currency formatting reads the active locale
+  from the provider — see [`useLandingStats`](./src/shared/hooks/useLandingStats.ts),
+  which feeds `intl.locale` into `Intl.NumberFormat`.
+
+### Usage
+
+Two interchangeable conventions:
+
+```tsx
+// 1. useTranslation() — type-checked `t(id)`, ideal for string values / arrays.
+import { useTranslation } from '../shared/i18n'
+
+const { t } = useTranslation()
+const label = t('dashboardNav.discover') // 'Discover'
+```
+
+```tsx
+// 2. <FormattedMessage> — ideal for inline JSX.
+import { FormattedMessage } from 'react-intl'
+
+;<FormattedMessage id="landingNav.features" />
+```
+
+`t(id)` only accepts keys that exist in the catalog (`MessageId`), so a typo is a
+**compile-time error** rather than a silent missing translation.
+
+### Adding a key (and English fallback)
+
+1. Add `'namespace.key': 'English text'` to the `en` catalog in
+   [`messages.ts`](./src/shared/i18n/messages.ts). The `MessageId` type updates
+   automatically.
+2. Use it via `t('namespace.key')` or `<FormattedMessage id="namespace.key" />`.
+3. **Fallback**: future locales are layered on top of `en` by `resolveMessages()`
+   (`{ ...en, ...localeCatalog }`), so any key missing from another locale
+   transparently falls back to its English value. `en` must therefore stay
+   complete. Non-fatal `MISSING_TRANSLATION` errors are swallowed by the provider's
+   error policy ([`errors.ts`](./src/shared/i18n/errors.ts)).
+
+### Security: interpolation is text-only
+
+Interpolated values are rendered by react-intl as **React text nodes**, never as
+HTML. The `t()` helper's `values` are typed to primitives only, and the app does
+**not** use rich-text/HTML message interpolation or `dangerouslySetInnerHTML` for
+translations. Untrusted input passed as a placeholder can therefore only ever
+become inert text. This is verified by an anti-injection test in
+[`i18n.test.tsx`](./src/shared/i18n/i18n.test.tsx).
+
 ## Available Scripts
 
 | Command | Description |
@@ -238,6 +300,21 @@ We monitor the size of the compiled **main chunk** (`dist/assets/index-*.js`). I
 
 - **Baseline Main Chunk Size**: `1,732.13 KB` (approx. `1.77 MB` raw, `464.52 KB` gzipped)
 - **Main Chunk Size Budget**: `1,800 KB`
+
+### Vendor code splitting
+
+`react-intl` (added for [i18n](#internationalization-i18n)) and its `@formatjs` /
+`intl-messageformat` dependencies are split into a dedicated `i18n-vendor-*.js`
+chunk via `manualChunks` in [`vite.config.ts`](./vite.config.ts). `react-intl` is
+a stable dependency that changes far less often than feature code, so isolating it
+keeps the main `index-*.js` chunk lean and improves long-term caching.
+
+> **Note on what this does and does not do:** code splitting reorganizes the
+> output into separate chunks — it does **not** reduce the total bytes the browser
+> downloads on first load (the provider is mounted at the app root). Its benefit is
+> better caching and keeping the *measured* main chunk (`index-*.js`) within budget.
+> After adding i18n the main chunk is `~1,738 KB` (within the `1,800 KB` budget),
+> with `react-intl` (`~69 KB`) living in the `i18n-vendor` chunk.
 
 ### Running Local Analysis
 
