@@ -1,4 +1,5 @@
 import { logger } from '../../../shared/utils/logger';
+import { useCallback } from 'react';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ExternalLink, Copy, Circle, ArrowLeft, GitPullRequest } from 'lucide-react';
@@ -111,6 +112,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
   const [activeIssueTab, setActiveIssueTab] = useState('all');
   const [copiedLink, setCopiedLink] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<null | { message: string; notFound?: boolean }>(null);
   const [project, setProject] = useState<null | Awaited<ReturnType<typeof getPublicProject>>>(null);
   const [issues, setIssues] = useState<Array<{
     github_issue_id: number;
@@ -141,7 +143,6 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
 
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
       if (!projectId) {
         logger.warn('ProjectDetailPage: No projectId provided');
@@ -149,6 +150,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         return;
       }
       setIsLoading(true);
+      setError(null);
       try {
         logger.debug('ProjectDetailPage: Fetching project data for ID:', projectId);
         const [p, i, pr] = await Promise.all([
@@ -165,15 +167,20 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         setProject(p);
         setIssues(i?.issues || []);
         setPRs(pr?.prs || []);
-        setIsLoading(false);
-      } catch (e) {
+      } catch (e: any) {
         if (cancelled) return;
         logger.error('ProjectDetailPage: Error loading project data', e);
-        // Keep loading state true to show skeleton forever when backend is down
-        // Don't set isLoading to false - keep showing skeleton
+        const status = e?.response?.status;
+        if (status === 404) {
+          setError({ message: 'Project not found', notFound: true });
+        } else {
+          setError({ message: 'Failed to load project data. Please try again.' });
+        }
+      } finally {
+        if (cancelled) return;
+        setIsLoading(false);
       }
     };
-
     load();
     return () => {
       cancelled = true;
@@ -411,6 +418,22 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
           <div className="aspect-square rounded-[20px] overflow-hidden bg-gradient-to-br from-[#c9983a]/20 to-[#d4af37]/10">
             {isLoading ? (
               <SkeletonLoader className="w-full h-full" />
+            ) : error ? (
+              <div role="alert" className={`p-4 rounded-md ${
+                error.notFound ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+              }`}>
+                <p className="mb-2">{error.message}</p>
+                <button
+                  onClick={() => {
+                    // retry fetch
+                    setError(null);
+                    setIsLoading(true);
+                  }}
+                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                >
+                  Retry
+                </button>
+              </div>
             ) : (
               <img 
                 src={projectAvatar} 
