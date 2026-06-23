@@ -210,11 +210,14 @@ export function LeaderboardPage() {
     };
 
     generatePetals();
-    setTimeout(() => setIsLoaded(true), 100);
+    const loadTimer = setTimeout(() => setIsLoaded(true), 100);
 
     // Regenerate petals every 15 seconds for continuous effect
     const interval = setInterval(generatePetals, 15000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(loadTimer);
+      clearInterval(interval);
+    };
   }, []);
 
   // Ensure we have at least 3 items for the podium (pad with empty data if needed)
