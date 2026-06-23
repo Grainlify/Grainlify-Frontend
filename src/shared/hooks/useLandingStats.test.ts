@@ -2,11 +2,16 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useLandingStats } from './useLandingStats';
+import { I18nProvider } from '../i18n';
 import type { LandingStats } from '../api/client';
 
 const mockGetLandingStats = vi.fn();
 vi.mock('../api/client', () => ({
   getLandingStats: (...args: unknown[]) => mockGetLandingStats(...args),
+}));
+
+vi.mock('../i18n', () => ({
+  useTranslation: () => ({ locale: 'en', t: (id: string) => id }),
 }));
 
 const PAYLOAD: LandingStats = {
@@ -22,7 +27,7 @@ describe('useLandingStats', () => {
 
   it('starts with isLoading true, null stats and error, and placeholder display values', () => {
     mockGetLandingStats.mockReturnValue(new Promise(() => {})); // never resolves
-    const { result } = renderHook(() => useLandingStats());
+    const { result } = renderHook(() => useLandingStats(), { wrapper: I18nProvider });
 
     expect(result.current.isLoading).toBe(true);
     expect(result.current.stats).toBeNull();
@@ -36,7 +41,7 @@ describe('useLandingStats', () => {
 
   it('transitions to loaded state and formats display values on success', async () => {
     mockGetLandingStats.mockResolvedValue(PAYLOAD);
-    const { result } = renderHook(() => useLandingStats());
+    const { result } = renderHook(() => useLandingStats(), { wrapper: I18nProvider });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -55,7 +60,7 @@ describe('useLandingStats', () => {
 
   it('populates error, keeps stats null, and clears isLoading when fetch rejects with an Error', async () => {
     mockGetLandingStats.mockRejectedValue(new Error('Network timeout'));
-    const { result } = renderHook(() => useLandingStats());
+    const { result } = renderHook(() => useLandingStats(), { wrapper: I18nProvider });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -70,7 +75,7 @@ describe('useLandingStats', () => {
 
   it('uses fallback error message when rejection value is not an Error instance', async () => {
     mockGetLandingStats.mockRejectedValue('string rejection');
-    const { result } = renderHook(() => useLandingStats());
+    const { result } = renderHook(() => useLandingStats(), { wrapper: I18nProvider });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -86,7 +91,7 @@ describe('useLandingStats', () => {
       }),
     );
 
-    const { result, unmount } = renderHook(() => useLandingStats());
+    const { result, unmount } = renderHook(() => useLandingStats(), { wrapper: I18nProvider });
 
     unmount();
 
@@ -106,7 +111,7 @@ describe('useLandingStats', () => {
       }),
     );
 
-    const { result, unmount } = renderHook(() => useLandingStats());
+    const { result, unmount } = renderHook(() => useLandingStats(), { wrapper: I18nProvider });
 
     unmount();
 

@@ -111,9 +111,11 @@ export function ActivityItem({ activity, index, onClick }: ActivityItemProps) {
         </div>
 
         {/* Right: Review Button */}
-        <button className="px-4 py-2 rounded-[10px] backdrop-blur-[25px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/20 border border-[#c9983a]/40 text-[13px] font-semibold text-[#c9983a] hover:from-[#c9983a]/35 hover:to-[#d4af37]/30 hover:scale-105 transition-all duration-200 whitespace-nowrap flex-shrink-0">
-          Review
-        </button>
+        {isClickable && (
+          <button className="px-4 py-2 rounded-[10px] backdrop-blur-[25px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/20 border border-[#c9983a]/40 text-[13px] font-semibold text-[#c9983a] hover:from-[#c9983a]/35 hover:to-[#d4af37]/30 hover:scale-105 transition-all duration-200 whitespace-nowrap flex-shrink-0">
+            Review
+          </button>
+        )}
       </div>
     </div>
   );
