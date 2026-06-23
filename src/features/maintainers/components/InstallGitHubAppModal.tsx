@@ -1,20 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { X, FileText, Code, GitBranch, Users, Loader2 } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { API_BASE_URL } from '../../../shared/config/api';
 import { getAuthToken } from '../../../shared/api/client';
 
+/**
+ * Props for the InstallGitHubAppModal component.
+ */
 interface InstallGitHubAppModalProps {
+  /** Controls the visibility of the modal */
   isOpen: boolean;
+  /** Callback fired when the modal should be closed */
   onClose: () => void;
+  /** Callback fired after a successful installation is initiated */
   onSuccess: () => void;
 }
 
-export function InstallGitHubAppModal({ isOpen, onClose }: InstallGitHubAppModalProps) {
+/**
+ * Modal component for guiding users to install the Grainlify GitHub App.
+ * Handles the installation flow, permissions display, and dismissal preferences.
+ */
+export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGitHubAppModalProps) {
   const { theme } = useTheme();
   const darkTheme = theme === 'dark';
   const [isInstalling, setIsInstalling] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      const isDismissed = localStorage.getItem('github_app_modal_dismissed');
+      if (isDismissed === 'true') {
+        onClose();
+      }
+    } catch (e) {
+      // Ignore localStorage errors if access is denied
+    }
+  }, [isOpen, onClose]);
 
   const handleInstall = async () => {
     setIsInstalling(true);
@@ -42,13 +65,20 @@ export function InstallGitHubAppModal({ isOpen, onClose }: InstallGitHubAppModal
       
       // Store "don't show again" preference
       if (dontShowAgain) {
-        localStorage.setItem('github_app_modal_dismissed', 'true');
+        try {
+          localStorage.setItem('github_app_modal_dismissed', 'true');
+        } catch (e) {
+          // Ignore localStorage errors
+        }
       }
+
+      // Call success callback
+      onSuccess();
 
       // Redirect to GitHub App installation page
       window.location.href = data.install_url;
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to start installation');
+      toast.error(err instanceof Error ? err.message : 'Failed to start installation');
       setIsInstalling(false);
     }
   };
@@ -206,6 +236,20 @@ export function InstallGitHubAppModal({ isOpen, onClose }: InstallGitHubAppModal
                   </p>
                 </div>
               </div>
+            </div>
+            
+            {/* Privacy link */}
+            <div className="pt-2">
+              <a 
+                href="https://docs.github.com/en/apps/using-github-apps/reviewing-and-modifying-installed-github-apps"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`text-[12px] font-medium hover:underline transition-colors ${
+                  darkTheme ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a2792c] hover:text-[#8b6f3a]'
+                }`}
+              >
+                Learn more about GitHub App permissions and privacy →
+              </a>
             </div>
           </div>
 

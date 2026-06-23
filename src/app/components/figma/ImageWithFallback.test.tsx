@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ImageWithFallback, FALLBACK_IMAGE } from './ImageWithFallback'
-import React from 'react'
 
 describe('ImageWithFallback (Figma)', () => {
   it('renders the normal image with correct src and alt', () => {
