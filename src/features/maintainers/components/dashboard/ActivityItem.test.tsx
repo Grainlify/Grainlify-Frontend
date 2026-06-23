@@ -19,7 +19,7 @@ const baseActivity = {
 describe('ActivityItem', () => {
   it('is non-interactive when no onClick is provided', () => {
     const { container } = render(<ActivityItem activity={baseActivity as any} index={0} />);
-    expect((container.firstChild as HTMLElement).getAttribute('role')).toBeNull();
+    expect(container.firstChild).not.toHaveAttribute('role');
     expect(container.firstChild).toHaveClass('cursor-default');
   });
 
