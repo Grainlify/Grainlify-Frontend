@@ -58,9 +58,11 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
   // Content-Type when we actually send a JSON body.
   const method = (fetchOptions.method || 'GET').toUpperCase()
   const hasBody = fetchOptions.body !== undefined && fetchOptions.body !== null
-  if (hasBody && !(fetchOptions.body instanceof FormData)) {
+  const isFormData = hasBody && fetchOptions.body instanceof FormData
+
+  if (hasBody && !isFormData) {
     requestHeaders['Content-Type'] = 'application/json'
-  } else if (method !== 'GET' && method !== 'HEAD' && !('Content-Type' in requestHeaders)) {
+  } else if (method !== 'GET' && method !== 'HEAD' && !isFormData && !('Content-Type' in requestHeaders)) {
     // Non-GET/HEAD without an explicit content-type: default to JSON for our API.
     requestHeaders['Content-Type'] = 'application/json'
   }

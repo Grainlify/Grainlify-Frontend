@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { LandingPage } from "./LandingPage";
 import { MemoryRouter } from "react-router-dom";
+import { I18nProvider } from "../../../shared/i18n";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -43,7 +44,11 @@ vi.mock("react-theme-switch-animation", () => ({
 // ---------------------------------------------------------------------------
 
 function renderWithRouter(ui: React.ReactNode) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>);
+  return render(
+    <I18nProvider>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </I18nProvider>
+  );
 }
 
 // ---------------------------------------------------------------------------
