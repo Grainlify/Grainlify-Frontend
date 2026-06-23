@@ -1,7 +1,64 @@
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
+import { getTermsStatus, acceptTerms } from '../../../../shared/api/client';
 
+/**
+ * Current version of the terms and conditions.
+ * Used to track which version the user has accepted.
+ */
+export const CURRENT_TERMS_VERSION = '1.0.0';
+
+/**
+ * TermsTab component
+ * Displays terms of service, privacy policy, and handles user consent.
+ */
 export function TermsTab() {
   const { theme } = useTheme();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isAccepted, setIsAccepted] = useState(false);
+  const [acceptedVersion, setAcceptedVersion] = useState<string | null>(null);
+  const [acceptedDate, setAcceptedDate] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchStatus = async () => {
+      try {
+        const status = await getTermsStatus();
+        if (mounted) {
+          setIsAccepted(status.accepted);
+          setAcceptedVersion(status.version);
+          setAcceptedDate(status.accepted_at);
+        }
+      } catch (err) {
+        console.error('Failed to fetch terms status:', err);
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    fetchStatus();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleAccept = async () => {
+    setIsAccepting(true);
+    setError(null);
+    try {
+      const res = await acceptTerms(CURRENT_TERMS_VERSION);
+      setIsAccepted(true);
+      setAcceptedVersion(res.version);
+      setAcceptedDate(res.accepted_at);
+    } catch (err: any) {
+      setError(err.message || 'Failed to accept terms. Please try again.');
+    } finally {
+      setIsAccepting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -32,7 +89,7 @@ export function TermsTab() {
           <p className={`text-[14px] leading-relaxed mb-6 transition-colors ${
             theme === 'dark' ? 'text-[#c5b5a2]' : 'text-[#6b5d4d]'
           }`}>
-            By using Grainlify, you agree to abide by our terms of service. These terms govern your use of the platform and outline your rights and responsibilities as a user.
+            By using Grainlify, you agree to abide by our <a href="/terms" className="underline hover:opacity-80">terms of service</a>. These terms govern your use of the platform and outline your rights and responsibilities as a user.
           </p>
 
           <h3 className={`text-[20px] font-bold mb-4 mt-8 transition-colors ${
@@ -41,7 +98,7 @@ export function TermsTab() {
           <p className={`text-[14px] leading-relaxed mb-6 transition-colors ${
             theme === 'dark' ? 'text-[#c5b5a2]' : 'text-[#6b5d4d]'
           }`}>
-            We take your privacy seriously. Our privacy policy explains how we collect, use, and protect your personal information.
+            We take your privacy seriously. Our <a href="/privacy" className="underline hover:opacity-80">privacy policy</a> explains how we collect, use, and protect your personal information.
           </p>
 
           <h3 className={`text-[20px] font-bold mb-4 mt-8 transition-colors ${
@@ -77,11 +134,31 @@ export function TermsTab() {
           <p className={`text-[13px] transition-colors ${
             theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
           }`}>
-            By clicking accept, you agree to our terms of service and privacy policy.
+            By clicking accept, you agree to our <a href="/terms" className="underline hover:opacity-80">terms of service</a> and <a href="/privacy" className="underline hover:opacity-80">privacy policy</a>.
           </p>
+          {isAccepted && acceptedVersion && acceptedDate && (
+            <p className="text-[12px] text-green-500 mt-2 font-medium">
+              ✓ Accepted version {acceptedVersion} on {new Date(acceptedDate).toLocaleDateString()}
+            </p>
+          )}
+          {error && (
+            <p className="text-[12px] text-red-500 mt-2 font-medium">
+              {error}
+            </p>
+          )}
         </div>
-        <button className="px-8 py-3 rounded-[16px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[15px] shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] transition-all border border-white/10">
-          Accept
+        <button
+          onClick={handleAccept}
+          disabled={isLoading || isAccepting || isAccepted}
+          className={`px-8 py-3 rounded-[16px] font-semibold text-[15px] transition-all border border-white/10 ${
+            isAccepted
+              ? 'bg-green-600/20 text-green-500 cursor-not-allowed border-green-500/20 shadow-none'
+              : isLoading
+              ? 'bg-gray-500/50 text-gray-300 cursor-wait shadow-none'
+              : 'bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] disabled:opacity-50 disabled:cursor-not-allowed'
+          }`}
+        >
+          {isLoading ? 'Loading...' : isAccepting ? 'Accepting...' : isAccepted ? 'Accepted' : 'Accept'}
         </button>
       </div>
     </div>

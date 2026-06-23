@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "../../../shared/contexts/ThemeContext";
+import { I18nProvider } from "../../../shared/i18n";
 import { BlogPage } from "./BlogPage";
 
 vi.mock("../../../shared/api/client", () => ({
@@ -14,11 +15,13 @@ const mockGetBlogPosts = vi.mocked(getBlogPosts);
 
 function renderBlogPage() {
   return render(
-    <ThemeProvider>
-      <MemoryRouter>
-        <BlogPage />
-      </MemoryRouter>
-    </ThemeProvider>,
+    <I18nProvider>
+      <ThemeProvider>
+        <MemoryRouter>
+          <BlogPage />
+        </MemoryRouter>
+      </ThemeProvider>
+    </I18nProvider>,
   );
 }
 
