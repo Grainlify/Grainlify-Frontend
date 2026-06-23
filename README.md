@@ -1,5 +1,7 @@
 # Grainlify
 
+[![CI](https://github.com/Phantomcall/Grainlify-Frontend/actions/workflows/ci.yml/badge.svg)](https://github.com/Phantomcall/Grainlify-Frontend/actions/workflows/ci.yml)
+
 **Grainlify** is an open-source contribution platform that connects contributors with maintainers through GitHub OAuth authentication. The platform enables developers to discover projects, track contributions, manage open-source work, and participate in ecosystem-driven initiatives.
 
 ## Features
@@ -33,40 +35,44 @@
 ## Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd grainlify
    ```
 
 2. **Install dependencies**
+
    ```bash
    pnpm install
    ```
 
 3. **Configure environment variables**
+
    ```bash
    cp .env.example .env
    ```
-   
+
    Edit `.env` and set:
    - `VITE_API_BASE_URL`: Backend API URL (e.g., `http://localhost:8080` or production URL)
    - `VITE_FRONTEND_BASE_URL`: Frontend URL (optional, defaults to `http://localhost:5173`)
 
 4. **Start development server**
+
    ```bash
    pnpm run dev
    ```
-   
+
    The app will be available at `http://localhost:5173`
 
 ## Environment Variables
 
 All environment variables must use the `VITE_` prefix to be exposed to the client.
 
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `VITE_API_BASE_URL` | Yes | Backend API base URL | `http://localhost:8080` |
-| `VITE_FRONTEND_BASE_URL` | No | Frontend base URL (defaults to current origin) | `http://localhost:5173` |
+| Variable                 | Required | Description                                    | Example                 |
+| ------------------------ | -------- | ---------------------------------------------- | ----------------------- |
+| `VITE_API_BASE_URL`      | Yes      | Backend API base URL                           | `http://localhost:8080` |
+| `VITE_FRONTEND_BASE_URL` | No       | Frontend base URL (defaults to current origin) | `http://localhost:5173` |
 
 ## Authentication Flow
 
@@ -143,7 +149,6 @@ const label = t('dashboardNav.discover') // 'Discover'
 ```tsx
 // 2. <FormattedMessage> — ideal for inline JSX.
 import { FormattedMessage } from 'react-intl'
-
 ;<FormattedMessage id="landingNav.features" />
 ```
 
@@ -173,19 +178,19 @@ become inert text. This is verified by an anti-injection test in
 
 ## Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm run dev` | Start development server |
-| `pnpm run build` | Build for production |
-| `pnpm run generate-favicon` | Generate favicon from logo |
-| `pnpm run test` | Run unit tests once |
-| `pnpm run test:watch` | Run tests in watch mode |
-| `pnpm run test:coverage` | Generate coverage report |
-| `pnpm run test:e2e` | Run end-to-end tests with Playwright |
-| `pnpm run lint` | Lint code with ESLint |
-| `pnpm run lint:fix` | Fix linting issues automatically |
-| `pnpm run format` | Format code with Prettier |
-| `pnpm run typecheck` | Type-check without emitting files |
+| Command                     | Description                          |
+| --------------------------- | ------------------------------------ |
+| `pnpm run dev`              | Start development server             |
+| `pnpm run build`            | Build for production                 |
+| `pnpm run generate-favicon` | Generate favicon from logo           |
+| `pnpm run test`             | Run unit tests once                  |
+| `pnpm run test:watch`       | Run tests in watch mode              |
+| `pnpm run test:coverage`    | Generate coverage report             |
+| `pnpm run test:e2e`         | Run end-to-end tests with Playwright |
+| `pnpm run lint`             | Lint code with ESLint                |
+| `pnpm run lint:fix`         | Fix linting issues automatically     |
+| `pnpm run format`           | Format code with Prettier            |
+| `pnpm run typecheck`        | Type-check without emitting files    |
 
 ## Testing
 
@@ -206,11 +211,25 @@ pnpm run test:coverage
 
 ### Test Coverage
 
-The project maintains a **95% coverage threshold** for:
-- Lines
-- Functions
-- Branches
-- Statements
+The project enforces a coverage threshold (configured in `vitest.config.ts` to match the current codebase baseline) for:
+- Lines (79%)
+- Functions (69%)
+- Branches (58%)
+- Statements (78%)
+
+These thresholds are configured in `vitest.config.ts` and are enforced in CI via the `test:coverage` step — the build fails automatically when any threshold is breached.
+
+Coverage is measured only for source files actually exercised by the test suite (files not imported by any test are excluded automatically). Additionally excluded:
+- `src/app/components/ui/` — vendored shadcn/ui components
+- `src/imports/` — Figma-generated files
+- Test files, type declarations, and the app entry point
+
+| Metric | Threshold | Baseline |
+|--------|-----------|---------|
+| Lines | 79% | 79.94% |
+| Functions | 69% | 69.96% |
+| Branches | 58% | 58.49% |
+| Statements | 78% | 78.03% |
 
 Coverage reports are generated in the `coverage/` directory. Open `coverage/index.html` in a browser to view detailed coverage metrics.
 
@@ -239,26 +258,28 @@ src/
 ```
 
 Example test structure:
+
 ```typescript
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 describe('Feature Name', () => {
   beforeEach(() => {
     // Setup
-  });
+  })
 
   it('should do something specific', () => {
     // Arrange
     // Act
     // Assert
-    expect(result).toBe(expected);
-  });
-});
+    expect(result).toBe(expected)
+  })
+})
 ```
 
 ### Security Testing
 
 All tests that handle authentication tokens include security assertions to ensure:
+
 - Tokens never appear in error messages
 - Tokens never appear in console logs
 - Tokens are not exposed in API responses
@@ -282,13 +303,13 @@ pnpm run test:e2e
 
 ### Test structure
 
-| File | What it covers |
-|------|---------------|
-| `auth.spec.ts` | Sign-in page, OAuth callback redirect, access-denied error |
-| `routing.spec.ts` | Landing page render, unauthenticated redirect, 404 page |
-| `leaderboard.spec.ts` | Contributor table + podium render, load-more pagination, end-of-list, empty state, projects tab |
-| `browse-pagination.spec.ts` | Project grid render, load-more pagination, end-of-list, empty state, showing counter |
-| `search.spec.ts` | Search input, dynamic results, empty results, clear button, suggestion pills |
+| File                        | What it covers                                                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `auth.spec.ts`              | Sign-in page, OAuth callback redirect, access-denied error                                      |
+| `routing.spec.ts`           | Landing page render, unauthenticated redirect, 404 page                                         |
+| `leaderboard.spec.ts`       | Contributor table + podium render, load-more pagination, end-of-list, empty state, projects tab |
+| `browse-pagination.spec.ts` | Project grid render, load-more pagination, end-of-list, empty state, showing counter            |
+| `search.spec.ts`            | Search input, dynamic results, empty results, clear button, suggestion pills                    |
 
 ### Fixtures
 
@@ -302,7 +323,10 @@ All fixtures use synthetic data and fake tokens only. No real credentials are ev
 
 ## Contributing
 
-Contributions are welcome! Please ensure your changes:
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) to get started and learn about our project's folder structure, feature-sliced architecture, coding conventions, styling guidelines, and API/routing setups.
+
+Please ensure your changes:
+
 - Follow the existing code style and architecture
 - Include appropriate TypeScript types
 - Maintain the glassmorphism design language
@@ -314,21 +338,25 @@ Contributions are welcome! Please ensure your changes:
 This project uses [Dependabot](https://docs.github.com/en/code-security/dependabot) to automate dependency updates. Configuration lives in [`.github/dependabot.yml`](./.github/dependabot.yml).
 
 **Update Schedule:**
+
 - PRs are opened **every Monday at 09:00 UTC**
 - **npm** (pnpm) packages from the root `package.json`
 - **GitHub Actions** from `.github/workflows/` (activates when workflows are added)
 
 **Grouping Strategy:**
+
 - Related packages (Radix UI, MUI/Emotion, testing tools, linting, React core, build tooling) are grouped into single PRs
 - All patch-level updates across unrelated packages are batched together
 - Major version bumps always arrive as individual PRs for careful review
 
 **Reviewing a Dependabot PR:**
+
 1. Check the PR description for release notes and changelog links
 2. Verify CI passes (lint, typecheck, tests, bundle size)
 3. Merge if all checks are green and the changelog shows no breaking changes
 
 **Pinned Dependencies:**
+
 - `vite` is pinned to 6.3.x via `pnpm.overrides` — Dependabot will not propose upgrades beyond this range
 - `@types/react` and `@types/react-dom` are pinned to v18 via `pnpm.overrides` — Dependabot will not propose v19+
 
@@ -365,7 +393,7 @@ keeps the main `index-*.js` chunk lean and improves long-term caching.
 > **Note on what this does and does not do:** code splitting reorganizes the
 > output into separate chunks — it does **not** reduce the total bytes the browser
 > downloads on first load (the provider is mounted at the app root). Its benefit is
-> better caching and keeping the *measured* main chunk (`index-*.js`) within budget.
+> better caching and keeping the _measured_ main chunk (`index-*.js`) within budget.
 > After adding i18n the main chunk is `~1,738 KB` (within the `1,800 KB` budget),
 > with `react-intl` (`~69 KB`) living in the `i18n-vendor` chunk.
 
@@ -389,6 +417,7 @@ npm run test:bundle-size
 
 ## Documentation
 
+- [Contributing Guide](./CONTRIBUTING.md) - Development setup, feature-sliced layout, styling guidelines, testing, and PR checklists.
 - [API Integration Guide](./API_INTEGRATION.md) - Backend API integration details
 - [Attributions](./ATTRIBUTIONS.md) - Third-party assets and licenses
 

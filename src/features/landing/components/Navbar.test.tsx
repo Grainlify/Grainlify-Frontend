@@ -61,7 +61,7 @@ describe('Navbar i18n strings', () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, logout: vi.fn() })
     renderNavbar()
 
-    await user.click(screen.getByLabelText('Toggle mobile menu'))
+    await user.click(screen.getByLabelText('Open menu'))
 
     // Desktop + mobile copies are now both in the DOM.
     SECTION_LINKS.forEach((label) => {
@@ -75,7 +75,7 @@ describe('Navbar i18n strings', () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true, logout: vi.fn() })
     renderNavbar()
 
-    await user.click(screen.getByLabelText('Toggle mobile menu'))
+    await user.click(screen.getByLabelText('Open menu'))
 
     expect(screen.getAllByText('Dashboard').length).toBeGreaterThanOrEqual(2)
     expect(screen.getAllByText('Sign Out').length).toBeGreaterThanOrEqual(2)
