@@ -39,7 +39,7 @@ export function validateUrl(value: string): string | true {
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
       return 'URL must start with http:// or https://'
     }
-    if (!url.hostname.includes('.')) {
+    if (!url.hostname) {
       return 'URL must have a valid hostname'
     }
     return true
@@ -58,7 +58,7 @@ export function validateUrl(value: string): string | true {
 export function validateEmail(value: string): string | true {
   const trimmed = value.trim()
   if (!trimmed) return true
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+  if (!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(trimmed)) {
     return 'Please enter a valid email address'
   }
   return true
