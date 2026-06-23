@@ -151,8 +151,12 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onNa
 
   // Helper function to format time ago (memoized to prevent unnecessary re-renders)
   const formatTimeAgo = useCallback((date: Date): string => {
+    const timeMs = date.getTime();
+    if (isNaN(timeMs)) {
+      return 'unknown time';
+    }
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const diffMs = now.getTime() - timeMs;
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
@@ -165,26 +169,17 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onNa
     return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
   }, []);
 
-  // Helper function to parse time ago for sorting (memoized)
-  const parseTimeAgo = useCallback((timeAgo: string): number => {
-    const now = new Date().getTime();
-    if (timeAgo.includes('minute')) {
-      const mins = parseInt(timeAgo) || 0;
-      return now - mins * 60000;
-    }
-    if (timeAgo.includes('hour')) {
-      const hours = parseInt(timeAgo) || 0;
-      return now - hours * 3600000;
-    }
-    if (timeAgo.includes('day')) {
-      const days = parseInt(timeAgo) || 0;
-      return now - days * 86400000;
-    }
-    if (timeAgo.includes('month')) {
-      const months = parseInt(timeAgo) || 0;
-      return now - months * 30 * 86400000;
-    }
-    return now;
+  /**
+   * Safely parses a date string, returning its Unix timestamp in milliseconds.
+   * Returns 0 if the date string is null, undefined, or invalid to prevent NaN sorting issues.
+   * 
+   * @param dateStr - The date string to parse.
+   * @returns The parsed Unix time in milliseconds, or 0 if invalid.
+   */
+  const safeParseDate = useCallback((dateStr?: string | null): number => {
+    if (!dateStr) return 0;
+    const parsed = Date.parse(dateStr);
+    return isNaN(parsed) ? 0 : parsed;
   }, []);
 
   // Calculate stats from real data
@@ -255,20 +250,21 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onNa
 
     // Add recent PRs
     prs.slice(0, 10).forEach(pr => {
+      const timestamp = pr.updated_at || pr.last_seen_at || '';
       combined.push({
         id: pr.github_pr_id,
         type: 'pr',
         number: pr.number,
         title: pr.title,
         label: pr.merged ? 'Merged' : pr.state === 'open' ? 'Open' : 'Closed',
-        timeAgo: pr.updated_at
-          ? formatTimeAgo(new Date(pr.updated_at))
-          : formatTimeAgo(new Date(pr.last_seen_at)),
+        timestamp,
+        timeAgo: timestamp ? formatTimeAgo(new Date(timestamp)) : 'unknown time',
       });
     });
 
     // Add recent issues
     issues.slice(0, 10).forEach(issue => {
+      const timestamp = issue.updated_at || issue.last_seen_at || '';
       combined.push({
         id: issue.github_issue_id,
         type: 'issue',
@@ -276,21 +272,24 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onNa
         title: issue.title,
         label: issue.comments_count > 0 ? `${issue.comments_count} comment${issue.comments_count !== 1 ? 's' : ''}` : null,
         projectId: issue.projectId,
-        timeAgo: issue.updated_at
-          ? formatTimeAgo(new Date(issue.updated_at))
-          : formatTimeAgo(new Date(issue.last_seen_at)),
+        timestamp,
+        timeAgo: timestamp ? formatTimeAgo(new Date(timestamp)) : 'unknown time',
       });
     });
 
-    // Sort by time (most recent first)
-    combined.sort((a, b) => {
-      const timeA = parseTimeAgo(a.timeAgo);
-      const timeB = parseTimeAgo(b.timeAgo);
-      return timeB - timeA;
+    // Sort by timestamp (most recent first) with stable tie-breaking
+    const indexed = combined.map((activity, idx) => ({ activity, idx }));
+    indexed.sort((a, b) => {
+      const timeA = safeParseDate(a.activity.timestamp);
+      const timeB = safeParseDate(b.activity.timestamp);
+      if (timeB !== timeA) {
+        return timeB - timeA;
+      }
+      return a.idx - b.idx; // Stable tie-breaking using original array indices
     });
 
-    return combined; // Return all activities (will be sliced in render based on state)
-  }, [issues, prs, formatTimeAgo, parseTimeAgo]);
+    return indexed.map(item => item.activity);
+  }, [issues, prs, formatTimeAgo, safeParseDate]);
 
   // Generate chart data from real data (last 6 months)
   const chartData: ChartDataPoint[] = useMemo(() => {
