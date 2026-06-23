@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "../../../shared/contexts/ThemeContext";
 import { BlogPage } from "./BlogPage";
+import { I18nProvider } from "../../../shared/i18n";
 
 vi.mock("../../../shared/api/client", () => ({
   getBlogPosts: vi.fn(),
@@ -14,11 +15,13 @@ const mockGetBlogPosts = vi.mocked(getBlogPosts);
 
 function renderBlogPage() {
   return render(
-    <ThemeProvider>
-      <MemoryRouter>
-        <BlogPage />
-      </MemoryRouter>
-    </ThemeProvider>,
+    <I18nProvider>
+      <ThemeProvider>
+        <MemoryRouter>
+          <BlogPage />
+        </MemoryRouter>
+      </ThemeProvider>
+    </I18nProvider>,
   );
 }
 
