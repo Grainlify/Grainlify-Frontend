@@ -58,9 +58,11 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
   // Content-Type when we actually send a JSON body.
   const method = (fetchOptions.method || 'GET').toUpperCase()
   const hasBody = fetchOptions.body !== undefined && fetchOptions.body !== null
-  if (hasBody && !(fetchOptions.body instanceof FormData)) {
+  const isFormData = hasBody && fetchOptions.body instanceof FormData
+
+  if (hasBody && !isFormData) {
     requestHeaders['Content-Type'] = 'application/json'
-  } else if (method !== 'GET' && method !== 'HEAD' && !('Content-Type' in requestHeaders)) {
+  } else if (method !== 'GET' && method !== 'HEAD' && !isFormData && !('Content-Type' in requestHeaders)) {
     // Non-GET/HEAD without an explicit content-type: default to JSON for our API.
     requestHeaders['Content-Type'] = 'application/json'
   }
@@ -258,6 +260,34 @@ export const getProfileActivity = (limit = 50, offset = 0, userId?: string, logi
     offset: number
   }>(`/profile/activity?${params.toString()}`, { requiresAuth: true })
 }
+
+export type ProfileReward = {
+  id: string | number
+  date?: string | null
+  created_at?: string | null
+  awarded_at?: string | null
+  project_name?: string | null
+  project?: string | null
+  project_logo?: string | null
+  owner_avatar_url?: string | null
+  contributor_login?: string | null
+  from?: string | null
+  contribution_title?: string | null
+  contribution?: string | null
+  amount?: number | string | null
+  currency?: string | null
+  status?: string | null
+}
+
+/**
+ * Fetch the authenticated user's reward history.
+ *
+ * @returns Reward records for the current profile. The UI normalizes nullable
+ * fields defensively before rendering so incomplete API rows cannot leak
+ * placeholder text such as `"undefined"` into the rewards table.
+ */
+export const getProfileRewards = () =>
+  apiRequest<{ rewards: ProfileReward[] }>('/profile/rewards', { requiresAuth: true })
 
 export const getProjectsContributed = (userId?: string, login?: string) => {
   const params = new URLSearchParams()
@@ -1091,3 +1121,15 @@ export async function downloadInvoice(invoiceId: string): Promise<Blob> {
 
   return response.blob()
 }
+
+export const getTermsStatus = () =>
+  apiRequest<{ accepted: boolean; version: string | null; accepted_at: string | null }>('/profile/terms', {
+    requiresAuth: true,
+  })
+
+export const acceptTerms = (version: string) =>
+  apiRequest<{ ok: boolean; accepted_at: string; version: string }>('/profile/terms', {
+    requiresAuth: true,
+    method: 'POST',
+    body: JSON.stringify({ version }),
+  })
