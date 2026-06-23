@@ -25,10 +25,10 @@ describe('ActivityItem', () => {
 
   it('calls onClick when clicked and shows interactive attributes', () => {
     const handler = vi.fn();
-    const { getByRole, container } = render(<ActivityItem activity={baseActivity as any} index={0} onClick={handler} />);
-    const row = getByRole('button');
+    const { container } = render(<ActivityItem activity={baseActivity as any} index={0} onClick={handler} />);
+    const row = container.firstChild as HTMLElement;
     expect(row).toHaveAttribute('tabindex', '0');
-    expect(container.firstChild).toHaveClass('cursor-pointer');
+    expect(row).toHaveClass('cursor-pointer');
 
     fireEvent.click(row);
     expect(handler).toHaveBeenCalledTimes(1);
@@ -36,8 +36,8 @@ describe('ActivityItem', () => {
 
   it('activates on Enter and Space key presses', () => {
     const handler = vi.fn();
-    const { getByRole } = render(<ActivityItem activity={baseActivity as any} index={0} onClick={handler} />);
-    const row = getByRole('button');
+    const { container } = render(<ActivityItem activity={baseActivity as any} index={0} onClick={handler} />);
+    const row = container.firstChild as HTMLElement;
 
     fireEvent.keyDown(row, { key: 'Enter' });
     fireEvent.keyDown(row, { key: ' ' });
