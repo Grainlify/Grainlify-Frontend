@@ -1049,3 +1049,15 @@ export const rejectApplication = (projectId: string, issueNumber: number, assign
     method: 'POST',
     body: JSON.stringify({ assignee }),
   })
+
+export const getTermsStatus = () =>
+  apiRequest<{ accepted: boolean; version: string | null; accepted_at: string | null }>('/profile/terms', {
+    requiresAuth: true,
+  })
+
+export const acceptTerms = (version: string) =>
+  apiRequest<{ ok: boolean; accepted_at: string; version: string }>('/profile/terms', {
+    requiresAuth: true,
+    method: 'POST',
+    body: JSON.stringify({ version }),
+  })
