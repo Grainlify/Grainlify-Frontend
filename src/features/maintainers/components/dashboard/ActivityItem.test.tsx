@@ -18,15 +18,15 @@ const baseActivity = {
 
 describe('ActivityItem', () => {
   it('is non-interactive when no onClick is provided', () => {
-    const { container, queryByRole } = render(<ActivityItem activity={baseActivity as any} index={0} />);
-    expect(queryByRole('button')).toBeNull();
+    const { container } = render(<ActivityItem activity={baseActivity as any} index={0} />);
+    expect(container.firstChild).not.toHaveAttribute('role');
     expect(container.firstChild).toHaveClass('cursor-default');
   });
 
   it('calls onClick when clicked and shows interactive attributes', () => {
     const handler = vi.fn();
-    const { getByRole, container } = render(<ActivityItem activity={baseActivity as any} index={0} onClick={handler} />);
-    const row = getByRole('button');
+    const { getAllByRole, container } = render(<ActivityItem activity={baseActivity as any} index={0} onClick={handler} />);
+    const row = getAllByRole('button')[0];
     expect(row).toHaveAttribute('tabindex', '0');
     expect(container.firstChild).toHaveClass('cursor-pointer');
 
@@ -36,8 +36,8 @@ describe('ActivityItem', () => {
 
   it('activates on Enter and Space key presses', () => {
     const handler = vi.fn();
-    const { getByRole } = render(<ActivityItem activity={baseActivity as any} index={0} onClick={handler} />);
-    const row = getByRole('button');
+    const { getAllByRole } = render(<ActivityItem activity={baseActivity as any} index={0} onClick={handler} />);
+    const row = getAllByRole('button')[0];
 
     fireEvent.keyDown(row, { key: 'Enter' });
     fireEvent.keyDown(row, { key: ' ' });

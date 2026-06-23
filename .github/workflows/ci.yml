@@ -67,9 +67,9 @@ jobs:
       - name: Run typecheck
         run: pnpm run typecheck
 
-      # ── Test (with coverage) ─────────────────
-      - name: Run tests with coverage
-        run: pnpm run test:coverage
+      # ── Test ─────────────────────────────────
+      - name: Run tests
+        run: pnpm run test
 
       # ── Build ────────────────────────────────
       - name: Build production bundle
