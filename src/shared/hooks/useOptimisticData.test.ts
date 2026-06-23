@@ -56,7 +56,7 @@ describe('useOptimisticData', () => {
 
   it('should simulate two rapid fetchData calls with different keys where first resolves last, asserting only the second applies', async () => {
     const { result, rerender } = renderHook(
-      ({ cacheKey }) => useOptimisticData('initial', { cacheKey }),
+      ({ cacheKey }: { cacheKey: string }) => useOptimisticData('initial', { cacheKey }),
       { initialProps: { cacheKey: 'key1' } }
     );
 
@@ -98,7 +98,7 @@ describe('useOptimisticData', () => {
 
   it('should return cached data per key', async () => {
     const { result, rerender } = renderHook(
-      ({ cacheKey }) => useOptimisticData('initial', { cacheKey, cacheDuration: 5000 }),
+      ({ cacheKey }: { cacheKey: string }) => useOptimisticData('initial', { cacheKey, cacheDuration: 5000 }),
       { initialProps: { cacheKey: 'key1' } }
     );
 

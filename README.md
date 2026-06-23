@@ -116,6 +116,26 @@ All authenticated API requests include: `Authorization: Bearer <jwt>`
 | `pnpm run dev` | Start development server |
 | `pnpm run build` | Build for production |
 | `pnpm run generate-favicon` | Generate favicon from logo |
+| `pnpm run test:e2e` | Run all E2E tests with Playwright |
+
+## E2E Testing
+
+End-to-end tests are executed using Playwright. The test suite is configured to run across Chromium, Firefox, and WebKit rendering engines.
+
+To run all E2E tests across all configured engines:
+```bash
+pnpm run test:e2e
+```
+
+To run E2E tests on a single browser locally, specify the `--project` flag:
+- **Chromium:** `pnpm run test:e2e --project=chromium`
+- **Firefox:** `pnpm run test:e2e --project=firefox`
+- **WebKit:** `pnpm run test:e2e --project=webkit`
+
+To open the Playwright UI runner:
+```bash
+pnpm exec playwright test --ui
+```
 
 ## API Integration
 

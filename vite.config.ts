@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
@@ -19,5 +20,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
     dedupe: ['react', 'react-dom'],
+  },
+  test: {
+    environment: 'jsdom',
+    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**'],
   },
 })
