@@ -276,9 +276,15 @@ Playwright end-to-end tests are located in `e2e/`. Tests use `page.route()` to m
 
 ### Running tests
 
+To run all E2E tests across all configured engines (Chromium, Firefox, WebKit):
 ```bash
 pnpm run test:e2e
 ```
+
+To run E2E tests on a single browser locally, specify the `--project` flag:
+- **Chromium:** `pnpm run test:e2e --project=chromium`
+- **Firefox:** `pnpm run test:e2e --project=firefox`
+- **WebKit:** `pnpm run test:e2e --project=webkit`
 
 ### Test structure
 
