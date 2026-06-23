@@ -1049,3 +1049,45 @@ export const rejectApplication = (projectId: string, issueNumber: number, assign
     method: 'POST',
     body: JSON.stringify({ assignee }),
   })
+
+/**
+ * Downloads an invoice PDF for the given invoice ID.
+ *
+ * Uses a raw fetch (not `apiRequest`) because the endpoint returns a binary
+ * blob rather than JSON. Mirrors the same auth and error-handling shape as
+ * `apiRequest`: attaches the Bearer token, throws a typed Error on 401 (and
+ * clears the stored token), and throws on any other non-2xx status.
+ *
+ * @param invoiceId - The invoice `id` from the {@link Invoice} type.
+ * @returns The PDF content as a `Blob`.
+ * @throws {Error} On network failure, auth error, or non-2xx response.
+ */
+export async function downloadInvoice(invoiceId: string): Promise<Blob> {
+  const url = `${API_BASE_URL}/billing/invoices/${invoiceId}/download`
+  const headers: Record<string, string> = {}
+
+  const token = getAuthToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  let response: Response
+  try {
+    response = await fetch(url, { headers })
+  } catch (err) {
+    if (err instanceof TypeError && err.message.includes('fetch')) {
+      throw new Error('Network error: Unable to connect to the server. Please check your connection.')
+    }
+    throw err
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      removeAuthToken()
+      throw new Error('Authentication failed. Please sign in again.')
+    }
+    throw new Error(`Failed to download invoice (${response.status}).`)
+  }
+
+  return response.blob()
+}
