@@ -1,5 +1,5 @@
 import { logger } from '../../../../shared/utils/logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { PRFilterType } from '../../types';
@@ -34,6 +34,43 @@ interface PullRequestsTabProps {
   onRefresh?: () => void;
 }
 
+/**
+ * Explicit empty-state buckets for the PR table.
+ *
+ * Keeping these states separate avoids a generic "no rows" message and lets
+ * the UI tell the user whether they need to select repositories, wait for PRs
+ * to exist for the selected repositories, or clear filters.
+ */
+type EmptyStateKind = 'no-repos' | 'no-prs' | 'no-matches';
+
+/**
+ * Returns the empty-state bucket to render after loading and errors have been
+ * ruled out.
+ */
+function getEmptyStateKind({
+  selectedProjectCount,
+  totalPullRequests,
+  hasActiveFilters,
+}: {
+  selectedProjectCount: number;
+  totalPullRequests: number;
+  hasActiveFilters: boolean;
+}): EmptyStateKind | null {
+  if (selectedProjectCount === 0) {
+    return 'no-repos';
+  }
+
+  if (totalPullRequests === 0) {
+    return 'no-prs';
+  }
+
+  if (hasActiveFilters) {
+    return 'no-matches';
+  }
+
+  return null;
+}
+
 export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,12 +80,7 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch PRs from selected projects
-  useEffect(() => {
-    loadPRs();
-  }, [selectedProjects]);
-
-  const loadPRs = async () => {
+  const loadPRs = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -90,23 +122,26 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedProjects]);
+
+  // Fetch PRs from selected projects
+  useEffect(() => {
+    loadPRs();
+  }, [loadPRs]);
 
   // Refresh PRs when selectedProjects change
   // Also refresh when page becomes visible (user switches back to tab)
   // And when repositories are refreshed (new repo added)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && selectedProjects.length > 0) {
+      if (document.visibilityState === 'visible') {
         loadPRs();
       }
     };
 
     const handleRepositoriesRefreshed = () => {
-      // Refresh PRs when repositories are added/updated
-      if (selectedProjects.length > 0) {
-        loadPRs();
-      }
+      // Refresh PRs when repositories are added or updated.
+      loadPRs();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -116,7 +151,7 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('repositories-refreshed', handleRepositoriesRefreshed);
     };
-  }, [selectedProjects]);
+  }, [loadPRs]);
 
   // Filter PRs based on search and filter
   const filteredPRs = prs.filter(pr => {
@@ -148,6 +183,15 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
     setSearchQuery('');
     setFilter('All states');
   };
+
+  const hasActiveFilters = searchQuery.trim().length > 0 || filter !== 'All states';
+  const emptyStateKind = !isLoading && !error
+    ? getEmptyStateKind({
+        selectedProjectCount: selectedProjects.length,
+        totalPullRequests: prs.length,
+        hasActiveFilters,
+      })
+    : null;
 
   return (
     <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 transition-colors ${
@@ -195,16 +239,19 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
         />
 
         {/* Clear Filters Button */}
-        <button 
-          className={`px-5 py-3 rounded-[14px] backdrop-blur-[25px] border transition-all ${
-            theme === 'dark'
-              ? 'bg-white/[0.08] border-white/20 hover:bg-white/[0.12] hover:border-[#c9983a]/30 text-[#b8a898]'
-              : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:border-[#c9983a]/30 text-[#7a6b5a]'
-          }`}
-          onClick={handleClearFilters}
-        >
-          <span className="text-[14px] font-semibold">Clear filters</span>
-        </button>
+        {hasActiveFilters && (
+          <button
+            className={`px-5 py-3 rounded-[14px] backdrop-blur-[25px] border transition-all ${
+              theme === 'dark'
+                ? 'bg-white/[0.08] border-white/20 hover:bg-white/[0.12] hover:border-[#c9983a]/30 text-[#b8a898]'
+                : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:border-[#c9983a]/30 text-[#7a6b5a]'
+            }`}
+            onClick={handleClearFilters}
+            type="button"
+          >
+            <span className="text-[14px] font-semibold">Clear filters</span>
+          </button>
+        )}
       </div>
 
       {/* Pull Requests Table */}
@@ -287,20 +334,64 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
             return <PRRow key={`${pr.github_pr_id}-${pr.projectName}`} pr={prForComponent} />;
           })
         ) : (
-          <div className="text-center py-12">
-            <p className={`text-[14px] font-medium mb-1 transition-colors ${
-              theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-            }`}>
-              {selectedProjects.length === 0 
-                ? 'Select repositories to view pull requests' 
-                : 'No pull requests found in selected repositories'}
-            </p>
-            {selectedProjects.length === 0 && (
-              <p className={`text-[12px] transition-colors ${
-                theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
-              }`}>
-                Use the repository selector above to choose which repositories to view
-              </p>
+          <div
+            className={`text-center py-12 px-6 rounded-[16px] border ${
+              theme === 'dark' ? 'bg-white/[0.04] border-white/10' : 'bg-white/[0.08] border-white/15'
+            }`}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {emptyStateKind === 'no-repos' ? (
+              <>
+                <p className={`text-[14px] font-medium mb-1 transition-colors ${
+                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                }`}>
+                  Select one or more repositories to view pull requests
+                </p>
+                <p className={`text-[12px] transition-colors ${
+                  theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
+                }`}>
+                  Use the repository selector above to choose which repositories to include.
+                </p>
+              </>
+            ) : emptyStateKind === 'no-prs' ? (
+              <>
+                <p className={`text-[14px] font-medium mb-1 transition-colors ${
+                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                }`}>
+                  No pull requests were found in the selected repositories
+                </p>
+                <p className={`text-[12px] transition-colors ${
+                  theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
+                }`}>
+                  Try a different repository selection or come back after new pull requests are opened.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className={`text-[14px] font-medium mb-1 transition-colors ${
+                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                }`}>
+                  No pull requests match the current search or state filters
+                </p>
+                <p className={`text-[12px] mb-4 transition-colors ${
+                  theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
+                }`}>
+                  Clear the search or state filter to bring rows back into view.
+                </p>
+                <button
+                  className={`px-5 py-3 rounded-[14px] backdrop-blur-[25px] border transition-all ${
+                    theme === 'dark'
+                      ? 'bg-white/[0.08] border-white/20 hover:bg-white/[0.12] hover:border-[#c9983a]/30 text-[#b8a898]'
+                      : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:border-[#c9983a]/30 text-[#7a6b5a]'
+                  }`}
+                  onClick={handleClearFilters}
+                  type="button"
+                >
+                  <span className="text-[14px] font-semibold">Clear filters</span>
+                </button>
+              </>
             )}
           </div>
         )}
