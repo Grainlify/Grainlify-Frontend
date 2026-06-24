@@ -4,25 +4,23 @@ import { AlertCircle, Calendar, RefreshCw } from 'lucide-react'
 import { getOpenSourceWeekEvents } from '../../../shared/api/client'
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 
-/**
- * Props for the OpenSourceWeekPage component.
- * @interface OpenSourceWeekPageProps
- */
+/** Props for {@link OpenSourceWeekPage}. */
 interface OpenSourceWeekPageProps {
-  /**
-   * Callback function called when an event is clicked.
-   * @param id - The unique identifier of the event.
-   * @param name - The title/name of the event.
-   */
+  /** Callback invoked when the user activates an event card (click or keyboard). */
   onEventClick: (id: string, name: string) => void
 }
 
 /**
- * OpenSourceWeekPage displays a list of upcoming, running, or completed Open-Source Week events.
- * It handles loading, error, and empty states with retry capabilities and content-shaped skeletons.
+ * Displays Open-Source Week events fetched from the API.
  *
- * @param props - Component props
- * @returns React component
+ * Each event card is keyboard-accessible: it carries `role="button"` and
+ * `tabIndex={0}` so keyboard users can focus and activate it with Enter or
+ * Space. A visible focus ring appears via `focus-visible` Tailwind utilities.
+ * The status badge prefixes a visually-hidden "Event status:" label so screen
+ * readers announce its meaning rather than a bare word.
+ *
+ * @param onEventClick - Invoked with the event `id` and `title` when a card is
+ *   activated via pointer or keyboard.
  */
 export function OpenSourceWeekPage({ onEventClick }: OpenSourceWeekPageProps) {
   const { theme } = useTheme()
