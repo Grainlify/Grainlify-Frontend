@@ -58,9 +58,11 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
   // Content-Type when we actually send a JSON body.
   const method = (fetchOptions.method || 'GET').toUpperCase()
   const hasBody = fetchOptions.body !== undefined && fetchOptions.body !== null
-  if (hasBody && !(fetchOptions.body instanceof FormData)) {
+  const isFormData = hasBody && fetchOptions.body instanceof FormData
+
+  if (hasBody && !isFormData) {
     requestHeaders['Content-Type'] = 'application/json'
-  } else if (method !== 'GET' && method !== 'HEAD' && !('Content-Type' in requestHeaders)) {
+  } else if (method !== 'GET' && method !== 'HEAD' && !isFormData && !('Content-Type' in requestHeaders)) {
     // Non-GET/HEAD without an explicit content-type: default to JSON for our API.
     requestHeaders['Content-Type'] = 'application/json'
   }
@@ -258,6 +260,73 @@ export const getProfileActivity = (limit = 50, offset = 0, userId?: string, logi
     offset: number
   }>(`/profile/activity?${params.toString()}`, { requiresAuth: true })
 }
+
+export type ProfileReward = {
+  id: string | number
+  date?: string | null
+  created_at?: string | null
+  awarded_at?: string | null
+  project_name?: string | null
+  project?: string | null
+  project_logo?: string | null
+  owner_avatar_url?: string | null
+  contributor_login?: string | null
+  from?: string | null
+  contribution_title?: string | null
+  contribution?: string | null
+  amount?: number | string | null
+  currency?: string | null
+  status?: string | null
+}
+
+/**
+ * Fetch the authenticated user's reward history.
+ *
+ * @returns Reward records for the current profile. The UI normalizes nullable
+ * fields defensively before rendering so incomplete API rows cannot leak
+ * placeholder text such as `"undefined"` into the rewards table.
+ */
+export const getProfileRewards = () =>
+  apiRequest<{ rewards: ProfileReward[] }>('/profile/rewards', { requiresAuth: true })
+
+export type ProfileContribution = {
+  id: string | number
+  title?: string | null
+  status?: string | null
+  project_name?: string | null
+  project?: string | null
+  repository?: string | null
+  github_full_name?: string | null
+  contributor_login?: string | null
+  author_login?: string | null
+  badge?: string | number | null
+  issue_number?: number | null
+  number?: number | null
+  tag?: string | null
+  label?: string | null
+  labels?: Array<string | { name?: string | null }> | null
+  url?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  submitted_at?: string | null
+  merged_at?: string | null
+  rewarded?: boolean | null
+  is_rewarded?: boolean | null
+  reward_status?: string | null
+  amount?: number | string | null
+}
+
+/**
+ * Fetches the authenticated contributor's board items.
+ *
+ * @returns API contribution rows for the Applied, Assigned, Pending Review,
+ * and Complete board. The UI normalizes nullable fields before rendering so
+ * repository-supplied text is displayed as escaped React text, never HTML.
+ */
+export const getProfileContributions = () =>
+  apiRequest<{ contributions: ProfileContribution[] }>('/profile/contributions', {
+    requiresAuth: true,
+  })
 
 export const getProjectsContributed = (userId?: string, login?: string) => {
   const params = new URLSearchParams()
@@ -1048,4 +1117,58 @@ export const rejectApplication = (projectId: string, issueNumber: number, assign
     requiresAuth: true,
     method: 'POST',
     body: JSON.stringify({ assignee }),
+  })
+
+/**
+ * Downloads an invoice PDF for the given invoice ID.
+ *
+ * Uses a raw fetch (not `apiRequest`) because the endpoint returns a binary
+ * blob rather than JSON. Mirrors the same auth and error-handling shape as
+ * `apiRequest`: attaches the Bearer token, throws a typed Error on 401 (and
+ * clears the stored token), and throws on any other non-2xx status.
+ *
+ * @param invoiceId - The invoice `id` from the {@link Invoice} type.
+ * @returns The PDF content as a `Blob`.
+ * @throws {Error} On network failure, auth error, or non-2xx response.
+ */
+export async function downloadInvoice(invoiceId: string): Promise<Blob> {
+  const url = `${API_BASE_URL}/billing/invoices/${invoiceId}/download`
+  const headers: Record<string, string> = {}
+
+  const token = getAuthToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  let response: Response
+  try {
+    response = await fetch(url, { headers })
+  } catch (err) {
+    if (err instanceof TypeError && err.message.includes('fetch')) {
+      throw new Error('Network error: Unable to connect to the server. Please check your connection.')
+    }
+    throw err
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      removeAuthToken()
+      throw new Error('Authentication failed. Please sign in again.')
+    }
+    throw new Error(`Failed to download invoice (${response.status}).`)
+  }
+
+  return response.blob()
+}
+
+export const getTermsStatus = () =>
+  apiRequest<{ accepted: boolean; version: string | null; accepted_at: string | null }>('/profile/terms', {
+    requiresAuth: true,
+  })
+
+export const acceptTerms = (version: string) =>
+  apiRequest<{ ok: boolean; accepted_at: string; version: string }>('/profile/terms', {
+    requiresAuth: true,
+    method: 'POST',
+    body: JSON.stringify({ version }),
   })

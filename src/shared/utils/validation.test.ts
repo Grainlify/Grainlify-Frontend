@@ -88,10 +88,26 @@ describe('validateUrl', () => {
     expect(result).toContain('valid URL')
   })
 
-  it('rejects hostname without dot', () => {
-    const result = validateUrl('https://localhost')
-    // localhost has no dot but is technically valid; our rule catches it
-    expect(result).toBe('URL must have a valid hostname')
+  it('accepts localhost (no dot required)', () => {
+    expect(validateUrl('https://localhost')).toBe(true)
+  })
+
+  it('accepts localhost with port', () => {
+    expect(validateUrl('http://localhost:3000')).toBe(true)
+  })
+
+  it('accepts IP address', () => {
+    expect(validateUrl('http://192.168.1.1')).toBe(true)
+  })
+
+  it('rejects javascript: scheme', () => {
+    const result = validateUrl('javascript:alert(1)')
+    expect(result).toContain('http')
+  })
+
+  it('rejects data: scheme', () => {
+    const result = validateUrl('data:text/html,<h1>hi</h1>')
+    expect(result).toContain('http')
   })
 })
 
@@ -134,6 +150,18 @@ describe('validateEmail', () => {
 
   it('rejects trailing dot after TLD', () => {
     expect(validateEmail('user@example.')).toContain('valid email')
+  })
+
+  it('rejects double dot in domain', () => {
+    expect(validateEmail('user@example..com')).toContain('valid email')
+  })
+
+  it('accepts subdomain email', () => {
+    expect(validateEmail('user@mail.example.co.uk')).toBe(true)
+  })
+
+  it('rejects missing domain before dot', () => {
+    expect(validateEmail('user@.com')).toContain('valid email')
   })
 })
 
