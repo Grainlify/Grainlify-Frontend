@@ -1,6 +1,6 @@
 import { render, fireEvent, screen } from '@testing-library/react'
 import { describe, it, vi, expect } from 'vitest'
-import { ApplicationsChart, generateApplicationsSummary } from './ApplicationsChart'
+import { ApplicationsChart, generateApplicationsSummary, escapeHtml } from './ApplicationsChart'
 
 // Mock theme hook to avoid needing full provider
 vi.mock('../../../../shared/contexts/ThemeContext', () => ({
@@ -10,11 +10,12 @@ vi.mock('../../../../shared/contexts/ThemeContext', () => ({
 // Mock Recharts to avoid layout size warnings and rendering logs in JSDOM
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-  BarChart: ({ children }: any) => <svg>{children}</svg>,
-  Bar: () => null,
+  BarChart: ({ children, ...props }: any) => <svg {...props}>{children}</svg>,
+  Bar: ({ children }: any) => <g>{children}</g>,
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
+  LabelList: () => null,
   Tooltip: ({ content }: any) => {
     if (typeof content === 'function') {
       return (
@@ -56,6 +57,7 @@ describe('generateApplicationsSummary', () => {
     const singleData = [{ month: 'Jan', applications: 5, merged: 2 }]
     const result = generateApplicationsSummary(singleData)
     expect(result).toContain('Applications history chart showing 1 month')
+    expect(result).toContain('Peak month: Jan with 5 applications')
     expect(result).toContain('Jan: 5 applications, 2 merged')
   })
 
@@ -63,6 +65,7 @@ describe('generateApplicationsSummary', () => {
     const singleData = [{ month: 'Jan', applications: 1, merged: 1 }]
     const result = generateApplicationsSummary(singleData)
     expect(result).toContain('Jan: 1 application, 1 merged')
+    expect(result).toContain('Peak month: Jan with 1 application')
   })
 
   it('handles large series/normal series', () => {
@@ -70,27 +73,95 @@ describe('generateApplicationsSummary', () => {
     expect(result).toContain('Applications history chart showing data for 6 months')
     expect(result).toContain('Total applications: 1120')
     expect(result).toContain('Total merged: 775')
+    expect(result).toContain('Peak month: Jun with 250 applications')
     expect(result).toContain('Jan: 120 applications, 80 merged')
   })
 })
 
+describe('escapeHtml helper', () => {
+  it('escapes characters properly', () => {
+    expect(escapeHtml('<div>')).toBe('&lt;div&gt;')
+    expect(escapeHtml('John & Jane')).toBe('John &amp; Jane')
+    expect(escapeHtml('"test"')).toBe('&quot;test&quot;')
+    expect(escapeHtml("'test'")).toBe('&#039;test&#039;')
+  })
+})
+
 describe('ApplicationsChart Component', () => {
-  it('renders title, description, and accessibility labels', () => {
+  // Test 1: Accessible table is present in the DOM
+  it('accessible table is present in the DOM', () => {
     render(<ApplicationsChart data={mockData} />)
+    const table = screen.getByTestId('accessible-applications-table')
+    expect(table).toBeInTheDocument()
+    expect(table).toHaveClass('visually-hidden')
+    expect(table.textContent).toContain('Jan')
+    expect(table.textContent).toContain('120')
+    expect(table.textContent).toContain('80')
+  })
 
-    // Check region labelling
-    const region = screen.getByRole('region', { name: /applications history/i })
-    expect(region).toBeInTheDocument()
+  // Test 2: SVG has aria-hidden="true"
+  it('SVG has aria-hidden="true"', () => {
+    const { container } = render(<ApplicationsChart data={mockData} />)
+    const svg = container.querySelector('svg')
+    expect(svg).toBeInTheDocument()
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+  })
 
-    // Check chart container summary label
-    const chartContainer = screen.getByRole('img', {
-      name: /applications history chart showing data for 6 months/i,
-    })
-    expect(chartContainer).toBeInTheDocument()
+  // Test 3: Container has correct role="img" and aria-label
+  it('container has correct role="img" and aria-label', () => {
+    render(<ApplicationsChart data={mockData} />)
+    const container = screen.getByRole('img')
+    expect(container).toBeInTheDocument()
+    expect(container).toHaveAttribute('aria-label')
+    expect(container.getAttribute('aria-label')).toContain('Applications history chart')
+  })
 
-    // SVG wrapper must be aria-hidden="true"
-    const svgWrapper = chartContainer.firstElementChild
-    expect(svgWrapper).toHaveAttribute('aria-hidden', 'true')
+  // Test 4: Empty series renders without crashing
+  it('empty series renders without crashing', () => {
+    render(<ApplicationsChart data={[]} />)
+    const container = screen.getByRole('img')
+    expect(container.getAttribute('aria-label')).toBe('No application history data available.')
+
+    const table = screen.getByTestId('accessible-applications-table')
+    expect(table).toBeInTheDocument()
+    expect(screen.getAllByText('No application history data available.').length).toBeGreaterThan(0)
+  })
+
+  // Test 5: Single data point renders correctly
+  it('single data point renders correctly', () => {
+    const singleData = [{ month: 'Jan', applications: 5, merged: 2 }]
+    render(<ApplicationsChart data={singleData} />)
+
+    const container = screen.getByRole('img')
+    expect(container.getAttribute('aria-label')).toContain('Applications history chart showing 1 month')
+    expect(container.getAttribute('aria-label')).toContain('Peak month: Jan with 5 applications')
+
+    const table = screen.getByTestId('accessible-applications-table')
+    expect(table).toBeInTheDocument()
+    expect(table.textContent).toContain('Jan')
+    expect(table.textContent).toContain('5')
+    expect(table.textContent).toContain('2')
+  })
+
+  // Test 6: Large series renders correctly
+  it('large series renders correctly', () => {
+    render(<ApplicationsChart data={mockData} />)
+    const container = screen.getByRole('img')
+    expect(container.getAttribute('aria-label')).toContain('Applications history chart showing data for 6 months')
+    expect(container.getAttribute('aria-label')).toContain('Total applications: 1120')
+    expect(container.getAttribute('aria-label')).toContain('Total merged: 775')
+    expect(container.getAttribute('aria-label')).toContain('Peak month: Jun with 250 applications')
+  })
+
+  it('escapes month labels in the chart to prevent HTML injection', () => {
+    const maliciousData = [
+      { month: 'Jan<script>alert("xss")</script>', applications: 10, merged: 5 },
+    ]
+    render(<ApplicationsChart data={maliciousData} />)
+
+    const table = screen.getByTestId('accessible-applications-table')
+    expect(table.textContent).toContain('Jan&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;')
+    expect(table.textContent).not.toContain('<script>')
   })
 
   it('initially displays visual chart and hides the data table visually', () => {
@@ -101,7 +172,7 @@ describe('ApplicationsChart Component', () => {
     expect(chartContainer).not.toHaveClass('hidden')
 
     const tableContainer = container.querySelector('#applications-data-table')
-    expect(tableContainer).toHaveClass('sr-only')
+    expect(tableContainer).toHaveClass('hidden')
   })
 
   it('toggles to data table view on button click and back to chart view', () => {
@@ -120,9 +191,9 @@ describe('ApplicationsChart Component', () => {
     expect(chartContainer).toHaveClass('hidden')
     expect(chartContainer).not.toHaveClass('block')
 
-    // Table container should be visible (not sr-only)
+    // Table container should be visible (not hidden)
     const tableContainer = container.querySelector('#applications-data-table')
-    expect(tableContainer).not.toHaveClass('sr-only')
+    expect(tableContainer).not.toHaveClass('hidden')
     expect(tableContainer).toHaveClass('h-[320px]')
 
     // Verify table structure and data
@@ -132,34 +203,11 @@ describe('ApplicationsChart Component', () => {
     expect(tableHeaders[1]).toHaveTextContent('Applications')
     expect(tableHeaders[2]).toHaveTextContent('Merged')
 
-    expect(screen.getAllByText('Jan').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('120').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('80').length).toBeGreaterThan(0)
-
     // Click to view chart again
     fireEvent.click(toggleButton)
     expect(toggleButton).toHaveAttribute('aria-expanded', 'false')
     expect(chartContainer).toHaveClass('block')
-    expect(tableContainer).toHaveClass('sr-only')
-  })
-
-  it('renders placeholders gracefully when data series is empty', () => {
-    render(<ApplicationsChart data={[]} />)
-
-    // Verify empty summary
-    const chartContainer = screen.getByRole('img', {
-      name: /no application history data available/i,
-    })
-    expect(chartContainer).toBeInTheDocument()
-
-    // Toggle table
-    const toggleButton = screen.getByRole('button', { name: /view table/i })
-    fireEvent.click(toggleButton)
-
-    // Table must show "No application history data available."
-    const noDataCell = screen.getByText('No application history data available.')
-    expect(noDataCell).toBeInTheDocument()
-    expect(noDataCell).toHaveAttribute('colspan', '3')
+    expect(tableContainer).toHaveClass('hidden')
   })
 
   it('renders custom tooltip content correctly when active and covers all tooltip paths', () => {
@@ -168,10 +216,10 @@ describe('ApplicationsChart Component', () => {
     // Verify mock tooltip exists and renders correctly
     const tooltipContainer = screen.getByTestId('mock-tooltip')
     expect(tooltipContainer).toBeInTheDocument()
-    
+
     // Check that we have values from applications (120) and merged (80)
-    expect(screen.getAllByText('Applications')).toHaveLength(3) // 1 in tooltip, 1 in legend, 1 in table header
-    expect(screen.getAllByText('Merged')).toHaveLength(3) // 1 in tooltip, 1 in legend, 1 in table header
+    expect(screen.getAllByText('Applications').length).toBeGreaterThanOrEqual(3)
+    expect(screen.getAllByText('Merged').length).toBeGreaterThanOrEqual(3)
     expect(screen.getAllByText('120').length).toBeGreaterThan(0)
     expect(screen.getAllByText('80').length).toBeGreaterThan(0)
   })

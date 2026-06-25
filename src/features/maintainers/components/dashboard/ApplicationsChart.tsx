@@ -7,6 +7,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  LabelList,
 } from 'recharts'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { ChartDataPoint } from '../../types'
@@ -16,8 +17,24 @@ interface ApplicationsChartProps {
 }
 
 /**
+ * Escapes special HTML characters in a string to prevent raw HTML injection.
+ *
+ * @param str - The raw string to escape.
+ * @returns The escaped HTML string.
+ */
+export function escapeHtml(str: string): string {
+  if (!str) return ''
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+/**
  * Generates an accessible, escaped, screen-reader friendly summary of the applications chart data.
- * Describes the key trends, data volume, and details of the chart series.
+ * Describes the key trends, data volume (total applications and merged), peak month, and details of the chart series.
  *
  * @param data - The raw series data representing application volume and merge counts.
  * @returns A descriptive, localized, and safe summary text.
@@ -30,6 +47,17 @@ export function generateApplicationsSummary(data: ChartDataPoint[]): string {
   const totalApplications = data.reduce((sum, d) => sum + (d.applications || 0), 0)
   const totalMerged = data.reduce((sum, d) => sum + (d.merged || 0), 0)
 
+  // Find peak month (month with the highest number of applications)
+  let peakMonth = ''
+  let maxApplications = -1
+  for (const d of data) {
+    const apps = d.applications || 0
+    if (apps > maxApplications) {
+      maxApplications = apps
+      peakMonth = d.month || ''
+    }
+  }
+
   const monthBreakdown = data
     .map(
       (d) =>
@@ -39,11 +67,17 @@ export function generateApplicationsSummary(data: ChartDataPoint[]): string {
     )
     .join('; ')
 
+  const peakMonthText = peakMonth
+    ? ` Peak month: ${peakMonth} with ${maxApplications} application${
+        maxApplications === 1 ? '' : 's'
+      }.`
+    : ''
+
   if (data.length === 1) {
-    return `Applications history chart showing 1 month. ${monthBreakdown}.`
+    return `Applications history chart showing 1 month.${peakMonthText} ${monthBreakdown}.`
   }
 
-  return `Applications history chart showing data for ${data.length} months. Total applications: ${totalApplications}, Total merged: ${totalMerged}. Monthly breakdown: ${monthBreakdown}.`
+  return `Applications history chart showing data for ${data.length} months. Total applications: ${totalApplications}, Total merged: ${totalMerged}.${peakMonthText} Monthly breakdown: ${monthBreakdown}.`
 }
 
 export function ApplicationsChart({ data }: ApplicationsChartProps) {
@@ -61,7 +95,15 @@ export function ApplicationsChart({ data }: ApplicationsChartProps) {
 
   const tooltipValueText = isDark ? 'text-neutral-100' : 'text-[#2d2820]'
 
-  const summary = generateApplicationsSummary(data)
+  // Escape chart data to prevent HTML injection
+  const escapedData = data
+    ? data.map((point) => ({
+        ...point,
+        month: escapeHtml(point.month || ''),
+      }))
+    : []
+
+  const summary = generateApplicationsSummary(escapedData)
 
   return (
     <div
@@ -159,7 +201,7 @@ export function ApplicationsChart({ data }: ApplicationsChartProps) {
         >
           <div aria-hidden="true" className="w-full h-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} barGap={4}>
+              <BarChart data={escapedData} barGap={4} aria-hidden="true">
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke={
@@ -238,14 +280,30 @@ export function ApplicationsChart({ data }: ApplicationsChartProps) {
                   radius={[8, 8, 0, 0]}
                   animationBegin={0}
                   animationDuration={800}
-                />
+                >
+                  <LabelList
+                    dataKey="applications"
+                    position="top"
+                    fill={theme === 'dark' ? '#b8a898' : '#7a6b5a'}
+                    fontSize={10}
+                    fontWeight={600}
+                  />
+                </Bar>
                 <Bar
                   dataKey="merged"
                   fill="url(#mergedGradient)"
                   radius={[8, 8, 0, 0]}
                   animationBegin={100}
                   animationDuration={800}
-                />
+                >
+                  <LabelList
+                    dataKey="merged"
+                    position="top"
+                    fill={theme === 'dark' ? '#b8a898' : '#7a6b5a'}
+                    fontSize={10}
+                    fontWeight={600}
+                  />
+                </Bar>
                 <defs>
                   <linearGradient id="applicationsGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#c9983a" stopOpacity={0.9} />
@@ -279,9 +337,37 @@ export function ApplicationsChart({ data }: ApplicationsChartProps) {
           </div>
         </div>
 
-        {/* Accessible Data Table for Sighted & Screen Reader Users */}
+        {/* Visually-hidden table below the chart for screen-reader traversal */}
+        <table className="visually-hidden" data-testid="accessible-applications-table">
+          <caption>Applications History Data</caption>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Applications</th>
+              <th>Merged</th>
+            </tr>
+          </thead>
+          <tbody>
+            {escapedData.length === 0 ? (
+              <tr>
+                <td colSpan={3}>No application history data available.</td>
+              </tr>
+            ) : (
+              escapedData.map((point) => (
+                <tr key={point.month}>
+                  <td>{point.month}</td>
+                  <td>{point.applications}</td>
+                  <td>{point.merged}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+
+        {/* Toggleable Data Table for Sighted Users */}
         <div
           id="applications-data-table"
+          aria-hidden="true"
           className={
             showTable
               ? `h-[320px] overflow-y-auto backdrop-blur-[25px] rounded-[16px] border p-6 transition-all duration-300 ${
@@ -289,7 +375,7 @@ export function ApplicationsChart({ data }: ApplicationsChartProps) {
                     ? 'bg-white/[0.05] border-white/10'
                     : 'bg-white/[0.08] border-white/20'
                 }`
-              : 'sr-only'
+              : 'hidden'
           }
         >
           <table className="w-full text-left border-collapse">
@@ -311,7 +397,7 @@ export function ApplicationsChart({ data }: ApplicationsChartProps) {
                 theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
               }`}
             >
-              {data.length === 0 ? (
+              {escapedData.length === 0 ? (
                 <tr>
                   <td
                     colSpan={3}
@@ -323,7 +409,7 @@ export function ApplicationsChart({ data }: ApplicationsChartProps) {
                   </td>
                 </tr>
               ) : (
-                data.map((point) => (
+                escapedData.map((point) => (
                   <tr
                     key={point.month}
                     className={`border-b last:border-0 hover:bg-white/[0.02] transition-colors ${
