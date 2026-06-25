@@ -23,6 +23,8 @@ const MOCK_EVENTS = [
     status: 'upcoming',
     start_at: '2024-07-01T09:00:00Z',
     end_at: '2024-07-07T18:00:00Z',
+    created_at: '2024-06-01T09:00:00Z',
+    updated_at: '2024-06-01T09:00:00Z',
   },
   {
     id: 'evt-2',
@@ -32,6 +34,8 @@ const MOCK_EVENTS = [
     status: 'completed',
     start_at: '2024-06-01T09:00:00Z',
     end_at: '2024-06-07T18:00:00Z',
+    created_at: '2024-05-01T09:00:00Z',
+    updated_at: '2024-05-01T09:00:00Z',
   },
 ];
 
