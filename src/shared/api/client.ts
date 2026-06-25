@@ -1022,43 +1022,80 @@ export const syncProject = (projectId: string) =>
     method: 'POST',
   })
 
-// Project Data (Issues and PRs)
-export const getProjectIssues = (projectId: string) =>
-  apiRequest<{
-    issues: Array<{
-      github_issue_id: number
-      number: number
-      state: string
-      title: string
-      description: string | null
-      author_login: string
-      assignees: any[]
-      labels: any[]
-      comments_count: number
-      comments: any[]
-      url: string
-      updated_at: string | null
-      last_seen_at: string
-    }>
-  }>(`/projects/${projectId}/issues`, { requiresAuth: true })
+export interface MaintainerComment {
+  id: number
+  body: string
+  user: {
+    login: string
+  }
+  created_at: string
+  updated_at: string
+}
 
-export const getProjectPRs = (projectId: string) =>
-  apiRequest<{
-    prs: Array<{
-      github_pr_id: number
-      number: number
-      state: string
-      title: string
-      author_login: string
-      url: string
-      merged: boolean
-      created_at: string | null
-      updated_at: string | null
-      closed_at: string | null
-      merged_at: string | null
-      last_seen_at: string
-    }>
-  }>(`/projects/${projectId}/prs`, { requiresAuth: true })
+export interface MaintainerIssue {
+  github_issue_id: number
+  number: number
+  state: string
+  title: string
+  description: string | null
+  author_login: string
+  assignees: any[]
+  labels: any[]
+  comments_count: number
+  comments: MaintainerComment[]
+  url: string
+  updated_at: string | null
+  last_seen_at: string
+}
+
+export interface MaintainerPR {
+  github_pr_id: number
+  number: number
+  state: string
+  title: string
+  author_login: string
+  url: string
+  merged: boolean
+  created_at: string | null
+  updated_at: string | null
+  closed_at: string | null
+  merged_at: string | null
+  last_seen_at: string
+}
+
+/**
+ * Fetches the list of issues for a specific project.
+ * Requires maintainer authentication (requiresAuth: true).
+ *
+ * @param projectId - The unique identifier of the project
+ * @param options - Optional API request options (e.g. AbortSignal)
+ * @returns Promise resolving to an object containing the project's issues
+ * @throws {Error} If authentication fails or the request is unauthorized
+ */
+export const getMaintainerIssues = (projectId: string, options?: ApiRequestOptions) =>
+  apiRequest<{ issues: MaintainerIssue[] }>(`/projects/${projectId}/issues`, {
+    requiresAuth: true,
+    ...options,
+  })
+
+/**
+ * Fetches the list of pull requests for a specific project.
+ * Requires maintainer authentication (requiresAuth: true).
+ *
+ * @param projectId - The unique identifier of the project
+ * @param options - Optional API request options (e.g. AbortSignal)
+ * @returns Promise resolving to an object containing the project's pull requests
+ * @throws {Error} If authentication fails or the request is unauthorized
+ */
+export const getMaintainerPRs = (projectId: string, options?: ApiRequestOptions) =>
+  apiRequest<{ prs: MaintainerPR[] }>(`/projects/${projectId}/prs`, {
+    requiresAuth: true,
+    ...options,
+  })
+
+// Project Data (Issues and PRs) - Deprecated/Wrapper
+export const getProjectIssues = (projectId: string) => getMaintainerIssues(projectId)
+export const getProjectPRs = (projectId: string) => getMaintainerPRs(projectId)
 
 export const applyToIssue = (projectId: string, issueNumber: number, message: string) =>
   apiRequest<{
