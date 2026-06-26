@@ -17,7 +17,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "analyze": "cross-env ANALYZE=true vite build",
-    "test:bundle-size": "node scripts/check-bundle-size.mjs"
+    "test:bundle-size": "node scripts/check-bundle-size.mjs",
+    "prepare": "husky"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -105,7 +106,9 @@
     "eslint-config-prettier": "^9.1.2",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "~0.4.26",
+    "husky": "^9.1.7",
     "jsdom": "^25.0.1",
+    "lint-staged": "^17.0.8",
     "prettier": "^3.8.4",
     "rollup-plugin-visualizer": "^7.0.1",
     "sharp": "^0.34.5",
@@ -115,6 +118,12 @@
     "typescript-eslint": "^8.61.1",
     "vite": "6.3.5",
     "vitest": "^4.1.9"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   },
   "pnpm": {
     "overrides": {
