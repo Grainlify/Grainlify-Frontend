@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SettingsPage } from './SettingsPage';
+import { I18nProvider } from '../../../shared/i18n';
 
 // Mock contexts and components to isolate testing of the tab functionality
 vi.mock('../../../shared/contexts/ThemeContext', () => ({
@@ -17,6 +18,14 @@ vi.mock('../components/payout/PayoutTab', () => ({ PayoutTab: () => <div>Payout 
 vi.mock('../components/billing/BillingTab', () => ({ BillingTab: () => <div>Billing Content</div> }));
 vi.mock('../components/terms/TermsTab', () => ({ TermsTab: () => <div>Terms Content</div> }));
 
+function renderSettingsPage(props?: React.ComponentProps<typeof SettingsPage>) {
+  return render(
+    <I18nProvider>
+      <SettingsPage {...props} />
+    </I18nProvider>
+  );
+}
+
 describe('SettingsPage Tabs Accessibility', () => {
   beforeEach(() => {
     // We need to mock requestAnimationFrame for the focus management to work synchronously in tests
@@ -26,8 +35,18 @@ describe('SettingsPage Tabs Accessibility', () => {
     });
   });
 
+  it('renders tab labels from the i18n catalog', () => {
+    renderSettingsPage();
+
+    expect(screen.getByRole('tab', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Notifications' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Payout Preferences' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Billing Profiles' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Terms and Conditions' })).toBeInTheDocument();
+  });
+
   it('applies correct ARIA roles and associations', () => {
-    render(<SettingsPage />);
+    renderSettingsPage();
 
     // Check tablist
     const tablist = screen.getByRole('tablist');
@@ -56,7 +75,7 @@ describe('SettingsPage Tabs Accessibility', () => {
   });
 
   it('updates aria-selected when a tab is clicked', () => {
-    render(<SettingsPage />);
+    renderSettingsPage();
     const tabs = screen.getAllByRole('tab');
     
     fireEvent.click(tabs[1]); // Click 'Notifications' tab
@@ -71,7 +90,7 @@ describe('SettingsPage Tabs Accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('moves focus and selection to the next tab on ArrowRight', () => {
-      render(<SettingsPage />);
+      renderSettingsPage();
       const tabs = screen.getAllByRole('tab');
       
       // Starting on first tab
@@ -83,7 +102,7 @@ describe('SettingsPage Tabs Accessibility', () => {
     });
 
     it('moves focus and selection to the previous tab on ArrowLeft', () => {
-      render(<SettingsPage initialTab="notifications" />);
+      renderSettingsPage({ initialTab: 'notifications' });
       const tabs = screen.getAllByRole('tab');
       
       // Starting on second tab
@@ -95,7 +114,7 @@ describe('SettingsPage Tabs Accessibility', () => {
     });
 
     it('wraps around to the first tab when pressing ArrowRight on the last tab', () => {
-      render(<SettingsPage initialTab="terms" />); // 'terms' is the last tab
+      renderSettingsPage({ initialTab: 'terms' }); // 'terms' is the last tab
       const tabs = screen.getAllByRole('tab');
       
       fireEvent.keyDown(tabs[4], { key: 'ArrowRight' });
@@ -106,7 +125,7 @@ describe('SettingsPage Tabs Accessibility', () => {
     });
 
     it('wraps around to the last tab when pressing ArrowLeft on the first tab', () => {
-      render(<SettingsPage />); // 'profile' is the first tab
+      renderSettingsPage(); // 'profile' is the first tab
       const tabs = screen.getAllByRole('tab');
       
       fireEvent.keyDown(tabs[0], { key: 'ArrowLeft' });
@@ -117,7 +136,7 @@ describe('SettingsPage Tabs Accessibility', () => {
     });
 
     it('jumps to the first tab when pressing Home', () => {
-      render(<SettingsPage initialTab="payout" />); // middle tab
+      renderSettingsPage({ initialTab: 'payout' }); // middle tab
       const tabs = screen.getAllByRole('tab');
       
       fireEvent.keyDown(tabs[2], { key: 'Home' });
@@ -128,7 +147,7 @@ describe('SettingsPage Tabs Accessibility', () => {
     });
 
     it('jumps to the last tab when pressing End', () => {
-      render(<SettingsPage initialTab="profile" />); // first tab
+      renderSettingsPage({ initialTab: 'profile' }); // first tab
       const tabs = screen.getAllByRole('tab');
       
       fireEvent.keyDown(tabs[0], { key: 'End' });

@@ -7,6 +7,7 @@ import { BillingTab } from '../components/billing/BillingTab';
 import { TermsTab } from '../components/terms/TermsTab';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { BillingProfilesProvider } from '../contexts/BillingProfilesContext';
+import { useTranslation } from '../../../shared/i18n';
 
 interface SettingsPageProps {
   initialTab?: SettingsTabType;
@@ -28,13 +29,14 @@ interface SettingsPageProps {
 export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab);
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const tabs: { id: SettingsTabType; label: string }[] = [
-    { id: 'profile', label: 'Profile' },
-    { id: 'notifications', label: 'Notifications' },
-    { id: 'payout', label: 'Payout Preferences' },
-    { id: 'billing', label: 'Billing Profiles' },
-    { id: 'terms', label: 'Terms and Conditions' },
+    { id: 'profile', label: t('settingsTabs.profile') },
+    { id: 'notifications', label: t('settingsTabs.notifications') },
+    { id: 'payout', label: t('settingsTabs.payout') },
+    { id: 'billing', label: t('settingsTabs.billing') },
+    { id: 'terms', label: t('settingsTabs.terms') },
   ];
 
   const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
