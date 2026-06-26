@@ -38,7 +38,7 @@ const formatNumber = (num: number): string => {
 // Helper function to get project icon/avatar
 const getProjectIcon = (githubFullName: string): string => {
   const [owner] = githubFullName.split("/");
-  // Use higher‑resolution owner avatar so cards look crisp
+  // Use higher-resolution owner avatar so cards look crisp
   return `https://github.com/${owner}.png?size=200`;
 };
 
@@ -393,9 +393,10 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
                 {value}
                 <button
                   onClick={() => clearFilter(filterType, value)}
-                  className="hover:text-red-200 transition-colors"
+                  aria-label={`Remove filter: ${value}`}
+                  className="rounded-sm hover:text-red-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#a17932]"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X aria-hidden="true" className="w-3.5 h-3.5" />
                 </button>
               </span>
             )),

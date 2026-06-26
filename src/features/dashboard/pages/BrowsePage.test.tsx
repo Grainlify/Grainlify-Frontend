@@ -395,7 +395,7 @@ describe("BrowsePage filters", () => {
     );
   });
 
-  it("removes an active-filter chip when its X is clicked", async () => {
+  it("labels and removes an active-filter chip when its remove button is clicked", async () => {
     getPublicProjects.mockResolvedValue(makeResponse(2, 2));
     renderPage();
     await waitFor(() => expect(cards()).toBe(2));
@@ -405,10 +405,13 @@ describe("BrowsePage filters", () => {
     const chip = await screen.findByText("TypeScript");
     expect(chip).toBeInTheDocument();
 
-    // The chip's X button is the last button rendered inside the chip.
-    const xButton = chip.closest("span")?.querySelector("button");
-    expect(xButton).toBeTruthy();
-    await userEvent.click(xButton as HTMLButtonElement);
+    const removeButton = screen.getByRole("button", {
+      name: "Remove filter: TypeScript",
+    });
+    expect(removeButton.className).toMatch(/focus-visible:ring-2/);
+    expect(removeButton.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+
+    await userEvent.click(removeButton);
 
     await waitFor(() =>
       expect(screen.queryByText("TypeScript")).not.toBeInTheDocument(),
