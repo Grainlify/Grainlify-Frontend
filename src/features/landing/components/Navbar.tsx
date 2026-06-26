@@ -7,6 +7,13 @@ import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import grainlifyLogo from "../../../assets/grainlify_log.svg";
 
+/**
+ * Keeps the mobile menu trigger at the WCAG-recommended 44px minimum
+ * touch target while preserving the existing 24px icon size.
+ */
+const MOBILE_MENU_TRIGGER_CLASSES =
+  "md:hidden inline-flex h-11 w-11 items-center justify-center rounded-[12px]";
+
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, setThemeFromAnimation } = useTheme();
@@ -145,7 +152,7 @@ export function Navbar() {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2"
+            className={MOBILE_MENU_TRIGGER_CLASSES}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileMenuOpen}

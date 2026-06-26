@@ -70,6 +70,22 @@ describe('Navbar i18n strings', () => {
     expect(screen.getAllByText('Get Started').length).toBeGreaterThanOrEqual(2)
   })
 
+  it('keeps the mobile menu toggle accessible with a 44px touch target', async () => {
+    const user = userEvent.setup()
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, logout: vi.fn() })
+    renderNavbar()
+
+    const toggle = screen.getByRole('button', { name: 'Open menu' })
+    expect(toggle).toHaveClass('h-11', 'w-11', 'items-center', 'justify-center')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(toggle)
+
+    const closeToggle = screen.getByRole('button', { name: 'Close menu' })
+    expect(closeToggle).toHaveClass('h-11', 'w-11', 'items-center', 'justify-center')
+    expect(closeToggle).toHaveAttribute('aria-expanded', 'true')
+  })
+
   it('renders the authenticated CTAs inside the mobile menu when opened', async () => {
     const user = userEvent.setup()
     mockUseAuth.mockReturnValue({ isAuthenticated: true, logout: vi.fn() })
@@ -81,3 +97,4 @@ describe('Navbar i18n strings', () => {
     expect(screen.getAllByText('Sign Out').length).toBeGreaterThanOrEqual(2)
   })
 })
+
