@@ -1,17 +1,67 @@
 import { Toaster } from 'sonner'
+import { useEffect, useRef } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
+
+const DISMISS_LABEL = 'Dismiss notification';
+
+/**
+ * Sonner does not expose per-toast ARIA roles, so enhance the rendered toast
+ * nodes after insertion while preserving Sonner's timing and interaction logic.
+ */
+function useToastLiveRegionRoles() {
+  const toasterRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const root = toasterRef.current;
+    if (!root || typeof MutationObserver === 'undefined') return;
+
+    const enhanceToasts = () => {
+      root.querySelectorAll<HTMLElement>('[data-sonner-toast]').forEach((toast) => {
+        const isError = toast.dataset.type === 'error';
+        toast.setAttribute('role', isError ? 'alert' : 'status');
+        toast.setAttribute('aria-live', isError ? 'assertive' : 'polite');
+        toast.setAttribute('aria-atomic', 'true');
+      });
+
+      root
+        .querySelectorAll<HTMLButtonElement>('[data-close-button]')
+        .forEach((button) => {
+          button.setAttribute('aria-label', DISMISS_LABEL);
+        });
+    };
+
+    enhanceToasts();
+
+    const observer = new MutationObserver(enhanceToasts);
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-type'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  return toasterRef;
+}
 
 const Toast = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const toasterRef = useToastLiveRegionRoles();
+
   return (
     <Toaster
+      ref={toasterRef}
       richColors={false}
       position="top-right"
       closeButton={true}
       duration={3000}
+      containerAriaLabel="Notifications"
       toastOptions={{
         unstyled: true,
+        closeButtonAriaLabel: DISMISS_LABEL,
         className: `${isDark ? 'bg-[#2d2820] text-[#e8dfd0] border-white/15' : 'bg-[#ede3d0] text-[#2d2820] border-[#c9983a]/30'} backdrop-blur-[40px] w-[340px] flex flex-row text-md py-3 px-4 rounded-[14px] border-2 shadow-lg`,
         classNames: {
           closeButton: "order-last ml-auto cursor-pointer rounded-[10px] p-1 hover:opacity-80 transition-opacity",
