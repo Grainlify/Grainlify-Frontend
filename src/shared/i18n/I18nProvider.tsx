@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { IntlProvider } from 'react-intl'
 import { DEFAULT_LOCALE, resolveMessages, type Locale } from './messages'
 import { handleIntlError } from './errors'
@@ -21,7 +21,10 @@ export interface I18nProviderProps {
  * project's message catalog, guaranteed English fallback, and error policy
  * ({@link handleIntlError}).
  *
- * Mounted once at the very top of the tree — above the router — in
+ * It also keeps `<html lang>` synchronized with the active locale so assistive
+ * technologies and translation tools can interpret every route correctly.
+ *
+ * Mounted once at the very top of the tree - above the router - in
  * `src/app/App.tsx`, so every route can call `useTranslation()` or render
  * `<FormattedMessage>`.
  *
@@ -31,6 +34,12 @@ export interface I18nProviderProps {
  * </I18nProvider>
  */
 export function I18nProvider({ locale = DEFAULT_LOCALE, messages, children }: I18nProviderProps) {
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+
+    document.documentElement.lang = locale
+  }, [locale])
+
   return (
     <IntlProvider
       locale={locale}

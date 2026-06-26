@@ -40,9 +40,9 @@ describe('i18n catalog & fallback', () => {
     const partial: Partial<Messages> = { 'dashboardNav.discover': 'Descubrir' }
     const msgs = resolveMessages('es' as Locale, { es: partial })
 
-    // Provided key uses the locale value…
+    // Provided key uses the locale value.
     expect(msgs['dashboardNav.discover']).toBe('Descubrir')
-    // …every other key falls back to its English value.
+    // .every other key falls back to its English value.
     expect(msgs['dashboardNav.browse']).toBe('Browse')
     expect(msgs['landingNav.features']).toBe('Features')
   })
@@ -76,6 +76,40 @@ describe('useTranslation', () => {
     expect(result.current.t('dashboardNav.discover')).toBe('Discover')
     expect(result.current.t('landingNav.getStarted')).toBe('Get Started')
     expect(result.current.locale).toBe('en')
+  })
+})
+
+describe('html lang synchronization', () => {
+  it('defaults document.documentElement.lang to en', async () => {
+    document.documentElement.lang = ''
+
+    render(
+      <I18nProvider>
+        <div>App content</div>
+      </I18nProvider>
+    )
+
+    await waitFor(() => expect(document.documentElement.lang).toBe('en'))
+  })
+
+  it('updates document.documentElement.lang when the active locale changes', async () => {
+    document.documentElement.lang = 'en'
+
+    const { rerender } = render(
+      <I18nProvider locale={'en' as Locale}>
+        <div>App content</div>
+      </I18nProvider>
+    )
+
+    await waitFor(() => expect(document.documentElement.lang).toBe('en'))
+
+    rerender(
+      <I18nProvider locale={'es' as Locale} messages={resolveMessages('es' as Locale)}>
+        <div>App content</div>
+      </I18nProvider>
+    )
+
+    await waitFor(() => expect(document.documentElement.lang).toBe('es'))
   })
 })
 
@@ -129,8 +163,8 @@ describe('number formatting', () => {
     const { result } = renderHook(() => useLandingStats(), { wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(result.current.display.activeProjects).toBe('—')
-    expect(result.current.display.grantsDistributed).toBe('—')
+    expect(result.current.display.activeProjects).toBe('-')
+    expect(result.current.display.grantsDistributed).toBe('-')
     expect(result.current.error).toBe('boom')
   })
 })
@@ -163,7 +197,7 @@ describe('plural formatting', () => {
   })
 })
 
-describe('security — interpolation is text-only', () => {
+describe('security - interpolation is text-only', () => {
   it('renders interpolated untrusted markup as inert text, never as DOM', () => {
     const evil = '<img src=x onerror="window.__pwned = true">'
 
@@ -177,7 +211,7 @@ describe('security — interpolation is text-only', () => {
       </I18nProvider>
     )
 
-    // No element was injected — the payload never became part of the DOM tree.
+    // No element was injected - the payload never became part of the DOM tree.
     expect(container.querySelector('img')).toBeNull()
     expect((window as unknown as Record<string, unknown>).__pwned).toBeUndefined()
     // The raw markup is present verbatim, as a text node.
