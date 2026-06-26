@@ -41,6 +41,48 @@ export function ProtectedRoute({ children }: { children: React.JSX.Element }) {
   return <AuthGuard>{children}</AuthGuard>;
 }
 
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/signin" element={<SignInPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/dashboard/discover" replace />} />
+        <Route path="discover" element={<DiscoverPage />} />
+        <Route path="browse" element={<BrowsePage />} />
+        <Route path="open-source-week" element={<OpenSourceWeekPageRoute />} />
+        <Route path="open-source-week/:eventId" element={<OpenSourceWeekDetailPageRoute />} />
+        <Route path="ecosystems" element={<EcosystemsPageRoute />} />
+        <Route path="ecosystems/:ecosystemId" element={<EcosystemDetailPageRoute />} />
+        <Route path="contributors" element={<ContributorsPage />} />
+        <Route path="maintainers" element={<RoleGuard allow={['maintainer', 'admin']}><MaintainersPageRoute /></RoleGuard>} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="data" element={<DataPage />} />
+        <Route path="projects/:projectId" element={<ProjectDetailPageRoute />} />
+        <Route path="projects/:projectId/issues/:issueId" element={<IssueDetailPageRoute />} />
+        <Route path="leaderboard" element={<LeaderboardPage />} />
+        <Route path="blog" element={<BlogPage />} />
+        {/* Deep link to an individual article. The `:slug` param is
+            untrusted input — see BlogArticlePage for sanitize+lookup. */}
+        <Route path="blog/:slug" element={<BlogArticlePage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="admin" element={<RoleGuard allow={['admin']}><AdminPage /></RoleGuard>} />
+        <Route path="search" element={<SearchPageRoute />} />
+      </Route>
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+}
+
 export default function App() {
   return (
     <I18nProvider>
@@ -57,43 +99,7 @@ export default function App() {
               Skip to main content
             </a>
             <main id="main" tabIndex={-1} className="outline-none overflow-x-hidden">
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/signin" element={<SignInPage />} />
-                <Route path="/signup" element={<SignUpPage />} />
-                <Route path="/auth/callback" element={<AuthCallbackPage />} />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <DashboardLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<Navigate to="/dashboard/discover" replace />} />
-                  <Route path="discover" element={<DiscoverPage />} />
-                  <Route path="browse" element={<BrowsePage />} />
-                  <Route path="open-source-week" element={<OpenSourceWeekPageRoute />} />
-                  <Route path="open-source-week/:eventId" element={<OpenSourceWeekDetailPageRoute />} />
-                  <Route path="ecosystems" element={<EcosystemsPageRoute />} />
-                  <Route path="ecosystems/:ecosystemId" element={<EcosystemDetailPageRoute />} />
-                  <Route path="contributors" element={<ContributorsPage />} />
-                  <Route path="maintainers" element={<RoleGuard allow={['maintainer', 'admin']}><MaintainersPageRoute /></RoleGuard>} />
-                  <Route path="profile" element={<ProfilePage />} />
-                  <Route path="data" element={<DataPage />} />
-                  <Route path="projects/:projectId" element={<ProjectDetailPageRoute />} />
-                  <Route path="projects/:projectId/issues/:issueId" element={<IssueDetailPageRoute />} />
-                  <Route path="leaderboard" element={<LeaderboardPage />} />
-                  <Route path="blog" element={<BlogPage />} />
-                  {/* Deep link to an individual article. The `:slug` param is
-                      untrusted input — see BlogArticlePage for sanitize+lookup. */}
-                  <Route path="blog/:slug" element={<BlogArticlePage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="admin" element={<RoleGuard allow={['admin']}><AdminPage /></RoleGuard>} />
-                  <Route path="search" element={<SearchPageRoute />} />
-                </Route>
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
+              <AppRoutes />
               <Toast />
             </main>
           </AuthProvider>
