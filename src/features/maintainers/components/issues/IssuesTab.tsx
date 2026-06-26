@@ -13,6 +13,27 @@ import { formatDistanceToNow } from 'date-fns';
 import { IssueCardSkeleton } from '../../../../shared/components/IssueCardSkeleton';
 import RenderMarkdownContent from '../../../../app/utils/renderMarkdown';
 
+/**
+ * Lowercase set of well-known programming language names.
+ * Used to classify GitHub issue labels into the "Languages" filter bucket
+ * vs the general "Categories" bucket.
+ */
+const KNOWN_LANGUAGES = new Set([
+  'javascript', 'typescript', 'rust', 'python', 'go', 'golang', 'java', 'c', 'c++',
+  'c#', 'ruby', 'php', 'swift', 'kotlin', 'scala', 'haskell', 'elixir', 'erlang',
+  'solidity', 'vyper', 'makefile', 'shell', 'bash', 'html', 'css', 'scss', 'sass',
+  'dart', 'r', 'julia', 'perl', 'lua', 'assembly', 'webassembly', 'wasm',
+  'move', 'cairo', 'zig', 'nim', 'ocaml', 'f#', 'clojure', 'groovy', 'nix',
+]);
+
+/**
+ * Sanitizes an external label name for safe display.
+ * JSX automatically HTML-escapes text content, so XSS is not a concern for
+ * rendered text; this guards against layout breakage from excessively long or
+ * whitespace-padded strings sourced from external GitHub repositories.
+ */
+const sanitizeLabelName = (name: string): string => name.trim().slice(0, 60);
+
 interface Project {
   id: string;
   github_full_name: string;
@@ -611,8 +632,13 @@ Only applications submitted via the apply link above will be considered. Please 
           return issueTags.includes(category.toLowerCase());
         });
 
-      // Languages filter (not available in current API response, skip for now)
-      const matchesLanguages = selectedFilters.languages.length === 0;
+      // Languages filter: match against issue labels using the same label data as categories
+      const matchesLanguages =
+        selectedFilters.languages.length === 0 ||
+        selectedFilters.languages.some((lang) => {
+          const issueTags = issue.labels?.map((l: any) => (l.name || l).toLowerCase()) || [];
+          return issueTags.includes(lang.toLowerCase());
+        });
 
       // Labels filter
       const matchesLabels =
@@ -636,7 +662,7 @@ Only applications submitted via the apply link above will be considered. Please 
     });
   }, [issues, searchQuery, selectedFilters]);
 
-  // Extract unique labels from all loaded issues
+  /** Extracts all unique label names from loaded issues for the Labels filter section. */
   const availableLabels = useMemo(() => {
     const labelsSet = new Set<string>();
     issues.forEach(issue => {
@@ -644,12 +670,53 @@ Only applications submitted via the apply link above will be considered. Please 
         issue.labels.forEach((label: any) => {
           const labelName = typeof label === 'string' ? label : label.name;
           if (labelName) {
-            labelsSet.add(labelName);
+            labelsSet.add(sanitizeLabelName(labelName));
           }
         });
       }
     });
     return Array.from(labelsSet).sort();
+  }, [issues]);
+
+  /**
+   * Category filter options derived dynamically from issue labels.
+   * A label is classified as a category when its lowercase form does not match
+   * any entry in {@link KNOWN_LANGUAGES}. Keeps filters in sync as the issue
+   * set changes because it re-derives on every `issues` update.
+   */
+  const availableCategories = useMemo(() => {
+    const catSet = new Set<string>();
+    issues.forEach((issue) => {
+      if (Array.isArray(issue.labels)) {
+        issue.labels.forEach((label: any) => {
+          const raw = typeof label === 'string' ? label : label?.name;
+          if (raw && !KNOWN_LANGUAGES.has(raw.toLowerCase())) {
+            catSet.add(sanitizeLabelName(raw));
+          }
+        });
+      }
+    });
+    return Array.from(catSet).sort();
+  }, [issues]);
+
+  /**
+   * Language filter options derived dynamically from issue labels.
+   * A label is classified as a language when its lowercase form matches an entry
+   * in {@link KNOWN_LANGUAGES}. Keeps filters in sync as the issue set changes.
+   */
+  const availableLanguages = useMemo(() => {
+    const langSet = new Set<string>();
+    issues.forEach((issue) => {
+      if (Array.isArray(issue.labels)) {
+        issue.labels.forEach((label: any) => {
+          const raw = typeof label === 'string' ? label : label?.name;
+          if (raw && KNOWN_LANGUAGES.has(raw.toLowerCase())) {
+            langSet.add(sanitizeLabelName(raw));
+          }
+        });
+      }
+    });
+    return Array.from(langSet).sort();
   }, [issues]);
 
   // If we were opened from a deep-link (e.g. project detail click), auto-select the target issue.
@@ -745,6 +812,8 @@ Only applications submitted via the apply link above will be considered. Please 
           {/* Filter Button with Badge */}
           <button
             ref={filterBtnRef}
+            data-testid="filter-button"
+            aria-label="Filter issues"
             onClick={() => setIsFilterModalOpen((v) => !v)}
             className={`relative p-3 rounded-[16px] backdrop-blur-[40px] border hover:bg-white/[0.15] transition-all ${isDark
               ? 'bg-white/[0.12] border-white/20'
@@ -1615,12 +1684,12 @@ Only applications submitted via the apply link above will be considered. Please 
                 </div>
               </div>
 
-              {/* Categories */}
+              {/* Categories — derived from issue labels that are not programming languages */}
               <div>
                 <h3 className={`text-[12px] font-semibold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                   }`}>Categories</h3>
                 <div className="flex flex-wrap gap-2">
-                  {['Blockchain & Cryptocurrencies', 'Cryptography', 'Stellar', 'Web Development'].map((category) => (
+                  {availableCategories.map((category) => (
                     <button
                       key={category}
                       onClick={() => {
@@ -1647,15 +1716,22 @@ Only applications submitted via the apply link above will be considered. Please 
                       {category}
                     </button>
                   ))}
+                  {availableCategories.length === 0 && (
+                    <div className="text-center py-3 w-full">
+                      <p className={`text-[11px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+                        {isLoadingIssues ? 'Loading categories...' : 'No categories available'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Languages */}
+              {/* Languages — derived from issue labels that match known programming language names */}
               <div>
                 <h3 className={`text-[12px] font-semibold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                   }`}>Languages</h3>
                 <div className="flex flex-wrap gap-2">
-                  {['JavaScript', 'Makefile', 'Rust', 'Shell', 'TypeScript'].map((language) => (
+                  {availableLanguages.map((language) => (
                     <button
                       key={language}
                       onClick={() => {
@@ -1682,6 +1758,13 @@ Only applications submitted via the apply link above will be considered. Please 
                       {language}
                     </button>
                   ))}
+                  {availableLanguages.length === 0 && (
+                    <div className="text-center py-3 w-full">
+                      <p className={`text-[11px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+                        {isLoadingIssues ? 'Loading languages...' : 'No languages available'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
