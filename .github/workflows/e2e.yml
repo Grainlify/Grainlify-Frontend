@@ -16,7 +16,6 @@ jobs:
       NO_PROXY: 127.0.0.1,localhost
       VITE_API_BASE_URL: http://127.0.0.1:8080
       VITE_FRONTEND_BASE_URL: http://127.0.0.1:5173
-      no_proxy: 127.0.0.1,localhost
 
     strategy:
       fail-fast: false
