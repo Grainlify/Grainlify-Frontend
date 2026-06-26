@@ -7,6 +7,38 @@ import { MaintainersPage } from '../maintainers/pages/MaintainersPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { IssueDetailPage } from './pages/IssueDetailPage';
 import { SearchPage } from './pages/SearchPage';
+import { NotFoundPage } from '../../shared/components/NotFoundPage';
+
+// ─── Param Validation ──────────────────────────────────────────────────────
+// Validates route params before they reach detail pages, preventing malformed
+// IDs from being forwarded to API endpoints.
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const NUMERIC_RE = /^\d+$/;
+const MAX_PARAM_LENGTH = 128;
+
+/**
+ * Validate a path parameter.
+ * Accepts: UUID format, numeric IDs, or URL-safe slugs (lowercase alphanumeric + hyphens).
+ * Returns null if invalid.
+ */
+export function validateIdParam(value: string | undefined): string | null {
+  if (!value || value.length > MAX_PARAM_LENGTH) return null;
+  if (UUID_RE.test(value)) return value;
+  if (NUMERIC_RE.test(value)) return value;
+  if (SLUG_RE.test(value)) return value;
+  return null;
+}
+
+/**
+ * Validate a slug param (stricter — only lowercase alphanumeric + hyphens).
+ */
+export function validateSlugParam(value: string | undefined): string | null {
+  if (!value || value.length > MAX_PARAM_LENGTH) return null;
+  if (SLUG_RE.test(value)) return value;
+  return null;
+}
 
 // Open Source Week Page Wrapper
 export function OpenSourceWeekPageRoute() {
@@ -27,7 +59,8 @@ export function OpenSourceWeekDetailPageRoute() {
   const state = location.state as { eventName?: string } || {};
   const eventName = state.eventName || 'Event';
 
-  if (!eventId) return null;
+  const validatedEventId = validateIdParam(eventId);
+  if (!validatedEventId) return <NotFoundPage />;
 
   const handleBack = () => {
     navigate('/dashboard/open-source-week');
@@ -35,7 +68,7 @@ export function OpenSourceWeekDetailPageRoute() {
 
   return (
     <OpenSourceWeekDetailPage
-      eventId={eventId}
+      eventId={validatedEventId}
       eventName={eventName}
       onBack={handleBack}
     />
@@ -71,7 +104,8 @@ export function EcosystemDetailPageRoute() {
     logoUrl?: string | null;
   } || {};
 
-  if (!ecosystemId) return null;
+  const validatedEcosystemId = validateIdParam(ecosystemId);
+  if (!validatedEcosystemId) return <NotFoundPage />;
 
   const handleBack = () => {
     navigate('/dashboard/ecosystems');
@@ -85,7 +119,7 @@ export function EcosystemDetailPageRoute() {
 
   return (
     <EcosystemDetailPage
-      ecosystemId={ecosystemId}
+      ecosystemId={validatedEcosystemId}
       ecosystemName={state.ecosystemName || ''}
       initialDescription={state.description || null}
       initialLogoUrl={state.logoUrl || null}
@@ -113,7 +147,8 @@ export function ProjectDetailPageRoute() {
   const location = useLocation();
   const state = location.state as { backTarget?: string } || {};
 
-  if (!projectId) return null;
+  const validatedProjectId = validateIdParam(projectId);
+  if (!validatedProjectId) return <NotFoundPage />;
 
   const handleBack = () => {
     if (state.backTarget) {
@@ -140,7 +175,7 @@ export function ProjectDetailPageRoute() {
 
   return (
     <ProjectDetailPage
-      projectId={projectId}
+      projectId={validatedProjectId}
       backLabel={getBackLabel()}
       onBack={handleBack}
       onIssueClick={handleIssueClick}
@@ -153,7 +188,9 @@ export function IssueDetailPageRoute() {
   const { projectId, issueId } = useParams<{ projectId: string; issueId: string }>();
   const navigate = useNavigate();
 
-  if (!projectId || !issueId) return null;
+  const validatedProjectId = validateIdParam(projectId);
+  const validatedIssueId = validateIdParam(issueId);
+  if (!validatedProjectId || !validatedIssueId) return <NotFoundPage />;
 
   const handleClose = () => {
     navigate(`/dashboard/projects/${projectId}`);
@@ -161,8 +198,8 @@ export function IssueDetailPageRoute() {
 
   return (
     <IssueDetailPage
-      issueId={issueId}
-      projectId={projectId}
+      issueId={validatedIssueId}
+      projectId={validatedProjectId}
       onClose={handleClose}
     />
   );
