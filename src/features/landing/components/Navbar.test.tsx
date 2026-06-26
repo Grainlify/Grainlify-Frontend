@@ -80,4 +80,22 @@ describe('Navbar i18n strings', () => {
     expect(screen.getAllByText('Dashboard').length).toBeGreaterThanOrEqual(2)
     expect(screen.getAllByText('Sign Out').length).toBeGreaterThanOrEqual(2)
   })
+
+  it('keeps the mobile menu button at a 44px touch target and updates expanded state', async () => {
+    const user = userEvent.setup()
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, logout: vi.fn() })
+    renderNavbar()
+
+    const menuButton = screen.getByRole('button', { name: 'Open menu' })
+
+    expect(menuButton).toHaveClass('h-11', 'w-11', 'items-center', 'justify-center')
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(menuButton)
+
+    expect(screen.getByRole('button', { name: 'Close menu' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+  })
 })
