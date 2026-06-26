@@ -3,7 +3,7 @@
  */
 
 import { API_BASE_URL } from '../config/api'
-import { BillingProfile } from '../../features/settings/types'
+import { BillingProfile, NotificationSettings } from '../../features/settings/types'
 import { BlogPost } from '../../features/blog/types'
 
 // Token management
@@ -525,6 +525,7 @@ export const getPublicProjectIssues = (projectId: string) =>
       url: string
       updated_at: string | null
       last_seen_at: string
+      deadline?: string | null
     }>
   }>(`/projects/${projectId}/issues/public`)
 
@@ -1208,4 +1209,16 @@ export const acceptTerms = (version: string) =>
     requiresAuth: true,
     method: 'POST',
     body: JSON.stringify({ version }),
+  })
+
+export const getNotificationSettings = () =>
+  apiRequest<NotificationSettings>('/profile/notifications', {
+    requiresAuth: true,
+  })
+
+export const updateNotificationSettings = (settings: NotificationSettings) =>
+  apiRequest<{ ok: boolean }>('/profile/notifications', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+    requiresAuth: true,
   })
