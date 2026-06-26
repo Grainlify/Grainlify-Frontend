@@ -156,7 +156,7 @@ test.describe('Leaderboard', () => {
     await setupLeaderboard(page, 0);
     await page.goto('/dashboard/leaderboard');
 
-    await expect(page.getByText('No contributors yet')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('No contributors yet', { exact: true })).toBeVisible({ timeout: 10000 });
   });
 
   test('projects tab renders projects', async ({ page }) => {

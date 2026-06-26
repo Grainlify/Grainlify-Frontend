@@ -307,6 +307,14 @@ To run E2E tests on a single browser locally, specify the `--project` flag:
 - **Firefox:** `pnpm run test:e2e --project=firefox`
 - **WebKit:** `pnpm run test:e2e --project=webkit`
 
+### CI workflow
+
+Pull requests run the Playwright suite in
+`.github/workflows/e2e.yml` across the same Chromium, Firefox, and WebKit
+projects configured in `playwright.config.ts`. The workflow caches Playwright
+browser binaries by `@playwright/test` version and uploads the HTML report plus
+trace output as short-retention artifacts when a browser job fails.
+
 ### Test structure
 
 | File                        | What it covers                                                                                  |
