@@ -49,6 +49,26 @@ export function PRRow({ pr }: PRRowProps) {
     }
   }
 
+  /**
+   * Returns the screen-reader text equivalent for visual-only PR indicators.
+   */
+  const getIndicatorLabel = (indicator: string) => {
+    switch (indicator) {
+      case 'check':
+        return 'Checks passing'
+      case 'x':
+        return 'Checks failing'
+      case 'trophy':
+        return 'Rewarded pull request'
+      case 'eye':
+        return 'Needs review'
+      case 'code':
+        return 'Code changes'
+      default:
+        return 'Pull request indicator'
+    }
+  }
+
   const getPRStatusColor = () => {
     switch (pr.status) {
       case 'merged':
@@ -179,12 +199,14 @@ export function PRRow({ pr }: PRRowProps) {
           const { Icon, color } = getIndicatorIcon(indicator)
           return (
             <div
-              key={idx}
+              key={`${indicator}-${idx}`}
+              role="img"
+              aria-label={getIndicatorLabel(indicator)}
               className={`w-7 h-7 rounded-full border flex items-center justify-center hover:scale-110 transition-transform ${
                 theme === 'dark' ? 'bg-white/20 border-white/30' : 'bg-white/30 border-white/40'
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${color}`} />
+              <Icon aria-hidden="true" className={`w-3.5 h-3.5 ${color}`} />
             </div>
           )
         })}
