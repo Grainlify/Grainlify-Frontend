@@ -10,7 +10,7 @@
 - **Contributor Dashboard** - Track your contributions, activity calendar, and ecosystem participation
 - **Project Discovery** - Browse projects with filters for languages, ecosystems, categories, and tags
 - **Maintainer Tools** - Manage projects, issues, and pull requests
-- **Leaderboards & Analytics** - View contribution rankings and data insights
+- **Leaderboards & Analytics** - View live contribution rankings and real-time project/contributor activity charts with geographic insights.
 - **Open Source Week Events** - Participate in community events and challenges
 - **Ecosystem Explorer** - Discover projects across different blockchain and tech ecosystems
 - **Profile Management** - Customize your profile, notification preferences, and payout settings
