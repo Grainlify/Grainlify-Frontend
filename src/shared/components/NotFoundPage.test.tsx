@@ -1,18 +1,22 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it } from 'vitest';
+import { ThemeProvider } from '../contexts/ThemeContext';
 import { NotFoundPage } from './NotFoundPage';
 
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
-}));
-
-vi.mock('../contexts/ThemeContext', () => ({
-  useTheme: () => ({ theme: 'light' }),
-}));
+function renderNotFoundPage() {
+  return render(
+    <MemoryRouter>
+      <ThemeProvider>
+        <NotFoundPage />
+      </ThemeProvider>
+    </MemoryRouter>,
+  );
+}
 
 describe('NotFoundPage', () => {
   it('renders Page Not Found as the single top-level heading', () => {
-    render(<NotFoundPage />);
+    renderNotFoundPage();
 
     const heading = screen.getByRole('heading', {
       level: 1,
@@ -25,7 +29,7 @@ describe('NotFoundPage', () => {
   });
 
   it('keeps the recovery actions available', () => {
-    render(<NotFoundPage />);
+    renderNotFoundPage();
 
     expect(screen.getByRole('button', { name: 'Go Back' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Go to Dashboard' })).toBeInTheDocument();
