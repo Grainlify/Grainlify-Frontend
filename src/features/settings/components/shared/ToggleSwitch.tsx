@@ -1,19 +1,19 @@
-import { useTheme } from '../../../../shared/contexts/ThemeContext';
+import { useTheme } from '../../../../shared/contexts/ThemeContext'
 
 /**
  * Props for the accessible settings toggle switch.
  */
 interface ToggleSwitchProps {
   /** Current on/off state exposed through `aria-checked`. */
-  enabled: boolean;
+  enabled: boolean
   /** Called with the next state when the switch is toggled. */
-  onChange: (value: boolean) => void;
+  onChange: (value: boolean) => void
   /** Disable the toggle when in-flight. */
-  disabled?: boolean;
+  disabled?: boolean
   /** Accessible name when no visible label owns the switch. */
-  'aria-label'?: string;
+  'aria-label'?: string
   /** ID of visible text that labels the switch. */
-  'aria-labelledby'?: string;
+  'aria-labelledby'?: string
 }
 
 export function ToggleSwitch({
@@ -23,7 +23,7 @@ export function ToggleSwitch({
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledBy,
 }: ToggleSwitchProps) {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
 
   return (
     <button
@@ -35,10 +35,12 @@ export function ToggleSwitch({
       disabled={disabled}
       onClick={() => !disabled && onChange(!enabled)}
       className={`relative w-11 h-6 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a] focus-visible:ring-offset-2 ${
-        theme === 'dark' ? 'focus-visible:ring-offset-[#2d2820]' : 'focus-visible:ring-offset-[#e8dfd0]'
+        theme === 'dark'
+          ? 'focus-visible:ring-offset-[#2d2820]'
+          : 'focus-visible:ring-offset-[#e8dfd0]'
       } ${
-        enabled 
-          ? 'bg-gradient-to-r from-[#c9983a] to-[#a67c2e] shadow-[0_2px_8px_rgba(162,121,44,0.4)]' 
+        enabled
+          ? 'bg-gradient-to-r from-[#c9983a] to-[#a67c2e] shadow-[0_2px_8px_rgba(162,121,44,0.4)]'
           : 'bg-white/[0.15] border border-white/25'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
@@ -48,5 +50,5 @@ export function ToggleSwitch({
         }`}
       />
     </button>
-  );
+  )
 }

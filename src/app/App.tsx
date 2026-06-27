@@ -162,7 +162,14 @@ export function AppRoutes() {
         <Route path="ecosystems" element={<EcosystemsPageRoute />} />
         <Route path="ecosystems/:ecosystemId" element={<EcosystemDetailPageRoute />} />
         <Route path="contributors" element={<ContributorsPage />} />
-        <Route path="maintainers" element={<RoleGuard allow={['maintainer', 'admin']}><MaintainersPageRoute /></RoleGuard>} />
+        <Route
+          path="maintainers"
+          element={
+            <RoleGuard allow={['maintainer', 'admin']}>
+              <MaintainersPageRoute />
+            </RoleGuard>
+          }
+        />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="data" element={<DataPage />} />
         <Route path="projects/:projectId" element={<ProjectDetailPageRoute />} />
@@ -173,12 +180,19 @@ export function AppRoutes() {
             untrusted input — see BlogArticlePage for sanitize+lookup. */}
         <Route path="blog/:slug" element={<BlogArticlePage />} />
         <Route path="settings" element={<SettingsPage />} />
-        <Route path="admin" element={<RoleGuard allow={['admin']}><AdminPage /></RoleGuard>} />
+        <Route
+          path="admin"
+          element={
+            <RoleGuard allow={['admin']}>
+              <AdminPage />
+            </RoleGuard>
+          }
+        />
         <Route path="search" element={<SearchPageRoute />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
-  );
+  )
 }
 
 export default function App() {

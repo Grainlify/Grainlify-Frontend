@@ -62,7 +62,12 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
 
   if (hasBody && !isFormData) {
     requestHeaders['Content-Type'] = 'application/json'
-  } else if (method !== 'GET' && method !== 'HEAD' && !isFormData && !('Content-Type' in requestHeaders)) {
+  } else if (
+    method !== 'GET' &&
+    method !== 'HEAD' &&
+    !isFormData &&
+    !('Content-Type' in requestHeaders)
+  ) {
     // Non-GET/HEAD without an explicit content-type: default to JSON for our API.
     requestHeaders['Content-Type'] = 'application/json'
   }
@@ -179,16 +184,19 @@ export interface AnalyticsStats {
 }
 
 export const getProjectActivity = (interval: string) =>
-  apiRequest<ActivityDataPoint[]>(`/stats/project-activity?interval=${encodeURIComponent(interval)}`)
+  apiRequest<ActivityDataPoint[]>(
+    `/stats/project-activity?interval=${encodeURIComponent(interval)}`
+  )
 
 export const getContributorActivity = (interval: string) =>
-  apiRequest<ActivityDataPoint[]>(`/stats/contributor-activity?interval=${encodeURIComponent(interval)}`)
+  apiRequest<ActivityDataPoint[]>(
+    `/stats/contributor-activity?interval=${encodeURIComponent(interval)}`
+  )
 
 export const getContributorsByRegion = () =>
   apiRequest<ContributorRegion[]>('/stats/contributors-by-region')
 
-export const getAnalyticsStats = () =>
-  apiRequest<AnalyticsStats>('/stats/analytics-summary')
+export const getAnalyticsStats = () => apiRequest<AnalyticsStats>('/stats/analytics-summary')
 
 // Authentication
 export const getCurrentUser = () =>
@@ -1221,7 +1229,9 @@ export async function downloadInvoice(invoiceId: string): Promise<Blob> {
     response = await fetch(url, { headers })
   } catch (err) {
     if (err instanceof TypeError && err.message.includes('fetch')) {
-      throw new Error('Network error: Unable to connect to the server. Please check your connection.')
+      throw new Error(
+        'Network error: Unable to connect to the server. Please check your connection.'
+      )
     }
     throw err
   }
@@ -1238,9 +1248,12 @@ export async function downloadInvoice(invoiceId: string): Promise<Blob> {
 }
 
 export const getTermsStatus = () =>
-  apiRequest<{ accepted: boolean; version: string | null; accepted_at: string | null }>('/profile/terms', {
-    requiresAuth: true,
-  })
+  apiRequest<{ accepted: boolean; version: string | null; accepted_at: string | null }>(
+    '/profile/terms',
+    {
+      requiresAuth: true,
+    }
+  )
 
 export const acceptTerms = (version: string) =>
   apiRequest<{ ok: boolean; accepted_at: string; version: string }>('/profile/terms', {

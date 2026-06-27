@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * TSDoc for Profile Schema Module
@@ -28,12 +28,12 @@ export const profileSchema = z.object({
     .trim()
     .refine(
       (val) => {
-        if (!val) return true;
+        if (!val) return true
         try {
-          const url = new URL(val);
-          return (url.protocol === 'http:' || url.protocol === 'https:') && !!url.hostname;
+          const url = new URL(val)
+          return (url.protocol === 'http:' || url.protocol === 'https:') && !!url.hostname
         } catch {
-          return false;
+          return false
         }
       },
       { message: 'Please enter a valid URL starting with http:// or https://' }
@@ -70,9 +70,9 @@ export const profileSchema = z.object({
     .max(37, { message: 'Discord handle must be 37 characters or less' })
     .optional()
     .or(z.literal('')),
-});
+})
 
 /**
  * Type definition for the profile form data inferred from the schema.
  */
-export type ProfileFormData = z.infer<typeof profileSchema>;
+export type ProfileFormData = z.infer<typeof profileSchema>

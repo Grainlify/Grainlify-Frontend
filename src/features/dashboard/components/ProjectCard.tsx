@@ -31,14 +31,14 @@ interface ProjectCardProps {
  * @returns true if props are considered equal, false otherwise
  */
 const areProjectPropsEqual = (prevProps: ProjectCardProps, nextProps: ProjectCardProps) => {
-  if (prevProps.onClick !== nextProps.onClick) return false;
+  if (prevProps.onClick !== nextProps.onClick) return false
 
-  const p1 = prevProps.project;
-  const p2 = nextProps.project;
+  const p1 = prevProps.project
+  const p2 = nextProps.project
 
   // Handle null/undefined project references
-  if (p1 === p2) return true;
-  if (!p1 || !p2) return false;
+  if (p1 === p2) return true
+  if (!p1 || !p2) return false
 
   return (
     p1.id === p2.id &&
@@ -54,8 +54,8 @@ const areProjectPropsEqual = (prevProps: ProjectCardProps, nextProps: ProjectCar
     // Shallow array comparison for tags
     (p1.tags?.length ?? 0) === (p2.tags?.length ?? 0) &&
     (p1.tags ?? []).every((tag, index) => tag === (p2.tags ?? [])[index])
-  );
-};
+  )
+}
 
 /**
  * ProjectCard component displays project information in a card format.
@@ -206,5 +206,5 @@ export const ProjectCard = memo(function ProjectCard({ project, onClick }: Proje
         ))}
       </div>
     </button>
-  );
-}, areProjectPropsEqual);
+  )
+}, areProjectPropsEqual)
