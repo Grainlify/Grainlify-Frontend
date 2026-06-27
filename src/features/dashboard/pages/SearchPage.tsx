@@ -3,6 +3,15 @@ import { Search, ArrowRight, X, FileText, FolderGit2, User, ChevronLeft } from '
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useDebouncedValue } from '../../../shared/hooks/useDebouncedValue'
 
+/** Maximum number of characters allowed in the search query. */
+const MAX_SEARCH_LENGTH = 100
+
+/**
+ * Show the character counter once the query length is within this many
+ * characters of {@link MAX_SEARCH_LENGTH}, so users get advance notice.
+ */
+const SEARCH_COUNTER_THRESHOLD = MAX_SEARCH_LENGTH - 20
+
 /**
  * Props for the {@link SearchPage} component.
  */
@@ -44,6 +53,10 @@ export function SearchPage({
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const darkTheme = theme === 'dark'
+
+  const queryLength = searchQuery.length
+  const isAtSearchLimit = queryLength >= MAX_SEARCH_LENGTH
+  const showSearchCounter = queryLength >= SEARCH_COUNTER_THRESHOLD
 
   // Debounce the query so filtering only runs once the user pauses typing.
   const debouncedQuery = useDebouncedValue(searchQuery, 300)
@@ -88,7 +101,8 @@ export function SearchPage({
       return
     }
 
-    const query = debouncedQuery.toLowerCase()
+    // Trim leading/trailing whitespace so padded queries match cleanly.
+    const query = debouncedQuery.trim().toLowerCase()
     const results: SearchResult[] = []
 
     // Search issues
@@ -220,6 +234,8 @@ export function SearchPage({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search issues, projects, contributors..."
+              maxLength={MAX_SEARCH_LENGTH}
+              aria-describedby="search-input-counter"
               autoFocus
               className={`flex-1 bg-transparent outline-none text-[16px] transition-colors ${
                 darkTheme
@@ -254,6 +270,26 @@ export function SearchPage({
             </button>
           </div>
         </div>
+
+        {/* Character counter — announced to screen readers near the limit */}
+        {showSearchCounter && (
+          <p
+            id="search-input-counter"
+            aria-live="polite"
+            className={`text-[13px] -mt-6 mb-8 text-right transition-colors ${
+              isAtSearchLimit
+                ? darkTheme
+                  ? 'text-[#f59e0b]'
+                  : 'text-[#d97706]'
+                : darkTheme
+                  ? 'text-[#b8a898]/80'
+                  : 'text-[#6b5d4d]/80'
+            }`}
+          >
+            {isAtSearchLimit ? 'Character limit reached. ' : ''}
+            {queryLength}/{MAX_SEARCH_LENGTH}
+          </p>
+        )}
 
         {/* Search Results */}
         {searchResults.length > 0 && (
