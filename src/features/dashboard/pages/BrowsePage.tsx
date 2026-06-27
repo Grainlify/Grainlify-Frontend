@@ -1,18 +1,14 @@
 import { logger } from '../../../shared/utils/logger'
 import { X } from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Dropdown } from '../../../shared/components/ui/Dropdown'
 import { ProjectCard, Project } from '../components/ProjectCard'
 import { ProjectCardSkeleton } from '../components/ProjectCardSkeleton'
 import { getPublicProjects, getEcosystems } from '../../../shared/api/client'
 import { isValidProject, getRepoName } from '../../../shared/utils/projectFilter'
-import {
-  DEFAULT_PAGE_LIMIT,
-  clampLimit,
-  clampOffset,
-  hasMoreByPageSize,
-} from '../../../shared/utils/pagination'
+import { DEFAULT_PAGE_LIMIT } from '../../../shared/utils/pagination'
+import { usePaginatedQuery, FetchPageFn } from '../../../shared/hooks/usePaginatedQuery'
 
 interface BrowsePageProps {
   onProjectClick?: (id: string) => void
@@ -151,29 +147,6 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
     tags: [],
   })
 
-  // --- Pagination state ---------------------------------------------------
-  /** Projects accumulated across all loaded pages for the current filters. */
-  const [projects, setProjects] = useState<Project[]>([])
-  /** Total number of projects available for the current filters (from API). */
-  const [total, setTotal] = useState(0)
-  /** Whether the API indicates more pages remain to be loaded. */
-  const [hasMore, setHasMore] = useState(false)
-  /** True while the very first page for the current filters is loading. */
-  const [isLoading, setIsLoading] = useState(true)
-  /** True while an additional ("load more") page is being fetched. */
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  /** True when the most recent fetch failed. */
-  const [hasError, setHasError] = useState(false)
-
-  // Offset (start index) of the NEXT page to request. Tracked in a ref so the
-  // value is always current inside async callbacks without re-creating them.
-  const offsetRef = useRef(0)
-  // Synchronous guard so rapid double-clicks of "Load more" cannot fire two
-  // concurrent requests (state updates are async and would race).
-  const loadingMoreRef = useRef(false)
-  // Monotonic request id; responses from a superseded filter set are ignored.
-  const requestSeqRef = useRef(0)
-
   const [ecosystems, setEcosystems] = useState<Array<{ name: string }>>([])
   const [_isLoadingEcosystems, setIsLoadingEcosystems] = useState(true)
 
@@ -284,105 +257,55 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
   )
 
   /**
-   * Load a page of projects for the current filters.
-   *
-   * @param reset - When `true`, start a fresh result set at offset 0 (used on
-   *   mount and whenever filters change). When `false`, append the next page
-   *   ("Load more"). Concurrent "load more" calls are ignored so a double click
-   *   never issues two simultaneous requests.
+   * Fetch a single page of projects for the current filters. Memoized on
+   * `selectedFilters` so `usePaginatedQuery` automatically restarts
+   * pagination at offset 0 whenever the filters change.
    */
-  const loadProjects = useCallback(
-    async (reset: boolean) => {
-      // Guard against duplicate concurrent "load more" requests.
-      if (!reset && loadingMoreRef.current) return
+  const fetchProjectsPage = useCallback<FetchPageFn<Project>>(
+    async ({ limit, offset }) => {
+      const response = await getPublicProjects({
+        ...buildFilterParams(selectedFilters),
+        limit,
+        offset,
+      })
 
-      const seq = ++requestSeqRef.current
+      logger.debug('BrowsePage: API response received', { response })
 
-      if (reset) {
-        offsetRef.current = 0
-        setIsLoading(true)
-        setHasError(false)
+      let projectsArray: any[] = []
+      if (response && Array.isArray(response.projects)) {
+        projectsArray = response.projects
+      } else if (Array.isArray(response)) {
+        projectsArray = response
       } else {
-        loadingMoreRef.current = true
-        setIsLoadingMore(true)
+        logger.warn('BrowsePage: Unexpected response format', response)
       }
 
-      // Clamp paging values to safe bounds before they reach the API so
-      // user-influenced state can never request an abusive page/offset.
-      const limit = clampLimit(PAGE_SIZE)
-      const offset = clampOffset(reset ? 0 : offsetRef.current)
+      const apiTotal =
+        response && typeof (response as any).total === 'number'
+          ? (response as any).total
+          : undefined
 
-      try {
-        const response = await getPublicProjects({
-          ...buildFilterParams(selectedFilters),
-          limit,
-          offset,
-        })
-
-        // A newer request (e.g. filters changed) has superseded this one.
-        if (seq !== requestSeqRef.current) return
-
-        logger.debug('BrowsePage: API response received', { response })
-
-        let projectsArray: any[] = []
-        if (response && Array.isArray(response.projects)) {
-          projectsArray = response.projects
-        } else if (Array.isArray(response)) {
-          projectsArray = response
-        } else {
-          logger.warn('BrowsePage: Unexpected response format', response)
-        }
-
-        const received = projectsArray.length
-        const mapped = mapApiProjects(projectsArray)
-        const apiTotal =
-          response && typeof (response as any).total === 'number'
-            ? (response as any).total
-            : undefined
-
-        // Advance the cursor by the raw page size received (not the mapped
-        // count, which may be smaller after filtering invalid repos).
-        const nextOffset = offset + received
-        offsetRef.current = nextOffset
-
-        // More pages remain only if the last page was full AND (when the API
-        // reports a total) we have not yet reached it.
-        const more =
-          hasMoreByPageSize(received, limit) && (apiTotal != null ? nextOffset < apiTotal : true)
-
-        setProjects((prev) => (reset ? mapped : [...prev, ...mapped]))
-        setTotal(apiTotal ?? 0)
-        setHasMore(more)
-      } catch (err) {
-        if (seq !== requestSeqRef.current) return
-        logger.error('BrowsePage: Failed to fetch projects:', err)
-        setHasError(true)
-        if (reset) setProjects([])
-        setHasMore(false)
-      } finally {
-        if (seq === requestSeqRef.current) {
-          if (reset) {
-            setIsLoading(false)
-          } else {
-            setIsLoadingMore(false)
-          }
-        }
-        if (!reset) loadingMoreRef.current = false
+      // `received` is the raw row count from the API; `items` may be
+      // smaller after `mapApiProjects` filters out invalid repos. The next
+      // page's offset must advance by the raw count, not the filtered one.
+      return {
+        items: mapApiProjects(projectsArray),
+        total: apiTotal,
+        received: projectsArray.length,
       }
     },
     [selectedFilters]
   )
 
-  /** Public handler for the "Load more" button. */
-  const handleLoadMore = useCallback(() => {
-    void loadProjects(false)
-  }, [loadProjects])
-
-  // (Re)load the first page whenever the filters change. Changing filters
-  // resets pagination back to offset 0 via loadProjects(reset = true).
-  useEffect(() => {
-    void loadProjects(true)
-  }, [loadProjects])
+  const {
+    items: projects,
+    total,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    hasError,
+    loadMore: handleLoadMore,
+  } = usePaginatedQuery<Project>(fetchProjectsPage, { limit: PAGE_SIZE })
 
   return (
     <div className="space-y-6">
