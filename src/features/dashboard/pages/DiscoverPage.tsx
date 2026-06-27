@@ -1,4 +1,4 @@
-import { logger } from '../../../shared/utils/logger';
+﻿import { logger } from '../../../shared/utils/logger';
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { Heart, Star, GitFork, ArrowUpRight, Target, Zap } from "lucide-react";
 import { IssueCard } from "../../../shared/components/ui/IssueCard";
@@ -26,7 +26,7 @@ const formatNumber = (num: number): string => {
 // Helper function to get project icon/avatar
 const getProjectIcon = (githubFullName: string): string => {
   const [owner] = githubFullName.split("/");
-  // Use higher‑resolution owner avatar so cards look crisp
+  // Use higherâ€‘resolution owner avatar so cards look crisp
   return `https://github.com/${owner}.png?size=200`;
 };
 
@@ -506,9 +506,7 @@ export function DiscoverPage({
                       {project.icon}
                     </div>
                   )}
-                  <button className="text-[#c9983a] hover:text-[#a67c2e] transition-colors">
-                    <Heart className="w-5 h-5" />
-                  </button>
+                  <button className="text-[#c9983a] hover:text-[#a67c2e] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c9983a] rounded-lg" aria-label="Add to favorites" aria-pressed="false"><Heart className="w-5 h-5" aria-hidden="true" /></button>
                 </div>
 
                 <h4
@@ -649,3 +647,4 @@ export function DiscoverPage({
     </div>
   );
 }
+
