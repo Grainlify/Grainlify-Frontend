@@ -10,7 +10,7 @@
 - **Contributor Dashboard** - Track your contributions, activity calendar, and ecosystem participation
 - **Project Discovery** - Browse projects with filters for languages, ecosystems, categories, and tags
 - **Maintainer Tools** - Manage projects, issues, and pull requests
-- **Leaderboards & Analytics** - View contribution rankings and data insights
+- **Leaderboards & Analytics** - View live contribution rankings and real-time project/contributor activity charts with geographic insights.
 - **Open Source Week Events** - Participate in community events and challenges
 - **Ecosystem Explorer** - Discover projects across different blockchain and tech ecosystems
 - **Profile Management** - Customize your profile, notification preferences, and payout settings
@@ -402,6 +402,14 @@ keeps the main `index-*.js` chunk lean and improves long-term caching.
 > better caching and keeping the _measured_ main chunk (`index-*.js`) within budget.
 > After adding i18n the main chunk is `~1,738 KB` (within the `1,800 KB` budget),
 > with `react-intl` (`~69 KB`) living in the `i18n-vendor` chunk.
+
+### Route-level code splitting
+
+Dashboard, leaderboard, blog, settings, admin, and route-wrapper screens are
+lazy-loaded with `React.lazy` behind a single `Suspense` boundary in
+[`src/app/App.tsx`](./src/app/App.tsx). Landing and authentication routes stay
+eager so first paint remains fast for unauthenticated visitors, while protected
+dashboard code loads only after the auth guard allows the route to render.
 
 ### Running Local Analysis
 
