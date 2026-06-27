@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { IntlProvider } from 'react-intl'
 import { DEFAULT_LOCALE, resolveMessages, type Locale } from './messages'
 import { handleIntlError } from './errors'
+import { getTextDirection } from './direction'
 
 /** Props for {@link I18nProvider}. */
 export interface I18nProviderProps {
@@ -31,6 +32,10 @@ export interface I18nProviderProps {
  * </I18nProvider>
  */
 export function I18nProvider({ locale = DEFAULT_LOCALE, messages, children }: I18nProviderProps) {
+  useEffect(() => {
+    document.documentElement.dir = getTextDirection(locale)
+  }, [locale])
+
   return (
     <IntlProvider
       locale={locale}

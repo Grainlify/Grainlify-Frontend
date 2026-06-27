@@ -16,10 +16,11 @@
  */
 
 /**
- * Supported locale codes. English is the base/default locale; add new codes
- * here as their catalogs are introduced.
+ * Supported locale codes. English is the base/default locale. Arabic is kept
+ * as a fallback-backed RTL locale so direction support can be tested before a
+ * full translated catalog ships.
  */
-export type Locale = 'en'
+export type Locale = 'en' | 'ar'
 
 /** The default (and base) locale used as the fallback for every key. */
 export const DEFAULT_LOCALE: Locale = 'en'
@@ -76,6 +77,7 @@ export type Messages = Record<MessageId, string>
  */
 export const catalogs: Record<Locale, Partial<Messages>> = {
   en,
+  ar: {},
 }
 
 /**

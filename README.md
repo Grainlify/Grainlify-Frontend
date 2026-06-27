@@ -133,6 +133,9 @@ provider, message catalog, and helpers live in [`src/shared/i18n/`](./src/shared
 - **Locale-aware formatting**: number/currency formatting reads the active locale
   from the provider — see [`useLandingStats`](./src/shared/hooks/useLandingStats.ts),
   which feeds `intl.locale` into `Intl.NumberFormat`.
+- **Document direction**: the provider derives `document.documentElement.dir`
+  from the active locale via `getTextDirection(locale)`. English (`en`) defaults
+  to `ltr`; RTL locales such as Arabic (`ar`) map to `rtl`.
 
 ### Usage
 
@@ -166,6 +169,9 @@ import { FormattedMessage } from 'react-intl'
    transparently falls back to its English value. `en` must therefore stay
    complete. Non-fatal `MISSING_TRANSLATION` errors are swallowed by the provider's
    error policy ([`errors.ts`](./src/shared/i18n/errors.ts)).
+4. **Direction**: add the locale to the fixed `Locale` union and update
+   `getTextDirection()` only when the locale is right-to-left. Keep direction
+   values constrained to `ltr` / `rtl`; do not read them from user-provided text.
 
 ### Security: interpolation is text-only
 

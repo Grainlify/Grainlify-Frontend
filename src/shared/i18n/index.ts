@@ -6,9 +6,11 @@
  * - {@link useTranslation} — type-checked `t(id, values?)` + active `locale`.
  * - For inline JSX, import `<FormattedMessage>` / `<FormattedNumber>` directly
  *   from `react-intl` (this module intentionally does not re-wrap them).
+ * - {@link getTextDirection} — maps supported locales to `ltr` / `rtl`.
  * - {@link resolveMessages} / {@link en} / {@link MessageId} — catalog + types.
  */
 export { I18nProvider, type I18nProviderProps } from './I18nProvider'
+export { getTextDirection, type TextDirection } from './direction'
 export { handleIntlError } from './errors'
 export { useTranslation, type TranslationValues, type UseTranslation } from './useTranslation'
 export {

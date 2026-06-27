@@ -7,6 +7,7 @@ import {
   I18nProvider,
   handleIntlError,
   useTranslation,
+  getTextDirection,
   resolveMessages,
   en,
   type Locale,
@@ -49,6 +50,35 @@ describe('i18n catalog & fallback', () => {
 
   it('falls back entirely to English for an unknown locale', () => {
     expect(resolveMessages('zz' as Locale)).toEqual(en)
+  })
+})
+
+describe('locale direction', () => {
+  it('defaults English and unknown locales to ltr', () => {
+    expect(getTextDirection('en')).toBe('ltr')
+    expect(getTextDirection('zz' as Locale)).toBe('ltr')
+  })
+
+  it('maps RTL locales to rtl', () => {
+    expect(getTextDirection('ar')).toBe('rtl')
+  })
+
+  it('sets document.documentElement.dir from the active locale', async () => {
+    const { rerender } = render(
+      <I18nProvider locale="en">
+        <span>English</span>
+      </I18nProvider>
+    )
+
+    await waitFor(() => expect(document.documentElement.dir).toBe('ltr'))
+
+    rerender(
+      <I18nProvider locale="ar">
+        <span>Arabic fallback</span>
+      </I18nProvider>
+    )
+
+    await waitFor(() => expect(document.documentElement.dir).toBe('rtl'))
   })
 })
 
