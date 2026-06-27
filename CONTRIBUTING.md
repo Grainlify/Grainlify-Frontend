@@ -13,8 +13,9 @@ Thank you for your interest in contributing to **Grainlify**! This document prov
 5. [Routing Setup](#routing-setup)
 6. [API Client Conventions](#api-client-conventions)
 7. [Testing Setup](#testing-setup)
-8. [Available Scripts](#available-scripts)
-9. [Pull Request Checklist](#pull-request-checklist)
+8. [Git Hooks](#git-hooks)
+9. [Available Scripts](#available-scripts)
+10. [Pull Request Checklist](#pull-request-checklist)
 
 ---
 
@@ -203,6 +204,38 @@ E2E tests verify user workflows in `e2e/`.
   - `setupMockAuth`: Mocks profile details, login, and dashboard stats.
   - `setupMockBrowse`: Mocks ecosystem arrays and project directories.
   - `setupMockLeaderboard`: Mocks leaderboard statistics.
+
+---
+
+## Git Hooks
+
+Grainlify uses [Husky](https://typicode.github.io/husky/) to enforce code quality locally before changes reach CI.
+
+### Hooks
+
+| Hook         | Trigger        | Action                                                               |
+| :----------- | :------------- | :------------------------------------------------------------------- |
+| `pre-commit` | `git commit`   | Runs `lint-staged` — formats and ESLint-fixes all staged `*.ts`/`*.tsx` files via Prettier and ESLint. |
+| `pre-push`   | `git push`     | Runs `npm run typecheck` — verifies TypeScript compiles with zero errors. |
+
+### How it works
+
+- **`lint-staged`** only processes files staged for the commit, so unrelated files are never touched.
+- **Prettier** reformats staged files in-place; **ESLint** auto-fixes fixable rule violations.
+- **TypeScript** type-checking runs on push so type errors cannot reach the remote branch.
+
+### Setup
+
+Hooks are installed automatically when you run `pnpm install` (via the `prepare` script). No manual steps are needed after the initial install.
+
+### Bypassing hooks (emergencies only)
+
+```bash
+git commit --no-verify   # skip pre-commit
+git push --no-verify     # skip pre-push
+```
+
+> ⚠️ Use `--no-verify` sparingly. Bypassed commits must be cleaned up before merge.
 
 ---
 
