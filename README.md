@@ -403,6 +403,14 @@ keeps the main `index-*.js` chunk lean and improves long-term caching.
 > After adding i18n the main chunk is `~1,738 KB` (within the `1,800 KB` budget),
 > with `react-intl` (`~69 KB`) living in the `i18n-vendor` chunk.
 
+### Route-level code splitting
+
+Dashboard, leaderboard, blog, settings, admin, and route-wrapper screens are
+lazy-loaded with `React.lazy` behind a single `Suspense` boundary in
+[`src/app/App.tsx`](./src/app/App.tsx). Landing and authentication routes stay
+eager so first paint remains fast for unauthenticated visitors, while protected
+dashboard code loads only after the auth guard allows the route to render.
+
 ### Running Local Analysis
 
 You can generate a visual bundle analysis report to see what dependencies are consuming the most space:
