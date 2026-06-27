@@ -1,12 +1,25 @@
-import { Circle, AlertCircle, CircleX } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XOctagon } from 'lucide-react';
 import { BillingProfile } from '../../types';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 
-interface BillingProfileCardProps {
+/**
+ * Props for the BillingProfileCard component.
+ */
+export interface BillingProfileCardProps {
+  /** The billing profile data to display */
   profile: BillingProfile;
+  /** Callback fired when the card is clicked */
   onClick: () => void;
 }
 
+/**
+ * A card component that displays billing profile information.
+ * Includes visual status indicators that are accessible to colorblind users
+ * via distinct iconography and aria-labels.
+ *
+ * @param props - The component props
+ * @returns The rendered BillingProfileCard component
+ */
 export function BillingProfileCard({ profile, onClick }: BillingProfileCardProps) {
   const { theme } = useTheme();
 
@@ -14,54 +27,80 @@ export function BillingProfileCard({ profile, onClick }: BillingProfileCardProps
     switch (profile.status) {
       case 'verified':
         return (
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-[12px] backdrop-blur-[20px] border transition-colors ${
-            theme === 'dark'
-              ? 'bg-gradient-to-br from-[#10b981]/20 to-[#059669]/15 border-[#10b981]/40'
-              : 'bg-gradient-to-br from-[#10b981]/15 to-[#059669]/10 border-[#10b981]/35'
-          }`}>
-            <Circle className={`w-4 h-4 ${theme === 'dark' ? 'text-[#10b981] fill-[#10b981]' : 'text-[#059669] fill-[#059669]'}`} />
-            <span className={`text-[13px] font-medium transition-colors ${
+          <div
+            role="status"
+            aria-label="Status: Verified"
+            title="Status: Verified"
+            className={`flex items-center gap-2 px-4 py-2 rounded-[12px] backdrop-blur-[20px] border transition-colors ${
+              theme === 'dark'
+                ? 'bg-gradient-to-br from-[#10b981]/20 to-[#059669]/15 border-[#10b981]/40'
+                : 'bg-gradient-to-br from-[#10b981]/15 to-[#059669]/10 border-[#10b981]/35'
+            }`}
+          >
+            <CheckCircle2 aria-hidden="true" className={`w-4 h-4 ${theme === 'dark' ? 'text-[#10b981] fill-[#10b981]' : 'text-[#059669] fill-[#059669]'}`} />
+            <span aria-hidden="true" className={`text-[13px] font-medium transition-colors ${
               theme === 'dark' ? 'text-[#10b981]' : 'text-[#059669]'
             }`}>Verified</span>
           </div>
         );
       case 'missing-verification':
         return (
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-[12px] backdrop-blur-[20px] border transition-colors ${
-            theme === 'dark'
-              ? 'bg-gradient-to-br from-[#f59e0b]/20 to-[#d97706]/15 border-[#f59e0b]/40'
-              : 'bg-gradient-to-br from-[#f59e0b]/15 to-[#d97706]/10 border-[#f59e0b]/35'
-          }`}>
-            <AlertCircle className={`w-4 h-4 ${theme === 'dark' ? 'text-[#f59e0b]' : 'text-[#d97706]'}`} />
-            <span className={`text-[13px] font-medium transition-colors ${
+          <div
+            role="status"
+            aria-label="Status: Missing Verification"
+            title="Status: Missing Verification"
+            className={`flex items-center gap-2 px-4 py-2 rounded-[12px] backdrop-blur-[20px] border transition-colors ${
+              theme === 'dark'
+                ? 'bg-gradient-to-br from-[#f59e0b]/20 to-[#d97706]/15 border-[#f59e0b]/40'
+                : 'bg-gradient-to-br from-[#f59e0b]/15 to-[#d97706]/10 border-[#f59e0b]/35'
+            }`}
+          >
+            <AlertTriangle aria-hidden="true" className={`w-4 h-4 ${theme === 'dark' ? 'text-[#f59e0b]' : 'text-[#d97706]'}`} />
+            <span aria-hidden="true" className={`text-[13px] font-medium transition-colors ${
               theme === 'dark' ? 'text-[#f59e0b]' : 'text-[#d97706]'
             }`}>Missing Verification</span>
           </div>
         );
       case 'limit-reached':
         return (
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-[12px] backdrop-blur-[20px] border transition-colors ${
-            theme === 'dark'
-              ? 'bg-gradient-to-br from-[#ef4444]/20 to-[#dc2626]/15 border-[#ef4444]/40'
-              : 'bg-gradient-to-br from-[#ef4444]/15 to-[#dc2626]/10 border-[#ef4444]/35'
-          }`}>
-            <CircleX className={`w-4 h-4 ${theme === 'dark' ? 'text-[#ef4444]' : 'text-[#dc2626]'}`} />
-            <span className={`text-[13px] font-medium transition-colors ${
+          <div
+            role="status"
+            aria-label="Status: Individual Limit Reached"
+            title="Status: Individual Limit Reached"
+            className={`flex items-center gap-2 px-4 py-2 rounded-[12px] backdrop-blur-[20px] border transition-colors ${
+              theme === 'dark'
+                ? 'bg-gradient-to-br from-[#ef4444]/20 to-[#dc2626]/15 border-[#ef4444]/40'
+                : 'bg-gradient-to-br from-[#ef4444]/15 to-[#dc2626]/10 border-[#ef4444]/35'
+            }`}
+          >
+            <XOctagon aria-hidden="true" className={`w-4 h-4 ${theme === 'dark' ? 'text-[#ef4444]' : 'text-[#dc2626]'}`} />
+            <span aria-hidden="true" className={`text-[13px] font-medium transition-colors ${
               theme === 'dark' ? 'text-[#ef4444]' : 'text-[#dc2626]'
             }`}>Individual Limit Reached</span>
           </div>
         );
+      default:
+        return null;
     }
   };
 
   const getTypeLabel = () => {
     if (profile.type === 'organization') return 'Company';
+    if (!profile.type) return '';
     return profile.type.replace('-', ' ');
   };
 
   return (
     <div
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 hover:border-[#c9983a]/30 transition-all cursor-pointer group ${
         theme === 'dark'
           ? 'bg-[#2d2820]/[0.4] border-white/10 hover:bg-[#2d2820]/[0.5]'
