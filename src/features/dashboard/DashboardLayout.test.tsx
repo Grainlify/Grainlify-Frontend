@@ -52,6 +52,11 @@ function renderLayout() {
 
 describe('DashboardLayout i18n nav labels', () => {
   beforeEach(() => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1024,
+    })
     sessionStorage.clear()
     vi.clearAllMocks()
   })
@@ -82,5 +87,21 @@ describe('DashboardLayout i18n nav labels', () => {
 
     expect(screen.getByText('Maintainers')).toBeInTheDocument()
     expect(screen.getByText('Data')).toBeInTheDocument()
+  })
+
+  it('labels the sidebar toggle and reflects expanded state', async () => {
+    const user = userEvent.setup()
+    renderLayout()
+
+    const collapseButton = screen.getByRole('button', { name: 'Collapse sidebar' })
+    expect(collapseButton).toHaveAttribute('aria-expanded', 'true')
+    expect(collapseButton).toHaveAttribute('title', 'Collapse sidebar')
+    expect(collapseButton.className).toMatch(/focus-visible:ring-2/)
+
+    await user.click(collapseButton)
+
+    const expandButton = screen.getByRole('button', { name: 'Expand sidebar' })
+    expect(expandButton).toHaveAttribute('aria-expanded', 'false')
+    expect(expandButton).toHaveAttribute('title', 'Expand sidebar')
   })
 })

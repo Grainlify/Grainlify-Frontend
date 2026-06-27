@@ -168,6 +168,7 @@ export function DashboardLayout() {
   const darkTheme = theme === "dark";
   const isSmallDevice = deviceWidth && deviceWidth < 1024;
   const showMobileNav = mobileMenuOpen && isSmallDevice;
+  const sidebarToggleLabel = isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar";
 
   return (
     <div
@@ -202,12 +203,15 @@ export function DashboardLayout() {
         {/* Toggle Arrow Button */}
         <button
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className={`absolute z-[100] backdrop-blur-[90px] rounded-full border-[0.5px] w-6 h-6 shadow-md hover:shadow-lg transition-all flex items-center justify-center ${
+          aria-label={sidebarToggleLabel}
+          aria-expanded={!isSidebarCollapsed}
+          title={sidebarToggleLabel}
+          className={`absolute z-[100] backdrop-blur-[90px] rounded-full border-[0.5px] w-6 h-6 shadow-md hover:shadow-lg transition-all flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a] focus-visible:ring-offset-2 ${
             isSidebarCollapsed ? "-right-3 top-[60px]" : "-right-3 top-[60px]"
           } ${
             darkTheme
-              ? "bg-[#2d2820]/[0.85] border-[rgba(201,152,58,0.2)]"
-              : "bg-white/[0.85] border-[rgba(245,239,235,0.32)]"
+              ? "bg-[#2d2820]/[0.85] border-[rgba(201,152,58,0.2)] focus-visible:ring-offset-[#2d2820]"
+              : "bg-white/[0.85] border-[rgba(245,239,235,0.32)] focus-visible:ring-offset-white"
           }`}
         >
           <ChevronRight
