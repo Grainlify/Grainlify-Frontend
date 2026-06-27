@@ -1,5 +1,4 @@
 import { Shield, Users, Code, Lock } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
 
 type RoleSwitcherRole = 'contributor' | 'maintainer' | 'admin';
 
@@ -14,8 +13,6 @@ interface RoleSwitcherProps {
 }
 
 export function RoleSwitcher({ currentRole, onRoleChange, showMobileNav, closeMobileNav, availableRoles }: RoleSwitcherProps) {
-  const { theme } = useTheme();
-
   const allRoles = [
     { id: 'contributor' as const, label: 'CONTRIBUTOR', icon: Code },
     { id: 'maintainer' as const, label: 'MAINTAINER', icon: Users },
@@ -28,11 +25,7 @@ export function RoleSwitcher({ currentRole, onRoleChange, showMobileNav, closeMo
 
   return (
     <div 
-      className={`w-[80%] lg:w-auto max-w-[800px] lg:max-w-none flex-col lg:flex-row gap-[8px] lg:gap-[2px] lg:h-[44px] items-start p-[2px] rounded-[10px] lg:rounded-[999px] shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] ${
-        theme === 'dark'
-          ? 'bg-[#1a1612]'
-          : 'bg-[#8b7d6b]'
-      }
+      className={`w-[80%] lg:w-auto max-w-[800px] lg:max-w-none flex-col lg:flex-row gap-[8px] lg:gap-[2px] lg:h-[44px] items-start p-[2px] rounded-[10px] lg:rounded-[999px] shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] bg-surface-container
       ${showMobileNav? 'inline-flex' : 'hidden lg:inline-flex'}
       `}
     >
@@ -52,21 +45,15 @@ export function RoleSwitcher({ currentRole, onRoleChange, showMobileNav, closeMo
               'rounded-[4px]'
             } ${
               isActive
-                ? theme === 'dark'
-                  ? 'bg-gradient-to-br from-[#c9983a] to-[#a67c2e]'
-                  : 'bg-gradient-to-br from-[#e8c571] to-[#c9983a]'
-                : theme === 'dark'
-                ? 'bg-[#2d2820]'
-                : 'bg-[#d4c5b0]'
+                ? 'bg-gradient-to-br from-brand-gradient-from to-brand-gradient-to'
+                : 'bg-surface-variant'
             }`}
           >
             {/* Button Content */}
             <div className={`absolute flex items-center justify-center gap-2 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap ${
               isActive
                 ? 'text-white'
-                : theme === 'dark'
-                ? 'text-[rgba(255,255,255,0.69)]'
-                : 'text-[rgba(45,40,32,0.75)]'
+                : 'text-text-switcher-inactive'
             }`}>
               <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
                 isActive ? '' : 'opacity-80'

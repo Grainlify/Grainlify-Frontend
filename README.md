@@ -421,6 +421,49 @@ To manually check if the compiled bundle is within the size budget:
 npm run test:bundle-size
 ```
 
+## Design Tokens
+
+The application implements a themeable, unified design system using CSS custom variables mapped to semantic Tailwind CSS utility classes. This prevents styling duplication, avoids hardcoded HEX colors, and ensures consistent styling parity between light and dark modes.
+
+### Naming Conventions
+
+Design tokens are defined in [src/styles/theme.css](file:///home/mxr/Grainlify-Frontend/src/styles/theme.css) under the `:root` pseudo-class (for Light Mode) and the `.dark` class (for Dark Mode).
+
+Tokens follow a structured prefix naming convention:
+- **`--surface-*`**: Used for layout containers, backgrounds, and modal bases (e.g., `--surface-container`, `--surface-modal`).
+- **`--text-*`**: Used for text colors and contrast variants (e.g., `--text-modal-title`, `--text-switcher-inactive`).
+- **`--brand-*`**: Dedicated brand identity colors and theme gradient endpoints (e.g., `--brand-gradient-from`).
+- **`--card-*`**: Specific tokens for layout cards, covering borders, backgrounds, and state shadows (e.g., `--card-bg`, `--card-hover-shadow`).
+- **`--btn-*`**: Controls variations of buttons (e.g., `--btn-secondary-text`).
+- **`--input-*`**: Configures form field controls, borders, states, and error styles.
+- **`--select-*`**: Configures custom dropdown selectors (e.g., Radix Select components).
+
+These properties are mapped to Tailwind theme extensions inside the `@theme inline` block in `theme.css`, generating utilities like `bg-surface-container`, `text-text-switcher-inactive`, and `shadow-card-hover`.
+
+### Migration / Refactoring Pattern
+
+Avoid component-level JavaScript checking of the theme context for layout adjustments:
+
+```tsx
+// ❌ Anti-pattern: Hardcoded HEX values and ThemeContext branch checking
+const { theme } = useTheme();
+const bg = theme === 'dark' ? 'bg-[#1a1612]' : 'bg-[#8b7d6b]';
+```
+
+Use Tailwind semantic utility classes mapped directly to custom properties:
+
+```tsx
+// ✅ Correct Pattern: Styled via stylesheet tokens (does not require useTheme)
+const bg = 'bg-surface-container';
+```
+
+For custom gradient boundaries:
+```tsx
+const activeBg = 'bg-gradient-to-br from-brand-gradient-from to-brand-gradient-to';
+```
+
+---
+
 ## Documentation
 
 - [Contributing Guide](./CONTRIBUTING.md) - Development setup, feature-sliced layout, styling guidelines, testing, and PR checklists.

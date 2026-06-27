@@ -1,7 +1,6 @@
 import React, { ReactNode, useId } from 'react';
 import { X, ChevronDown, Check } from 'lucide-react';
 import * as Select from '@radix-ui/react-select';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useFocusTrap } from '../../utils/focusTrap';
 
 interface ModalProps {
@@ -54,8 +53,6 @@ export function Modal({
   dimBackdrop = true,
   ariaLabel
 }: ModalProps) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const titleId = useId();
 
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, { onEscape: onClose });
@@ -85,26 +82,19 @@ export function Modal({
         aria-labelledby={title ? titleId : undefined}
         aria-label={title ? undefined : (ariaLabel ?? 'Dialog')}
         tabIndex={-1}
-        className={`rounded-[16px] md:rounded-[24px] border-2 shadow-[0_20px_60px_rgba(0,0,0,0.3)] focus:outline-none ${widthClasses[width]} max-w-[95vw] sm:max-w-[90vw] max-h-[90vh] flex flex-col transition-all animate-in zoom-in-95 duration-200 ${isDark
-          ? 'bg-[#3a3228] border-white/30'
-          : 'bg-[#d4c5b0] border-white/40'
-          }`}
+        className={`rounded-[16px] md:rounded-[24px] border-2 shadow-[0_20px_60px_rgba(0,0,0,0.3)] focus:outline-none ${widthClasses[width]} max-w-[95vw] sm:max-w-[90vw] max-h-[90vh] flex flex-col transition-all animate-in zoom-in-95 duration-200 bg-surface-modal border-border-modal`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || icon || showCloseButton) && (
           <div className="flex items-start justify-between p-4 md:p-6 pb-3 md:pb-4 flex-shrink-0 border-b border-white/10">
             <div className="flex items-center gap-3 flex-1">
               {icon && (
-                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-[10px] md:rounded-[12px] flex items-center justify-center shadow-lg border-2 flex-shrink-0 ${isDark
-                  ? 'bg-gradient-to-br from-[#e8c571]/30 via-[#d4af37]/25 to-[#c9983a]/20 border-[#e8c571]/50'
-                  : 'bg-gradient-to-br from-[#c9983a]/30 via-[#d4af37]/25 to-[#c9983a]/20 border-[#c9983a]/50'
-                  }`}>
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-[10px] md:rounded-[12px] flex items-center justify-center shadow-lg border-2 flex-shrink-0 bg-gradient-to-br from-modal-icon-from via-modal-icon-via to-modal-icon-to border-modal-icon-border">
                   {icon}
                 </div>
               )}
               {title && (
-                <h3 id={titleId} className={`text-[16px] md:text-[18px] font-bold transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                  }`}>
+                <h3 id={titleId} className="text-[16px] md:text-[18px] font-bold transition-colors text-text-modal-title">
                   {title}
                 </h3>
               )}
@@ -114,10 +104,7 @@ export function Modal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className={`p-2 rounded-[10px] transition-all hover:scale-110 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#c9983a] ${isDark
-                  ? 'hover:bg-white/[0.1] text-[#e8c571] hover:text-[#f5d98a]'
-                  : 'hover:bg-black/[0.05] text-[#8b6f3a] hover:text-[#c9983a]'
-                  }`}
+                className="p-2 rounded-[10px] transition-all hover:scale-110 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#c9983a] text-modal-close-text hover:text-modal-close-hover-text hover:bg-modal-close-hover-bg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -158,7 +145,7 @@ interface ModalButtonProps {
   type?: 'button' | 'submit' | 'reset';
   variant?: 'primary' | 'secondary';
   className?: string;
-  disabled?: boolean; // ADDED
+  disabled?: boolean;
 }
 
 export function ModalButton({
@@ -167,10 +154,8 @@ export function ModalButton({
   type = 'button',
   variant = 'secondary',
   className = '',
-  disabled = false // ADDED
+  disabled = false
 }: ModalButtonProps) {
-  const { theme } = useTheme();
-
   if (variant === 'primary') {
     return (
       <button
@@ -189,10 +174,7 @@ export function ModalButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`px-4 md:px-5 py-2.5 rounded-[10px] md:rounded-[12px] backdrop-blur-[20px] border font-medium text-[13px] md:text-[14px] transition-all hover:scale-[1.02] active:scale-100 touch-manipulation min-h-[44px] w-full sm:w-auto ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${theme === 'dark'
-        ? 'bg-white/[0.08] border-white/15 text-[#d4d4d4] hover:bg-white/[0.12] active:bg-white/[0.15]'
-        : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2] active:bg-white/[0.25]'
-        } ${className}`}
+      className={`px-4 md:px-5 py-2.5 rounded-[10px] md:rounded-[12px] backdrop-blur-[20px] border font-medium text-[13px] md:text-[14px] transition-all hover:scale-[1.02] active:scale-100 touch-manipulation min-h-[44px] w-full sm:w-auto ${disabled ? 'opacity-50 cursor-not-allowed' : ''} bg-btn-secondary-bg border-btn-secondary-border text-btn-secondary-text hover:bg-btn-secondary-hover-bg active:bg-btn-secondary-active-bg ${className}`}
     >
       {children}
     </button>
@@ -224,24 +206,17 @@ export function ModalInput({
   className = '',
   error
 }: ModalInputProps) {
-  const { theme } = useTheme();
-
   const isError = !!error;
 
   const inputClasses = `w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none transition-all text-[14px] ${isError
-    ? theme === 'dark'
-      ? 'bg-red-500/10 border-red-500/40 text-[#f5f5f5] placeholder-red-300/50 focus:border-red-500/60'
-      : 'bg-red-500/5 border-red-500/40 text-[#2d2820] placeholder-red-700/50 focus:border-red-500/60'
-    : theme === 'dark'
-      ? 'bg-white/[0.08] border-white/15 text-[#f5f5f5] placeholder-[#d4d4d4] focus:bg-white/[0.12] focus:border-[#c9983a]/30'
-      : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a] focus:bg-white/[0.2] focus:border-[#c9983a]/30'
+    ? 'bg-input-error-bg border-red-500/40 text-foreground placeholder-input-error-placeholder focus:border-red-500/60'
+    : 'bg-input-bg border-input-border text-foreground placeholder-input-placeholder focus:bg-input-focus-bg focus:border-primary/30'
     } ${className}`;
 
   return (
     <div>
       {label && (
-        <label className={`block text-[13px] font-medium mb-2 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}>
+        <label className="block text-[13px] font-medium mb-2 transition-colors text-input-placeholder">
           {label}
           {required && <span className="text-[#c9983a] ml-1">*</span>}
         </label>
@@ -268,8 +243,7 @@ export function ModalInput({
         />
       )}
       {isError && (
-        <p className={`text-[12px] mt-1.5 transition-colors ${theme === 'dark' ? 'text-red-400' : 'text-red-600'
-          }`}>
+        <p className="text-[12px] mt-1.5 transition-colors text-text-error">
           {error}
         </p>
       )}
@@ -294,15 +268,10 @@ export function ModalSelect({
   required = false,
   className = '',
 }: ModalSelectProps) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-
   return (
     <div className={`flex flex-col gap-1 relative ${className}`}>
       {label && (
-        <label className={`block text-[13px] font-medium mb-2 transition-colors ${
-          isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-        }`}>
+        <label className="block text-[13px] font-medium mb-2 transition-colors text-input-placeholder">
           {label}
           {required && <span className="text-[#c9983a] ml-1">*</span>}
         </label>
@@ -310,25 +279,17 @@ export function ModalSelect({
       
       <Select.Root value={value} onValueChange={onChange} required={required}>
         <Select.Trigger 
-          className={`w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none transition-all text-[14px] flex items-center justify-between group ${
-            isDark
-              ? 'bg-white/[0.08] border-white/15 text-[#f5f5f5] hover:bg-white/[0.12] data-[state=open]:border-[#c9983a]/50'
-              : 'bg-white/[0.15] border-white/25 text-[#2d2820] hover:bg-white/[0.2] data-[state=open]:border-[#c9983a]/50'
-          }`}
+          className="w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none transition-all text-[14px] flex items-center justify-between group bg-input-bg border-input-border text-foreground hover:bg-input-focus-bg data-[state=open]:border-primary/50"
         >
           <Select.Value placeholder="Select an option" />
           <Select.Icon>
-            <ChevronDown className={`w-4 h-4 text-amber-500 transition-transform duration-200 group-data-[state=open]:rotate-180`} />
+            <ChevronDown className="w-4 h-4 text-amber-500 transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </Select.Icon>
         </Select.Trigger>
 
         <Select.Portal>
           <Select.Content 
-            className={`z-[10001] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[14px] border shadow-[0_10px_40px_rgba(0,0,0,0.2)] backdrop-blur-[30px] animate-in fade-in zoom-in-95 duration-200 ${
-              isDark
-                ? 'bg-[#2d241d] border-[#c9983a]/20 shadow-black/40'
-                : 'bg-[#ede3d0] border-[#c9983a]/20 shadow-amber-900/10'
-            }`}
+            className="z-[10001] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[14px] border shadow-select-content bg-select-content-bg border-select-content-border animate-in fade-in zoom-in-95 duration-200"
             position="popper"
             sideOffset={8}
           >
@@ -337,11 +298,7 @@ export function ModalSelect({
                 <Select.Item
                   key={option.value}
                   value={option.value}
-                  className={`relative flex w-full cursor-default select-none items-center rounded-[10px] py-2.5 pl-3 pr-8 text-[14px] outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 ${
-                    isDark
-                      ? 'text-[#d4d4d4] focus:bg-white/[0.08] focus:text-[#f5f5f5] data-[state=checked]:bg-white/[0.08] data-[state=checked]:text-[#f5f5f5]'
-                      : 'text-[#7a6b5a] focus:bg-black/[0.05] focus:text-[#2d2820] data-[state=checked]:bg-black/[0.05] data-[state=checked]:text-[#2d2820]'
-                  }`}
+                  className="relative flex w-full cursor-default select-none items-center rounded-[10px] py-2.5 pl-3 pr-8 text-[14px] outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 text-select-item-text focus:bg-select-item-focus-bg focus:text-select-item-focus-text data-[state=checked]:bg-select-item-focus-bg data-[state=checked]:text-select-item-focus-text"
                 >
                   <Select.ItemText>{option.label}</Select.ItemText>
                   <Select.ItemIndicator className="absolute right-2.5 flex items-center justify-center text-[#c9983a]">

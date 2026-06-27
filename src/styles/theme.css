@@ -118,6 +118,58 @@
   --sidebar-accent-foreground: #2d2820;
   --sidebar-border: rgba(201, 152, 58, 0.15);
   --sidebar-ring: rgba(201, 152, 58, 0.5);
+
+  /* Semantic Design Tokens (Light Mode) */
+  --surface-container: #8b7d6b;
+  --surface-variant: #d4c5b0;
+  --surface-modal: #d4c5b0;
+  --border-modal: rgba(255, 255, 255, 0.4);
+  --text-modal-title: #2d2820;
+  --text-switcher-inactive: rgba(45, 40, 32, 0.75);
+  
+  --brand-gradient-from: #e8c571;
+  --brand-gradient-to: #c9983a;
+  
+  --card-bg: rgba(255, 255, 255, 0.15);
+  --card-border: rgba(255, 255, 255, 0.25);
+  --card-hover-bg: rgba(255, 255, 255, 0.2);
+  --card-hover-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  
+  --tag-bg: rgba(201, 152, 58, 0.2);
+  --tag-border: rgba(201, 152, 58, 0.35);
+  --tag-text: #8b6f3a;
+  
+  --modal-close-text: #8b6f3a;
+  --modal-close-hover-text: #c9983a;
+  --modal-close-hover-bg: rgba(0, 0, 0, 0.05);
+  
+  --modal-icon-from: rgba(201, 152, 58, 0.3);
+  --modal-icon-via: rgba(212, 175, 55, 0.25);
+  --modal-icon-to: rgba(201, 152, 58, 0.2);
+  --modal-icon-border: rgba(201, 152, 58, 0.5);
+  
+  --btn-secondary-bg: rgba(255, 255, 255, 0.15);
+  --btn-secondary-border: rgba(255, 255, 255, 0.25);
+  --btn-secondary-text: #7a6b5a;
+  --btn-secondary-hover-bg: rgba(255, 255, 255, 0.2);
+  --btn-secondary-active-bg: rgba(255, 255, 255, 0.25);
+  
+  --input-bg: rgba(255, 255, 255, 0.15);
+  --input-border: rgba(255, 255, 255, 0.25);
+  --input-focus-bg: rgba(255, 255, 255, 0.2);
+  --input-placeholder: #7a6b5a;
+  
+  --input-error-bg: rgba(239, 68, 68, 0.05);
+  --input-error-placeholder: rgba(185, 28, 28, 0.5);
+  
+  --select-content-bg: #ede3d0;
+  --select-content-border: rgba(201, 152, 58, 0.2);
+  --select-content-shadow: 0 10px 40px rgba(120, 53, 4, 0.1);
+  --select-item-text: #7a6b5a;
+  --select-item-focus-bg: rgba(0, 0, 0, 0.05);
+  --select-item-focus-text: #2d2820;
+  
+  --text-error: #dc2626;
 }
 
 .dark {
@@ -155,6 +207,58 @@
   --sidebar-accent-foreground: #f5f5f5;
   --sidebar-border: #a67c2e;
   --sidebar-ring: #a67c2e;
+
+  /* Semantic Design Tokens (Dark Mode) */
+  --surface-container: #1a1612;
+  --surface-variant: #2d2820;
+  --surface-modal: #3a3228;
+  --border-modal: rgba(255, 255, 255, 0.3);
+  --text-modal-title: #e8dfd0;
+  --text-switcher-inactive: rgba(255, 255, 255, 0.69);
+  
+  --brand-gradient-from: #c9983a;
+  --brand-gradient-to: #a67c2e;
+  
+  --card-bg: rgba(255, 255, 255, 0.08);
+  --card-border: rgba(255, 255, 255, 0.15);
+  --card-hover-bg: rgba(255, 255, 255, 0.12);
+  --card-hover-shadow: 0 8px 24px rgba(201, 152, 58, 0.15);
+  
+  --tag-bg: rgba(201, 152, 58, 0.2);
+  --tag-border: rgba(201, 152, 58, 0.4);
+  --tag-text: #f5c563;
+  
+  --modal-close-text: #e8c571;
+  --modal-close-hover-text: #f5d98a;
+  --modal-close-hover-bg: rgba(255, 255, 255, 0.1);
+  
+  --modal-icon-from: rgba(232, 197, 113, 0.3);
+  --modal-icon-via: rgba(212, 175, 55, 0.25);
+  --modal-icon-to: rgba(201, 152, 58, 0.2);
+  --modal-icon-border: rgba(232, 197, 113, 0.5);
+  
+  --btn-secondary-bg: rgba(255, 255, 255, 0.08);
+  --btn-secondary-border: rgba(255, 255, 255, 0.15);
+  --btn-secondary-text: #d4d4d4;
+  --btn-secondary-hover-bg: rgba(255, 255, 255, 0.12);
+  --btn-secondary-active-bg: rgba(255, 255, 255, 0.15);
+  
+  --input-bg: rgba(255, 255, 255, 0.08);
+  --input-border: rgba(255, 255, 255, 0.15);
+  --input-focus-bg: rgba(255, 255, 255, 0.12);
+  --input-placeholder: #d4d4d4;
+  
+  --input-error-bg: rgba(239, 68, 68, 0.1);
+  --input-error-placeholder: rgba(252, 165, 165, 0.5);
+  
+  --select-content-bg: #2d241d;
+  --select-content-border: rgba(201, 152, 58, 0.2);
+  --select-content-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  --select-item-text: #d4d4d4;
+  --select-item-focus-bg: rgba(255, 255, 255, 0.08);
+  --select-item-focus-text: #f5f5f5;
+  
+  --text-error: #f87171;
 }
 
 @theme inline {
@@ -196,6 +300,58 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Semantic Theme Extensions */
+  --color-surface-container: var(--surface-container);
+  --color-surface-variant: var(--surface-variant);
+  --color-surface-modal: var(--surface-modal);
+  --color-border-modal: var(--border-modal);
+  --color-text-modal-title: var(--text-modal-title);
+  --color-text-switcher-inactive: var(--text-switcher-inactive);
+
+  --color-brand-gradient-from: var(--brand-gradient-from);
+  --color-brand-gradient-to: var(--brand-gradient-to);
+
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-card-hover-bg: var(--card-hover-bg);
+  --shadow-card-hover: var(--card-hover-shadow);
+
+  --color-tag-bg: var(--tag-bg);
+  --color-tag-border: var(--tag-border);
+  --color-tag-text: var(--tag-text);
+
+  --color-modal-close-text: var(--modal-close-text);
+  --color-modal-close-hover-text: var(--modal-close-hover-text);
+  --color-modal-close-hover-bg: var(--modal-close-hover-bg);
+
+  --color-modal-icon-from: var(--modal-icon-from);
+  --color-modal-icon-via: var(--modal-icon-via);
+  --color-modal-icon-to: var(--modal-icon-to);
+  --color-modal-icon-border: var(--modal-icon-border);
+
+  --color-btn-secondary-bg: var(--btn-secondary-bg);
+  --color-btn-secondary-border: var(--btn-secondary-border);
+  --color-btn-secondary-text: var(--btn-secondary-text);
+  --color-btn-secondary-hover-bg: var(--btn-secondary-hover-bg);
+  --color-btn-secondary-active-bg: var(--btn-secondary-active-bg);
+
+  --color-input-bg: var(--input-bg);
+  --color-input-border: var(--input-border);
+  --color-input-focus-bg: var(--input-focus-bg);
+  --color-input-placeholder: var(--input-placeholder);
+
+  --color-input-error-bg: var(--input-error-bg);
+  --color-input-error-placeholder: var(--input-error-placeholder);
+
+  --color-select-content-bg: var(--select-content-bg);
+  --color-select-content-border: var(--select-content-border);
+  --shadow-select-content: var(--select-content-shadow);
+  --color-select-item-text: var(--select-item-text);
+  --color-select-item-focus-bg: var(--select-item-focus-bg);
+  --color-select-item-focus-text: var(--select-item-focus-text);
+
+  --color-text-error: var(--text-error);
 }
 
 /* Grainlify Logo Styling */
