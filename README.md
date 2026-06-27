@@ -176,6 +176,22 @@ translations. Untrusted input passed as a placeholder can therefore only ever
 become inert text. This is verified by an anti-injection test in
 [`i18n.test.tsx`](./src/shared/i18n/i18n.test.tsx).
 
+## Observability
+
+The guarded logger in [`src/shared/utils/logger.ts`](./src/shared/utils/logger.ts)
+supports an optional remote sink for warning and error telemetry:
+
+```ts
+setErrorSink((level, message, params) => {
+  // Forward only non-sensitive metadata to a collector.
+})
+```
+
+Use `clearErrorSink()` during teardown or tests. Sink implementations must remain
+PII-safe: do not forward JWTs, credentials, full user profiles, email addresses,
+or other sensitive user data. Sink failures are caught so remote telemetry cannot
+crash application code.
+
 ## Available Scripts
 
 | Command                     | Description                          |
