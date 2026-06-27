@@ -104,10 +104,45 @@ const cleanIssueDescription = (
   return selectedLines;
 };
 
-// Helper function to calculate days left (mock for now, can be enhanced with actual dates)
-const getDaysLeft = (): string => {
-  const days = Math.floor(Math.random() * 10) + 1;
-  return `${days} days left`;
+/**
+ * Helper function to calculate days left from a deadline date string or timestamp.
+ * Returns formatted remaining time, or null if no deadline is available or invalid.
+ *
+ * @param deadline - The ISO date string or timestamp for the deadline
+ * @param now - The current anchor date (defaults to new Date())
+ * @returns Formatted remaining time string (e.g., "3 days left", "Today", "Overdue"), or null
+ */
+export const getDaysLeft = (
+  deadline: string | number | null | undefined,
+  now: Date = new Date()
+): string | null => {
+  if (deadline === undefined || deadline === null) {
+    return null;
+  }
+
+  const deadlineDate = new Date(deadline);
+  
+  // Guard against NaN/Invalid Date from untrusted deadline strings
+  if (isNaN(deadlineDate.getTime())) {
+    return null;
+  }
+
+  // Start of day for both dates to get a clean calendar days difference
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDeadline = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
+  
+  const diffTime = startOfDeadline.getTime() - startOfToday.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return 'Overdue';
+  } else if (diffDays === 0) {
+    return 'Today';
+  } else if (diffDays === 1) {
+    return '1 day left';
+  } else {
+    return `${diffDays} days left`;
+  }
 };
 
 // Helper function to get primary tag from issue labels
@@ -157,7 +192,7 @@ type IssueType = {
   title: string;
   description: string;
   language: string;
-  daysLeft: string;
+  daysLeft?: string;
   primaryTag?: string;
   projectId: string;
 };
@@ -274,12 +309,13 @@ export function DiscoverPage({
                 const projectData = projects.find(p => p.id === project.id);
                 const language = projectData?.tags.find(t => ['TypeScript', 'JavaScript', 'Python', 'Rust', 'Go', 'CSS', 'HTML'].includes(t)) || projectData?.tags[0] || 'TypeScript';
 
+                const dl = getDaysLeft(issue.deadline);
                 issues.push({
                   id: String(issue.github_issue_id),
                   title: issue.title || 'Untitled Issue',
                   description: cleanIssueDescription(issue.description),
                   language: language,
-                  daysLeft: getDaysLeft(),
+                  ...(dl ? { daysLeft: dl } : {}),
                   primaryTag: getPrimaryTag(issue.labels || []),
                   projectId: project.id,
                 });
