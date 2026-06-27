@@ -77,3 +77,20 @@ export function validateRequired(value: string, fieldName: string): string | tru
   }
   return true
 }
+
+/**
+ * Validates the shape of a route parameter (e.g. UUID-ish or slug-like [a-z0-9-]).
+ * Restricts length to 100 characters and allowed characters to alphanumeric,
+ * hyphens, and underscores. Rejects path-traversal (..) and encoded variants (%2e).
+ *
+ * @param param - The route param value to validate.
+ * @returns `true` if valid, otherwise `false`.
+ */
+export function isValidRouteParam(param: string | undefined): boolean {
+  if (!param) return false;
+  if (param.length > 100) return false;
+  // Allows lowercase/uppercase letters, numbers, hyphens, and underscores.
+  // This automatically rejects dot, slash, backslash, percent, etc., preventing path traversal.
+  const paramPattern = /^[a-zA-Z0-9-_]+$/;
+  return paramPattern.test(param);
+}

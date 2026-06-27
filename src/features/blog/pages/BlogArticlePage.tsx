@@ -3,6 +3,7 @@ import { Calendar, Clock, ArrowLeft } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { getPostBySlug } from '../data/blogPosts';
 import { sanitizeSlug } from '../utils/slug';
+import { isValidRouteParam } from '../../../shared/utils/validation';
 
 /**
  * Renders a single blog article addressed by its slug
@@ -18,7 +19,7 @@ export function BlogArticlePage() {
   const { theme } = useTheme();
   const { slug } = useParams<{ slug: string }>();
 
-  const safeSlug = sanitizeSlug(slug);
+  const safeSlug = slug && isValidRouteParam(slug) ? sanitizeSlug(slug) : null;
   const post = safeSlug ? getPostBySlug(safeSlug) : undefined;
 
   if (!post) {

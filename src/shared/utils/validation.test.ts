@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateRepoName, validateUrl, validateEmail, validateRequired } from './validation'
+import { validateRepoName, validateUrl, validateEmail, validateRequired, isValidRouteParam } from './validation'
 
 describe('validateRepoName', () => {
   it('accepts valid owner/repo format', () => {
@@ -180,5 +180,47 @@ describe('validateRequired', () => {
 
   it('uses custom field name in message', () => {
     expect(validateRequired('', 'Ecosystem')).toBe('Ecosystem is required')
+  })
+})
+
+describe('isValidRouteParam', () => {
+  it('accepts UUID format', () => {
+    expect(isValidRouteParam('123e4567-e89b-12d3-a456-426614174000')).toBe(true)
+  })
+
+  it('accepts lowercase alphanumeric and hyphens (slugs)', () => {
+    expect(isValidRouteParam('some-valid-slug-123')).toBe(true)
+  })
+
+  it('accepts uppercase letters and underscores', () => {
+    expect(isValidRouteParam('PROJECT_NAME-123')).toBe(true)
+  })
+
+  it('rejects undefined or empty values', () => {
+    expect(isValidRouteParam(undefined)).toBe(false)
+    expect(isValidRouteParam('')).toBe(false)
+  })
+
+  it('rejects overly long strings (> 100 characters)', () => {
+    const longParam = 'a'.repeat(101)
+    expect(isValidRouteParam(longParam)).toBe(false)
+  })
+
+  it('rejects path-traversal characters like dots and slashes', () => {
+    expect(isValidRouteParam('..')).toBe(false)
+    expect(isValidRouteParam('path/to/thing')).toBe(false)
+    expect(isValidRouteParam('dir\\file')).toBe(false)
+    expect(isValidRouteParam('../hack')).toBe(false)
+  })
+
+  it('rejects URL-encoded traversal characters', () => {
+    expect(isValidRouteParam('%2e%2e%2f')).toBe(false)
+    expect(isValidRouteParam('encoded%2fparam')).toBe(false)
+  })
+
+  it('rejects special symbols', () => {
+    expect(isValidRouteParam('some$value')).toBe(false)
+    expect(isValidRouteParam('value@name')).toBe(false)
+    expect(isValidRouteParam('test?query=true')).toBe(false)
   })
 })

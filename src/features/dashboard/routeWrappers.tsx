@@ -7,6 +7,7 @@ import { MaintainersPage } from '../maintainers/pages/MaintainersPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { IssueDetailPage } from './pages/IssueDetailPage';
 import { SearchPage } from './pages/SearchPage';
+import { isValidRouteParam } from '../../shared/utils/validation';
 
 // Open Source Week Page Wrapper
 export function OpenSourceWeekPageRoute() {
@@ -27,7 +28,7 @@ export function OpenSourceWeekDetailPageRoute() {
   const state = location.state as { eventName?: string } || {};
   const eventName = state.eventName || 'Event';
 
-  if (!eventId) return null;
+  if (!eventId || !isValidRouteParam(eventId)) return null;
 
   const handleBack = () => {
     navigate('/dashboard/open-source-week');
@@ -71,7 +72,7 @@ export function EcosystemDetailPageRoute() {
     logoUrl?: string | null;
   } || {};
 
-  if (!ecosystemId) return null;
+  if (!ecosystemId || !isValidRouteParam(ecosystemId)) return null;
 
   const handleBack = () => {
     navigate('/dashboard/ecosystems');
@@ -113,7 +114,7 @@ export function ProjectDetailPageRoute() {
   const location = useLocation();
   const state = location.state as { backTarget?: string } || {};
 
-  if (!projectId) return null;
+  if (!projectId || !isValidRouteParam(projectId)) return null;
 
   const handleBack = () => {
     if (state.backTarget) {
@@ -153,7 +154,7 @@ export function IssueDetailPageRoute() {
   const { projectId, issueId } = useParams<{ projectId: string; issueId: string }>();
   const navigate = useNavigate();
 
-  if (!projectId || !issueId) return null;
+  if (!projectId || !issueId || !isValidRouteParam(projectId) || !isValidRouteParam(issueId)) return null;
 
   const handleClose = () => {
     navigate(`/dashboard/projects/${projectId}`);
