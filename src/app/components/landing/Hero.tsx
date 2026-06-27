@@ -1,12 +1,12 @@
-import { Link } from 'react-router-dom';
-import { ArrowRight, Sparkles } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useLandingStats } from '../../../shared/hooks/useLandingStats';
+import { Link } from 'react-router-dom'
+import { ArrowRight, Sparkles } from 'lucide-react'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { useLandingStats } from '../../../shared/hooks/useLandingStats'
 
 export function Hero() {
-  const { theme } = useTheme();
-  const { display } = useLandingStats();
-  
+  const { theme } = useTheme()
+  const { display } = useLandingStats()
+
   return (
     <section className="relative min-h-screen flex items-center justify-center px-6 pt-20">
       {/* Golden Glassmorphism Orbs */}
@@ -16,35 +16,44 @@ export function Hero() {
       {/* Content */}
       <div className="relative z-10 max-w-6xl mx-auto text-center">
         {/* Badge */}
-        <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full backdrop-blur-[30px] border mb-8 transition-colors ${
-          theme === 'dark'
-            ? 'bg-white/[0.08] border-white/15'
-            : 'bg-white/[0.15] border-white/25'
-        }`}>
+        <div
+          className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full backdrop-blur-[30px] border mb-8 transition-colors ${
+            theme === 'dark' ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
+          }`}
+        >
           <Sparkles className="w-4 h-4 text-[#c9983a]" />
-          <span className={`text-sm font-medium transition-colors ${
-            theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-          }`}>Web3 Contributors Platform</span>
+          <span
+            className={`text-sm font-medium transition-colors ${
+              theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+            }`}
+          >
+            Web3 Contributors Platform
+          </span>
         </div>
 
         {/* Heading */}
-        <h1 className={`text-5xl md:text-7xl font-bold mb-6 leading-tight transition-colors ${
-          theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-        }`}>
+        <h1
+          className={`text-5xl md:text-7xl font-bold mb-6 leading-tight transition-colors ${
+            theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+          }`}
+        >
           Connect with
           <span className="bg-gradient-to-r from-[#c9983a] to-[#d4af37] bg-clip-text text-transparent">
-            {' '}Open Source
+            {' '}
+            Open Source
           </span>
           <br />
           Opportunities
         </h1>
 
         {/* Description */}
-        <p className={`text-xl max-w-2xl mx-auto mb-12 transition-colors ${
-          theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-        }`}>
-          Grainlify bridges the gap between talented contributors and innovative
-          projects, making open-source collaboration seamless and rewarding.
+        <p
+          className={`text-xl max-w-2xl mx-auto mb-12 transition-colors ${
+            theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+          }`}
+        >
+          Grainlify bridges the gap between talented contributors and innovative projects, making
+          open-source collaboration seamless and rewarding.
         </p>
 
         {/* CTA Buttons */}
@@ -83,16 +92,24 @@ export function Hero() {
                   : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2]'
               }`}
             >
-              <div className={`text-3xl font-bold mb-2 transition-colors ${
-                theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-              }`}>{stat.value}</div>
-              <div className={`transition-colors ${
-                theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-              }`}>{stat.label}</div>
+              <div
+                className={`text-3xl font-bold mb-2 transition-colors ${
+                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                }`}
+              >
+                {stat.value}
+              </div>
+              <div
+                className={`transition-colors ${
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                }`}
+              >
+                {stat.label}
+              </div>
             </div>
           ))}
         </div>
       </div>
     </section>
-  );
+  )
 }
