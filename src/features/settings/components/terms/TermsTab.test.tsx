@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { TermsTab, CURRENT_TERMS_VERSION } from './TermsTab';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { TermsTab, CURRENT_TERMS_VERSION, TERMS_STATUS_SKELETON_DELAY_MS } from './TermsTab';
 import { getTermsStatus, acceptTerms } from '../../../../shared/api/client';
 import { ThemeProvider } from '../../../../shared/contexts/ThemeContext';
 
@@ -23,13 +23,41 @@ describe('TermsTab', () => {
     vi.clearAllMocks();
   });
 
-  it('renders loading state initially', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('renders a skeleton only after the delayed loading threshold', async () => {
+    vi.useFakeTimers();
     vi.mocked(getTermsStatus).mockImplementation(() => new Promise(() => {}));
+
     renderWithTheme(<TermsTab />);
-    
-    const button = screen.getByRole('button', { name: /loading/i });
+
+    const button = screen.getByRole('button', { name: /checking/i });
     expect(button).toBeInTheDocument();
     expect(button).toBeDisabled();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(TERMS_STATUS_SKELETON_DELAY_MS);
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent('Checking terms status...');
+    expect(screen.getByText('Checking terms status...').closest('[aria-busy="true"]')).toBeInTheDocument();
+  });
+
+  it('does not flash the skeleton for fast status loads', async () => {
+    vi.mocked(getTermsStatus).mockResolvedValue({
+      accepted: false,
+      version: null,
+      accepted_at: null,
+    });
+
+    renderWithTheme(<TermsTab />);
+
+    const button = await screen.findByRole('button', { name: 'Accept' });
+    expect(button).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('renders terms content and accept button when not accepted', async () => {
@@ -130,9 +158,6 @@ describe('TermsTab', () => {
   });
 
   it('handles error when getting status', async () => {
-    // Should suppress console.error for this test
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    
     vi.mocked(getTermsStatus).mockRejectedValue(new Error('Fetch failed'));
 
     renderWithTheme(<TermsTab />);
@@ -140,8 +165,8 @@ describe('TermsTab', () => {
     const button = await screen.findByRole('button', { name: 'Accept' });
     expect(button).toBeInTheDocument();
     expect(button).not.toBeDisabled();
-    
-    expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch terms status:', expect.any(Error));
-    consoleSpy.mockRestore();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Unable to load your terms status. You can still review the terms and try accepting again.'
+    );
   });
 });
