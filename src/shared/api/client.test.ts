@@ -11,6 +11,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   apiRequest,
+  ApiError,
+  generateRequestId,
   getAuthToken,
   setAuthToken,
   removeAuthToken,
@@ -546,6 +548,185 @@ describe('apiRequest - Core Request Helper', () => {
       const callArgs = mockFetch.mock.calls[0];
       const headers = callArgs[1].headers;
       expect(headers['Content-Type']).toBeUndefined();
+    });
+  });
+
+  describe('X-Request-Id / Correlation ID', () => {
+    it('should generate a valid-looking identifier', () => {
+      const id = generateRequestId();
+      expect(id).toEqual(expect.any(String));
+      expect(id.length).toBeGreaterThanOrEqual(32);
+    });
+
+    it('should attach an X-Request-Id header to every request', async () => {
+      await apiRequest('/test');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/test`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'X-Request-Id': expect.any(String),
+          }),
+        }),
+      );
+    });
+
+    it('should generate a fresh UUID on each request', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true }),
+      });
+
+      await apiRequest('/a');
+      await apiRequest('/b');
+
+      const idA = mockFetch.mock.calls[0][1].headers['X-Request-Id'];
+      const idB = mockFetch.mock.calls[1][1].headers['X-Request-Id'];
+      expect(idA).not.toBe(idB);
+    });
+
+    it('should preserve a caller-supplied X-Request-Id', async () => {
+      await apiRequest('/test', {
+        headers: { 'X-Request-Id': 'caller-id-001' },
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/test`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'X-Request-Id': 'caller-id-001',
+          }),
+        }),
+      );
+    });
+
+    it('should throw ApiError with the requestId on network errors', async () => {
+      mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+
+      let error: unknown;
+      try {
+        await apiRequest('/test');
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).requestId).toEqual(expect.any(String));
+    });
+
+    it('should throw ApiError with the requestId on HTTP 401', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({}),
+      });
+
+      let error: unknown;
+      try {
+        await apiRequest('/test');
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).requestId).toEqual(expect.any(String));
+    });
+
+    it('should throw ApiError with the requestId on HTTP 403', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({}),
+      });
+
+      let error: unknown;
+      try {
+        await apiRequest('/test');
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).requestId).toEqual(expect.any(String));
+    });
+
+    it('should throw ApiError with the requestId on general HTTP error', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ message: 'Server error' }),
+      });
+
+      let error: unknown;
+      try {
+        await apiRequest('/test');
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).requestId).toEqual(expect.any(String));
+    });
+
+    it('should throw ApiError with the requestId on JSON parse failure', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => {
+          throw new Error('Invalid JSON');
+        },
+      });
+
+      let error: unknown;
+      try {
+        await apiRequest('/user');
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).requestId).toEqual(expect.any(String));
+    });
+
+    it('should fall back to a hex string when crypto.randomUUID is unavailable', async () => {
+      const original = crypto.randomUUID;
+      // @ts-expect-error removing randomUUID to test fallback
+      crypto.randomUUID = undefined;
+
+      await apiRequest('/test');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/test`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'X-Request-Id': expect.any(String),
+          }),
+        }),
+      );
+
+      const headerValue: string = mockFetch.mock.calls[0][1].headers['X-Request-Id'];
+      expect(headerValue.length).toBeGreaterThanOrEqual(32);
+
+      crypto.randomUUID = original;
+    });
+
+    it('should include requestId in logger.error calls on failure', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+
+      try {
+        await apiRequest('/test');
+      } catch {
+        // expected
+      }
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Network error: Unable to connect to the server. Please check your connection.',
+        expect.objectContaining({ requestId: expect.any(String) }),
+      );
+
+      consoleErrorSpy.mockRestore();
     });
   });
 

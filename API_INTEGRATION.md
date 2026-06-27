@@ -146,6 +146,31 @@ const projects = await getPublicProjects({
 });
 ```
 
+### Correlation ID (`X-Request-Id`)
+
+Every outgoing API request automatically includes an `X-Request-Id` header containing a random UUID (v4). This allows support and backend teams to correlate a frontend error report with a specific request in the server logs.
+
+**Behaviour:**
+- A fresh UUID is generated per request via `crypto.randomUUID()` (with a cryptographic fallback for older environments).
+- If the caller already supplies an `X-Request-Id` header (e.g. when retrying), that value is **preserved** and not overwritten.
+- The request ID is attached to the thrown `ApiError` as `error.requestId` so error handlers can surface it in UI or telemetry.
+- The same request ID is forwarded to `logger.error(...)` on every failure path for local debugging.
+
+```typescript
+import { apiRequest, ApiError } from '@/shared/api/client';
+
+try {
+  const data = await apiRequest('/some-endpoint');
+} catch (error) {
+  if (error instanceof ApiError) {
+    console.error(`Request ${error.requestId} failed:`, error.message);
+    // Show "If this keeps happening, please provide this code: <requestId>"
+  }
+}
+```
+
+**Security:** The ID is purely random and contains no PII (no JWTs, emails, or user identifiers are embedded). It is safe to log and safe to share with end users as a support reference.
+
 ### Available Endpoints
 
 #### Authentication
@@ -175,7 +200,7 @@ const projects = await getPublicProjects({
 
 ## Error Handling
 
-The API client automatically handles errors:
+The API client automatically handles errors. All non-2xx responses and network failures throw an `ApiError` (subclass of `Error`) that carries the request's correlation ID as `.requestId`.
 
 **401 Unauthorized** - Token expired/invalid
 ```typescript
@@ -184,13 +209,17 @@ localStorage.removeItem('patchwork_jwt');
 window.location.href = '/auth/signin';
 ```
 
-**Other Errors** - Throws error with backend message
+**Other Errors** - Throws `ApiError` with backend message
 ```typescript
+import { ApiError } from '@/shared/api/client';
+
 try {
   const profile = await getUserProfile();
 } catch (error) {
-  console.error(error.message); // Backend error message
-  // Handle error (show toast, etc.)
+  if (error instanceof ApiError) {
+    console.error(`Request ${error.requestId} failed:`, error.message);
+    // Handle error (show toast, etc.)
+  }
 }
 ```
 
@@ -256,6 +285,8 @@ export const FRONTEND_BASE_URL = import.meta.env.VITE_FRONTEND_BASE_URL || windo
 - Never log tokens to console
 - Use HTTPS in production
 - Validate token presence before authenticated requests
+- Include `X-Request-Id` on every API request for end-to-end tracing
+- Surface `error.requestId` to users so support can look up the failing request
 
 ⚠️ **Security Considerations:**
 - localStorage is vulnerable to XSS attacks

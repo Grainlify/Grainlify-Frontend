@@ -5,6 +5,29 @@
 import { API_BASE_URL } from '../config/api'
 import { BillingProfile } from '../../features/settings/types'
 import { BlogPost } from '../../features/blog/types'
+import { logger } from '../utils/logger'
+
+/**
+ * Generate a v4 UUID for request correlation.
+ *
+ * Uses `crypto.randomUUID()` when available (modern browsers, Node 19+).
+ * Falls back to a random hex string for environments where the API is
+ * unavailable (e.g. older browsers, non-secure contexts).
+ *
+ * @returns A random, PII‑free identifier suitable for X-Request-Id.
+ */
+export function generateRequestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  // Fallback: 32 hex chars (128 bits) matching UUID hex length.
+  const hex = '0123456789abcdef'
+  let id = ''
+  for (let i = 0; i < 32; i++) {
+    id += hex[Math.floor(Math.random() * 16)]
+  }
+  return id
+}
 
 // Token management
 export const getAuthToken = (): string | null => {
@@ -38,12 +61,29 @@ export interface ApiRequestOptions extends RequestInit {
 }
 
 /**
+ * Error subclass that carries the request correlation ID so callers can
+ * surface it to support for backend log lookups.
+ */
+export class ApiError extends Error {
+  /**
+   * @param message - Human‑readable error description.
+   * @param requestId - The X-Request-Id sent with the failing request.
+   */
+  constructor(message: string, public readonly requestId: string) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+/**
  * Core API request helper that handles authentication, headers, and error handling
  * @template T - The expected response type
  * @param {string} endpoint - API endpoint path (will be prefixed with API_BASE_URL)
  * @param {ApiRequestOptions} options - Request options including auth requirements
  * @returns {Promise<T>} Parsed JSON response
- * @throws {Error} On network failures, authentication errors, or non-2xx responses
+ * @throws {ApiError} On network failures, authentication errors, or non-2xx responses.
+ *   The thrown error includes a `.requestId` property for correlating with
+ *   backend logs.
  * @internal This function is exported for testing purposes
  */
 export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
@@ -53,6 +93,13 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
   const requestHeaders: Record<string, string> = {
     ...(headers as Record<string, string>),
   }
+
+  // Attach or preserve a correlation ID so every request can be traced in
+  // backend logs. The caller may supply one (e.g. when retrying), otherwise
+  // we generate a fresh UUID.
+  const requestId =
+    (headers as Record<string, string>)['X-Request-Id'] || generateRequestId()
+  requestHeaders['X-Request-Id'] = requestId
 
   // Avoid forcing CORS preflight for simple GET/HEAD requests by only setting
   // Content-Type when we actually send a JSON body.
@@ -84,10 +131,11 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
   } catch (err) {
     // Network error (CORS, connection refused, etc.)
     if (err instanceof TypeError && err.message.includes('fetch')) {
-      throw new Error(
-        'Network error: Unable to connect to the server. Please check your connection.'
-      )
+      const msg = 'Network error: Unable to connect to the server. Please check your connection.'
+      logger.error(msg, { requestId })
+      throw new ApiError(msg, requestId)
     }
+    logger.error('Unhandled fetch error', { requestId, error: err })
     throw err
   }
 
@@ -96,7 +144,9 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
     if (response.status === 401) {
       // Token expired or invalid - clear it
       removeAuthToken()
-      throw new Error('Authentication failed. Please sign in again.')
+      const msg = 'Authentication failed. Please sign in again.'
+      logger.error(msg, { requestId })
+      throw new ApiError(msg, requestId)
     }
 
     if (response.status === 403) {
@@ -107,9 +157,9 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
       } catch {
         errorMsg = 'Access forbidden'
       }
-      throw new Error(
-        `Permission denied: ${errorMsg}. You may need admin privileges to perform this action.`
-      )
+      const msg = `Permission denied: ${errorMsg}. You may need admin privileges to perform this action.`
+      logger.error(msg, { requestId })
+      throw new ApiError(msg, requestId)
     }
 
     // Try to parse error response
@@ -118,9 +168,12 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
       const errorData = await response.json()
       apiErrorMsg = errorData.message || errorData.error || 'API request failed'
     } catch {
-      throw new Error(`API request failed with status ${response.status}`)
+      const msg = `API request failed with status ${response.status}`
+      logger.error(msg, { requestId })
+      throw new ApiError(msg, requestId)
     }
-    throw new Error(apiErrorMsg)
+    logger.error(apiErrorMsg, { requestId })
+    throw new ApiError(apiErrorMsg, requestId)
   }
 
   // Parse JSON response
@@ -132,7 +185,9 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
     if (endpoint.includes('/projects/mine') || endpoint.includes('/projects')) {
       return [] as T
     }
-    throw new Error('Invalid response from server')
+    const msg = 'Invalid response from server'
+    logger.error(msg, { requestId, error: err })
+    throw new ApiError(msg, requestId)
   }
 }
 
@@ -1210,6 +1265,9 @@ export async function downloadInvoice(invoiceId: string): Promise<Blob> {
   const url = `${API_BASE_URL}/billing/invoices/${invoiceId}/download`
   const headers: Record<string, string> = {}
 
+  const requestId = generateRequestId()
+  headers['X-Request-Id'] = requestId
+
   const token = getAuthToken()
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
@@ -1220,17 +1278,24 @@ export async function downloadInvoice(invoiceId: string): Promise<Blob> {
     response = await fetch(url, { headers })
   } catch (err) {
     if (err instanceof TypeError && err.message.includes('fetch')) {
-      throw new Error('Network error: Unable to connect to the server. Please check your connection.')
+      const msg = 'Network error: Unable to connect to the server. Please check your connection.'
+      logger.error(msg, { requestId })
+      throw new ApiError(msg, requestId)
     }
+    logger.error('Unhandled fetch error', { requestId, error: err })
     throw err
   }
 
   if (!response.ok) {
     if (response.status === 401) {
       removeAuthToken()
-      throw new Error('Authentication failed. Please sign in again.')
+      const msg = 'Authentication failed. Please sign in again.'
+      logger.error(msg, { requestId })
+      throw new ApiError(msg, requestId)
     }
-    throw new Error(`Failed to download invoice (${response.status}).`)
+    const msg = `Failed to download invoice (${response.status}).`
+    logger.error(msg, { requestId })
+    throw new ApiError(msg, requestId)
   }
 
   return response.blob()
