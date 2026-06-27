@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
-import { ContributorsTable } from './ContributorsTable'
+import { ContributorsTable, ContributorRow } from './ContributorsTable'
 import { LeaderData } from '../types'
 
 const contributors: LeaderData[] = [
@@ -63,5 +63,10 @@ describe('ContributorsTable states', () => {
     renderTable({ error: "We couldn't load contributors. Please try again." })
     expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(screen.queryByText('octocat')).not.toBeInTheDocument()
+  })
+
+  it('memoizes the ContributorRow component to avoid unnecessary re-renders', () => {
+    expect(ContributorRow).toBeDefined()
+    expect((ContributorRow as any).$$typeof).toBe(Symbol.for('react.memo'))
   })
 })

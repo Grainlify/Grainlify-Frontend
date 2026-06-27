@@ -1,9 +1,154 @@
+import React, { memo } from 'react'
 import { TrendingUp, TrendingDown, Minus, Award } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { ProjectData, FilterType } from '../types'
 import { getAvatarGradient } from '../data/leaderboardData'
 import { LeaderboardTableState } from './LeaderboardTableState'
+
+interface ProjectRowProps {
+  project: ProjectData
+  index: number
+  theme: string
+  activeFilter: FilterType
+  isLoaded: boolean
+  detailPath: string | undefined
+}
+
+export const ProjectRow = memo(function ProjectRow({
+  project,
+  index,
+  theme,
+  activeFilter,
+  isLoaded,
+  detailPath,
+}: ProjectRowProps) {
+  return (
+    <div
+      className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group"
+      style={{
+        animation: isLoaded
+          ? `slideInLeft 0.5s ease-out ${1.1 + index * 0.1}s both`
+          : 'none',
+      }}
+    >
+      {/* Rank */}
+      <div className="col-span-1 flex items-center">
+        <div className="flex items-center justify-center w-8 h-8 rounded-[10px] bg-gradient-to-br from-white/[0.15] to-white/[0.08] border border-white/20 shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
+          <span
+            className={`text-[15px] font-bold transition-colors ${
+              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}
+          >
+            {project.rank}
+          </span>
+        </div>
+      </div>
+
+      {/* Trend */}
+      <div className="col-span-1 flex items-center">
+        <div className="flex items-center justify-center w-8 h-8 rounded-[10px] bg-gradient-to-br from-white/[0.15] to-white/[0.08] border border-white/20 shadow-sm group-hover:scale-110 transition-all duration-300">
+          {getTrendIcon(project.trend)}
+        </div>
+      </div>
+
+      {/* Project */}
+      <div className="col-span-5 flex items-center gap-3">
+        <div
+          className={`relative w-12 h-12 rounded-full bg-gradient-to-br ${getAvatarGradient(index)} flex items-center justify-center text-white font-bold text-[18px] shadow-md border-2 border-white/25 overflow-hidden group-hover:scale-125 group-hover:shadow-lg group-hover:rotate-12 transition-all duration-300`}
+        >
+          {isLogoUrl(project.logo) ? (
+            <img src={project.logo} alt="" className="w-full h-full object-cover" />
+          ) : (
+            project.logo
+          )}
+          <div className="absolute inset-0 rounded-full border-2 border-[#c9983a]/0 group-hover:border-[#c9983a]/50 transition-all duration-300 animate-ping-on-hover" />
+        </div>
+        <div>
+          <div
+            className={`text-[15px] font-bold group-hover:text-[#c9983a] transition-colors duration-300 ${
+              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}
+          >
+            {project.name}
+          </div>
+          {activeFilter === 'contributions' && project.contributors && (
+            <div
+              className={`text-[12px] transition-colors ${
+                theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              {project.contributors} contributors
+            </div>
+          )}
+          {project.ecosystems && (
+            <div className="flex gap-1.5 mt-1">
+              {project.ecosystems.map((eco, idx) => (
+                <span
+                  key={idx}
+                  className="px-2 py-0.5 bg-[#c9983a]/20 border border-[#c9983a]/30 rounded-[6px] text-[10px] font-semibold text-[#8b6f3a] hover:bg-[#c9983a]/30 transition-colors"
+                >
+                  {eco}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Score */}
+      <div className="col-span-2 flex items-center justify-end">
+        <div className="relative px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/15 border border-[#c9983a]/40 shadow-sm group-hover:shadow-lg group-hover:border-[#c9983a]/70 group-hover:from-[#c9983a]/35 group-hover:to-[#d4af37]/25 group-hover:scale-110 transition-all duration-300">
+          <div
+            className={`text-[17px] font-black transition-colors ${
+              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}
+          >
+            {project.score}
+          </div>
+        </div>
+      </div>
+
+      {/* Action */}
+      <div className="col-span-3 flex items-center justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-300 gap-2">
+        {project.activity && (
+          <div
+            className={`px-3 py-1.5 rounded-[8px] text-[11px] font-semibold ${
+              project.activity === 'Very High'
+                ? 'bg-green-500/20 text-green-700 border border-green-500/30'
+                : project.activity === 'High'
+                  ? 'bg-blue-500/20 text-blue-700 border border-blue-500/30'
+                  : project.activity === 'Medium'
+                    ? 'bg-yellow-500/20 text-yellow-700 border border-yellow-500/30'
+                    : 'bg-gray-500/20 text-gray-700 border border-gray-500/30'
+            }`}
+          >
+            {project.activity}
+          </div>
+        )}
+        {detailPath ? (
+          <Link
+            to={detailPath}
+            aria-label={`View ${project.name} project details`}
+            className={VIEW_PROJECT_CLASSES}
+          >
+            View Project
+          </Link>
+        ) : (
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Project details are unavailable"
+            className={`${VIEW_PROJECT_CLASSES} opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-md`}
+          >
+            View Project
+          </button>
+        )}
+      </div>
+    </div>
+  )
+})
 
 interface ProjectsTableProps {
   data: ProjectData[]
@@ -112,134 +257,15 @@ export function ProjectsTable({
           {data.map((project, index) => {
             const detailPath = projectDetailPath(project.id)
             return (
-              <div
-                key={project.rank}
-                className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group"
-                style={{
-                  animation: isLoaded
-                    ? `slideInLeft 0.5s ease-out ${1.1 + index * 0.1}s both`
-                    : 'none',
-                }}
-              >
-                {/* Rank */}
-                <div className="col-span-1 flex items-center">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-[10px] bg-gradient-to-br from-white/[0.15] to-white/[0.08] border border-white/20 shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
-                    <span
-                      className={`text-[15px] font-bold transition-colors ${
-                        theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                      }`}
-                    >
-                      {project.rank}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Trend */}
-                <div className="col-span-1 flex items-center">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-[10px] bg-gradient-to-br from-white/[0.15] to-white/[0.08] border border-white/20 shadow-sm group-hover:scale-110 transition-all duration-300">
-                    {getTrendIcon(project.trend)}
-                  </div>
-                </div>
-
-                {/* Project */}
-                <div className="col-span-5 flex items-center gap-3">
-                  <div
-                    className={`relative w-12 h-12 rounded-full bg-gradient-to-br ${getAvatarGradient(index)} flex items-center justify-center text-white font-bold text-[18px] shadow-md border-2 border-white/25 overflow-hidden group-hover:scale-125 group-hover:shadow-lg group-hover:rotate-12 transition-all duration-300`}
-                  >
-                    {isLogoUrl(project.logo) ? (
-                      <img src={project.logo} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      project.logo
-                    )}
-                    {/* Glow ring on hover */}
-                    <div className="absolute inset-0 rounded-full border-2 border-[#c9983a]/0 group-hover:border-[#c9983a]/50 transition-all duration-300 animate-ping-on-hover" />
-                  </div>
-                  <div>
-                    <div
-                      className={`text-[15px] font-bold group-hover:text-[#c9983a] transition-colors duration-300 ${
-                        theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                      }`}
-                    >
-                      {project.name}
-                    </div>
-                    {activeFilter === 'contributions' && project.contributors && (
-                      <div
-                        className={`text-[12px] transition-colors ${
-                          theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                        }`}
-                      >
-                        {project.contributors} contributors
-                      </div>
-                    )}
-                    {project.ecosystems && (
-                      <div className="flex gap-1.5 mt-1">
-                        {project.ecosystems.map((eco, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-0.5 bg-[#c9983a]/20 border border-[#c9983a]/30 rounded-[6px] text-[10px] font-semibold text-[#8b6f3a] hover:bg-[#c9983a]/30 transition-colors"
-                          >
-                            {eco}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Score */}
-                <div className="col-span-2 flex items-center justify-end">
-                  <div className="relative px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/15 border border-[#c9983a]/40 shadow-sm group-hover:shadow-lg group-hover:border-[#c9983a]/70 group-hover:from-[#c9983a]/35 group-hover:to-[#d4af37]/25 group-hover:scale-110 transition-all duration-300">
-                    <div
-                      className={`text-[17px] font-black transition-colors ${
-                        theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                      }`}
-                    >
-                      {project.score}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action */}
-                {/* `group-focus-within` keeps this column visible when the "View
-                Project" control receives keyboard focus, so its focus ring is
-                never hidden behind the hover-only reveal. */}
-                <div className="col-span-3 flex items-center justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-300 gap-2">
-                  {project.activity && (
-                    <div
-                      className={`px-3 py-1.5 rounded-[8px] text-[11px] font-semibold ${
-                        project.activity === 'Very High'
-                          ? 'bg-green-500/20 text-green-700 border border-green-500/30'
-                          : project.activity === 'High'
-                            ? 'bg-blue-500/20 text-blue-700 border border-blue-500/30'
-                            : project.activity === 'Medium'
-                              ? 'bg-yellow-500/20 text-yellow-700 border border-yellow-500/30'
-                              : 'bg-gray-500/20 text-gray-700 border border-gray-500/30'
-                      }`}
-                    >
-                      {project.activity}
-                    </div>
-                  )}
-                  {detailPath ? (
-                    <Link
-                      to={detailPath}
-                      aria-label={`View ${project.name} project details`}
-                      className={VIEW_PROJECT_CLASSES}
-                    >
-                      View Project
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      aria-disabled="true"
-                      title="Project details are unavailable"
-                      className={`${VIEW_PROJECT_CLASSES} opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-md`}
-                    >
-                      View Project
-                    </button>
-                  )}
-                </div>
-              </div>
+              <ProjectRow
+                key={project.id || project.name}
+                project={project}
+                index={index}
+                theme={theme}
+                activeFilter={activeFilter}
+                isLoaded={isLoaded}
+                detailPath={detailPath}
+              />
             )
           })}
         </div>

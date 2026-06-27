@@ -1,5 +1,5 @@
 import { logger } from '../../../shared/utils/logger'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { LeaderboardType, FilterType, Petal, LeaderData, ProjectData } from '../types'
 import { getLeaderboard, getRecommendedProjects } from '../../../shared/api/client'
 import { clampLimit, clampOffset, hasMoreByPageSize } from '../../../shared/utils/pagination'
@@ -248,38 +248,42 @@ export function LeaderboardPage() {
   }, []);
 
   // Ensure we have at least 3 items for the podium (pad with empty data if needed)
-  const contributorTopThree: LeaderData[] = [
-    ...leaderboardData.slice(0, 3),
-    ...Array(Math.max(0, 3 - leaderboardData.length))
-      .fill(null)
-      .map((_, i) => ({
-        rank: leaderboardData.length + i + 1,
-        username: '-',
-        avatar: '👤',
-        score: 0,
-        trend: 'same' as const,
-        trendValue: 0,
-        contributions: 0,
-        ecosystems: [],
-      })),
-  ].slice(0, 3) as LeaderData[]
+  const contributorTopThree = useMemo<LeaderData[]>(() => {
+    return [
+      ...leaderboardData.slice(0, 3),
+      ...Array(Math.max(0, 3 - leaderboardData.length))
+        .fill(null)
+        .map((_, i) => ({
+          rank: leaderboardData.length + i + 1,
+          username: '-',
+          avatar: '👤',
+          score: 0,
+          trend: 'same' as const,
+          trendValue: 0,
+          contributions: 0,
+          ecosystems: [],
+        })),
+    ].slice(0, 3) as LeaderData[]
+  }, [leaderboardData])
 
-  const projectTopThree: ProjectData[] = [
-    ...projectsData.slice(0, 3),
-    ...Array(Math.max(0, 3 - projectsData.length))
-      .fill(null)
-      .map((_, i) => ({
-        rank: projectsData.length + i + 1,
-        name: '-',
-        logo: '📦',
-        score: 0,
-        trend: 'same' as const,
-        trendValue: 0,
-        contributors: 0,
-        ecosystems: [] as string[],
-        activity: 'Low',
-      })),
-  ].slice(0, 3) as ProjectData[]
+  const projectTopThree = useMemo<ProjectData[]>(() => {
+    return [
+      ...projectsData.slice(0, 3),
+      ...Array(Math.max(0, 3 - projectsData.length))
+        .fill(null)
+        .map((_, i) => ({
+          rank: projectsData.length + i + 1,
+          name: '-',
+          logo: '📦',
+          score: 0,
+          trend: 'same' as const,
+          trendValue: 0,
+          contributors: 0,
+          ecosystems: [] as string[],
+          activity: 'Low',
+        })),
+    ].slice(0, 3) as ProjectData[]
+  }, [projectsData])
 
   return (
     <div className="space-y-6 relative">

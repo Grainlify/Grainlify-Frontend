@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route, useParams } from 'react-router-dom'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
-import { ProjectsTable } from './ProjectsTable'
+import { ProjectsTable, ProjectRow } from './ProjectsTable'
 import { ProjectData } from '../types'
 
 const projects: ProjectData[] = [
@@ -165,5 +165,10 @@ describe('ProjectsTable states', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /try again/i }))
     expect(onRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it('memoizes the ProjectRow component to avoid unnecessary re-renders', () => {
+    expect(ProjectRow).toBeDefined()
+    expect((ProjectRow as any).$$typeof).toBe(Symbol.for('react.memo'))
   })
 })
