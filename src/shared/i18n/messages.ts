@@ -33,6 +33,8 @@ export const DEFAULT_LOCALE: Locale = 'en'
  *   extracted from `src/features/landing/components/Navbar.tsx`.
  * - `dashboardNav.*` — the authenticated dashboard sidebar navigation,
  *   extracted from `src/features/dashboard/DashboardLayout.tsx`.
+ * - `maintainers.*` — maintainer workspace navigation and repository-load
+ *   errors from `src/features/maintainers/pages/MaintainersPage.tsx`.
  *
  * `as const` keeps every value a string literal so {@link MessageId} can be
  * derived from the keys with full type-safety.
@@ -57,6 +59,15 @@ export const en = {
   'dashboardNav.data': 'Data',
   'dashboardNav.leaderboard': 'Leaderboard',
   'dashboardNav.blog': 'Grainlify Blog',
+
+  // ── Maintainers page — src/features/maintainers/pages/MaintainersPage.tsx ──
+  'maintainers.tabs.dashboard': 'Dashboard',
+  'maintainers.tabs.issues': 'Issues',
+  'maintainers.tabs.pullRequests': 'Pull Requests',
+  'maintainers.errors.loadRepositories': 'Failed to load repositories',
+  'maintainers.errors.signInRequired': 'Please sign in to view your repositories',
+  'maintainers.errors.network':
+    'Unable to connect to the server. Please check your connection and try again.',
 } as const
 
 /**

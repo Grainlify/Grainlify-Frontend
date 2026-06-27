@@ -74,6 +74,10 @@ describe('useTranslation', () => {
   it('resolves typed keys to their English strings and exposes the locale', () => {
     const { result } = renderHook(() => useTranslation(), { wrapper })
     expect(result.current.t('dashboardNav.discover')).toBe('Discover')
+    expect(result.current.t('maintainers.tabs.dashboard')).toBe('Dashboard')
+    expect(result.current.t('maintainers.errors.loadRepositories')).toBe(
+      'Failed to load repositories'
+    )
     expect(result.current.t('landingNav.getStarted')).toBe('Get Started')
     expect(result.current.locale).toBe('en')
   })
