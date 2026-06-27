@@ -152,6 +152,44 @@ export type LandingStats = {
 
 export const getLandingStats = () => apiRequest<LandingStats>('/stats/landing')
 
+// Analytics
+export interface ActivityDataPoint {
+  month: string
+  value: number
+  trend: number
+  new: number
+  reactivated: number
+  active: number
+  churned: number
+  prMerged: number
+  rewarded: number
+}
+
+export interface ContributorRegion {
+  name: string
+  value: number
+  percentage: number
+}
+
+export interface AnalyticsStats {
+  billing_profile_count: number
+  total_contributor_count: number
+  active_contributor_count: number
+  total_count: number
+}
+
+export const getProjectActivity = (interval: string) =>
+  apiRequest<ActivityDataPoint[]>(`/stats/project-activity?interval=${encodeURIComponent(interval)}`)
+
+export const getContributorActivity = (interval: string) =>
+  apiRequest<ActivityDataPoint[]>(`/stats/contributor-activity?interval=${encodeURIComponent(interval)}`)
+
+export const getContributorsByRegion = () =>
+  apiRequest<ContributorRegion[]>('/stats/contributors-by-region')
+
+export const getAnalyticsStats = () =>
+  apiRequest<AnalyticsStats>('/stats/analytics-summary')
+
 // Authentication
 export const getCurrentUser = () =>
   apiRequest<{
