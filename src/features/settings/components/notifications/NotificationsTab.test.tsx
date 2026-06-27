@@ -5,7 +5,6 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { renderWithTheme } from '../../../../test/renderWithTheme';
 import { NotificationsTab } from './NotificationsTab';
-import * as client from '../../../../shared/api/client';
 
 // Mock client and sonner
 const mockGetNotificationSettings = vi.fn();
