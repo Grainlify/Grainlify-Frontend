@@ -166,20 +166,17 @@ Routing is centralized in [src/app/App.tsx](file:///c:/Trabajos%20Progra/GRANDFO
 
 ## API Client Conventions
 
-All backend API requests are centralized and handled by the client helper in [src/shared/api/client.ts](file:///c:/Trabajos%20Progra/GRANDFOX/Grainlify-Frontend/src/shared/api/client.ts).
+All backend API requests are centralized in [src/shared/api/client.ts](file:///c:/Trabajos%20Progra/GRANDFOX/Grainlify-Frontend/src/shared/api/client.ts).
 
-### Centralized Request helper
+> **Full reference**: See [docs/API_INTEGRATION.md](docs/API_INTEGRATION.md) for the complete endpoint listing, `ApiRequestOptions` contract, error handling conventions, AbortSignal usage, and the canonical `useOptimisticData` fetch pattern.
 
-- `apiRequest<T>(endpoint, options)` is the core helper.
-- Exposes common methods like `getCurrentUser()`, `getLeaderboard()`, `getPublicProjects()`, and `updateProfile()`.
+### Quick Rules
 
-### Conventions & Best Practices
-
-1. **Authentication Headers**: Set `requiresAuth: true` in your `ApiRequestOptions` for paths requiring JWT credentials. The helper will fetch `patchwork_jwt` from `localStorage` and inject the `Authorization: Bearer <jwt>` header.
-2. **CORS Optimization**: The client avoids sending redundant `Content-Type: application/json` headers on simple `GET` or `HEAD` requests when no body is provided, minimizing CORS preflight complexity.
-3. **Token Management & Error Boundary**:
-   - If an API call fails with status `401 Unauthorized`, the client automatically removes the token from `localStorage` via `removeAuthToken()` and triggers a `patchwork-auth-token` event to alert active contexts.
-   - 403 Forbidden responses automatically parse detailed server error feedback and throw descriptive, user-friendly errors.
+1. **Use the typed functions** — never hand-roll `fetch`. Every endpoint is exposed as a typed function from `client.ts`.
+2. **Set `requiresAuth: true`** for endpoints that need JWT. The helper reads `patchwork_jwt` from `localStorage` and injects `Authorization: Bearer <jwt>`.
+3. **CORS Optimization**: The client avoids sending redundant `Content-Type: application/json` on simple `GET`/`HEAD` requests (no body), minimizing preflight complexity.
+4. **Token Management**: On HTTP 401, the client calls `removeAuthToken()` and dispatches a `patchwork-auth-token` event. On HTTP 403, it parses the server error and throws a descriptive message.
+5. **Error Display**: Catch errors from API calls and use `getUserFriendlyError(err)` from `src/shared/utils/errorHandler.ts` and `<DataState>` from `src/shared/components/DataState.tsx` for user-facing messages.
 
 ---
 
