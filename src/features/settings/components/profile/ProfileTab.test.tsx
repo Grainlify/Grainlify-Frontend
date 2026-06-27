@@ -51,6 +51,16 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 describe('ProfileTab', () => {
   it('renders heading and loads data', async () => {
     mockGetCurrentUser.mockResolvedValue(mockUser)
@@ -156,6 +166,69 @@ describe('ProfileTab', () => {
       expect(toast.error).toHaveBeenCalledWith(
         'Failed to update profile. Please try again.',
       )
+    })
+  })
+
+  it('keeps form save idle while the avatar upload is pending', async () => {
+    const avatarSave = deferred<void>()
+    mockGetCurrentUser.mockResolvedValue({
+      ...mockUser,
+      avatar_url: 'data:image/png;base64,new-avatar',
+    })
+    mockUpdateAvatar.mockReturnValue(avatarSave.promise)
+
+    renderWithTheme(<ProfileTab />)
+
+    const savePicture = await screen.findByRole('button', { name: 'Save Picture' })
+    await userEvent.click(savePicture)
+
+    expect(mockUpdateAvatar).toHaveBeenCalledWith('data:image/png;base64,new-avatar')
+    expect(screen.getByRole('button', { name: /saving picture/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /saving picture/i })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: /uploading/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^save$/i })).toHaveTextContent('Save')
+    expect(screen.queryByRole('button', { name: /^saving\.\.\.$/i })).not.toBeInTheDocument()
+
+    avatarSave.resolve()
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith('Profile picture updated successfully!')
+    })
+  })
+
+  it('keeps avatar controls idle while the profile form save is pending', async () => {
+    const user = userEvent.setup()
+    const profileSave = deferred<void>()
+    mockGetCurrentUser.mockResolvedValue({
+      ...mockUser,
+      avatar_url: 'data:image/png;base64,new-avatar',
+    })
+    mockUpdateProfile.mockReturnValue(profileSave.promise)
+
+    renderWithTheme(<ProfileTab />)
+
+    const firstNameInput = await screen.findByDisplayValue('John')
+    await user.clear(firstNameInput)
+    await user.type(firstNameInput, 'Jane')
+
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    expect(screen.getByRole('button', { name: /^saving\.\.\.$/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save Picture' })).not.toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Update' })).not.toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+    expect(screen.queryByRole('button', { name: /saving picture/i })).not.toBeInTheDocument()
+
+    profileSave.resolve()
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith('Profile updated successfully!')
     })
   })
 })

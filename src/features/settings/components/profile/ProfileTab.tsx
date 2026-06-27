@@ -1,7 +1,7 @@
 import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { Github, User, Upload, Link as LinkIcon } from 'lucide-react';
+import { Github, Loader2, User, Upload, Link as LinkIcon } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { getCurrentUser, updateProfile, updateAvatar, resyncGitHubProfile } from '../../../../shared/api/client';
 import { toast } from 'sonner';
@@ -50,6 +50,7 @@ export function ProfileTab() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [isResyncing, setIsResyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -199,7 +200,7 @@ export function ProfileTab() {
   const handleSaveAvatar = async () => {
     if (!avatarUrl) return;
 
-    setIsSaving(true);
+    setIsSavingAvatar(true);
     try {
       await updateAvatar(avatarUrl);
       // Refetch user data to get updated avatar
@@ -213,7 +214,7 @@ export function ProfileTab() {
       logger.error('Failed to update avatar:', error);
       toast.error('Failed to update avatar. Please try again.');
     } finally {
-      setIsSaving(false);
+      setIsSavingAvatar(false);
     }
   };
 
@@ -367,21 +368,29 @@ export function ProfileTab() {
           />
           <button
             onClick={() => fileInputRef.current?.click()}
+            disabled={isSavingAvatar}
+            aria-busy={isSavingAvatar}
             className={`px-5 py-2.5 rounded-[12px] backdrop-blur-[30px] border font-medium text-[14px] hover:bg-white/[0.2] transition-all flex items-center gap-2 ${theme === 'dark'
               ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#d4c5b0]'
               : 'bg-white/[0.15] border-white/25 text-[#2d2820]'
-              }`}
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            <Upload className="w-4 h-4" />
-            Update
+            {isSavingAvatar ? (
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Upload className="w-4 h-4" />
+            )}
+            {isSavingAvatar ? 'Uploading...' : 'Update'}
           </button>
           {avatarUrl && avatarUrl !== currentUser?.github?.avatar_url && (
             <button
               onClick={handleSaveAvatar}
-              disabled={isSaving}
-              className={`px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-medium text-[14px] shadow-[0_4px_16px_rgba(162,121,44,0.3)] hover:shadow-[0_6px_20px_rgba(162,121,44,0.4)] transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed`}
+              disabled={isSavingAvatar}
+              aria-busy={isSavingAvatar}
+              className={`px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-medium text-[14px] shadow-[0_4px_16px_rgba(162,121,44,0.3)] hover:shadow-[0_6px_20px_rgba(162,121,44,0.4)] transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
             >
-              {isSaving ? 'Saving...' : 'Save Picture'}
+              {isSavingAvatar && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
+              {isSavingAvatar ? 'Saving picture...' : 'Save Picture'}
             </button>
           )}
         </div>
