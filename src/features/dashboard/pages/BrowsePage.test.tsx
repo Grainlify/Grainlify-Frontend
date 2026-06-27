@@ -12,12 +12,17 @@ vi.mock("../../../shared/api/client", () => ({
 }));
 
 // --- Mock heavy / presentational children -------------------------------
+const projectCardRenderCount = vi.fn();
+
+// Use a real memoization for the mock to test BrowsePage's stability
+import { memo } from "react";
+const MockProjectCard = memo(({ project }: { project: { id: string; name: string } }) => {
+  projectCardRenderCount();
+  return <div data-testid={`project-card-${project.id}`}>{project.name}</div>;
+});
+
 vi.mock("../components/ProjectCard", () => ({
-  ProjectCard: ({ project }: { project: { id: string; name: string } }) => (
-    <div data-testid="project-card">{project.name}</div>
-  ),
-  // The page imports the `Project` type from this module; a runtime stub is
-  // enough since types are erased.
+  ProjectCard: (props: any) => <MockProjectCard {...props} />,
 }));
 vi.mock("../components/ProjectCardSkeleton", () => ({
   ProjectCardSkeleton: () => <div data-testid="project-skeleton" />,
@@ -73,7 +78,7 @@ function makeResponse(count: number, total: number, start = 0) {
   };
 }
 
-const cards = () => screen.queryAllByTestId("project-card").length;
+const cards = () => screen.queryAllByTestId(/^project-card-/).length;
 
 const renderPage = () =>
   render(
@@ -87,6 +92,7 @@ beforeEach(() => {
   getEcosystems.mockReset();
   getEcosystems.mockResolvedValue({ ecosystems: [] });
   localStorage.clear();
+  projectCardRenderCount.mockClear();
 });
 
 describe("BrowsePage pagination", () => {
@@ -253,7 +259,7 @@ describe("BrowsePage rendering & data mapping", () => {
     renderPage();
 
     await waitFor(() => expect(cards()).toBe(1));
-    expect(screen.getByTestId("project-card")).toHaveTextContent("big");
+    expect(screen.getByTestId("project-card-x1")).toHaveTextContent("big");
     expect(screen.getByText(/reached the end of the list/i)).toBeInTheDocument();
   });
 
@@ -271,7 +277,7 @@ describe("BrowsePage rendering & data mapping", () => {
     renderPage();
 
     await waitFor(() => expect(cards()).toBe(1));
-    expect(screen.getByTestId("project-card")).toHaveTextContent("real");
+    expect(screen.getByTestId("project-card-ok")).toHaveTextContent("real");
   });
 
   it("loads active ecosystems for the filter options", async () => {
@@ -356,6 +362,44 @@ describe("BrowsePage rendering & data mapping", () => {
     await waitFor(() =>
       expect(screen.getByText("No projects found")).toBeInTheDocument(),
     );
+  });
+});
+
+describe("BrowsePage memoization", () => {
+  it("does not re-render ProjectCards when opening a dropdown", async () => {
+    getPublicProjects.mockResolvedValueOnce(makeResponse(5, 5));
+    renderPage();
+
+    // Wait for projects to load
+    await waitFor(() => expect(cards()).toBe(5));
+
+    // Reset count after initial render
+    projectCardRenderCount.mockClear();
+
+    // Toggle a dropdown (triggers state change in BrowsePage)
+    await userEvent.click(screen.getByRole("button", { name: "open-languages" }));
+
+    // Verify projects are still there
+    expect(cards()).toBe(5);
+
+    // ProjectCards should not have re-rendered because we're using React.memo
+    // and BrowsePage passed memoized handlers.
+    expect(projectCardRenderCount).not.toHaveBeenCalled();
+  });
+
+  it("does not re-render ProjectCards when changing search terms in a dropdown", async () => {
+    getPublicProjects.mockResolvedValueOnce(makeResponse(5, 5));
+    renderPage();
+
+    await waitFor(() => expect(cards()).toBe(5));
+
+    projectCardRenderCount.mockClear();
+
+    // Change search term (triggers state change in BrowsePage)
+    await userEvent.click(screen.getByRole("button", { name: "search-languages" }));
+
+    expect(cards()).toBe(5);
+    expect(projectCardRenderCount).not.toHaveBeenCalled();
   });
 });
 

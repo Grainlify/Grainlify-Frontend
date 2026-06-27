@@ -1,7 +1,7 @@
 import { logger } from '../../../shared/utils/logger';
 import { X } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Dropdown } from "../../../shared/components/ui/Dropdown";
 import { ProjectCard, Project } from "../components/ProjectCard";
 import { ProjectCardSkeleton } from "../components/ProjectCardSkeleton";
@@ -183,32 +183,35 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
   const [_isLoadingEcosystems, setIsLoadingEcosystems] = useState(true);
 
   // Filter options data
-  const filterOptions = {
-    languages: [
-      { name: "TypeScript" },
-      { name: "JavaScript" },
-      { name: "Python" },
-      { name: "Go" },
-      { name: "Rust" },
-      { name: "Java" },
-    ],
-    ecosystems: ecosystems,
-    categories: [
-      { name: "Frontend" },
-      { name: "Backend" },
-      { name: "Full Stack" },
-      { name: "DevOps" },
-      { name: "Mobile" },
-    ],
-    tags: [
-      { name: "Good first issues" },
-      { name: "Open issues" },
-      { name: "Help wanted" },
-      { name: "Bug" },
-      { name: "Feature" },
-      { name: "Documentation" },
-    ],
-  };
+  const filterOptions = useMemo(
+    () => ({
+      languages: [
+        { name: "TypeScript" },
+        { name: "JavaScript" },
+        { name: "Python" },
+        { name: "Go" },
+        { name: "Rust" },
+        { name: "Java" },
+      ],
+      ecosystems: ecosystems,
+      categories: [
+        { name: "Frontend" },
+        { name: "Backend" },
+        { name: "Full Stack" },
+        { name: "DevOps" },
+        { name: "Mobile" },
+      ],
+      tags: [
+        { name: "Good first issues" },
+        { name: "Open issues" },
+        { name: "Help wanted" },
+        { name: "Bug" },
+        { name: "Feature" },
+        { name: "Documentation" },
+      ],
+    }),
+    [ecosystems],
+  );
 
   // Fetch ecosystems from API
   useEffect(() => {
@@ -256,21 +259,35 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
     fetchEcosystems();
   }, []);
 
-  const toggleFilter = (filterType: string, value: string) => {
+  const toggleFilter = useCallback((filterType: string, value: string) => {
     setSelectedFilters((prev) => ({
       ...prev,
       [filterType]: prev[filterType].includes(value)
         ? prev[filterType].filter((v) => v !== value)
         : [...prev[filterType], value],
     }));
-  };
+  }, []);
 
-  const clearFilter = (filterType: string, value: string) => {
+  const clearFilter = useCallback((filterType: string, value: string) => {
     setSelectedFilters((prev) => ({
       ...prev,
       [filterType]: prev[filterType].filter((v) => v !== value),
     }));
-  };
+  }, []);
+
+  const handleSearchChange = useCallback((filterType: string, value: string) => {
+    setSearchTerms((prev) => ({ ...prev, [filterType]: value }));
+  }, []);
+
+  const handleToggleOpen = useCallback((filterType: string) => {
+    setOpenDropdown((prev) => (prev === filterType ? null : filterType));
+  }, []);
+
+  const handleCloseDropdown = useCallback(() => setOpenDropdown(null), []);
+
+  const projectOnClick = useCallback((id: string) => {
+    onProjectClick?.(id);
+  }, [onProjectClick]);
 
 
   /**
@@ -405,24 +422,29 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
 
       {/* Filters */}
       <div className="flex items-center flex-wrap gap-3">
-        {["languages", "ecosystems", "categories", "tags"].map((filterType) => (
-          <Dropdown
-            key={filterType}
-            filterType={filterType}
-            options={filterOptions[filterType as keyof typeof filterOptions]}
-            selectedValues={selectedFilters[filterType]}
-            onToggle={(value) => toggleFilter(filterType, value)}
-            searchValue={searchTerms[filterType]}
-            onSearchChange={(value) =>
-              setSearchTerms((prev) => ({ ...prev, [filterType]: value }))
-            }
-            isOpen={openDropdown === filterType}
-            onToggleOpen={() =>
-              setOpenDropdown(openDropdown === filterType ? null : filterType)
-            }
-            onClose={() => setOpenDropdown(null)}
-          />
-        ))}
+        {["languages", "ecosystems", "categories", "tags"].map((filterType) => {
+          // Stable callback per filter type
+          const onToggle = (value: string) => toggleFilter(filterType, value);
+          const onSearchChange = (value: string) => handleSearchChange(filterType, value);
+          const onToggleOpen = () => handleToggleOpen(filterType);
+
+          return (
+            <Dropdown
+              key={filterType}
+              filterType={filterType}
+              options={
+                filterOptions[filterType as keyof typeof filterOptions]
+              }
+              selectedValues={selectedFilters[filterType]}
+              onToggle={onToggle}
+              searchValue={searchTerms[filterType]}
+              onSearchChange={onSearchChange}
+              isOpen={openDropdown === filterType}
+              onToggleOpen={onToggleOpen}
+              onClose={handleCloseDropdown}
+            />
+          );
+        })}
       </div>
 
       {/* Projects Grid */}
@@ -456,7 +478,7 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
               <ProjectCard
                 key={project.id}
                 project={project}
-                onClick={onProjectClick}
+                onClick={projectOnClick}
               />
             ))}
           </div>
