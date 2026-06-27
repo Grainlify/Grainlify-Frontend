@@ -5,11 +5,18 @@ import { Activity } from '../../types';
 interface ActivityItemProps {
   activity: Activity;
   index: number;
+  /** 
+   * Called when the user activates the row (click, Enter, or Space).
+   * When omitted, the row renders as a non-interactive element 
+   * with no pointer cursor, tabIndex, or keyboard handlers.
+   */
   onClick?: () => void;
 }
 
 /**
  * ActivityItem
+ *
+ * Renders a single activity row in the maintainer dashboard.
  *
  * Navigation behaviour:
  * - The row is interactive only when an `onClick` handler is provided by the parent.
