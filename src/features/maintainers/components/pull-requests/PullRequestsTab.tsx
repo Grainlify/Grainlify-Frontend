@@ -1,11 +1,13 @@
 import { logger } from '../../../../shared/utils/logger';
-import { useState, useEffect } from 'react';
-import { Search, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Search, AlertCircle, ShieldOff } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
+import { useAuth } from '../../../../shared/contexts/AuthContext';
+import { useOptimisticData } from '../../../../shared/hooks/useOptimisticData';
 import { PRFilterType } from '../../types';
 import { PRRow } from './PRRow';
 import { PRFilterDropdown } from './PRFilterDropdown';
-import { getProjectPRs } from '../../../../shared/api/client';
+import { getMaintainerPRs } from '../../../../shared/api/client';
 import { PRRowSkeleton } from '../../../../shared/components/PRRowSkeleton';
 
 interface PRFromAPI {
@@ -34,47 +36,96 @@ interface PullRequestsTabProps {
   onRefresh?: () => void;
 }
 
+/**
+ * Explicit empty-state buckets for the PR table.
+ *
+ * Keeping these states separate avoids a generic "no rows" message and lets
+ * the UI tell the user whether they need to select repositories, wait for PRs
+ * to exist for the selected repositories, or clear filters.
+ */
+type EmptyStateKind = 'no-repos' | 'no-prs' | 'no-matches';
+
+/**
+ * Returns the empty-state bucket to render after loading and errors have been
+ * ruled out.
+ */
+function getEmptyStateKind({
+  selectedProjectCount,
+  totalPullRequests,
+  hasActiveFilters,
+}: {
+  selectedProjectCount: number;
+  totalPullRequests: number;
+  hasActiveFilters: boolean;
+}): EmptyStateKind | null {
+  if (selectedProjectCount === 0) {
+    return 'no-repos';
+  }
+
+  if (totalPullRequests === 0) {
+    return 'no-prs';
+  }
+
+  if (hasActiveFilters) {
+    return 'no-matches';
+  }
+
+  return null;
+}
+
 export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
   const { theme } = useTheme();
+  const { userRole } = useAuth();
+  const isAuthorized = userRole === 'maintainer' || userRole === 'admin';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<PRFilterType>('All states');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-  const [prs, setPrs] = useState<Array<PRFromAPI & { projectName: string }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Fetch PRs from selected projects
-  useEffect(() => {
-    loadPRs();
-  }, [selectedProjects]);
+  const {
+    data: prs,
+    isLoading,
+    hasError,
+    error,
+    retry,
+    fetchData,
+  } = useOptimisticData<Array<PRFromAPI & { projectName: string }>>([], {
+    cacheKey: `maintainer-prs-${selectedProjects.map((p) => p.id).join(',')}`,
+    cacheDuration: 30000,
+  });
 
-  const loadPRs = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
+  const loadPRs = useCallback(async () => {
+    if (!isAuthorized) return;
+    await fetchData(async (signal) => {
       if (selectedProjects.length === 0) {
-        setPrs([]);
-        setIsLoading(false);
-        return;
+        return [];
       }
 
       // Fetch PRs from all selected projects in parallel
+      let successCount = 0;
+      let lastError: any = null;
+
       const prPromises = selectedProjects.map(async (project: Project) => {
         try {
-          const response = await getProjectPRs(project.id);
+          const response = await getMaintainerPRs(project.id, { signal });
+          successCount++;
           return (response.prs || []).map((pr: PRFromAPI) => ({
             ...pr,
             projectName: project.github_full_name,
           }));
         } catch (err) {
           logger.error(`Failed to fetch PRs for ${project.github_full_name}:`, err);
+          lastError = err;
           return [];
         }
       });
 
       const allPRs = await Promise.all(prPromises);
+      if (selectedProjects.length > 0 && successCount === 0 && lastError) {
+        throw lastError;
+      }
       const flattenedPRs = allPRs.flat();
-      
+
       // Sort by updated_at (most recent first)
       flattenedPRs.sort((a, b) => {
         const dateA = a.updated_at ? new Date(a.updated_at).getTime() : new Date(a.last_seen_at).getTime();
@@ -82,41 +133,58 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
         return dateB - dateA;
       });
 
-      setPrs(flattenedPRs);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load pull requests';
-      setError(errorMessage);
-      setPrs([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return flattenedPRs;
+    });
+  }, [selectedProjects, fetchData, isAuthorized]);
+
+  // Fetch PRs from selected projects
+  useEffect(() => {
+    loadPRs();
+  }, [loadPRs]);
 
   // Refresh PRs when selectedProjects change
   // Also refresh when page becomes visible (user switches back to tab)
   // And when repositories are refreshed (new repo added)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && selectedProjects.length > 0) {
+      if (document.visibilityState === 'visible') {
         loadPRs();
       }
     };
 
     const handleRepositoriesRefreshed = () => {
-      // Refresh PRs when repositories are added/updated
-      if (selectedProjects.length > 0) {
-        loadPRs();
-      }
+      // Refresh PRs when repositories are added or updated.
+      loadPRs();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('repositories-refreshed', handleRepositoriesRefreshed);
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('repositories-refreshed', handleRepositoriesRefreshed);
     };
-  }, [selectedProjects]);
+  }, [loadPRs]);
+
+  if (!isAuthorized) {
+    return (
+      <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 flex flex-col items-center justify-center text-center transition-colors ${
+        theme === 'dark'
+          ? 'bg-[#2d2820]/[0.4] border-white/10'
+          : 'bg-white/[0.12] border-white/20'
+      }`}>
+        <ShieldOff className="w-16 h-16 text-red-500/70 mb-4" strokeWidth={1.5} />
+        <h3 className={`text-[20px] font-bold mb-2 transition-colors ${
+          theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+        }`}>Access Restricted</h3>
+        <p className={`text-[14px] max-w-md transition-colors ${
+          theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+        }`}>
+          You must be a project maintainer or admin to access pull request data.
+        </p>
+      </div>
+    );
+  }
 
   // Filter PRs based on search and filter
   const filteredPRs = prs.filter(pr => {
@@ -148,6 +216,15 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
     setSearchQuery('');
     setFilter('All states');
   };
+
+  const hasActiveFilters = searchQuery.trim().length > 0 || filter !== 'All states';
+  const emptyStateKind = !isLoading && !error
+    ? getEmptyStateKind({
+        selectedProjectCount: selectedProjects.length,
+        totalPullRequests: prs.length,
+        hasActiveFilters,
+      })
+    : null;
 
   return (
     <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 transition-colors ${
@@ -195,16 +272,19 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
         />
 
         {/* Clear Filters Button */}
-        <button 
-          className={`px-5 py-3 rounded-[14px] backdrop-blur-[25px] border transition-all ${
-            theme === 'dark'
-              ? 'bg-white/[0.08] border-white/20 hover:bg-white/[0.12] hover:border-[#c9983a]/30 text-[#b8a898]'
-              : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:border-[#c9983a]/30 text-[#7a6b5a]'
-          }`}
-          onClick={handleClearFilters}
-        >
-          <span className="text-[14px] font-semibold">Clear filters</span>
-        </button>
+        {hasActiveFilters && (
+          <button
+            className={`px-5 py-3 rounded-[14px] backdrop-blur-[25px] border transition-all ${
+              theme === 'dark'
+                ? 'bg-white/[0.08] border-white/20 hover:bg-white/[0.12] hover:border-[#c9983a]/30 text-[#b8a898]'
+                : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:border-[#c9983a]/30 text-[#7a6b5a]'
+            }`}
+            onClick={handleClearFilters}
+            type="button"
+          >
+            <span className="text-[14px] font-semibold">Clear filters</span>
+          </button>
+        )}
       </div>
 
       {/* Pull Requests Table */}
@@ -234,14 +314,29 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
               <PRRowSkeleton key={idx} />
             ))}
           </div>
-        ) : error ? (
-          <div className={`flex items-center gap-3 px-6 py-4 mx-4 rounded-[12px] ${
+        ) : hasError ? (
+          <div className={`flex flex-col items-center gap-3 px-6 py-6 mx-4 rounded-[16px] border transition-colors ${
             theme === 'dark'
-              ? 'bg-red-500/10 border border-red-500/30 text-red-400'
-              : 'bg-red-100 border border-red-300 text-red-700'
+              ? 'bg-red-500/10 border-red-500/20 text-red-400'
+              : 'bg-red-100/50 border-red-300/40 text-red-700'
           }`}>
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="text-[14px] font-medium">{error}</span>
+            <AlertCircle className="w-8 h-8 flex-shrink-0" />
+            <div className="text-center">
+              <p className="text-[14px] font-semibold mb-1">Failed to load pull requests</p>
+              <p className="text-[12px] opacity-80 mb-3">
+                {error instanceof Error ? error.message : typeof error === 'string' ? error : 'An unknown error occurred'}
+              </p>
+              <button
+                onClick={retry}
+                className={`px-4 py-2 rounded-[10px] text-[12px] font-bold border transition-all ${
+                  theme === 'dark'
+                    ? 'bg-white/10 hover:bg-white/15 border-white/20 text-white'
+                    : 'bg-white hover:bg-white/50 border-gray-300 text-gray-800'
+                }`}
+              >
+                Retry Connection
+              </button>
+            </div>
           </div>
         ) : filteredPRs.length > 0 ? (
           filteredPRs.map((pr) => {
@@ -287,20 +382,64 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
             return <PRRow key={`${pr.github_pr_id}-${pr.projectName}`} pr={prForComponent} />;
           })
         ) : (
-          <div className="text-center py-12">
-            <p className={`text-[14px] font-medium mb-1 transition-colors ${
-              theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-            }`}>
-              {selectedProjects.length === 0 
-                ? 'Select repositories to view pull requests' 
-                : 'No pull requests found in selected repositories'}
-            </p>
-            {selectedProjects.length === 0 && (
-              <p className={`text-[12px] transition-colors ${
-                theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
-              }`}>
-                Use the repository selector above to choose which repositories to view
-              </p>
+          <div
+            className={`text-center py-12 px-6 rounded-[16px] border ${
+              theme === 'dark' ? 'bg-white/[0.04] border-white/10' : 'bg-white/[0.08] border-white/15'
+            }`}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {emptyStateKind === 'no-repos' ? (
+              <>
+                <p className={`text-[14px] font-medium mb-1 transition-colors ${
+                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                }`}>
+                  Select one or more repositories to view pull requests
+                </p>
+                <p className={`text-[12px] transition-colors ${
+                  theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
+                }`}>
+                  Use the repository selector above to choose which repositories to include.
+                </p>
+              </>
+            ) : emptyStateKind === 'no-prs' ? (
+              <>
+                <p className={`text-[14px] font-medium mb-1 transition-colors ${
+                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                }`}>
+                  No pull requests were found in the selected repositories
+                </p>
+                <p className={`text-[12px] transition-colors ${
+                  theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
+                }`}>
+                  Try a different repository selection or come back after new pull requests are opened.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className={`text-[14px] font-medium mb-1 transition-colors ${
+                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                }`}>
+                  No pull requests match the current search or state filters
+                </p>
+                <p className={`text-[12px] mb-4 transition-colors ${
+                  theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
+                }`}>
+                  Clear the search or state filter to bring rows back into view.
+                </p>
+                <button
+                  className={`px-5 py-3 rounded-[14px] backdrop-blur-[25px] border transition-all ${
+                    theme === 'dark'
+                      ? 'bg-white/[0.08] border-white/20 hover:bg-white/[0.12] hover:border-[#c9983a]/30 text-[#b8a898]'
+                      : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:border-[#c9983a]/30 text-[#7a6b5a]'
+                  }`}
+                  onClick={handleClearFilters}
+                  type="button"
+                >
+                  <span className="text-[14px] font-semibold">Clear filters</span>
+                </button>
+              </>
             )}
           </div>
         )}
