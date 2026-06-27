@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { X, FileText, Code, GitBranch, Users, Loader2 } from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
-import { API_BASE_URL } from '../../../shared/config/api'
-import { getAuthToken } from '../../../shared/api/client'
+import { apiRequest } from '../../../shared/api/client'
 import { logger } from '../../../shared/utils/logger'
 
 /**
@@ -61,30 +60,13 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
     setIsInstalling(true)
 
     try {
-      const token = getAuthToken()
-      if (!token) {
-        throw new Error('Please sign in to install the GitHub App')
-      }
-
       // Get installation URL from backend
-      const response = await fetch(`${API_BASE_URL}/auth/github/app/install/start`, {
+      const data = await apiRequest<{ install_url: string }>('/auth/github/app/install/start', {
         method: 'POST',
+        requiresAuth: true,
         signal: abortController.signal,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
       })
 
-      if (abortController.signal.aborted) return
-
-      if (!response.ok) {
-        const error = await response.json()
-        if (abortController.signal.aborted) return
-        throw new Error(error.message || error.error || 'Failed to start installation')
-      }
-
-      const data = await response.json()
       if (abortController.signal.aborted) return
 
       // Store "don't show again" preference

@@ -146,6 +146,19 @@ All backend API requests are centralized and handled by the client helper in [sr
    - If an API call fails with status `401 Unauthorized`, the client automatically removes the token from `localStorage` via `removeAuthToken()` and triggers a `patchwork-auth-token` event to alert active contexts.
    - 403 Forbidden responses automatically parse detailed server error feedback and throw descriptive, user-friendly errors.
 
+### ESLint Enforcement — Centralised Network & Token Access
+
+Two ESLint rules (`no-restricted-syntax`) prevent accidental drift from the centralised API layer:
+
+| Rule | Selector | Rationale |
+| :--- | :------- | :-------- |
+| **No raw `fetch()`** | `CallExpression[callee.name="fetch"]` | Bypassing `apiRequest` skips auth headers, X-Request-Id, error normalization, and the 401 clear-redirect flow. Every request must use the centralised client. |
+| **No direct `patchwork_jwt` access** | `CallExpression[callee.object.name="localStorage"] … [arguments.0.value="patchwork_jwt"]` | Reads and writes to the JWT key must go through `getAuthToken` / `setAuthToken` / `removeAuthToken` so token storage strategy can be changed (e.g. to httpOnly cookies) without hunting down ad‑hoc `localStorage` calls. |
+
+**Exempt files** — `src/shared/api/client.ts` and `src/shared/config/api.ts` are allowed because they _define_ the centralised accessors.
+
+**Adding a new endpoint:** Always add it as a named function in `client.ts` that calls `apiRequest`. Never write `fetch(url, …)` in a component or hook. If the endpoint returns binary data, add the function to `client.ts` and apply an inline `// eslint-disable-next-line no-restricted-syntax` with a short justification for the raw fetch.
+
 ---
 
 ## Testing Setup
