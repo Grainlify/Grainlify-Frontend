@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ArrowRight, X, FileText, FolderGit2, User, ChevronLeft } from 'lucide-react';
+import { Search, ArrowRight, X, FileText, FolderGit2, User, ChevronLeft, type LucideIcon } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { useDebouncedValue } from '../../../shared/hooks/useDebouncedValue';
 
@@ -15,59 +15,82 @@ interface SearchResult {
   type: 'issue' | 'project' | 'contributor';
   title: string;
   subtitle?: string;
-  icon: any;
+  icon: LucideIcon;
 }
+
+/** Maximum user-entered search query length sent through the debounced search path. */
+export const SEARCH_QUERY_MAX_LENGTH = 120;
+
+/** Show remaining-character guidance once the query is close to the hard cap. */
+const SEARCH_QUERY_WARNING_THRESHOLD = 100;
+
+/** Keeps pasted text inside the same bound enforced by the input maxLength attribute. */
+function clampSearchQuery(value: string): string {
+  return value.slice(0, SEARCH_QUERY_MAX_LENGTH);
+}
+
+const SEARCH_SUGGESTIONS = [
+  "Terminal-based markdown editors worth checking out",
+  "Unity projects for procedural terrain generation",
+  "Find the best GraphQL clients for TypeScript",
+  "AI-powered tools for reviewing pull requests",
+];
+
+// Mock data for search - in real app, this would come from API.
+const SEARCH_DATA = {
+  issues: [
+    { id: '1', title: 'Add dark mode support', project: 'React Dashboard' },
+    { id: '2', title: 'Fix navigation bug in mobile view', project: 'Mobile App' },
+    { id: '3', title: 'Implement user authentication', project: 'Backend API' },
+    { id: '4', title: 'Update documentation for API endpoints', project: 'Backend API' },
+    { id: '5', title: 'Refactor component structure', project: 'React Dashboard' },
+  ],
+  projects: [
+    { id: '1', name: 'React Dashboard', description: 'Modern dashboard with React and TypeScript' },
+    { id: '2', name: 'Mobile App', description: 'Cross-platform mobile application' },
+    { id: '3', name: 'Backend API', description: 'RESTful API built with Node.js' },
+    { id: '4', name: 'Design System', description: 'Component library and design tokens' },
+  ],
+  contributors: [
+    { id: '1', name: 'Sarah Johnson', contributions: 245 },
+    { id: '2', name: 'Mike Chen', contributions: 189 },
+    { id: '3', name: 'Emily Rodriguez', contributions: 156 },
+    { id: '4', name: 'David Park', contributions: 134 },
+  ],
+};
 
 export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributorClick }: SearchPageProps) {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const darkTheme = theme === 'dark';
+  const searchQueryLength = searchQuery.length;
+  const remainingSearchCharacters = SEARCH_QUERY_MAX_LENGTH - searchQueryLength;
+  const isNearSearchLimit = searchQueryLength >= SEARCH_QUERY_WARNING_THRESHOLD;
+  const trimmedSearchQuery = searchQuery.trim();
+  const searchCounterMessage =
+    remainingSearchCharacters === 0
+      ? 'Search limit reached.'
+      : isNearSearchLimit
+        ? `${remainingSearchCharacters} characters remaining.`
+        : `${searchQueryLength} / ${SEARCH_QUERY_MAX_LENGTH} characters`;
 
   // Debounce the query so filtering only runs once the user pauses typing.
   const debouncedQuery = useDebouncedValue(searchQuery, 300);
 
-  const searchSuggestions = [
-    "Terminal-based markdown editors worth checking out",
-    "Unity projects for procedural terrain generation",
-    "Find the best GraphQL clients for TypeScript",
-    "AI-powered tools for reviewing pull requests",
-  ];
-
-  // Mock data for search - in real app, this would come from API
-  const allData = {
-    issues: [
-      { id: '1', title: 'Add dark mode support', project: 'React Dashboard' },
-      { id: '2', title: 'Fix navigation bug in mobile view', project: 'Mobile App' },
-      { id: '3', title: 'Implement user authentication', project: 'Backend API' },
-      { id: '4', title: 'Update documentation for API endpoints', project: 'Backend API' },
-      { id: '5', title: 'Refactor component structure', project: 'React Dashboard' },
-    ],
-    projects: [
-      { id: '1', name: 'React Dashboard', description: 'Modern dashboard with React and TypeScript' },
-      { id: '2', name: 'Mobile App', description: 'Cross-platform mobile application' },
-      { id: '3', name: 'Backend API', description: 'RESTful API built with Node.js' },
-      { id: '4', name: 'Design System', description: 'Component library and design tokens' },
-    ],
-    contributors: [
-      { id: '1', name: 'Sarah Johnson', contributions: 245 },
-      { id: '2', name: 'Mike Chen', contributions: 189 },
-      { id: '3', name: 'Emily Rodriguez', contributions: 156 },
-      { id: '4', name: 'David Park', contributions: 134 },
-    ],
-  };
-
   useEffect(() => {
-    if (!debouncedQuery.trim()) {
+    const normalizedQuery = debouncedQuery.trim();
+
+    if (!normalizedQuery) {
       setSearchResults([]);
       return;
     }
 
-    const query = debouncedQuery.toLowerCase();
+    const query = normalizedQuery.toLowerCase();
     const results: SearchResult[] = [];
 
     // Search issues
-    allData.issues.forEach(issue => {
+    SEARCH_DATA.issues.forEach(issue => {
       if (issue.title.toLowerCase().includes(query) || issue.project.toLowerCase().includes(query)) {
         results.push({
           id: issue.id,
@@ -80,7 +103,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
     });
 
     // Search projects
-    allData.projects.forEach(project => {
+    SEARCH_DATA.projects.forEach(project => {
       if (project.name.toLowerCase().includes(query) || project.description.toLowerCase().includes(query)) {
         results.push({
           id: project.id,
@@ -93,7 +116,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
     });
 
     // Search contributors
-    allData.contributors.forEach(contributor => {
+    SEARCH_DATA.contributors.forEach(contributor => {
       if (contributor.name.toLowerCase().includes(query)) {
         results.push({
           id: contributor.id,
@@ -119,7 +142,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    setSearchQuery(suggestion);
+    setSearchQuery(clampSearchQuery(suggestion));
   };
 
   return (
@@ -159,52 +182,69 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
         </p>
 
         {/* Search Input */}
-        <div 
-          className={`relative h-[64px] rounded-[32px] mb-8 transition-colors ${
-            darkTheme 
-              ? 'bg-[#2d2820]/60 border border-white/10' 
-              : 'bg-white/60 border border-black/10'
-          }`}
-          style={{ backdropFilter: 'blur(40px)' }}
-        >
-          <div className="absolute inset-0 flex items-center px-6">
-            <Search className={`w-5 h-5 mr-4 flex-shrink-0 transition-colors ${
-              darkTheme ? 'text-white/50' : 'text-black/50'
-            }`} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search issues, projects, contributors..."
-              autoFocus
-              className={`flex-1 bg-transparent outline-none text-[16px] transition-colors ${
-                darkTheme 
-                  ? 'text-white placeholder:text-white/40' 
-                  : 'text-[#2d2820] placeholder:text-black/40'
-              }`}
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className={`w-8 h-8 rounded-full flex items-center justify-center ml-4 flex-shrink-0 transition-all hover:scale-105 ${
+        <div className="mb-8">
+          <div
+            className={`relative h-[64px] rounded-[32px] transition-colors ${
+              darkTheme
+                ? 'bg-[#2d2820]/60 border border-white/10'
+                : 'bg-white/60 border border-black/10'
+            }`}
+            style={{ backdropFilter: 'blur(40px)' }}
+          >
+            <div className="absolute inset-0 flex items-center px-6">
+              <Search className={`w-5 h-5 mr-4 flex-shrink-0 transition-colors ${
+                darkTheme ? 'text-white/50' : 'text-black/50'
+              }`} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(clampSearchQuery(e.target.value))}
+                placeholder="Search issues, projects, contributors..."
+                maxLength={SEARCH_QUERY_MAX_LENGTH}
+                aria-describedby="search-query-counter"
+                autoFocus
+                className={`flex-1 bg-transparent outline-none text-[16px] transition-colors ${
                   darkTheme
-                    ? 'bg-white/10 hover:bg-white/20 text-white/60'
-                    : 'bg-black/10 hover:bg-black/20 text-black/60'
+                    ? 'text-white placeholder:text-white/40'
+                    : 'text-[#2d2820] placeholder:text-black/40'
+                }`}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ml-4 flex-shrink-0 transition-all hover:scale-105 ${
+                    darkTheme
+                      ? 'bg-white/10 hover:bg-white/20 text-white/60'
+                      : 'bg-black/10 hover:bg-black/20 text-black/60'
+                  }`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                className={`w-10 h-10 rounded-full flex items-center justify-center ml-3 flex-shrink-0 transition-all hover:scale-105 ${
+                  darkTheme
+                    ? 'bg-[#c9983a] hover:bg-[#d4a645]'
+                    : 'bg-[#c9983a] hover:bg-[#e8c571]'
                 }`}
               >
-                <X className="w-4 h-4" />
+                <ArrowRight className="w-5 h-5 text-white" />
               </button>
-            )}
-            <button 
-              className={`w-10 h-10 rounded-full flex items-center justify-center ml-3 flex-shrink-0 transition-all hover:scale-105 ${
-                darkTheme
-                  ? 'bg-[#c9983a] hover:bg-[#d4a645]'
-                  : 'bg-[#c9983a] hover:bg-[#e8c571]'
-              }`}
-            >
-              <ArrowRight className="w-5 h-5 text-white" />
-            </button>
+            </div>
           </div>
+          <p
+            id="search-query-counter"
+            aria-live="polite"
+            className={`mt-2 min-h-[18px] text-right text-[12px] transition-colors ${
+              remainingSearchCharacters === 0
+                ? darkTheme ? 'text-red-300' : 'text-red-700'
+                : isNearSearchLimit
+                  ? darkTheme ? 'text-[#e8c77f]' : 'text-[#8b6f3a]'
+                  : darkTheme ? 'text-[#b8a898]/70' : 'text-[#6b5d4d]/70'
+            }`}
+          >
+            {searchCounterMessage}
+          </p>
         </div>
 
         {/* Search Results */}
@@ -265,7 +305,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
         )}
 
         {/* No Results */}
-        {searchQuery && searchResults.length === 0 && (
+        {trimmedSearchQuery && searchResults.length === 0 && (
           <div className={`text-center py-12 transition-colors ${
             darkTheme ? 'text-[#b8a898]/60' : 'text-[#6b5d4d]/60'
           }`}>
@@ -276,7 +316,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
         )}
 
         {/* Search Suggestions */}
-        {!searchQuery && (
+        {!trimmedSearchQuery && (
           <div>
             <h2 className={`font-semibold mb-2 transition-colors ${
               darkTheme ? 'text-[#f5efe5]' : 'text-[#2d2820]'
@@ -291,7 +331,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
 
             {/* Suggestion Pills Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {searchSuggestions.map((suggestion, index) => (
+              {SEARCH_SUGGESTIONS.map((suggestion, index) => (
                 <button
                   key={index}
                   onClick={() => handleSuggestionClick(suggestion)}
