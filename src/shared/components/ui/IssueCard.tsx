@@ -44,7 +44,7 @@ export function IssueCard({
   variant = 'default',
   primaryTag,
   ...rest
-}: IssueCardProps & React.HTMLAttributes<HTMLDivElement>) {
+}: IssueCardProps & React.HTMLAttributes<HTMLElement>) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
