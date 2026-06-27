@@ -1,6 +1,6 @@
 import { Star, GitFork, Package } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 
 export interface Project {
   id: number | string;
@@ -21,7 +21,44 @@ interface ProjectCardProps {
   onClick?: (id: string) => void;
 }
 
-export function ProjectCard({ project, onClick }: ProjectCardProps) {
+/**
+ * Custom comparison function for ProjectCard to optimize rendering performance.
+ * It performs a shallow comparison of the project object's core properties
+ * and checks referential equality for the onClick handler.
+ *
+ * @param prevProps - The previous props of the component
+ * @param nextProps - The next props of the component
+ * @returns true if props are considered equal, false otherwise
+ */
+const areProjectPropsEqual = (prevProps: ProjectCardProps, nextProps: ProjectCardProps) => {
+  if (prevProps.onClick !== nextProps.onClick) return false;
+
+  const p1 = prevProps.project;
+  const p2 = nextProps.project;
+
+  return (
+    p1.id === p2.id &&
+    p1.name === p2.name &&
+    p1.stars === p2.stars &&
+    p1.forks === p2.forks &&
+    p1.contributors === p2.contributors &&
+    p1.openIssues === p2.openIssues &&
+    p1.prs === p2.prs &&
+    p1.description === p2.description &&
+    p1.color === p2.color &&
+    p1.icon === p2.icon &&
+    // Shallow array comparison for tags
+    p1.tags.length === p2.tags.length &&
+    p1.tags.every((tag, index) => tag === p2.tags[index])
+  );
+};
+
+/**
+ * ProjectCard component displays project information in a card format.
+ * Memoized to prevent unnecessary re-renders when parent list re-renders.
+ * Uses a custom comparison function for fine-grained control over re-renders.
+ */
+export const ProjectCard = memo(function ProjectCard({ project, onClick }: ProjectCardProps) {
   const { theme } = useTheme();
   const [avatarError, setAvatarError] = useState(false);
 
@@ -30,6 +67,7 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
 
   return (
     <div
+      data-testid={`project-card-${project.id}`}
       className={`backdrop-blur-[30px] rounded-[18px] border p-5 transition-all cursor-pointer ${
         theme === 'dark'
           ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.12] hover:shadow-[0_8px_24px_rgba(201,152,58,0.15)]'
@@ -106,9 +144,9 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       </div>
 
       <div className="flex flex-wrap gap-1.5">
-        {project.tags.map((tag, idx) => (
+        {project.tags.map((tag) => (
           <span
-            key={idx}
+            key={`${project.id}-${tag}`}
             className={`px-2 py-1 rounded-[8px] text-[11px] font-semibold shadow-[0_2px_8px_rgba(201,152,58,0.1)] ${
               theme === 'dark'
                 ? 'bg-[#c9983a]/20 border border-[#c9983a]/40 text-[#f5c563]'
@@ -121,4 +159,4 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       </div>
     </div>
   );
-}
+}, areProjectPropsEqual);
