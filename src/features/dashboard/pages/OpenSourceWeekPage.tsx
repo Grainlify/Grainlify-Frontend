@@ -165,11 +165,22 @@ export function OpenSourceWeekPage({ onEventClick }: OpenSourceWeekPageProps) {
           formattedEvents.map((event) => (
           <div
             key={event.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`${event.title}, status: ${event.statusLabel}`}
             onClick={() => onEventClick(event.id, event.title)}
-            className={`backdrop-blur-[40px] rounded-[24px] border p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all cursor-pointer ${
+            onKeyDown={(e) => {
+              // Only handle keys originating on this element, not bubbling from
+              // the nested "Join Event" button, which has its own click handler.
+              if (e.currentTarget === e.target && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                onEventClick(event.id, event.title);
+              }
+            }}
+            className={`backdrop-blur-[40px] rounded-[24px] border p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a]/70 focus-visible:ring-offset-2 ${
               theme === 'dark'
-                ? 'bg-white/[0.08] border-white/10 hover:bg-white/[0.12] hover:shadow-[0_8px_24px_rgba(201,152,58,0.15)]'
-                : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]'
+                ? 'bg-white/[0.08] border-white/10 hover:bg-white/[0.12] hover:shadow-[0_8px_24px_rgba(201,152,58,0.15)] focus-visible:ring-offset-[#1a1a1a]'
+                : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] focus-visible:ring-offset-white'
             }`}
           >
             <div className="flex flex-col sm:flex-row items-start justify-between mb-6 gap-4 sm:gap-0">
@@ -186,6 +197,7 @@ export function OpenSourceWeekPage({ onEventClick }: OpenSourceWeekPageProps) {
                       ? 'bg-[#c9983a]/20 border border-[#c9983a]/40 text-[#e8c77f]'
                       : 'bg-[#c9983a]/15 border border-[#c9983a]/30 text-[#6d5530]'
                   }`}>
+                    <span className="sr-only">Event status: </span>
                     {event.statusLabel}
                   </span>
                 </div>
