@@ -76,6 +76,8 @@
   --muted: rgba(162, 121, 44, 0.1);
   --muted-foreground: rgba(45, 40, 32, 0.6);
   --accent: rgba(201, 152, 58, 0.15);
+  --accent-strong: #d4af37;
+  --accent-gradient: linear-gradient(135deg, #c9983a 0%, #d4af37 100%);
   --accent-foreground: #2d2820;
   --destructive: #d64545;
   --destructive-foreground: #ffffff;
@@ -171,6 +173,8 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-gradient: var(--accent-gradient);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
