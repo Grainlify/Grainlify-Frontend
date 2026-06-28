@@ -53,6 +53,14 @@ export default defineConfig({
           ) {
             return 'i18n-vendor'
           }
+
+          if (
+            id.includes('recharts') ||
+            id.includes('react-simple-maps') ||
+            id.includes('d3')
+          ) {
+            return 'viz-vendor'
+          }
         },
       },
     },
