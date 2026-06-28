@@ -6,7 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "../../app/components/ui/dropdown-menu";
+} from "./ui/dropdown-menu";
 
 interface NotificationsDropdownProp {
      showMobileNav: boolean;
