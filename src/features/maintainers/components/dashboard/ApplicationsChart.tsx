@@ -85,9 +85,7 @@ export function ApplicationsChart({ data }: ApplicationsChartProps) {
   const [showTable, setShowTable] = useState(false)
   const isDark = theme === 'dark'
 
-  const tooltipBg = isDark
-    ? 'bg-neutral-900/80 border-white/10'
-    : 'bg-[#e8dfd0]/95 border-white/25'
+  const tooltipBg = isDark ? 'bg-neutral-900/80 border-white/10' : 'bg-[#e8dfd0]/95 border-white/25'
 
   const tooltipTitleText = isDark ? 'text-neutral-300' : 'text-[#7a6b5a]'
 
@@ -427,10 +425,7 @@ export function ApplicationsChart({ data }: ApplicationsChartProps) {
         </div>
 
         {/* Legend */}
-        <div
-          className="flex items-center justify-center gap-6 mt-5"
-          aria-hidden="true"
-        >
+        <div className="flex items-center justify-center gap-6 mt-5" aria-hidden="true">
           <div className="flex items-center gap-2">
             <div
               className="w-4 h-4 rounded-[4px] border border-white/10"
