@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react'
 
 /**
  * Persists a piece of state to `localStorage` as JSON, with caller-supplied
@@ -36,28 +36,28 @@ import { useState } from "react";
 export function useLocalStorage<T>(
   key: string,
   defaultValue: T,
-  validate: (parsed: unknown) => T | null,
+  validate: (parsed: unknown) => T | null
 ): [T, (value: T) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
-      const raw = localStorage.getItem(key);
-      if (raw === null) return defaultValue;
-      const parsed: unknown = JSON.parse(raw);
-      const validated = validate(parsed);
-      return validated !== null ? validated : defaultValue;
+      const raw = localStorage.getItem(key)
+      if (raw === null) return defaultValue
+      const parsed: unknown = JSON.parse(raw)
+      const validated = validate(parsed)
+      return validated !== null ? validated : defaultValue
     } catch {
-      return defaultValue;
+      return defaultValue
     }
-  });
+  })
 
   const setValue = (value: T) => {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      localStorage.setItem(key, JSON.stringify(value))
     } catch {
       // Storage quota exceeded or private browsing — update in-memory state anyway.
     }
-    setStoredValue(value);
-  };
+    setStoredValue(value)
+  }
 
-  return [storedValue, setValue];
+  return [storedValue, setValue]
 }
