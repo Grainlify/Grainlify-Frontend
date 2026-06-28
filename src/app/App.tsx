@@ -11,7 +11,6 @@ import { ProfilePage } from "../features/dashboard/pages/ProfilePage";
 import { DataPage } from "../features/dashboard/pages/DataPage";
 import { LeaderboardPage } from "../features/leaderboard/pages/LeaderboardPage";
 import { BlogPage } from "../features/blog/pages/BlogPage";
-import { BlogArticlePage } from "../features/blog/pages/BlogArticlePage";
 import { SettingsPage } from "../features/settings/pages/SettingsPage";
 import { AdminPage } from "../features/admin/pages/AdminPage";
 import {
@@ -23,6 +22,7 @@ import {
   ProjectDetailPageRoute,
   IssueDetailPageRoute,
   SearchPageRoute,
+  BlogArticlePageRoute,
 } from "../features/dashboard/routeWrappers";
 import { NotFoundPage } from "../shared/components/NotFoundPage";
 import { RoleGuard } from "../shared/components/RoleGuard";
@@ -86,8 +86,8 @@ export default function App() {
                   <Route path="leaderboard" element={<LeaderboardPage />} />
                   <Route path="blog" element={<BlogPage />} />
                   {/* Deep link to an individual article. The `:slug` param is
-                      untrusted input — see BlogArticlePage for sanitize+lookup. */}
-                  <Route path="blog/:slug" element={<BlogArticlePage />} />
+                      untrusted input — see BlogArticlePageRoute for validation. */}
+                  <Route path="blog/:slug" element={<BlogArticlePageRoute />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="admin" element={<RoleGuard allow={['admin']}><AdminPage /></RoleGuard>} />
                   <Route path="search" element={<SearchPageRoute />} />
