@@ -63,6 +63,7 @@ src/
 └── shared/                 # Reusable helpers and generic utilities
     ├── api/                # API client helper and centralized endpoint calls
     ├── components/         # Generic UI components (e.g., Modals, Guards, Toasts)
+    │   └── ui/             # Canonical shadcn-style UI primitives
     ├── config/             # Config files, constants, and API base URL configurations
     ├── contexts/           # Contexts shared across multiple features
     ├── hooks/              # Shared Custom React Hooks (e.g., i18n, window dimensions)
