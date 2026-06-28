@@ -1,136 +1,259 @@
-import { logger } from '../../../../shared/utils/logger';
-import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { X, ExternalLink, User, ChevronDown, Plus, Award, Users, Star, CheckCircle, MessageSquare, Filter, Search } from 'lucide-react';
-import { useTheme } from '../../../../shared/contexts/ThemeContext';
-import { useAuth } from '../../../../shared/contexts/AuthContext';
-import { Issue } from '../../types';
-import { EmptyIssueState } from './EmptyIssueState';
-import { IssueCard } from '../../../../shared/components/ui/IssueCard';
-import { Modal, ModalFooter, ModalButton } from '../../../../shared/components/ui/Modal';
-import { applyToIssue, getProjectIssues, postBotComment, withdrawApplication, assignApplicant, unassignApplicant, rejectApplication } from '../../../../shared/api/client';
-import { formatDistanceToNow } from 'date-fns';
-import { IssueCardSkeleton } from '../../../../shared/components/IssueCardSkeleton';
-import RenderMarkdownContent from '../../../../app/utils/renderMarkdown';
+import { logger } from '../../../../shared/utils/logger'
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
+import {
+  X,
+  ExternalLink,
+  User,
+  ChevronDown,
+  Plus,
+  Award,
+  Users,
+  Star,
+  CheckCircle,
+  MessageSquare,
+  Filter,
+  Search,
+  ShieldOff,
+  AlertCircle,
+} from 'lucide-react'
+import { useTheme } from '../../../../shared/contexts/ThemeContext'
+import { useAuth } from '../../../../shared/contexts/AuthContext'
+import { useOptimisticData } from '../../../../shared/hooks/useOptimisticData'
+import { Issue } from '../../types'
+import { EmptyIssueState } from './EmptyIssueState'
+import { IssueCard } from '../../../../shared/components/ui/IssueCard'
+import { Modal, ModalFooter, ModalButton } from '../../../../shared/components/ui/Modal'
+import {
+  applyToIssue,
+  getMaintainerIssues,
+  postBotComment,
+  withdrawApplication,
+  assignApplicant,
+  unassignApplicant,
+  rejectApplication,
+} from '../../../../shared/api/client'
+import { formatDistanceToNow } from 'date-fns'
+import { IssueCardSkeleton } from '../../../../shared/components/IssueCardSkeleton'
+import RenderMarkdownContent from '../../../../app/utils/renderMarkdown'
+
+/**
+ * Lowercase set of well-known programming language names.
+ * Used to classify GitHub issue labels into the "Languages" filter bucket
+ * vs the general "Categories" bucket.
+ */
+const KNOWN_LANGUAGES = new Set([
+  'javascript',
+  'typescript',
+  'rust',
+  'python',
+  'go',
+  'golang',
+  'java',
+  'c',
+  'c++',
+  'c#',
+  'ruby',
+  'php',
+  'swift',
+  'kotlin',
+  'scala',
+  'haskell',
+  'elixir',
+  'erlang',
+  'solidity',
+  'vyper',
+  'makefile',
+  'shell',
+  'bash',
+  'html',
+  'css',
+  'scss',
+  'sass',
+  'dart',
+  'r',
+  'julia',
+  'perl',
+  'lua',
+  'assembly',
+  'webassembly',
+  'wasm',
+  'move',
+  'cairo',
+  'zig',
+  'nim',
+  'ocaml',
+  'f#',
+  'clojure',
+  'groovy',
+  'nix',
+])
+
+/**
+ * Sanitizes an external label name for safe display.
+ * JSX automatically HTML-escapes text content, so XSS is not a concern for
+ * rendered text; this guards against layout breakage from excessively long or
+ * whitespace-padded strings sourced from external GitHub repositories.
+ */
+const sanitizeLabelName = (name: string): string => name.trim().slice(0, 60)
 
 interface Project {
-  id: string;
-  github_full_name: string;
-  status: string;
+  id: string
+  github_full_name: string
+  status: string
 }
 
 interface IssuesTabProps {
-  onNavigate: (page: string) => void;
-  selectedProjects: Project[];
-  onRefresh?: () => void;
-  initialSelectedIssueId?: string;
-  initialSelectedProjectId?: string;
+  onNavigate: (page: string) => void
+  selectedProjects: Project[]
+  onRefresh?: () => void
+  initialSelectedIssueId?: string
+  initialSelectedProjectId?: string
   /** 'contributor' = issue detail from Dashboard (Browse): only Withdraw for own application. 'maintainer' = Maintainers Issues: Reject/Assign/Unassign */
-  viewMode?: 'contributor' | 'maintainer';
+  viewMode?: 'contributor' | 'maintainer'
 }
 
 interface CommentFromAPI {
-  id: number;
-  body: string;
+  id: number
+  body: string
   user: {
-    login: string;
-  };
-  created_at: string;
-  updated_at: string;
+    login: string
+  }
+  created_at: string
+  updated_at: string
 }
 
 interface IssueFromAPI {
-  github_issue_id: number;
-  number: number;
-  state: string;
-  title: string;
-  description: string | null;
-  author_login: string;
-  assignees: any[];
-  labels: any[];
-  comments_count: number;
-  comments: CommentFromAPI[];
-  url: string;
-  updated_at: string | null;
-  last_seen_at: string;
+  github_issue_id: number
+  number: number
+  state: string
+  title: string
+  description: string | null
+  author_login: string
+  assignees: any[]
+  labels: any[]
+  comments_count: number
+  comments: CommentFromAPI[]
+  url: string
+  updated_at: string | null
+  last_seen_at: string
 }
 
-export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSelectedIssueId, initialSelectedProjectId, viewMode = 'maintainer' }: IssuesTabProps) {
-  const { theme } = useTheme();
-  const { userRole, user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
-  const [selectedIssueFromAPI, setSelectedIssueFromAPI] = useState<(IssueFromAPI & { projectName: string; projectId: string }) | null>(null);
-  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
-  const [issueDetailTab, setIssueDetailTab] = useState<'applications' | 'discussions'>('applications');
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+export function IssuesTab({
+  onNavigate,
+  selectedProjects,
+  onRefresh,
+  initialSelectedIssueId,
+  initialSelectedProjectId,
+  viewMode = 'maintainer',
+}: IssuesTabProps) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const { userRole, user } = useAuth()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
+  const [selectedIssueFromAPI, setSelectedIssueFromAPI] = useState<
+    (IssueFromAPI & { projectName: string; projectId: string }) | null
+  >(null)
+  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set())
+  const [issueDetailTab, setIssueDetailTab] = useState<'applications' | 'discussions'>(
+    'applications'
+  )
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [selectedFilters, setSelectedFilters] = useState({
     // Radio-like filters (at most one selection each)
     status: ['open'] as string[], // default to open issues only
     applicants: [] as string[], // 'yes' | 'no'
-    assignee: [] as string[],   // 'yes' | 'no'
-    stale: [] as string[],      // 'yes' | 'no'
+    assignee: [] as string[], // 'yes' | 'no'
+    stale: [] as string[], // 'yes' | 'no'
     repositoryId: null as string | null, // selected project id
     categories: [] as string[],
     languages: [] as string[],
     labels: [] as string[],
-  });
-  const [labelSearch, setLabelSearch] = useState('');
-  const [repoSearch, setRepoSearch] = useState('');
-  const [expandedApplications, setExpandedApplications] = useState<Record<string, boolean>>({});
-  const [applicationDraft, setApplicationDraft] = useState('');
-  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
-  const [applicationError, setApplicationError] = useState<string | null>(null);
-  const [applyModalOpen, setApplyModalOpen] = useState(false);
-  const [botCommentModalOpen, setBotCommentModalOpen] = useState(false);
-  const [botCommentDraft, setBotCommentDraft] = useState('');
-  const [botCommentError, setBotCommentError] = useState<string | null>(null);
-  const [isPostingBotComment, setIsPostingBotComment] = useState(false);
-  const [actionInProgress, setActionInProgress] = useState<{ type: 'withdraw' | 'assign' | 'unassign' | 'reject'; id: string } | null>(null);
-  const [issues, setIssues] = useState<Array<IssueFromAPI & { projectName: string; projectId: string }>>([]);
-  const [isLoadingIssues, setIsLoadingIssues] = useState(true);
-  const filterBtnRef = useRef<HTMLButtonElement | null>(null);
-  const filterPopoverRef = useRef<HTMLDivElement | null>(null);
-  const [filterPopoverPos, setFilterPopoverPos] = useState<{ top: number; left: number }>({ top: 140, left: 350 });
+  })
+  const [labelSearch, setLabelSearch] = useState('')
+  const [repoSearch, setRepoSearch] = useState('')
+  const [expandedApplications, setExpandedApplications] = useState<Record<string, boolean>>({})
+  const [applicationDraft, setApplicationDraft] = useState('')
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false)
+  const [applicationError, setApplicationError] = useState<string | null>(null)
+  const [applyModalOpen, setApplyModalOpen] = useState(false)
+  const [botCommentModalOpen, setBotCommentModalOpen] = useState(false)
+  const [botCommentDraft, setBotCommentDraft] = useState('')
+  const [botCommentError, setBotCommentError] = useState<string | null>(null)
+  const [isPostingBotComment, setIsPostingBotComment] = useState(false)
+  const [actionInProgress, setActionInProgress] = useState<{
+    type: 'withdraw' | 'assign' | 'unassign' | 'reject'
+    id: string
+  } | null>(null)
+  const isAuthorized =
+    viewMode === 'contributor' || userRole === 'maintainer' || userRole === 'admin'
+
+  const {
+    data: fetchedIssues,
+    isLoading: isLoadingIssues,
+    hasError: hasIssuesError,
+    error: issuesError,
+    retry: retryLoadIssues,
+    fetchData: fetchIssuesData,
+  } = useOptimisticData<Array<IssueFromAPI & { projectName: string; projectId: string }>>([], {
+    cacheKey: `maintainer-issues-${selectedProjects.map((p) => p.id).join(',')}`,
+    cacheDuration: 30000,
+  })
+
+  const [issues, setIssues] = useState<
+    Array<IssueFromAPI & { projectName: string; projectId: string }>
+  >([])
+
+  // Sync fetched issues with local state
+  useEffect(() => {
+    setIssues(fetchedIssues)
+  }, [fetchedIssues])
+  const filterBtnRef = useRef<HTMLButtonElement | null>(null)
+  const filterPopoverRef = useRef<HTMLDivElement | null>(null)
+  const [filterPopoverPos, setFilterPopoverPos] = useState<{ top: number; left: number }>({
+    top: 140,
+    left: 350,
+  })
 
   const computeFilterPopoverPos = useCallback(() => {
-    const el = filterBtnRef.current;
-    if (!el) return { top: 140, left: 350 };
+    const el = filterBtnRef.current
+    if (!el) return { top: 140, left: 350 }
 
-    const r = el.getBoundingClientRect();
-    const width = 350;
-    const gap = 10;
-    const padding = 12;
+    const r = el.getBoundingClientRect()
+    const width = 350
+    const gap = 10
+    const padding = 12
 
     // Desired: same row as the filter icon, positioned to the RIGHT of it.
-    let top = r.top;
-    let left = r.right + gap;
+    let top = r.top
+    let left = r.right + gap
 
     // Clamp vertically so it stays on screen.
-    top = Math.max(padding, Math.min(window.innerHeight - padding, top));
+    top = Math.max(padding, Math.min(window.innerHeight - padding, top))
 
     // If it overflows to the right, flip to left side of the icon.
     if (left + width + padding > window.innerWidth) {
-      left = r.left - width - gap;
+      left = r.left - width - gap
     }
 
     // Final clamp horizontally.
-    left = Math.max(padding, Math.min(window.innerWidth - width - padding, left));
+    left = Math.max(padding, Math.min(window.innerWidth - width - padding, left))
 
-    return { top, left };
-  }, []);
+    return { top, left }
+  }, [])
 
   useEffect(() => {
-    if (!isFilterModalOpen) return;
-    const update = () => setFilterPopoverPos(computeFilterPopoverPos());
-    update();
-    window.addEventListener('resize', update);
+    if (!isFilterModalOpen) return
+    const update = () => setFilterPopoverPos(computeFilterPopoverPos())
+    update()
+    window.addEventListener('resize', update)
     // Keep popover aligned when page scrolls (fixed positioning uses viewport coordinates).
-    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('scroll', update, { passive: true })
     return () => {
-      window.removeEventListener('resize', update);
-      window.removeEventListener('scroll', update as any);
-    };
-  }, [isFilterModalOpen, computeFilterPopoverPos]);
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update as any)
+    }
+  }, [isFilterModalOpen, computeFilterPopoverPos])
 
   // Popover behavior:
   // - allow background scrolling/clicking (no overlay)
@@ -139,71 +262,75 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
   // Helper function to format time ago (memoized)
   const formatTimeAgo = useCallback((dateString: string | null): string => {
     if (!dateString) {
-      logger.warn('Missing date string for time ago formatting');
-      return 'Unknown';
+      logger.warn('Missing date string for time ago formatting')
+      return 'Unknown'
     }
 
     try {
-      const date = new Date(dateString);
+      const date = new Date(dateString)
       if (isNaN(date.getTime())) {
-        logger.warn('Invalid date string:', dateString);
-        return 'Unknown';
+        logger.warn('Invalid date string:', dateString)
+        return 'Unknown'
       }
-      return formatDistanceToNow(date, { addSuffix: true });
+      return formatDistanceToNow(date, { addSuffix: true })
     } catch (err) {
-      logger.warn('Error formatting date:', dateString, err);
-      return 'Unknown';
+      logger.warn('Error formatting date:', dateString, err)
+      return 'Unknown'
     }
-  }, []);
+  }, [])
 
-  // Fetch issues from selected projects
-  useEffect(() => {
-    loadIssues();
-  }, [selectedProjects]);
-
-  const loadIssues = async () => {
-    setIsLoadingIssues(true);
-    try {
+  const loadIssues = useCallback(async () => {
+    if (!isAuthorized) return
+    await fetchIssuesData(async (signal) => {
       if (selectedProjects.length === 0) {
-        setIssues([]);
-        setIsLoadingIssues(false);
-        return;
+        return []
       }
 
       // Fetch issues from all selected projects in parallel
+      let successCount = 0
+      let lastError: any = null
+
       const issuePromises = selectedProjects.map(async (project: Project) => {
         try {
-          const response = await getProjectIssues(project.id);
+          const response = await getMaintainerIssues(project.id, { signal })
+          successCount++
           return (response.issues || []).map((issue: IssueFromAPI) => ({
             ...issue,
             projectName: project.github_full_name,
             projectId: project.id,
-          }));
+          }))
         } catch (err) {
-          logger.error(`Failed to fetch issues for ${project.github_full_name}:`, err);
-          return [];
+          logger.error(`Failed to fetch issues for ${project.github_full_name}:`, err)
+          lastError = err
+          return []
         }
-      });
+      })
 
-      const allIssues = await Promise.all(issuePromises);
-      const flattenedIssues = allIssues.flat();
+      const allIssues = await Promise.all(issuePromises)
+      if (selectedProjects.length > 0 && successCount === 0 && lastError) {
+        throw lastError
+      }
+      const flattenedIssues = allIssues.flat()
 
       // Sort by updated_at (most recent first)
       flattenedIssues.sort((a, b) => {
-        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : new Date(a.last_seen_at).getTime();
-        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : new Date(b.last_seen_at).getTime();
-        return dateB - dateA;
-      });
+        const dateA = a.updated_at
+          ? new Date(a.updated_at).getTime()
+          : new Date(a.last_seen_at).getTime()
+        const dateB = b.updated_at
+          ? new Date(b.updated_at).getTime()
+          : new Date(b.last_seen_at).getTime()
+        return dateB - dateA
+      })
 
-      setIssues(flattenedIssues);
-      setIsLoadingIssues(false);
-    } catch (err) {
-      logger.error('Failed to load issues:', err);
-      // Keep loading state true to show skeleton forever when backend is down
-      setIssues([]);
-      // Don't set isLoadingIssues to false - keep showing skeleton
-    }
-  };
+      return flattenedIssues
+    })
+  }, [selectedProjects, fetchIssuesData, isAuthorized])
+
+  // Fetch issues from selected projects
+  useEffect(() => {
+    loadIssues()
+  }, [loadIssues])
 
   // Refresh issues when selectedProjects change
   // Also refresh when page becomes visible (user switches back to tab)
@@ -211,83 +338,88 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && selectedProjects.length > 0) {
-        loadIssues();
+        loadIssues()
       }
-    };
+    }
 
     const handleRepositoriesRefreshed = () => {
       // Refresh issues when repositories are added/updated
       if (selectedProjects.length > 0) {
-        loadIssues();
+        loadIssues()
       }
-    };
+    }
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('repositories-refreshed', handleRepositoriesRefreshed);
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('repositories-refreshed', handleRepositoriesRefreshed)
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('repositories-refreshed', handleRepositoriesRefreshed);
-    };
-  }, [selectedProjects]);
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('repositories-refreshed', handleRepositoriesRefreshed)
+    }
+  }, [loadIssues, selectedProjects.length])
 
   const handleProfileClick = () => {
-    setSelectedIssue(null);
-    onNavigate('profile');
-  };
+    setSelectedIssue(null)
+    onNavigate('profile')
+  }
 
   // Helper function to get GitHub avatar URL
   const getGitHubAvatar = (login: string, size: number = 40): string => {
-    return `https://github.com/${login}.png?size=${size}`;
-  };
+    return `https://github.com/${login}.png?size=${size}`
+  }
 
   // Detect application comments: new format has "has applied to work on this issue as part of the Grainlify program"; legacy had "[grainlify application]" at start
   const isApplicationComment = (body: string | null | undefined): boolean => {
-    const b = (body || '').toLowerCase();
-    return b.includes('has applied to work on this issue as part of the grainlify program') || b.startsWith('[grainlify application]');
-  };
+    const b = (body || '').toLowerCase()
+    return (
+      b.includes('has applied to work on this issue as part of the grainlify program') ||
+      b.startsWith('[grainlify application]')
+    )
+  }
 
   const DEFAULT_BOT_MESSAGE = `This issue has been added to the Grainlify program. Interested in contributing? **Apply to work on this issue on Grainlify**, earn points, and receive rewards.
 
-Only applications submitted via the apply link above will be considered. Please do not apply by commenting on the issue or opening a PR directly.`;
+Only applications submitted via the apply link above will be considered. Please do not apply by commenting on the issue or opening a PR directly.`
 
-  const countApplicationComments = (comments: Array<{ body?: string | null }> | null | undefined): number => {
-    if (!Array.isArray(comments)) return 0;
-    return comments.filter((c) => isApplicationComment(c?.body)).length;
-  };
+  const countApplicationComments = (
+    comments: Array<{ body?: string | null }> | null | undefined
+  ): number => {
+    if (!Array.isArray(comments)) return 0
+    return comments.filter((c) => isApplicationComment(c?.body)).length
+  }
 
   // Extract the applicant's custom message from a Grainlify application comment body (blockquote holds the message).
   const getApplicationMessage = (body: string): string => {
-    const lines = body.split('\n');
-    const blockquoteLines: string[] = [];
+    const lines = body.split('\n')
+    const blockquoteLines: string[] = []
     for (const line of lines) {
       if (line.startsWith('> ')) {
-        blockquoteLines.push(line.slice(2));
+        blockquoteLines.push(line.slice(2))
       } else if (blockquoteLines.length > 0) {
-        break; // end of blockquote
+        break // end of blockquote
       }
     }
     if (blockquoteLines.length > 0) {
-      return blockquoteLines.join('\n').trim();
+      return blockquoteLines.join('\n').trim()
     }
-    return '';
-  };
+    return ''
+  }
 
   const getApplicationData = (issue: Issue | null, issueFromAPI: IssueFromAPI | null) => {
-    if (!issue || !issueFromAPI) return null;
+    if (!issue || !issueFromAPI) return null
 
     // Get all comments from the API
-    const comments = issueFromAPI.comments || [];
-    const issueAuthor = issueFromAPI.author_login;
+    const comments = issueFromAPI.comments || []
+    const issueAuthor = issueFromAPI.author_login
 
     // Applications are explicit Grainlify application comments (so discussions can contain other chatter).
     // When posted as Grainlify bot, body contains "**@username has applied" – use that as display author.
     const applications = comments
-      .filter(comment => isApplicationComment(comment.body))
+      .filter((comment) => isApplicationComment(comment.body))
       .map((comment) => {
-        const body = comment.body || '';
-        const applicantMatch = body.match(/\*\*@(\S+)\s+has\s+applied/i);
-        const applicantLogin = applicantMatch ? applicantMatch[1] : comment.user.login;
+        const body = comment.body || ''
+        const applicantMatch = body.match(/\*\*@(\S+)\s+has\s+applied/i)
+        const applicantLogin = applicantMatch ? applicantMatch[1] : comment.user.login
         return {
           id: comment.id.toString(),
           commentId: comment.id,
@@ -303,8 +435,8 @@ Only applications submitted via the apply link above will be considered. Please 
           rewards: 0,
           projectsContributed: 0,
           projectsLead: 0,
-        };
-      });
+        }
+      })
 
     // Discussions are all comments (including from the author)
     const discussions = comments.map((comment) => ({
@@ -314,38 +446,43 @@ Only applications submitted via the apply link above will be considered. Please 
       content: comment.body,
       isAuthor: comment.user.login === issueAuthor,
       appliedForContribution: isApplicationComment(comment.body),
-    }));
+    }))
 
     return {
       applications,
       discussions,
-    };
-  };
+    }
+  }
 
-  const applicationData = getApplicationData(selectedIssue, selectedIssueFromAPI);
-  const isDark = theme === 'dark';
+  const applicationData = getApplicationData(selectedIssue, selectedIssueFromAPI)
 
-  const canApplyToSelectedIssue = selectedIssueFromAPI && (() => {
-    const isOpen = (selectedIssueFromAPI.state || '').toLowerCase() === 'open';
-    const assigneesCount = Array.isArray(selectedIssueFromAPI.assignees) ? selectedIssueFromAPI.assignees.length : 0;
-    const unassigned = assigneesCount === 0;
-    const notAuthor = !user?.github?.login || user.github.login.toLowerCase() !== (selectedIssueFromAPI.author_login || '').toLowerCase();
-    return isOpen && unassigned && notAuthor;
-  })();
+  const canApplyToSelectedIssue =
+    selectedIssueFromAPI &&
+    (() => {
+      const isOpen = (selectedIssueFromAPI.state || '').toLowerCase() === 'open'
+      const assigneesCount = Array.isArray(selectedIssueFromAPI.assignees)
+        ? selectedIssueFromAPI.assignees.length
+        : 0
+      const unassigned = assigneesCount === 0
+      const notAuthor =
+        !user?.github?.login ||
+        user.github.login.toLowerCase() !== (selectedIssueFromAPI.author_login || '').toLowerCase()
+      return isOpen && unassigned && notAuthor
+    })()
 
   const handleSubmitApplication = useCallback(async () => {
-    if (!selectedIssueFromAPI || !applicationDraft.trim()) return;
+    if (!selectedIssueFromAPI || !applicationDraft.trim()) return
     try {
-      setApplicationError(null);
-      setIsSubmittingApplication(true);
+      setApplicationError(null)
+      setIsSubmittingApplication(true)
       const res = await applyToIssue(
         selectedIssueFromAPI.projectId,
         selectedIssueFromAPI.number,
         applicationDraft.trim()
-      );
-      const newComment = res.comment;
+      )
+      const newComment = res.comment
       setSelectedIssueFromAPI((prev) => {
-        if (!prev) return prev;
+        if (!prev) return prev
         return {
           ...prev,
           comments_count: (prev.comments_count || 0) + 1,
@@ -359,53 +496,56 @@ Only applications submitted via the apply link above will be considered. Please 
               updated_at: newComment.updated_at,
             } as CommentFromAPI,
           ],
-        };
-      });
+        }
+      })
       setIssues((prev) =>
         prev.map((it) =>
-          it.github_issue_id === selectedIssueFromAPI.github_issue_id && it.projectId === selectedIssueFromAPI.projectId
+          it.github_issue_id === selectedIssueFromAPI.github_issue_id &&
+          it.projectId === selectedIssueFromAPI.projectId
             ? {
-              ...it,
-              comments_count: (it.comments_count || 0) + 1,
-              comments: [
-                ...(it.comments || []),
-                {
-                  id: newComment.id,
-                  body: newComment.body,
-                  user: { login: newComment.user.login },
-                  created_at: newComment.created_at,
-                  updated_at: newComment.updated_at,
-                } as any,
-              ],
-            }
+                ...it,
+                comments_count: (it.comments_count || 0) + 1,
+                comments: [
+                  ...(it.comments || []),
+                  {
+                    id: newComment.id,
+                    body: newComment.body,
+                    user: { login: newComment.user.login },
+                    created_at: newComment.created_at,
+                    updated_at: newComment.updated_at,
+                  } as any,
+                ],
+              }
             : it
         )
-      );
+      )
       setSelectedIssue((prev) =>
-        prev ? { ...prev, applicants: (prev.applicants || 0) + 1, comments: (prev.comments || 0) + 1 } : prev
-      );
-      setApplicationDraft('');
-      setApplyModalOpen(false);
+        prev
+          ? { ...prev, applicants: (prev.applicants || 0) + 1, comments: (prev.comments || 0) + 1 }
+          : prev
+      )
+      setApplicationDraft('')
+      setApplyModalOpen(false)
     } catch (e: any) {
-      setApplicationError(e?.message || 'Failed to submit application');
+      setApplicationError(e?.message || 'Failed to submit application')
     } finally {
-      setIsSubmittingApplication(false);
+      setIsSubmittingApplication(false)
     }
-  }, [selectedIssueFromAPI, applicationDraft]);
+  }, [selectedIssueFromAPI, applicationDraft])
 
   const handlePostBotComment = useCallback(async () => {
-    if (!selectedIssueFromAPI || !botCommentDraft.trim()) return;
+    if (!selectedIssueFromAPI || !botCommentDraft.trim()) return
     try {
-      setBotCommentError(null);
-      setIsPostingBotComment(true);
+      setBotCommentError(null)
+      setIsPostingBotComment(true)
       const res = await postBotComment(
         selectedIssueFromAPI.projectId,
         selectedIssueFromAPI.number,
         botCommentDraft.trim()
-      );
-      const newComment = res.comment;
+      )
+      const newComment = res.comment
       setSelectedIssueFromAPI((prev) => {
-        if (!prev) return prev;
+        if (!prev) return prev
         return {
           ...prev,
           comments_count: (prev.comments_count || 0) + 1,
@@ -419,128 +559,152 @@ Only applications submitted via the apply link above will be considered. Please 
               updated_at: newComment.updated_at,
             } as CommentFromAPI,
           ],
-        };
-      });
+        }
+      })
       setIssues((prev) =>
         prev.map((it) =>
-          it.github_issue_id === selectedIssueFromAPI.github_issue_id && it.projectId === selectedIssueFromAPI.projectId
+          it.github_issue_id === selectedIssueFromAPI.github_issue_id &&
+          it.projectId === selectedIssueFromAPI.projectId
             ? {
-              ...it,
-              comments_count: (it.comments_count || 0) + 1,
-              comments: [
-                ...(it.comments || []),
-                {
-                  id: newComment.id,
-                  body: newComment.body,
-                  user: { login: newComment.user.login },
-                  created_at: newComment.created_at,
-                  updated_at: newComment.updated_at,
-                } as any,
-              ],
-            }
+                ...it,
+                comments_count: (it.comments_count || 0) + 1,
+                comments: [
+                  ...(it.comments || []),
+                  {
+                    id: newComment.id,
+                    body: newComment.body,
+                    user: { login: newComment.user.login },
+                    created_at: newComment.created_at,
+                    updated_at: newComment.updated_at,
+                  } as any,
+                ],
+              }
             : it
         )
-      );
-      setBotCommentDraft('');
-      setBotCommentModalOpen(false);
+      )
+      setBotCommentDraft('')
+      setBotCommentModalOpen(false)
     } catch (e: any) {
-      setBotCommentError(e?.message || 'Failed to post bot comment');
+      setBotCommentError(e?.message || 'Failed to post bot comment')
     } finally {
-      setIsPostingBotComment(false);
+      setIsPostingBotComment(false)
     }
-  }, [selectedIssueFromAPI, botCommentDraft]);
+  }, [selectedIssueFromAPI, botCommentDraft])
 
-  const handleWithdraw = useCallback(async (commentId: number) => {
-    if (!selectedIssueFromAPI) return;
-    const key = `withdraw-${commentId}`;
-    setApplicationError(null);
-    try {
-      setActionInProgress({ type: 'withdraw', id: key });
-      await withdrawApplication(selectedIssueFromAPI.projectId, selectedIssueFromAPI.number, commentId);
-      setSelectedIssueFromAPI((prev) => {
-        if (!prev) return prev;
-        const comments = (prev.comments || []).filter((c) => c.id !== commentId);
-        return { ...prev, comments, comments_count: comments.length };
-      });
-      setIssues((prev) =>
-        prev.map((it) =>
-          it.github_issue_id === selectedIssueFromAPI.github_issue_id && it.projectId === selectedIssueFromAPI.projectId
-            ? { ...it, comments: (it.comments || []).filter((c) => c.id !== commentId), comments_count: (it.comments || []).filter((c) => c.id !== commentId).length }
-            : it
+  const handleWithdraw = useCallback(
+    async (commentId: number) => {
+      if (!selectedIssueFromAPI) return
+      const key = `withdraw-${commentId}`
+      setApplicationError(null)
+      try {
+        setActionInProgress({ type: 'withdraw', id: key })
+        await withdrawApplication(
+          selectedIssueFromAPI.projectId,
+          selectedIssueFromAPI.number,
+          commentId
         )
-      );
-    } catch (e: any) {
-      const msg = e?.message ?? '';
-      if (msg.includes('you_can_only_withdraw_your_own') || msg.includes('cannot_delete_comment_forbidden')) {
-        setApplicationError('You can only withdraw your own application.');
-      } else if (msg.includes('comment_not_found')) {
-        setApplicationError('Application comment not found. It may have already been removed.');
-      } else {
-        setApplicationError(msg || 'Failed to withdraw application');
+        setSelectedIssueFromAPI((prev) => {
+          if (!prev) return prev
+          const comments = (prev.comments || []).filter((c) => c.id !== commentId)
+          return { ...prev, comments, comments_count: comments.length }
+        })
+        setIssues((prev) =>
+          prev.map((it) =>
+            it.github_issue_id === selectedIssueFromAPI.github_issue_id &&
+            it.projectId === selectedIssueFromAPI.projectId
+              ? {
+                  ...it,
+                  comments: (it.comments || []).filter((c) => c.id !== commentId),
+                  comments_count: (it.comments || []).filter((c) => c.id !== commentId).length,
+                }
+              : it
+          )
+        )
+      } catch (e: any) {
+        const msg = e?.message ?? ''
+        if (
+          msg.includes('you_can_only_withdraw_your_own') ||
+          msg.includes('cannot_delete_comment_forbidden')
+        ) {
+          setApplicationError('You can only withdraw your own application.')
+        } else if (msg.includes('comment_not_found')) {
+          setApplicationError('Application comment not found. It may have already been removed.')
+        } else {
+          setApplicationError(msg || 'Failed to withdraw application')
+        }
+      } finally {
+        setActionInProgress(null)
       }
-    } finally {
-      setActionInProgress(null);
-    }
-  }, [selectedIssueFromAPI]);
+    },
+    [selectedIssueFromAPI]
+  )
 
-  const handleAssign = useCallback(async (login: string) => {
-    if (!selectedIssueFromAPI) return;
-    const key = `assign-${login}`;
-    setApplicationError(null);
-    try {
-      setActionInProgress({ type: 'assign', id: key });
-      await assignApplicant(selectedIssueFromAPI.projectId, selectedIssueFromAPI.number, login);
-      const assignees = [{ login }];
-      setSelectedIssueFromAPI((prev) => prev ? { ...prev, assignees } : prev);
-      setIssues((prev) =>
-        prev.map((it) =>
-          it.github_issue_id === selectedIssueFromAPI.github_issue_id && it.projectId === selectedIssueFromAPI.projectId
-            ? { ...it, assignees }
-            : it
+  const handleAssign = useCallback(
+    async (login: string) => {
+      if (!selectedIssueFromAPI) return
+      const key = `assign-${login}`
+      setApplicationError(null)
+      try {
+        setActionInProgress({ type: 'assign', id: key })
+        await assignApplicant(selectedIssueFromAPI.projectId, selectedIssueFromAPI.number, login)
+        const assignees = [{ login }]
+        setSelectedIssueFromAPI((prev) => (prev ? { ...prev, assignees } : prev))
+        setIssues((prev) =>
+          prev.map((it) =>
+            it.github_issue_id === selectedIssueFromAPI.github_issue_id &&
+            it.projectId === selectedIssueFromAPI.projectId
+              ? { ...it, assignees }
+              : it
+          )
         )
-      );
-    } catch (e: any) {
-      setApplicationError(e?.message || 'Failed to assign');
-    } finally {
-      setActionInProgress(null);
-    }
-  }, [selectedIssueFromAPI]);
+      } catch (e: any) {
+        setApplicationError(e?.message || 'Failed to assign')
+      } finally {
+        setActionInProgress(null)
+      }
+    },
+    [selectedIssueFromAPI]
+  )
 
   const handleUnassign = useCallback(async () => {
-    if (!selectedIssueFromAPI) return;
-    setApplicationError(null);
+    if (!selectedIssueFromAPI) return
+    setApplicationError(null)
     try {
-      setActionInProgress({ type: 'unassign', id: 'unassign' });
-      await unassignApplicant(selectedIssueFromAPI.projectId, selectedIssueFromAPI.number);
-      setSelectedIssueFromAPI((prev) => prev ? { ...prev, assignees: [] } : prev);
+      setActionInProgress({ type: 'unassign', id: 'unassign' })
+      await unassignApplicant(selectedIssueFromAPI.projectId, selectedIssueFromAPI.number)
+      setSelectedIssueFromAPI((prev) => (prev ? { ...prev, assignees: [] } : prev))
       setIssues((prev) =>
         prev.map((it) =>
-          it.github_issue_id === selectedIssueFromAPI.github_issue_id && it.projectId === selectedIssueFromAPI.projectId
+          it.github_issue_id === selectedIssueFromAPI.github_issue_id &&
+          it.projectId === selectedIssueFromAPI.projectId
             ? { ...it, assignees: [] }
             : it
         )
-      );
+      )
     } catch (e: any) {
-      setApplicationError(e?.message || 'Failed to unassign');
+      setApplicationError(e?.message || 'Failed to unassign')
     } finally {
-      setActionInProgress(null);
+      setActionInProgress(null)
     }
-  }, [selectedIssueFromAPI]);
+  }, [selectedIssueFromAPI])
 
-  const handleReject = useCallback(async (login: string) => {
-    if (!selectedIssueFromAPI) return;
-    const key = `reject-${login}`;
-    setApplicationError(null);
-    try {
-      setActionInProgress({ type: 'reject', id: key });
-      await rejectApplication(selectedIssueFromAPI.projectId, selectedIssueFromAPI.number, login);
-      onRefresh?.();
-    } catch (e: any) {
-      setApplicationError(e?.message || 'Failed to reject');
-    } finally {
-      setActionInProgress(null);
-    }
-  }, [selectedIssueFromAPI, onRefresh]);
+  const handleReject = useCallback(
+    async (login: string) => {
+      if (!selectedIssueFromAPI) return
+      const key = `reject-${login}`
+      setApplicationError(null)
+      try {
+        setActionInProgress({ type: 'reject', id: key })
+        await rejectApplication(selectedIssueFromAPI.projectId, selectedIssueFromAPI.number, login)
+        onRefresh?.()
+      } catch (e: any) {
+        setApplicationError(e?.message || 'Failed to reject')
+      } finally {
+        setActionInProgress(null)
+      }
+    },
+    [selectedIssueFromAPI, onRefresh]
+  )
 
   const appliedFilterCount =
     selectedFilters.status.length +
@@ -550,7 +714,7 @@ Only applications submitted via the apply link above will be considered. Please 
     (selectedFilters.repositoryId ? 1 : 0) +
     selectedFilters.categories.length +
     selectedFilters.languages.length +
-    selectedFilters.labels.length;
+    selectedFilters.labels.length
 
   const visibleIssues = useMemo(() => {
     return issues.filter((issue) => {
@@ -558,50 +722,58 @@ Only applications submitted via the apply link above will be considered. Please 
       const matchesSearch =
         searchQuery === '' ||
         issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        issue.author_login.toLowerCase().includes(searchQuery.toLowerCase());
+        issue.author_login.toLowerCase().includes(searchQuery.toLowerCase())
 
       // Status filter
-      const status = selectedFilters.status[0] || 'open';
-      const matchesStatus = issue.state === status;
+      const status = selectedFilters.status[0] || 'open'
+      const matchesStatus = issue.state === status
 
       // Applicants filter (count only grainlify application comments)
-      const applicants = selectedFilters.applicants[0]; // 'yes' | 'no' | undefined
-      const applicantCount = countApplicationComments(issue.comments);
-      const matchesApplicants = !applicants || (applicants === 'yes' ? applicantCount > 0 : applicantCount === 0);
+      const applicants = selectedFilters.applicants[0] // 'yes' | 'no' | undefined
+      const applicantCount = countApplicationComments(issue.comments)
+      const matchesApplicants =
+        !applicants || (applicants === 'yes' ? applicantCount > 0 : applicantCount === 0)
 
       // Assignee filter (based on assignees array)
-      const assignee = selectedFilters.assignee[0]; // 'yes' | 'no' | undefined
-      const assigneesCount = Array.isArray(issue.assignees) ? issue.assignees.length : 0;
-      const matchesAssignee = !assignee || (assignee === 'yes' ? assigneesCount > 0 : assigneesCount === 0);
+      const assignee = selectedFilters.assignee[0] // 'yes' | 'no' | undefined
+      const assigneesCount = Array.isArray(issue.assignees) ? issue.assignees.length : 0
+      const matchesAssignee =
+        !assignee || (assignee === 'yes' ? assigneesCount > 0 : assigneesCount === 0)
 
       // Stale filter (issues older than 30 days)
-      const stale = selectedFilters.stale[0]; // 'yes' | 'no' | undefined
-      const updatedAt = issue.updated_at ? new Date(issue.updated_at) : new Date(issue.last_seen_at);
-      const daysSinceUpdate = (Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24);
-      const isStale = daysSinceUpdate >= 30;
-      const matchesStale = !stale || (stale === 'yes' ? isStale : !isStale);
+      const stale = selectedFilters.stale[0] // 'yes' | 'no' | undefined
+      const updatedAt = issue.updated_at ? new Date(issue.updated_at) : new Date(issue.last_seen_at)
+      const daysSinceUpdate = (Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24)
+      const isStale = daysSinceUpdate >= 30
+      const matchesStale = !stale || (stale === 'yes' ? isStale : !isStale)
 
       // Repository filter
-      const matchesRepository = !selectedFilters.repositoryId || issue.projectId === selectedFilters.repositoryId;
+      const matchesRepository =
+        !selectedFilters.repositoryId || issue.projectId === selectedFilters.repositoryId
 
       // Categories filter (check labels)
       const matchesCategories =
         selectedFilters.categories.length === 0 ||
         selectedFilters.categories.some((category) => {
-          const issueTags = issue.labels?.map((l: any) => (l.name || l).toLowerCase()) || [];
-          return issueTags.includes(category.toLowerCase());
-        });
+          const issueTags = issue.labels?.map((l: any) => (l.name || l).toLowerCase()) || []
+          return issueTags.includes(category.toLowerCase())
+        })
 
-      // Languages filter (not available in current API response, skip for now)
-      const matchesLanguages = selectedFilters.languages.length === 0;
+      // Languages filter: match against issue labels using the same label data as categories
+      const matchesLanguages =
+        selectedFilters.languages.length === 0 ||
+        selectedFilters.languages.some((lang) => {
+          const issueTags = issue.labels?.map((l: any) => (l.name || l).toLowerCase()) || []
+          return issueTags.includes(lang.toLowerCase())
+        })
 
       // Labels filter
       const matchesLabels =
         selectedFilters.labels.length === 0 ||
         selectedFilters.labels.some((label) => {
-          const issueTags = issue.labels?.map((l: any) => (l.name || l).toLowerCase()) || [];
-          return issueTags.includes(label.toLowerCase());
-        });
+          const issueTags = issue.labels?.map((l: any) => (l.name || l).toLowerCase()) || []
+          return issueTags.includes(label.toLowerCase())
+        })
 
       return (
         matchesSearch &&
@@ -613,37 +785,78 @@ Only applications submitted via the apply link above will be considered. Please 
         matchesCategories &&
         matchesLanguages &&
         matchesLabels
-      );
-    });
-  }, [issues, searchQuery, selectedFilters]);
+      )
+    })
+  }, [issues, searchQuery, selectedFilters])
 
-  // Extract unique labels from all loaded issues
+  /** Extracts all unique label names from loaded issues for the Labels filter section. */
   const availableLabels = useMemo(() => {
-    const labelsSet = new Set<string>();
-    issues.forEach(issue => {
+    const labelsSet = new Set<string>()
+    issues.forEach((issue) => {
       if (Array.isArray(issue.labels)) {
         issue.labels.forEach((label: any) => {
-          const labelName = typeof label === 'string' ? label : label.name;
+          const labelName = typeof label === 'string' ? label : label.name
           if (labelName) {
-            labelsSet.add(labelName);
+            labelsSet.add(sanitizeLabelName(labelName))
           }
-        });
+        })
       }
-    });
-    return Array.from(labelsSet).sort();
-  }, [issues]);
+    })
+    return Array.from(labelsSet).sort()
+  }, [issues])
+
+  /**
+   * Category filter options derived dynamically from issue labels.
+   * A label is classified as a category when its lowercase form does not match
+   * any entry in {@link KNOWN_LANGUAGES}. Keeps filters in sync as the issue
+   * set changes because it re-derives on every `issues` update.
+   */
+  const availableCategories = useMemo(() => {
+    const catSet = new Set<string>()
+    issues.forEach((issue) => {
+      if (Array.isArray(issue.labels)) {
+        issue.labels.forEach((label: any) => {
+          const raw = typeof label === 'string' ? label : label?.name
+          if (raw && !KNOWN_LANGUAGES.has(raw.toLowerCase())) {
+            catSet.add(sanitizeLabelName(raw))
+          }
+        })
+      }
+    })
+    return Array.from(catSet).sort()
+  }, [issues])
+
+  /**
+   * Language filter options derived dynamically from issue labels.
+   * A label is classified as a language when its lowercase form matches an entry
+   * in {@link KNOWN_LANGUAGES}. Keeps filters in sync as the issue set changes.
+   */
+  const availableLanguages = useMemo(() => {
+    const langSet = new Set<string>()
+    issues.forEach((issue) => {
+      if (Array.isArray(issue.labels)) {
+        issue.labels.forEach((label: any) => {
+          const raw = typeof label === 'string' ? label : label?.name
+          if (raw && KNOWN_LANGUAGES.has(raw.toLowerCase())) {
+            langSet.add(sanitizeLabelName(raw))
+          }
+        })
+      }
+    })
+    return Array.from(langSet).sort()
+  }, [issues])
 
   // If we were opened from a deep-link (e.g. project detail click), auto-select the target issue.
   useEffect(() => {
-    if (!initialSelectedIssueId) return;
-    if (isLoadingIssues) return;
-    if (selectedIssue) return;
-    if (!issues || issues.length === 0) return;
+    if (!initialSelectedIssueId) return
+    if (isLoadingIssues) return
+    if (selectedIssue) return
+    if (!issues || issues.length === 0) return
 
-    const match = issues.find((it) => it.github_issue_id?.toString() === initialSelectedIssueId);
-    if (!match) return;
+    const match = issues.find((it) => it.github_issue_id?.toString() === initialSelectedIssueId)
+    if (!match) return
 
-    const timeAgoFormatted = formatTimeAgo(match.updated_at);
+    const timeAgoFormatted = formatTimeAgo(match.updated_at)
     const issueForCard: Issue = {
       id: match.github_issue_id.toString(),
       number: match.number,
@@ -659,20 +872,46 @@ Only applications submitted via the apply link above will be considered. Please 
       applicationStatus: 'pending',
       discussions: [],
       url: match.url,
-    };
+    }
 
-    setSelectedIssue(issueForCard);
-    setSelectedIssueFromAPI(match);
-  }, [initialSelectedIssueId, isLoadingIssues, issues, selectedIssue, formatTimeAgo]);
+    setSelectedIssue(issueForCard)
+    setSelectedIssueFromAPI(match)
+  }, [initialSelectedIssueId, isLoadingIssues, issues, selectedIssue, formatTimeAgo])
 
   // Pre-select a repository when provided (e.g. from project detail click)
   useEffect(() => {
-    if (!initialSelectedProjectId) return;
+    if (!initialSelectedProjectId) return
     setSelectedFilters((prev) => {
-      if (prev.repositoryId) return prev;
-      return { ...prev, repositoryId: initialSelectedProjectId };
-    });
-  }, [initialSelectedProjectId]);
+      if (prev.repositoryId) return prev
+      return { ...prev, repositoryId: initialSelectedProjectId }
+    })
+  }, [initialSelectedProjectId])
+
+  if (!isAuthorized) {
+    return (
+      <div
+        className={`backdrop-blur-[40px] rounded-[24px] border p-8 flex flex-col items-center justify-center text-center transition-colors ${
+          isDark ? 'bg-[#2d2820]/[0.4] border-white/10' : 'bg-white/[0.12] border-white/20'
+        }`}
+      >
+        <ShieldOff className="w-16 h-16 text-red-500/70 mb-4" strokeWidth={1.5} />
+        <h3
+          className={`text-[20px] font-bold mb-2 transition-colors ${
+            isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+          }`}
+        >
+          Access Restricted
+        </h3>
+        <p
+          className={`text-[14px] max-w-md transition-colors ${
+            isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+          }`}
+        >
+          You must be a project maintainer or admin to access this dashboard.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex gap-6 h-[calc(100vh-220px)]">
@@ -681,24 +920,37 @@ Only applications submitted via the apply link above will be considered. Please 
         {/* Search and Filter Row */}
         <div className="flex items-center gap-3 flex-shrink-0">
           {/* Search Bar */}
-          <div className={`flex-1 backdrop-blur-[40px] rounded-[16px] border p-3 transition-colors ${isDark
-            ? 'bg-white/[0.12] border-white/20'
-            : 'bg-white/[0.12] border-white/20'
-            }`}>
+          <div
+            className={`flex-1 backdrop-blur-[40px] rounded-[16px] border p-3 transition-colors ${
+              isDark ? 'bg-white/[0.12] border-white/20' : 'bg-white/[0.12] border-white/20'
+            }`}
+          >
             <div className="flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={`flex-shrink-0 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                className={`flex-shrink-0 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+              >
                 <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5" />
-                <path d="m11 11 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <path
+                  d="m11 11 3 3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
               </svg>
               <input
                 type="text"
                 placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`flex-1 bg-transparent border-none outline-none text-[13px] placeholder:text-[13px] transition-colors ${isDark
-                  ? 'text-[#f5f5f5] placeholder-[#d4d4d4]'
-                  : 'text-[#2d2820] placeholder-[#7a6b5a]'
-                  }`}
+                className={`flex-1 bg-transparent border-none outline-none text-[13px] placeholder:text-[13px] transition-colors ${
+                  isDark
+                    ? 'text-[#f5f5f5] placeholder-[#d4d4d4]'
+                    : 'text-[#2d2820] placeholder-[#7a6b5a]'
+                }`}
               />
             </div>
           </div>
@@ -706,30 +958,66 @@ Only applications submitted via the apply link above will be considered. Please 
           {/* Filter Button with Badge */}
           <button
             ref={filterBtnRef}
+            data-testid="filter-button"
+            aria-label="Filter issues"
             onClick={() => setIsFilterModalOpen((v) => !v)}
-            className={`relative p-3 rounded-[16px] backdrop-blur-[40px] border hover:bg-white/[0.15] transition-all ${isDark
-              ? 'bg-white/[0.12] border-white/20'
-              : 'bg-white/[0.12] border-white/20'
-              }`}>
+            className={`relative p-3 rounded-[16px] backdrop-blur-[40px] border hover:bg-white/[0.15] transition-all ${
+              isDark ? 'bg-white/[0.12] border-white/20' : 'bg-white/[0.12] border-white/20'
+            }`}
+          >
             <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-br from-[#e8c571] to-[#c9983a] rounded-full text-[12px] font-bold text-white flex items-center justify-center">
               {appliedFilterCount}
             </div>
-            <Filter className={`w-4 h-4 transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-              }`} />
+            <Filter
+              className={`w-4 h-4 transition-colors ${
+                isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+              }`}
+            />
           </button>
         </div>
 
         {/* Issues List - height fits ~5 cards so 5 show at a time without scrolling; more issues scroll */}
         <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-custom min-h-0 max-h-[calc(5*7.5rem+4*0.75rem)]">
-          {isLoadingIssues ? (
+          {hasIssuesError ? (
+            <div
+              className={`flex flex-col items-center gap-3 px-6 py-6 mx-2 rounded-[16px] border transition-colors ${
+                isDark
+                  ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                  : 'bg-red-100/50 border-red-300/40 text-red-700'
+              }`}
+            >
+              <AlertCircle className="w-8 h-8 flex-shrink-0" />
+              <div className="text-center">
+                <p className="text-[14px] font-semibold mb-1">Failed to load issues</p>
+                <p className="text-[12px] opacity-80 mb-3">
+                  {issuesError instanceof Error
+                    ? issuesError.message
+                    : typeof issuesError === 'string'
+                      ? issuesError
+                      : 'An unknown error occurred'}
+                </p>
+                <button
+                  onClick={retryLoadIssues}
+                  className={`px-4 py-2 rounded-[10px] text-[12px] font-bold border transition-all cursor-pointer ${
+                    isDark
+                      ? 'bg-white/10 hover:bg-white/15 border-white/20 text-white'
+                      : 'bg-white hover:bg-white/50 border-gray-300 text-gray-800'
+                  }`}
+                >
+                  Retry Connection
+                </button>
+              </div>
+            </div>
+          ) : isLoadingIssues ? (
             <div className="space-y-3">
               {[...Array(8)].map((_, idx) => (
                 <IssueCardSkeleton key={idx} />
               ))}
             </div>
           ) : issues.length === 0 ? (
-            <div className={`px-6 py-8 text-center ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-              }`}>
+            <div
+              className={`px-6 py-8 text-center ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+            >
               <p className="text-[14px] font-medium mb-1">No issues found</p>
               <p className="text-[12px]">
                 {selectedProjects.length === 0
@@ -738,8 +1026,9 @@ Only applications submitted via the apply link above will be considered. Please 
               </p>
             </div>
           ) : visibleIssues.length === 0 ? (
-            <div className={`px-6 py-8 text-center ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-              }`}>
+            <div
+              className={`px-6 py-8 text-center ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+            >
               <p className="text-[14px] font-medium mb-1">No issues match the filters</p>
               <p className="text-[12px]">Try changing filters or clearing them.</p>
             </div>
@@ -748,7 +1037,7 @@ Only applications submitted via the apply link above will be considered. Please 
               {visibleIssues.map((issue) => {
                 // Convert API issue to Issue type for compatibility
                 // Backend now always provides updated_at_github, so we use updated_at
-                const timeAgoFormatted = formatTimeAgo(issue.updated_at);
+                const timeAgoFormatted = formatTimeAgo(issue.updated_at)
 
                 const issueForCard: Issue = {
                   id: issue.github_issue_id.toString(),
@@ -765,7 +1054,7 @@ Only applications submitted via the apply link above will be considered. Please 
                   applicationStatus: 'pending',
                   discussions: [],
                   url: issue.url,
-                };
+                }
 
                 return (
                   <IssueCard
@@ -777,23 +1066,26 @@ Only applications submitted via the apply link above will be considered. Please 
                     applicants={countApplicationComments(issue.comments)}
                     author={{
                       name: issue.author_login,
-                      avatar: `https://github.com/${issue.author_login}.png?size=40`
+                      avatar: `https://github.com/${issue.author_login}.png?size=40`,
                     }}
                     timeAgo={timeAgoFormatted}
                     tags={issue.labels?.map((l: any) => l.name || l) || []}
                     isSelected={selectedIssue?.id === issue.github_issue_id.toString()}
                     onClick={() => {
-                      setSelectedIssue(issueForCard);
-                      setSelectedIssueFromAPI(issue);
+                      setSelectedIssue(issueForCard)
+                      setSelectedIssueFromAPI(issue)
                     }}
                     showTags={false}
                   />
-                );
+                )
               })}
 
               {/* Issues Count */}
-              <div className={`text-center py-2 text-[12px] font-semibold transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                }`}>
+              <div
+                className={`text-center py-2 text-[12px] font-semibold transition-colors ${
+                  isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                }`}
+              >
                 {visibleIssues.length} issue{visibleIssues.length !== 1 ? 's' : ''}
               </div>
             </>
@@ -802,10 +1094,11 @@ Only applications submitted via the apply link above will be considered. Please 
       </div>
 
       {/* Right Content Area - Issue Detail or Placeholder */}
-      <div className={`flex-1 backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] relative overflow-y-auto scrollbar-custom transition-colors ${isDark
-        ? 'bg-[#2d2820]/[0.4] border-white/10'
-        : 'bg-white/[0.12] border-white/20'
-        }`}>
+      <div
+        className={`flex-1 backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] relative overflow-y-auto scrollbar-custom transition-colors ${
+          isDark ? 'bg-[#2d2820]/[0.4] border-white/10' : 'bg-white/[0.12] border-white/20'
+        }`}
+      >
         {!selectedIssue ? (
           <EmptyIssueState issueCount={visibleIssues.length} />
         ) : (
@@ -814,19 +1107,30 @@ Only applications submitted via the apply link above will be considered. Please 
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
-                  <span className={`text-[24px] font-bold transition-colors ${isDark ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
-                    }`}>#{selectedIssue.number || selectedIssue.id}</span>
-                  <h1 className={`text-[24px] font-bold transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                    }`}>
+                  <span
+                    className={`text-[24px] font-bold transition-colors ${
+                      isDark ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
+                    }`}
+                  >
+                    #{selectedIssue.number || selectedIssue.id}
+                  </span>
+                  <h1
+                    className={`text-[24px] font-bold transition-colors ${
+                      isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                    }`}
+                  >
                     {selectedIssue.title}
                   </h1>
                 </div>
 
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-[8px] border transition-colors ${isDark
-                    ? 'bg-[#c9983a]/20 border-[#c9983a]/30'
-                    : 'bg-[#8b6f3a]/15 border-[#8b6f3a]/30'
-                    }`}>
+                  <div
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-[8px] border transition-colors ${
+                      isDark
+                        ? 'bg-[#c9983a]/20 border-[#c9983a]/30'
+                        : 'bg-[#8b6f3a]/15 border-[#8b6f3a]/30'
+                    }`}
+                  >
                     {failedAvatars.has(getGitHubAvatar(selectedIssue.user, 16)) ? (
                       <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#c9983a]/30 to-[#d4af37]/20 border border-[#c9983a]/40" />
                     ) : (
@@ -834,13 +1138,24 @@ Only applications submitted via the apply link above will be considered. Please 
                         src={getGitHubAvatar(selectedIssue.user, 16)}
                         alt={selectedIssue.user}
                         className="w-4 h-4 rounded-full border border-[#c9983a]/40"
-                        onError={() => setFailedAvatars(prev => new Set(prev).add(getGitHubAvatar(selectedIssue.user, 16)))}
+                        onError={() =>
+                          setFailedAvatars((prev) =>
+                            new Set(prev).add(getGitHubAvatar(selectedIssue.user, 16))
+                          )
+                        }
                       />
                     )}
-                    <span className={`text-[12px] font-bold transition-colors ${isDark ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
-                      }`}>{selectedIssue.user}</span>
+                    <span
+                      className={`text-[12px] font-bold transition-colors ${
+                        isDark ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
+                      }`}
+                    >
+                      {selectedIssue.user}
+                    </span>
                   </div>
-                  <span className={`text-[13px] transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
+                  <span
+                    className={`text-[13px] transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+                  >
                     opened {selectedIssue.timeAgo}
                   </span>
                   {selectedIssue.url && (
@@ -848,8 +1163,9 @@ Only applications submitted via the apply link above will be considered. Please 
                       href={selectedIssue.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`flex items-center gap-1 text-[13px] font-semibold hover:underline transition-colors ${isDark ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
-                        }`}
+                      className={`flex items-center gap-1 text-[13px] font-semibold hover:underline transition-colors ${
+                        isDark ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
+                      }`}
                     >
                       View on GitHub
                       <ExternalLink className="w-3 h-3" />
@@ -861,8 +1177,9 @@ Only applications submitted via the apply link above will be considered. Please 
                   {selectedIssue.tags?.map((tag: string, idx: number) => (
                     <span
                       key={idx}
-                      className={`px-3 py-1.5 rounded-[8px] text-[12px] font-bold backdrop-blur-[20px] border border-white/25 transition-colors ${isDark ? 'bg-white/[0.08] text-[#d4d4d4]' : 'bg-white/[0.08] text-[#4a3f2f]'
-                        }`}
+                      className={`px-3 py-1.5 rounded-[8px] text-[12px] font-bold backdrop-blur-[20px] border border-white/25 transition-colors ${
+                        isDark ? 'bg-white/[0.08] text-[#d4d4d4]' : 'bg-white/[0.08] text-[#4a3f2f]'
+                      }`}
                     >
                       {tag}
                     </span>
@@ -872,8 +1189,9 @@ Only applications submitted via the apply link above will be considered. Please 
 
               <button
                 onClick={() => setSelectedIssue(null)}
-                className={`p-2 rounded-[10px] backdrop-blur-[20px] border border-white/25 hover:bg-white/[0.2] transition-all ${isDark ? 'bg-white/[0.08] text-[#f5f5f5]' : 'bg-white/[0.08] text-[#2d2820]'
-                  }`}
+                className={`p-2 rounded-[10px] backdrop-blur-[20px] border border-white/25 hover:bg-white/[0.2] transition-all ${
+                  isDark ? 'bg-white/[0.08] text-[#f5f5f5]' : 'bg-white/[0.08] text-[#2d2820]'
+                }`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -883,23 +1201,29 @@ Only applications submitted via the apply link above will be considered. Please 
             <div className="flex items-center gap-2 mb-6 border-b border-white/20 pb-4">
               <button
                 onClick={() => setIssueDetailTab('applications')}
-                className={`px-4 py-2 rounded-t-[10px] text-[14px] font-semibold transition-all ${issueDetailTab === 'applications'
-                  ? 'bg-[#c9983a] text-white'
-                  : isDark
-                    ? 'text-[#d4d4d4] hover:bg-white/[0.05]'
-                    : 'text-[#7a6b5a] hover:bg-white/[0.05]'
-                  }`}
+                className={`px-4 py-2 rounded-t-[10px] text-[14px] font-semibold transition-all ${
+                  issueDetailTab === 'applications'
+                    ? 'bg-[#c9983a] text-white'
+                    : isDark
+                      ? 'text-[#d4d4d4] hover:bg-white/[0.05]'
+                      : 'text-[#7a6b5a] hover:bg-white/[0.05]'
+                }`}
               >
-                Applications ({applicationData ? applicationData.applications.length : (selectedIssue?.applicants ?? 0)})
+                Applications (
+                {applicationData
+                  ? applicationData.applications.length
+                  : (selectedIssue?.applicants ?? 0)}
+                )
               </button>
               <button
                 onClick={() => setIssueDetailTab('discussions')}
-                className={`px-4 py-2 rounded-t-[10px] text-[14px] font-semibold transition-all ${issueDetailTab === 'discussions'
-                  ? 'bg-[#c9983a] text-white'
-                  : isDark
-                    ? 'text-[#d4d4d4] hover:bg-white/[0.05]'
-                    : 'text-[#7a6b5a] hover:bg-white/[0.05]'
-                  }`}
+                className={`px-4 py-2 rounded-t-[10px] text-[14px] font-semibold transition-all ${
+                  issueDetailTab === 'discussions'
+                    ? 'bg-[#c9983a] text-white'
+                    : isDark
+                      ? 'text-[#d4d4d4] hover:bg-white/[0.05]'
+                      : 'text-[#7a6b5a] hover:bg-white/[0.05]'
+                }`}
               >
                 Discussions
               </button>
@@ -910,33 +1234,68 @@ Only applications submitted via the apply link above will be considered. Please 
               <>
                 {/* Apply CTA: any logged-in user with GitHub linked can apply when issue is open + unassigned + not author */}
                 {selectedIssueFromAPI && (
-                  <div className={`mb-6 rounded-[16px] border p-5 transition-colors ${isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'}`}>
+                  <div
+                    className={`mb-6 rounded-[16px] border p-5 transition-colors ${isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'}`}
+                  >
                     {!user ? (
                       <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
                         Sign in to apply for this issue.
                       </p>
                     ) : !canApplyToSelectedIssue ? (
                       (() => {
-                        const isOpen = (selectedIssueFromAPI.state || '').toLowerCase() === 'open';
-                        const assigneesCount = Array.isArray(selectedIssueFromAPI.assignees) ? selectedIssueFromAPI.assignees.length : 0;
-                        const unassigned = assigneesCount === 0;
-                        const notAuthor = !user?.github?.login || user.github.login.toLowerCase() !== (selectedIssueFromAPI.author_login || '').toLowerCase();
-                        if (!isOpen) return <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>This issue is closed. Applications are disabled.</p>;
-                        if (!unassigned) return <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>This issue is already assigned. Applications are disabled.</p>;
-                        if (!notAuthor) return <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>You can't apply to your own issue.</p>;
-                        return null;
+                        const isOpen = (selectedIssueFromAPI.state || '').toLowerCase() === 'open'
+                        const assigneesCount = Array.isArray(selectedIssueFromAPI.assignees)
+                          ? selectedIssueFromAPI.assignees.length
+                          : 0
+                        const unassigned = assigneesCount === 0
+                        const notAuthor =
+                          !user?.github?.login ||
+                          user.github.login.toLowerCase() !==
+                            (selectedIssueFromAPI.author_login || '').toLowerCase()
+                        if (!isOpen)
+                          return (
+                            <p
+                              className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+                            >
+                              This issue is closed. Applications are disabled.
+                            </p>
+                          )
+                        if (!unassigned)
+                          return (
+                            <p
+                              className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+                            >
+                              This issue is already assigned. Applications are disabled.
+                            </p>
+                          )
+                        if (!notAuthor)
+                          return (
+                            <p
+                              className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+                            >
+                              You can't apply to your own issue.
+                            </p>
+                          )
+                        return null
                       })()
                     ) : (
                       <div className="flex items-center justify-between gap-4">
-                        <p className={`text-[13px] ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'}`}>
-                          Interested in contributing? Apply to work on this issue; your message will be posted as a comment on GitHub.
+                        <p
+                          className={`text-[13px] ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'}`}
+                        >
+                          Interested in contributing? Apply to work on this issue; your message will
+                          be posted as a comment on GitHub.
                         </p>
                         <button
                           type="button"
-                          onClick={() => { setApplicationError(null); setApplyModalOpen(true); }}
-                          className={`flex-shrink-0 px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all border ${isDark
-                            ? 'bg-gradient-to-br from-[#c9983a] to-[#a67c2e] border-white/10 text-white hover:opacity-90'
-                            : 'bg-gradient-to-br from-[#c9983a] to-[#a67c2e] border-white/10 text-white hover:opacity-90'
+                          onClick={() => {
+                            setApplicationError(null)
+                            setApplyModalOpen(true)
+                          }}
+                          className={`flex-shrink-0 px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all border ${
+                            isDark
+                              ? 'bg-gradient-to-br from-[#c9983a] to-[#a67c2e] border-white/10 text-white hover:opacity-90'
+                              : 'bg-gradient-to-br from-[#c9983a] to-[#a67c2e] border-white/10 text-white hover:opacity-90'
                           }`}
                         >
                           Apply for this issue
@@ -946,15 +1305,23 @@ Only applications submitted via the apply link above will be considered. Please 
                     {/* Maintainer: Post Grainlify bot message on this issue */}
                     {(userRole === 'maintainer' || userRole === 'admin') && (
                       <div className="mt-4 pt-4 border-t border-white/10">
-                        <p className={`text-[12px] mb-2 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
-                          As maintainer: Post a Grainlify bot message on this issue (e.g. to announce it&apos;s in the program).
+                        <p
+                          className={`text-[12px] mb-2 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+                        >
+                          As maintainer: Post a Grainlify bot message on this issue (e.g. to
+                          announce it&apos;s in the program).
                         </p>
                         <button
                           type="button"
-                          onClick={() => { setBotCommentError(null); setBotCommentDraft(DEFAULT_BOT_MESSAGE); setBotCommentModalOpen(true); }}
-                          className={`px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border ${isDark
-                            ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
-                            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
+                          onClick={() => {
+                            setBotCommentError(null)
+                            setBotCommentDraft(DEFAULT_BOT_MESSAGE)
+                            setBotCommentModalOpen(true)
+                          }}
+                          className={`px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border ${
+                            isDark
+                              ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
+                              : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
                           }`}
                         >
                           Post Grainlify bot message
@@ -977,16 +1344,27 @@ Only applications submitted via the apply link above will be considered. Please 
                       <div className="relative w-full h-full rounded-full bg-gradient-to-br from-[#c9983a]/15 to-[#d4af37]/10 border-2 border-[#c9983a]/30 flex items-center justify-center backdrop-blur-[20px]">
                         <div className="relative">
                           <User className="w-8 h-8 text-[#c9983a]/60" strokeWidth={1.5} />
-                          <Plus className="w-4 h-4 text-[#c9983a] absolute -top-1 -right-1" strokeWidth={3} />
+                          <Plus
+                            className="w-4 h-4 text-[#c9983a] absolute -top-1 -right-1"
+                            strokeWidth={3}
+                          />
                         </div>
                       </div>
                     </div>
-                    <h3 className={`text-[18px] font-bold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                      }`}>No applications yet</h3>
-                    <p className={`text-[14px] max-w-sm mx-auto leading-relaxed transition-colors ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                      }`}>
-                      This issue is open and waiting for contributors to apply.
-                      Applications will appear here once submitted.
+                    <h3
+                      className={`text-[18px] font-bold mb-2 transition-colors ${
+                        isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                      }`}
+                    >
+                      No applications yet
+                    </h3>
+                    <p
+                      className={`text-[14px] max-w-sm mx-auto leading-relaxed transition-colors ${
+                        isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                      }`}
+                    >
+                      This issue is open and waiting for contributors to apply. Applications will
+                      appear here once submitted.
                     </p>
                   </div>
                 )}
@@ -994,13 +1372,16 @@ Only applications submitted via the apply link above will be considered. Please 
                 {applicationData && applicationData.applications.length > 0 && (
                   <div className="space-y-4">
                     {applicationData.applications.map((application, appIndex) => {
-                      const isExpanded = expandedApplications[application.id] || false;
+                      const isExpanded = expandedApplications[application.id] || false
 
                       return (
                         <div
                           key={application.id}
-                          className={`backdrop-blur-[25px] rounded-[16px] border p-6 transition-colors ${isDark ? 'bg-white/[0.15] border-white/25' : 'bg-white/[0.15] border-white/25'
-                            }`}
+                          className={`backdrop-blur-[25px] rounded-[16px] border p-6 transition-colors ${
+                            isDark
+                              ? 'bg-white/[0.15] border-white/25'
+                              : 'bg-white/[0.15] border-white/25'
+                          }`}
                         >
                           {/* User Header - Always Visible */}
                           <div className="flex items-center justify-between">
@@ -1019,31 +1400,49 @@ Only applications submitted via the apply link above will be considered. Please 
                                   src={application.author.avatar}
                                   alt={application.author.name}
                                   className="w-12 h-12 rounded-full border-2 border-[#c9983a]/30 shadow-[0_4px_12px_rgba(201,152,58,0.3)]"
-                                  onError={() => setFailedAvatars(prev => new Set(prev).add(application.author.avatar))}
+                                  onError={() =>
+                                    setFailedAvatars((prev) =>
+                                      new Set(prev).add(application.author.avatar)
+                                    )
+                                  }
                                 />
                               )}
                               <div className="text-left">
-                                <h4 className={`text-[15px] font-bold transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                                  } group-hover/user:text-[#c9983a]`}>
+                                <h4
+                                  className={`text-[15px] font-bold transition-colors ${
+                                    isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                                  } group-hover/user:text-[#c9983a]`}
+                                >
                                   {application.author.name}
                                 </h4>
-                                <p className={`text-[12px] transition-colors ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                                  }`}>Applied - {application.timeAgo}</p>
+                                <p
+                                  className={`text-[12px] transition-colors ${
+                                    isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                                  }`}
+                                >
+                                  Applied - {application.timeAgo}
+                                </p>
                               </div>
                               <ExternalLink className="w-4 h-4 text-[#7a6b5a] ml-auto opacity-0 group-hover/user:opacity-100 transition-opacity" />
                             </button>
 
                             {/* Dropdown Button */}
                             <button
-                              onClick={() => setExpandedApplications(prev => ({
-                                ...prev,
-                                [application.id]: !prev[application.id]
-                              }))}
-                              className={`p-2 rounded-[8px] hover:bg-white/10 transition-all ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                                }`}
+                              onClick={() =>
+                                setExpandedApplications((prev) => ({
+                                  ...prev,
+                                  [application.id]: !prev[application.id],
+                                }))
+                              }
+                              className={`p-2 rounded-[8px] hover:bg-white/10 transition-all ${
+                                isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                              }`}
                             >
-                              <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''
-                                }`} />
+                              <ChevronDown
+                                className={`w-5 h-5 transition-transform duration-300 ${
+                                  isExpanded ? 'rotate-180' : ''
+                                }`}
+                              />
                             </button>
                           </div>
 
@@ -1052,63 +1451,123 @@ Only applications submitted via the apply link above will be considered. Please 
                             <div className="mt-5 space-y-5">
                               {/* Profile Stats Grid */}
                               <div className="grid grid-cols-2 gap-3">
-                                <div className={`backdrop-blur-[20px] rounded-[12px] border border-[#c9983a]/20 p-3 transition-colors ${isDark ? 'bg-white/[0.12]' : 'bg-white/[0.12]'
-                                  }`}>
+                                <div
+                                  className={`backdrop-blur-[20px] rounded-[12px] border border-[#c9983a]/20 p-3 transition-colors ${
+                                    isDark ? 'bg-white/[0.12]' : 'bg-white/[0.12]'
+                                  }`}
+                                >
                                   <div className="flex items-center gap-2 mb-1">
-                                    <Award className={`w-4 h-4 transition-colors ${isDark ? 'text-[#c9983a]' : 'text-[#c9983a]'
-                                      }`} />
-                                    <span className={`text-[20px] font-bold transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                                      }`}>{application.contributions}</span>
+                                    <Award
+                                      className={`w-4 h-4 transition-colors ${
+                                        isDark ? 'text-[#c9983a]' : 'text-[#c9983a]'
+                                      }`}
+                                    />
+                                    <span
+                                      className={`text-[20px] font-bold transition-colors ${
+                                        isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                                      }`}
+                                    >
+                                      {application.contributions}
+                                    </span>
                                   </div>
-                                  <p className={`text-[11px] font-semibold uppercase tracking-wide transition-colors ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                                    }`}>Contributions</p>
+                                  <p
+                                    className={`text-[11px] font-semibold uppercase tracking-wide transition-colors ${
+                                      isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                                    }`}
+                                  >
+                                    Contributions
+                                  </p>
                                 </div>
-                                <div className={`backdrop-blur-[20px] rounded-[12px] border border-[#c9983a]/20 p-3 transition-colors ${isDark ? 'bg-white/[0.12]' : 'bg-white/[0.12]'
-                                  }`}>
+                                <div
+                                  className={`backdrop-blur-[20px] rounded-[12px] border border-[#c9983a]/20 p-3 transition-colors ${
+                                    isDark ? 'bg-white/[0.12]' : 'bg-white/[0.12]'
+                                  }`}
+                                >
                                   <div className="flex items-center gap-2 mb-1">
-                                    <Award className={`w-4 h-4 transition-colors ${isDark ? 'text-[#c9983a]' : 'text-[#c9983a]'
-                                      }`} />
-                                    <span className={`text-[20px] font-bold transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                                      }`}>{application.rewards}</span>
+                                    <Award
+                                      className={`w-4 h-4 transition-colors ${
+                                        isDark ? 'text-[#c9983a]' : 'text-[#c9983a]'
+                                      }`}
+                                    />
+                                    <span
+                                      className={`text-[20px] font-bold transition-colors ${
+                                        isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                                      }`}
+                                    >
+                                      {application.rewards}
+                                    </span>
                                   </div>
-                                  <p className={`text-[11px] font-semibold uppercase tracking-wide transition-colors ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                                    }`}>Rewards</p>
+                                  <p
+                                    className={`text-[11px] font-semibold uppercase tracking-wide transition-colors ${
+                                      isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                                    }`}
+                                  >
+                                    Rewards
+                                  </p>
                                 </div>
                               </div>
 
                               {/* Additional Profile Info */}
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
-                                  <Users className={`w-4 h-4 transition-colors ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                                    }`} />
-                                  <span className={`text-[13px] transition-colors ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                                    }`}>
+                                  <Users
+                                    className={`w-4 h-4 transition-colors ${
+                                      isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                                    }`}
+                                  />
+                                  <span
+                                    className={`text-[13px] transition-colors ${
+                                      isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                                    }`}
+                                  >
                                     Contributor on{' '}
-                                    <span className={`font-bold transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                                      }`}>{application.projectsContributed}</span>
-                                    {' '}projects
+                                    <span
+                                      className={`font-bold transition-colors ${
+                                        isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                                      }`}
+                                    >
+                                      {application.projectsContributed}
+                                    </span>{' '}
+                                    projects
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <Star className={`w-4 h-4 transition-colors ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                                    }`} />
-                                  <span className={`text-[13px] transition-colors ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                                    }`}>
+                                  <Star
+                                    className={`w-4 h-4 transition-colors ${
+                                      isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                                    }`}
+                                  />
+                                  <span
+                                    className={`text-[13px] transition-colors ${
+                                      isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                                    }`}
+                                  >
                                     Lead{' '}
-                                    <span className={`font-bold transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                                      }`}>{application.projectsLead}</span>
-                                    {' '}projects
+                                    <span
+                                      className={`font-bold transition-colors ${
+                                        isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                                      }`}
+                                    >
+                                      {application.projectsLead}
+                                    </span>{' '}
+                                    projects
                                   </span>
                                 </div>
                               </div>
 
                               {/* Message */}
-                              <div className={`p-4 rounded-[12px] border transition-colors ${isDark
-                                ? 'bg-white/20 border-white/30'
-                                : 'bg-white/20 border-white/30'
-                                }`}>
-                                <p className={`text-[13px] leading-relaxed transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                                  }`}>
+                              <div
+                                className={`p-4 rounded-[12px] border transition-colors ${
+                                  isDark
+                                    ? 'bg-white/20 border-white/30'
+                                    : 'bg-white/20 border-white/30'
+                                }`}
+                              >
+                                <p
+                                  className={`text-[13px] leading-relaxed transition-colors ${
+                                    isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                                  }`}
+                                >
                                   {application.message}
                                 </p>
                               </div>
@@ -1116,73 +1575,107 @@ Only applications submitted via the apply link above will be considered. Please 
                               {/* Status & Action Buttons: contributor = Withdraw only (own application); maintainer = Reject / Assign / Unassign */}
                               <div className="flex items-center justify-between">
                                 {viewMode === 'contributor' ? (
-                                  (application as { login?: string; commentId?: number }).login === user?.github?.login && (application as { commentId?: number }).commentId != null ? (
+                                  (application as { login?: string; commentId?: number }).login ===
+                                    user?.github?.login &&
+                                  (application as { commentId?: number }).commentId != null ? (
                                     <button
-                                      onClick={() => handleWithdraw((application as { commentId: number }).commentId)}
+                                      onClick={() =>
+                                        handleWithdraw(
+                                          (application as { commentId: number }).commentId
+                                        )
+                                      }
                                       disabled={actionInProgress?.type === 'withdraw'}
-                                      className={`px-4 py-2 rounded-[8px] border text-[13px] font-semibold transition-all ${isDark
-                                        ? 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#e8dfd0] hover:text-[#c9983a] disabled:opacity-50'
-                                        : 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#2d2820] hover:text-[#c9983a] disabled:opacity-50'
-                                        }`}
+                                      className={`px-4 py-2 rounded-[8px] border text-[13px] font-semibold transition-all ${
+                                        isDark
+                                          ? 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#e8dfd0] hover:text-[#c9983a] disabled:opacity-50'
+                                          : 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#2d2820] hover:text-[#c9983a] disabled:opacity-50'
+                                      }`}
                                     >
-                                      {actionInProgress?.type === 'withdraw' && actionInProgress?.id === `withdraw-${(application as { commentId: number }).commentId}` ? 'Withdrawing…' : 'Withdraw'}
+                                      {actionInProgress?.type === 'withdraw' &&
+                                      actionInProgress?.id ===
+                                        `withdraw-${(application as { commentId: number }).commentId}`
+                                        ? 'Withdrawing…'
+                                        : 'Withdraw'}
                                     </button>
                                   ) : null
                                 ) : (
                                   (() => {
-                                    const isAssigned = Array.isArray(selectedIssueFromAPI?.assignees) && (selectedIssueFromAPI?.assignees?.length ?? 0) > 0;
+                                    const isAssigned =
+                                      Array.isArray(selectedIssueFromAPI?.assignees) &&
+                                      (selectedIssueFromAPI?.assignees?.length ?? 0) > 0
                                     if (isAssigned) {
                                       return (
                                         <>
                                           <div className="flex items-center gap-2">
                                             <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#c9983a] to-[#d4af37] flex items-center justify-center">
-                                              <CheckCircle className="w-3 h-3 text-white" strokeWidth={3} />
+                                              <CheckCircle
+                                                className="w-3 h-3 text-white"
+                                                strokeWidth={3}
+                                              />
                                             </div>
-                                            <span className={`text-[13px] font-bold ${isDark ? 'text-[#c9983a]' : 'text-[#c9983a]'}`}>Assigned</span>
+                                            <span
+                                              className={`text-[13px] font-bold ${isDark ? 'text-[#c9983a]' : 'text-[#c9983a]'}`}
+                                            >
+                                              Assigned
+                                            </span>
                                           </div>
                                           {appIndex === 0 ? (
                                             <button
                                               onClick={() => handleUnassign()}
                                               disabled={!!actionInProgress}
-                                              className={`px-4 py-2 rounded-[8px] border text-[13px] font-semibold transition-all ${isDark
-                                                ? 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#e8dfd0] hover:text-[#c9983a] disabled:opacity-50'
-                                                : 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#2d2820] hover:text-[#c9983a] disabled:opacity-50'
-                                                }`}
+                                              className={`px-4 py-2 rounded-[8px] border text-[13px] font-semibold transition-all ${
+                                                isDark
+                                                  ? 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#e8dfd0] hover:text-[#c9983a] disabled:opacity-50'
+                                                  : 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#2d2820] hover:text-[#c9983a] disabled:opacity-50'
+                                              }`}
                                             >
-                                              {actionInProgress?.type === 'unassign' ? 'Unassigning…' : 'Unassign'}
+                                              {actionInProgress?.type === 'unassign'
+                                                ? 'Unassigning…'
+                                                : 'Unassign'}
                                             </button>
                                           ) : null}
                                         </>
-                                      );
+                                      )
                                     }
                                     return (
                                       <>
                                         <button
-                                          onClick={() => handleReject((application as { login: string }).login)}
+                                          onClick={() =>
+                                            handleReject((application as { login: string }).login)
+                                          }
                                           disabled={!!actionInProgress}
-                                          className={`flex-1 px-4 py-2 rounded-[8px] border text-[13px] font-semibold transition-all mr-2 ${isDark
-                                            ? 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#e8dfd0] hover:text-[#c9983a] disabled:opacity-50'
-                                            : 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#2d2820] hover:text-[#c9983a] disabled:opacity-50'
-                                            }`}
+                                          className={`flex-1 px-4 py-2 rounded-[8px] border text-[13px] font-semibold transition-all mr-2 ${
+                                            isDark
+                                              ? 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#e8dfd0] hover:text-[#c9983a] disabled:opacity-50'
+                                              : 'bg-white/30 hover:bg-white/50 border-white/40 hover:border-[#c9983a]/40 text-[#2d2820] hover:text-[#c9983a] disabled:opacity-50'
+                                          }`}
                                         >
-                                          {actionInProgress?.id === `reject-${(application as { login: string }).login}` ? 'Rejecting…' : 'Reject'}
+                                          {actionInProgress?.id ===
+                                          `reject-${(application as { login: string }).login}`
+                                            ? 'Rejecting…'
+                                            : 'Reject'}
                                         </button>
                                         <button
-                                          onClick={() => handleAssign((application as { login: string }).login)}
+                                          onClick={() =>
+                                            handleAssign((application as { login: string }).login)
+                                          }
                                           disabled={!!actionInProgress}
                                           className="flex-1 px-4 py-2 rounded-[8px] bg-gradient-to-br from-[#c9983a]/30 to-[#d4af37]/25 border border-[#c9983a]/40 text-[13px] font-semibold text-[#2d2820] hover:from-[#c9983a]/40 hover:to-[#d4af37]/35 hover:shadow-[0_4px_16px_rgba(201,152,58,0.3)] transition-all disabled:opacity-50"
                                         >
-                                          {actionInProgress?.id === `assign-${(application as { login: string }).login}` ? 'Assigning…' : 'Assign'}
+                                          {actionInProgress?.id ===
+                                          `assign-${(application as { login: string }).login}`
+                                            ? 'Assigning…'
+                                            : 'Assign'}
                                         </button>
                                       </>
-                                    );
+                                    )
                                   })()
                                 )}
                               </div>
                             </div>
                           )}
                         </div>
-                      );
+                      )
                     })}
                   </div>
                 )}
@@ -1193,15 +1686,21 @@ Only applications submitted via the apply link above will be considered. Please 
               <div className="space-y-4">
                 {/* Issue description */}
                 {selectedIssueFromAPI?.description && (
-                  <div className={`backdrop-blur-[25px] rounded-[16px] border p-5 transition-colors ${isDark
-                    ? 'bg-white/[0.08] border-white/10'
-                    : 'bg-white/[0.15] border-white/25'
-                    }`}>
-                    <div className={`text-[12px] font-bold mb-2 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+                  <div
+                    className={`backdrop-blur-[25px] rounded-[16px] border p-5 transition-colors ${
+                      isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'
+                    }`}
+                  >
+                    <div
+                      className={`text-[12px] font-bold mb-2 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+                    >
                       Description
                     </div>
-                    <div className={`text-[14px] leading-relaxed whitespace-pre-wrap transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                      }`}>
+                    <div
+                      className={`text-[14px] leading-relaxed whitespace-pre-wrap transition-colors ${
+                        isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                      }`}
+                    >
                       <RenderMarkdownContent content={selectedIssueFromAPI.description} />
                     </div>
                   </div>
@@ -1210,10 +1709,11 @@ Only applications submitted via the apply link above will be considered. Please 
                   applicationData.discussions.map((discussion) => (
                     <div
                       key={discussion.id}
-                      className={`backdrop-blur-[25px] rounded-[16px] border p-5 transition-colors ${isDark
-                        ? 'bg-white/[0.08] border-white/10'
-                        : 'bg-white/[0.15] border-white/25'
-                        }`}
+                      className={`backdrop-blur-[25px] rounded-[16px] border p-5 transition-colors ${
+                        isDark
+                          ? 'bg-white/[0.08] border-white/10'
+                          : 'bg-white/[0.15] border-white/25'
+                      }`}
                     >
                       <div className="flex items-center gap-3 mb-3">
                         {failedAvatars.has(getGitHubAvatar(discussion.user, 32)) ? (
@@ -1227,21 +1727,35 @@ Only applications submitted via the apply link above will be considered. Please 
                             src={getGitHubAvatar(discussion.user, 32)}
                             alt={discussion.user}
                             className="w-8 h-8 rounded-full border border-[#c9983a]/40"
-                            onError={() => setFailedAvatars(prev => new Set(prev).add(getGitHubAvatar(discussion.user, 32)))}
+                            onError={() =>
+                              setFailedAvatars((prev) =>
+                                new Set(prev).add(getGitHubAvatar(discussion.user, 32))
+                              )
+                            }
                           />
                         )}
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className={`text-[14px] font-bold transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                              }`}>{discussion.user}</span>
+                            <span
+                              className={`text-[14px] font-bold transition-colors ${
+                                isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                              }`}
+                            >
+                              {discussion.user}
+                            </span>
                             {discussion.isAuthor && (
                               <span className="px-2 py-0.5 rounded-[4px] bg-[#c9983a]/20 border border-[#c9983a]/30 text-[10px] font-bold text-[#c9983a]">
                                 AUTHOR
                               </span>
                             )}
                           </div>
-                          <span className={`text-[12px] transition-colors ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                            }`}>{discussion.timeAgo}</span>
+                          <span
+                            className={`text-[12px] transition-colors ${
+                              isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                            }`}
+                          >
+                            {discussion.timeAgo}
+                          </span>
                         </div>
                       </div>
 
@@ -1253,19 +1767,31 @@ Only applications submitted via the apply link above will be considered. Please 
                         </div>
                       )}
 
-                      <div className={`text-[14px] leading-relaxed whitespace-pre-wrap transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                        }`}>
+                      <div
+                        className={`text-[14px] leading-relaxed whitespace-pre-wrap transition-colors ${
+                          isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                        }`}
+                      >
                         {discussion.content}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className={`p-8 rounded-[16px] backdrop-blur-[25px] border text-center min-h-[300px] flex flex-col items-center justify-center ${isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'
-                    }`}>
-                    <MessageSquare className={`w-12 h-12 mx-auto mb-4 transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                      }`} />
-                    <p className={`text-[14px] transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                      }`}>
+                  <div
+                    className={`p-8 rounded-[16px] backdrop-blur-[25px] border text-center min-h-[300px] flex flex-col items-center justify-center ${
+                      isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'
+                    }`}
+                  >
+                    <MessageSquare
+                      className={`w-12 h-12 mx-auto mb-4 transition-colors ${
+                        isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                      }`}
+                    />
+                    <p
+                      className={`text-[14px] transition-colors ${
+                        isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                      }`}
+                    >
                       No discussions yet
                     </p>
                   </div>
@@ -1279,68 +1805,101 @@ Only applications submitted via the apply link above will be considered. Please 
       {/* Apply for issue modal */}
       <Modal
         isOpen={applyModalOpen}
-        onClose={() => { setApplyModalOpen(false); setApplicationError(null); }}
+        onClose={() => {
+          setApplyModalOpen(false)
+          setApplicationError(null)
+        }}
         title="Apply for this issue"
         width="lg"
         footer={
           <ModalFooter>
-            <ModalButton onClick={() => { setApplyModalOpen(false); setApplicationError(null); }}>Cancel</ModalButton>
-            <ModalButton variant="primary" disabled={isSubmittingApplication || !applicationDraft.trim()} onClick={handleSubmitApplication}>
+            <ModalButton
+              onClick={() => {
+                setApplyModalOpen(false)
+                setApplicationError(null)
+              }}
+            >
+              Cancel
+            </ModalButton>
+            <ModalButton
+              variant="primary"
+              disabled={isSubmittingApplication || !applicationDraft.trim()}
+              onClick={handleSubmitApplication}
+            >
               {isSubmittingApplication ? 'Submitting…' : 'Submit application'}
             </ModalButton>
           </ModalFooter>
         }
       >
         <p className={`text-[13px] mb-3 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
-          Your comment on GitHub will look like: <strong>@{user?.github?.login ?? 'you'} has applied to work on this issue as part of the Grainlify program.</strong> Your message below will appear in a blockquote, followed by instructions for repo maintainers to review or assign you.
+          Your comment on GitHub will look like:{' '}
+          <strong>
+            @{user?.github?.login ?? 'you'} has applied to work on this issue as part of the
+            Grainlify program.
+          </strong>{' '}
+          Your message below will appear in a blockquote, followed by instructions for repo
+          maintainers to review or assign you.
         </p>
         <textarea
           value={applicationDraft}
           onChange={(e) => setApplicationDraft(e.target.value)}
           placeholder="e.g. Hi, I'm a smart contract and backend developer. I'm confident I can tackle this issue—can you assign me?"
-          className={`w-full min-h-[120px] rounded-[12px] border px-4 py-3 text-[13px] outline-none transition-colors ${isDark
-            ? 'bg-white/[0.06] border-white/15 text-[#e8dfd0] placeholder:text-[#b8a898]/60'
-            : 'bg-white/[0.25] border-white/30 text-[#2d2820] placeholder:text-[#7a6b5a]/70'
-            }`}
+          className={`w-full min-h-[120px] rounded-[12px] border px-4 py-3 text-[13px] outline-none transition-colors ${
+            isDark
+              ? 'bg-white/[0.06] border-white/15 text-[#e8dfd0] placeholder:text-[#b8a898]/60'
+              : 'bg-white/[0.25] border-white/30 text-[#2d2820] placeholder:text-[#7a6b5a]/70'
+          }`}
         />
         {applicationError && (
-          <div className="mt-2 text-[12px] font-semibold text-red-400">
-            {applicationError}
-          </div>
+          <div className="mt-2 text-[12px] font-semibold text-red-400">{applicationError}</div>
         )}
       </Modal>
 
       {/* Post Grainlify bot message modal (maintainers) */}
       <Modal
         isOpen={botCommentModalOpen}
-        onClose={() => { setBotCommentModalOpen(false); setBotCommentError(null); }}
+        onClose={() => {
+          setBotCommentModalOpen(false)
+          setBotCommentError(null)
+        }}
         title="Post Grainlify bot message"
         width="lg"
         footer={
           <ModalFooter>
-            <ModalButton onClick={() => { setBotCommentModalOpen(false); setBotCommentError(null); }}>Cancel</ModalButton>
-            <ModalButton variant="primary" disabled={isPostingBotComment || !botCommentDraft.trim()} onClick={handlePostBotComment}>
+            <ModalButton
+              onClick={() => {
+                setBotCommentModalOpen(false)
+                setBotCommentError(null)
+              }}
+            >
+              Cancel
+            </ModalButton>
+            <ModalButton
+              variant="primary"
+              disabled={isPostingBotComment || !botCommentDraft.trim()}
+              onClick={handlePostBotComment}
+            >
               {isPostingBotComment ? 'Posting…' : 'Post comment'}
             </ModalButton>
           </ModalFooter>
         }
       >
         <p className={`text-[13px] mb-3 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
-          This will post a comment on the GitHub issue as the Grainlify bot (GitHub App). Edit the message below if needed.
+          This will post a comment on the GitHub issue as the Grainlify bot (GitHub App). Edit the
+          message below if needed.
         </p>
         <textarea
           value={botCommentDraft}
           onChange={(e) => setBotCommentDraft(e.target.value)}
           placeholder="Bot message (markdown supported)"
-          className={`w-full min-h-[160px] rounded-[12px] border px-4 py-3 text-[13px] outline-none transition-colors ${isDark
-            ? 'bg-white/[0.06] border-white/15 text-[#e8dfd0] placeholder:text-[#b8a898]/60'
-            : 'bg-white/[0.25] border-white/30 text-[#2d2820] placeholder:text-[#7a6b5a]/70'
-            }`}
+          className={`w-full min-h-[160px] rounded-[12px] border px-4 py-3 text-[13px] outline-none transition-colors ${
+            isDark
+              ? 'bg-white/[0.06] border-white/15 text-[#e8dfd0] placeholder:text-[#b8a898]/60'
+              : 'bg-white/[0.25] border-white/30 text-[#2d2820] placeholder:text-[#7a6b5a]/70'
+          }`}
         />
         {botCommentError && (
-          <div className="mt-2 text-[12px] font-semibold text-red-400">
-            {botCommentError}
-          </div>
+          <div className="mt-2 text-[12px] font-semibold text-red-400">{botCommentError}</div>
         )}
       </Modal>
 
@@ -1349,30 +1908,38 @@ Only applications submitted via the apply link above will be considered. Please 
         <>
           <div
             ref={filterPopoverRef}
-            className={`fixed z-50 w-[350px] max-h-[calc(100vh-160px)] flex flex-col rounded-[20px] border-2 transition-colors ${isDark
-              ? 'bg-[#3a3228] border-white/30'
-              : 'bg-[#d4c5b0] border-white/40'
-              }`}
+            className={`fixed z-50 w-[350px] max-h-[calc(100vh-160px)] flex flex-col rounded-[20px] border-2 transition-colors ${
+              isDark ? 'bg-[#3a3228] border-white/30' : 'bg-[#d4c5b0] border-white/40'
+            }`}
             style={{ top: filterPopoverPos.top, left: filterPopoverPos.left }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b border-white/10">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center shadow-lg border-2 ${isDark
-                  ? 'bg-gradient-to-br from-[#e8c571]/30 via-[#d4af37]/25 to-[#c9983a]/20 border-[#e8c571]/50'
-                  : 'bg-gradient-to-br from-[#c9983a]/30 via-[#d4af37]/25 to-[#c9983a]/20 border-[#c9983a]/50'
-                  }`}>
+                <div
+                  className={`w-10 h-10 rounded-[12px] flex items-center justify-center shadow-lg border-2 ${
+                    isDark
+                      ? 'bg-gradient-to-br from-[#e8c571]/30 via-[#d4af37]/25 to-[#c9983a]/20 border-[#e8c571]/50'
+                      : 'bg-gradient-to-br from-[#c9983a]/30 via-[#d4af37]/25 to-[#c9983a]/20 border-[#c9983a]/50'
+                  }`}
+                >
                   <Filter className="w-5 h-5 text-white" />
                 </div>
-                <h2 className={`text-[18px] font-bold transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                  }`}>All Filters</h2>
+                <h2
+                  className={`text-[18px] font-bold transition-colors ${
+                    isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                  }`}
+                >
+                  All Filters
+                </h2>
               </div>
               <button
                 onClick={() => setIsFilterModalOpen(false)}
-                className={`p-2 rounded-[10px] transition-all hover:scale-110 ${isDark
-                  ? 'hover:bg-white/[0.1] text-[#e8c571] hover:text-[#f5d98a]'
-                  : 'hover:bg-black/[0.05] text-[#8b6f3a] hover:text-[#c9983a]'
-                  }`}
+                className={`p-2 rounded-[10px] transition-all hover:scale-110 ${
+                  isDark
+                    ? 'hover:bg-white/[0.1] text-[#e8c571] hover:text-[#f5d98a]'
+                    : 'hover:bg-black/[0.05] text-[#8b6f3a] hover:text-[#c9983a]'
+                }`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1381,55 +1948,70 @@ Only applications submitted via the apply link above will be considered. Please 
             <div className="flex-1 overflow-y-auto p-6 scrollbar-hide space-y-4">
               {/* Repository */}
               <div>
-                <h3 className={`text-[12px] font-semibold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                  }`}>Repository</h3>
+                <h3
+                  className={`text-[12px] font-semibold mb-2 transition-colors ${
+                    isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                  }`}
+                >
+                  Repository
+                </h3>
 
                 {/* Search Bar */}
-                <div className={`mb-2.5 px-3 py-2 rounded-[8px] border transition-colors ${isDark
-                  ? 'bg-white/[0.08] border-white/15'
-                  : 'bg-white/[0.15] border-white/25'
-                  }`}>
+                <div
+                  className={`mb-2.5 px-3 py-2 rounded-[8px] border transition-colors ${
+                    isDark ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
+                  }`}
+                >
                   <div className="flex items-center gap-2">
-                    <Search className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`} />
+                    <Search
+                      className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+                    />
                     <input
                       type="text"
                       placeholder="Search repositories"
                       value={repoSearch}
                       onChange={(e) => setRepoSearch(e.target.value)}
-                      className={`flex-1 bg-transparent border-none outline-none text-[12px] placeholder:text-[12px] transition-colors ${isDark
-                        ? 'text-[#e8dfd0] placeholder-[#b8a898]/60'
-                        : 'text-[#2d2820] placeholder-[#7a6b5a]/60'
-                        }`}
+                      className={`flex-1 bg-transparent border-none outline-none text-[12px] placeholder:text-[12px] transition-colors ${
+                        isDark
+                          ? 'text-[#e8dfd0] placeholder-[#b8a898]/60'
+                          : 'text-[#2d2820] placeholder-[#7a6b5a]/60'
+                      }`}
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => setSelectedFilters(prev => ({ ...prev, repositoryId: null }))}
-                    className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-semibold transition-all border ${!selectedFilters.repositoryId
-                      ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
-                      : isDark
-                        ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
-                        : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
-                      }`}
+                    onClick={() => setSelectedFilters((prev) => ({ ...prev, repositoryId: null }))}
+                    className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-semibold transition-all border ${
+                      !selectedFilters.repositoryId
+                        ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
+                        : isDark
+                          ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
+                          : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
+                    }`}
                   >
                     All projects
                   </button>
 
                   {selectedProjects
-                    .filter((p) => p.github_full_name.toLowerCase().includes(repoSearch.toLowerCase()))
+                    .filter((p) =>
+                      p.github_full_name.toLowerCase().includes(repoSearch.toLowerCase())
+                    )
                     .slice(0, 25)
                     .map((p) => (
                       <button
                         key={p.id}
-                        onClick={() => setSelectedFilters(prev => ({ ...prev, repositoryId: p.id }))}
-                        className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-semibold transition-all border ${selectedFilters.repositoryId === p.id
-                          ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
-                          : isDark
-                            ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
-                            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
-                          }`}
+                        onClick={() =>
+                          setSelectedFilters((prev) => ({ ...prev, repositoryId: p.id }))
+                        }
+                        className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-semibold transition-all border ${
+                          selectedFilters.repositoryId === p.id
+                            ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
+                            : isDark
+                              ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
+                              : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
+                        }`}
                       >
                         {p.github_full_name}
                       </button>
@@ -1441,22 +2023,28 @@ Only applications submitted via the apply link above will be considered. Please 
               <div className="grid grid-cols-2 gap-3">
                 {/* Status */}
                 <div>
-                  <h3 className={`text-[12px] font-semibold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                    }`}>Status</h3>
+                  <h3
+                    className={`text-[12px] font-semibold mb-2 transition-colors ${
+                      isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                    }`}
+                  >
+                    Status
+                  </h3>
                   <div className="flex gap-2">
                     {['Open', 'Closed'].map((status) => (
                       <button
                         key={status}
                         onClick={() => {
-                          const value = status === 'Open' ? 'open' : 'closed';
-                          setSelectedFilters(prev => ({ ...prev, status: [value] }));
+                          const value = status === 'Open' ? 'open' : 'closed'
+                          setSelectedFilters((prev) => ({ ...prev, status: [value] }))
                         }}
-                        className={`flex-1 px-2 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all border ${selectedFilters.status[0] === (status === 'Open' ? 'open' : 'closed')
-                          ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
-                          : isDark
-                            ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
-                            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
-                          }`}
+                        className={`flex-1 px-2 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all border ${
+                          selectedFilters.status[0] === (status === 'Open' ? 'open' : 'closed')
+                            ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
+                            : isDark
+                              ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
+                              : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
+                        }`}
                       >
                         {status}
                       </button>
@@ -1466,25 +2054,31 @@ Only applications submitted via the apply link above will be considered. Please 
 
                 {/* Applicants */}
                 <div>
-                  <h3 className={`text-[12px] font-semibold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                    }`}>Applicants</h3>
+                  <h3
+                    className={`text-[12px] font-semibold mb-2 transition-colors ${
+                      isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                    }`}
+                  >
+                    Applicants
+                  </h3>
                   <div className="flex gap-2">
                     {['Yes', 'No'].map((applicant) => (
                       <button
                         key={applicant}
                         onClick={() => {
-                          const v = applicant.toLowerCase();
-                          setSelectedFilters(prev => ({
+                          const v = applicant.toLowerCase()
+                          setSelectedFilters((prev) => ({
                             ...prev,
-                            applicants: prev.applicants[0] === v ? [] : [v]
-                          }));
+                            applicants: prev.applicants[0] === v ? [] : [v],
+                          }))
                         }}
-                        className={`flex-1 px-2 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all border ${selectedFilters.applicants[0] === applicant.toLowerCase()
-                          ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
-                          : isDark
-                            ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
-                            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
-                          }`}
+                        className={`flex-1 px-2 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all border ${
+                          selectedFilters.applicants[0] === applicant.toLowerCase()
+                            ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
+                            : isDark
+                              ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
+                              : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
+                        }`}
                       >
                         {applicant}
                       </button>
@@ -1497,25 +2091,31 @@ Only applications submitted via the apply link above will be considered. Please 
               <div className="grid grid-cols-2 gap-3">
                 {/* Assignee */}
                 <div>
-                  <h3 className={`text-[12px] font-semibold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                    }`}>Assignee</h3>
+                  <h3
+                    className={`text-[12px] font-semibold mb-2 transition-colors ${
+                      isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                    }`}
+                  >
+                    Assignee
+                  </h3>
                   <div className="flex gap-2">
                     {['Yes', 'No'].map((assignee) => (
                       <button
                         key={assignee}
                         onClick={() => {
-                          const v = assignee.toLowerCase();
-                          setSelectedFilters(prev => ({
+                          const v = assignee.toLowerCase()
+                          setSelectedFilters((prev) => ({
                             ...prev,
-                            assignee: prev.assignee[0] === v ? [] : [v]
-                          }));
+                            assignee: prev.assignee[0] === v ? [] : [v],
+                          }))
                         }}
-                        className={`flex-1 px-2 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all border ${selectedFilters.assignee[0] === assignee.toLowerCase()
-                          ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
-                          : isDark
-                            ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
-                            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
-                          }`}
+                        className={`flex-1 px-2 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all border ${
+                          selectedFilters.assignee[0] === assignee.toLowerCase()
+                            ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
+                            : isDark
+                              ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
+                              : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
+                        }`}
                       >
                         {assignee}
                       </button>
@@ -1525,25 +2125,31 @@ Only applications submitted via the apply link above will be considered. Please 
 
                 {/* Stale */}
                 <div>
-                  <h3 className={`text-[12px] font-semibold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                    }`}>Stale</h3>
+                  <h3
+                    className={`text-[12px] font-semibold mb-2 transition-colors ${
+                      isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                    }`}
+                  >
+                    Stale
+                  </h3>
                   <div className="flex gap-2">
                     {['Yes', 'No'].map((stale) => (
                       <button
                         key={stale}
                         onClick={() => {
-                          const v = stale.toLowerCase();
-                          setSelectedFilters(prev => ({
+                          const v = stale.toLowerCase()
+                          setSelectedFilters((prev) => ({
                             ...prev,
-                            stale: prev.stale[0] === v ? [] : [v]
-                          }));
+                            stale: prev.stale[0] === v ? [] : [v],
+                          }))
                         }}
-                        className={`flex-1 px-2 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all border ${selectedFilters.stale[0] === stale.toLowerCase()
-                          ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
-                          : isDark
-                            ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
-                            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
-                          }`}
+                        className={`flex-1 px-2 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all border ${
+                          selectedFilters.stale[0] === stale.toLowerCase()
+                            ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
+                            : isDark
+                              ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
+                              : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
+                        }`}
                       >
                         {stale}
                       </button>
@@ -1552,131 +2158,169 @@ Only applications submitted via the apply link above will be considered. Please 
                 </div>
               </div>
 
-              {/* Categories */}
+              {/* Categories — derived from issue labels that are not programming languages */}
               <div>
-                <h3 className={`text-[12px] font-semibold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                  }`}>Categories</h3>
+                <h3
+                  className={`text-[12px] font-semibold mb-2 transition-colors ${
+                    isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                  }`}
+                >
+                  Categories
+                </h3>
                 <div className="flex flex-wrap gap-2">
-                  {['Blockchain & Cryptocurrencies', 'Cryptography', 'Stellar', 'Web Development'].map((category) => (
+                  {availableCategories.map((category) => (
                     <button
                       key={category}
                       onClick={() => {
-                        const lowerCategory = category.toLowerCase();
+                        const lowerCategory = category.toLowerCase()
                         if (selectedFilters.categories.includes(lowerCategory)) {
-                          setSelectedFilters(prev => ({
+                          setSelectedFilters((prev) => ({
                             ...prev,
-                            categories: prev.categories.filter(c => c !== lowerCategory)
-                          }));
+                            categories: prev.categories.filter((c) => c !== lowerCategory),
+                          }))
                         } else {
-                          setSelectedFilters(prev => ({
+                          setSelectedFilters((prev) => ({
                             ...prev,
-                            categories: [...prev.categories, lowerCategory]
-                          }));
+                            categories: [...prev.categories, lowerCategory],
+                          }))
                         }
                       }}
-                      className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-semibold transition-all border ${selectedFilters.categories.includes(category.toLowerCase())
-                        ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
-                        : isDark
-                          ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
-                          : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
-                        }`}
+                      className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-semibold transition-all border ${
+                        selectedFilters.categories.includes(category.toLowerCase())
+                          ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
+                          : isDark
+                            ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
+                            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
+                      }`}
                     >
                       {category}
                     </button>
                   ))}
+                  {availableCategories.length === 0 && (
+                    <div className="text-center py-3 w-full">
+                      <p className={`text-[11px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+                        {isLoadingIssues ? 'Loading categories...' : 'No categories available'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Languages */}
+              {/* Languages — derived from issue labels that match known programming language names */}
               <div>
-                <h3 className={`text-[12px] font-semibold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                  }`}>Languages</h3>
+                <h3
+                  className={`text-[12px] font-semibold mb-2 transition-colors ${
+                    isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                  }`}
+                >
+                  Languages
+                </h3>
                 <div className="flex flex-wrap gap-2">
-                  {['JavaScript', 'Makefile', 'Rust', 'Shell', 'TypeScript'].map((language) => (
+                  {availableLanguages.map((language) => (
                     <button
                       key={language}
                       onClick={() => {
-                        const lowerLanguage = language.toLowerCase();
+                        const lowerLanguage = language.toLowerCase()
                         if (selectedFilters.languages.includes(lowerLanguage)) {
-                          setSelectedFilters(prev => ({
+                          setSelectedFilters((prev) => ({
                             ...prev,
-                            languages: prev.languages.filter(l => l !== lowerLanguage)
-                          }));
+                            languages: prev.languages.filter((l) => l !== lowerLanguage),
+                          }))
                         } else {
-                          setSelectedFilters(prev => ({
+                          setSelectedFilters((prev) => ({
                             ...prev,
-                            languages: [...prev.languages, lowerLanguage]
-                          }));
+                            languages: [...prev.languages, lowerLanguage],
+                          }))
                         }
                       }}
-                      className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-semibold transition-all border ${selectedFilters.languages.includes(language.toLowerCase())
-                        ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
-                        : isDark
-                          ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
-                          : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
-                        }`}
+                      className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-semibold transition-all border ${
+                        selectedFilters.languages.includes(language.toLowerCase())
+                          ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
+                          : isDark
+                            ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
+                            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
+                      }`}
                     >
                       {language}
                     </button>
                   ))}
+                  {availableLanguages.length === 0 && (
+                    <div className="text-center py-3 w-full">
+                      <p className={`text-[11px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+                        {isLoadingIssues ? 'Loading languages...' : 'No languages available'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Labels */}
               <div>
-                <h3 className={`text-[12px] font-semibold mb-2 transition-colors ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                  }`}>Labels</h3>
+                <h3
+                  className={`text-[12px] font-semibold mb-2 transition-colors ${
+                    isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                  }`}
+                >
+                  Labels
+                </h3>
 
                 {/* Search Bar */}
-                <div className={`mb-2.5 px-3 py-2 rounded-[8px] border transition-colors ${isDark
-                  ? 'bg-white/[0.08] border-white/15'
-                  : 'bg-white/[0.15] border-white/25'
-                  }`}>
+                <div
+                  className={`mb-2.5 px-3 py-2 rounded-[8px] border transition-colors ${
+                    isDark ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
+                  }`}
+                >
                   <div className="flex items-center gap-2">
-                    <Search className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`} />
+                    <Search
+                      className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+                    />
                     <input
                       type="text"
                       placeholder="Search"
                       value={labelSearch}
                       onChange={(e) => setLabelSearch(e.target.value)}
-                      className={`flex-1 bg-transparent border-none outline-none text-[12px] placeholder:text-[12px] transition-colors ${isDark
-                        ? 'text-[#e8dfd0] placeholder-[#b8a898]/60'
-                        : 'text-[#2d2820] placeholder-[#7a6b5a]/60'
-                        }`}
+                      className={`flex-1 bg-transparent border-none outline-none text-[12px] placeholder:text-[12px] transition-colors ${
+                        isDark
+                          ? 'text-[#e8dfd0] placeholder-[#b8a898]/60'
+                          : 'text-[#2d2820] placeholder-[#7a6b5a]/60'
+                      }`}
                     />
                   </div>
                 </div>
 
                 {/* Label Pills */}
                 <div className="flex flex-wrap gap-2">
-                  {availableLabels.filter(label => label.toLowerCase().includes(labelSearch.toLowerCase())).map((label) => (
-                    <button
-                      key={label}
-                      onClick={() => {
-                        const lowerLabel = label.toLowerCase();
-                        if (selectedFilters.labels.includes(lowerLabel)) {
-                          setSelectedFilters(prev => ({
-                            ...prev,
-                            labels: prev.labels.filter(l => l !== lowerLabel)
-                          }));
-                        } else {
-                          setSelectedFilters(prev => ({
-                            ...prev,
-                            labels: [...prev.labels, lowerLabel]
-                          }));
-                        }
-                      }}
-                      className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-semibold transition-all border ${selectedFilters.labels.includes(label.toLowerCase())
-                        ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
-                        : isDark
-                          ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
-                          : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
+                  {availableLabels
+                    .filter((label) => label.toLowerCase().includes(labelSearch.toLowerCase()))
+                    .map((label) => (
+                      <button
+                        key={label}
+                        onClick={() => {
+                          const lowerLabel = label.toLowerCase()
+                          if (selectedFilters.labels.includes(lowerLabel)) {
+                            setSelectedFilters((prev) => ({
+                              ...prev,
+                              labels: prev.labels.filter((l) => l !== lowerLabel),
+                            }))
+                          } else {
+                            setSelectedFilters((prev) => ({
+                              ...prev,
+                              labels: [...prev.labels, lowerLabel],
+                            }))
+                          }
+                        }}
+                        className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-semibold transition-all border ${
+                          selectedFilters.labels.includes(label.toLowerCase())
+                            ? 'bg-[#c9983a]/20 border-[#c9983a] text-[#c9983a]'
+                            : isDark
+                              ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12]'
+                              : 'bg-white/[0.15] border-white/25 text-[#7a6b5a] hover:bg-white/[0.2]'
                         }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  
+                      >
+                        {label}
+                      </button>
+                    ))}
+
                   {/* Empty state when no labels available */}
                   {availableLabels.length === 0 && (
                     <div className="text-center py-3 w-full">
@@ -1701,14 +2345,15 @@ Only applications submitted via the apply link above will be considered. Please 
                     categories: [],
                     languages: [],
                     labels: [],
-                  });
-                  setLabelSearch('');
-                  setRepoSearch('');
+                  })
+                  setLabelSearch('')
+                  setRepoSearch('')
                 }}
-                className={`px-4 py-2 rounded-[10px] text-[12px] font-semibold transition-all hover:scale-[1.02] ${isDark
-                  ? 'text-[#e8dfd0] hover:bg-white/[0.05]'
-                  : 'text-[#7a6b5a] hover:bg-white/[0.1]'
-                  }`}
+                className={`px-4 py-2 rounded-[10px] text-[12px] font-semibold transition-all hover:scale-[1.02] ${
+                  isDark
+                    ? 'text-[#e8dfd0] hover:bg-white/[0.05]'
+                    : 'text-[#7a6b5a] hover:bg-white/[0.1]'
+                }`}
               >
                 Clear filters
               </button>
@@ -1723,5 +2368,5 @@ Only applications submitted via the apply link above will be considered. Please 
         </>
       )}
     </div>
-  );
+  )
 }
