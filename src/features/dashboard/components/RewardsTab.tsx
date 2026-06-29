@@ -241,7 +241,11 @@ export function RewardsTab() {
   return (
     <div className="space-y-4">
         <div className="flex items-center gap-2 sm:gap-3">
-          <button className="h-12 flex-shrink-0 w-10 sm:w-12 flex items-center justify-center rounded-[12px] backdrop-blur-[30px] bg-white/[0.15] border border-white/25 text-[#7a6b5a] hover:bg-white/[0.2] hover:border-[#c9983a]/40 transition-all">
+          <button
+            type="button"
+            aria-label="Filter rewards"
+            className="h-12 flex-shrink-0 w-10 sm:w-12 flex items-center justify-center rounded-[12px] backdrop-blur-[30px] bg-white/[0.15] border border-white/25 text-[#7a6b5a] hover:bg-white/[0.2] hover:border-[#c9983a]/40 transition-all"
+          >
             <Filter className="w-5 h-5" />
           </button>
 
@@ -258,7 +262,9 @@ export function RewardsTab() {
         <Popover open={isColumnsModalOpen} onOpenChange={setIsColumnsModalOpen}>
           <PopoverTrigger asChild>
             <button
-              aria-label="Toggle column visibility"
+              type="button"
+              aria-label="Choose rewards table columns"
+              aria-expanded={isColumnsModalOpen}
               className="w-full h-12 flex-shrink-0 sm:w-12 flex items-center justify-center rounded-[12px] backdrop-blur-[30px] bg-white/[0.15] border border-white/25 text-[#7a6b5a] hover:bg-white/[0.2] hover:border-[#c9983a]/40 transition-all"
             >
               <LayoutGrid className="w-5 h-5" />
@@ -353,7 +359,8 @@ export function RewardsTab() {
         ) : (
           <>
             <div className="hidden md:block backdrop-blur-[30px] bg-white/[0.12] rounded-[20px] border border-white/20 overflow-hidden">
-              <table className="w-full">
+              <table className="w-full" aria-label="Rewards history">
+                <caption className="sr-only">Rewards history</caption>
                 <thead className="backdrop-blur-[20px] bg-white/[0.08] border-b border-white/20">
                   <tr>
                     {selectedColumns.includes("Date") && (
@@ -430,9 +437,17 @@ export function RewardsTab() {
   );
 }
 
+/**
+ * Renders an accessible rewards table column header.
+ *
+ * @remarks
+ * The explicit column scope lets assistive technologies associate each reward
+ * cell with its header without changing the visual presentation.
+ */
 function HeaderCell({ theme, children }: { theme: string; children: ReactNode }) {
   return (
     <th
+      scope="col"
       className={`px-4 lg:px-6 py-4 text-left text-[11px] lg:text-[12px] font-semibold uppercase tracking-wider transition-colors ${
         theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
       }`}
