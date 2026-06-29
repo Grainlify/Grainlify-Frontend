@@ -4,6 +4,7 @@ import { Download, FileText, CheckCircle2, Clock, AlertCircle, Loader2 } from 'l
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { Invoice, InvoiceStatus } from '../../types'
 import { downloadInvoice } from '../../../../shared/api/client'
+import { useIntlFormatters } from '../../../../shared/i18n'
 
 interface InvoicesTabProps {
   invoices: Invoice[]
@@ -15,6 +16,7 @@ function sanitizeFilename(raw: string): string {
 
 export function InvoicesTab({ invoices }: InvoicesTabProps) {
   const { theme } = useTheme()
+  const { formatDate, formatCurrency } = useIntlFormatters()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>({})
 
@@ -186,7 +188,7 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                             theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                           }`}
                         >
-                          {new Date(invoice.date).toLocaleDateString('en-US', {
+                          {formatDate(invoice.date, {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
@@ -201,8 +203,7 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                             theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                           }`}
                         >
-                          {invoice.amount.toLocaleString('en-US', {
-                            style: 'currency',
+                          {formatCurrency(invoice.amount, {
                             currency: invoice.currency,
                           })}
                         </span>

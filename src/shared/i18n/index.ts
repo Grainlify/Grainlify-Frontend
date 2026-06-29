@@ -11,6 +11,7 @@
 export { I18nProvider, type I18nProviderProps } from './I18nProvider'
 export { handleIntlError } from './errors'
 export { useTranslation, type TranslationValues, type UseTranslation } from './useTranslation'
+export { useIntlFormatters, type UseIntlFormatters, type FormatDateOptions, type FormatNumberOptions, type FormatCurrencyOptions } from './useIntlFormatters'
 export {
   en,
   catalogs,
