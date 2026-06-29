@@ -68,13 +68,13 @@ export function SignInPage() {
         : 'bg-gradient-to-br from-[#e8dfd0] via-[#d4c5b0] to-[#c9b89a]'
     }`}>
       {/* Background Effects */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-[#c9983a]/30 blur-3xl animate-pulse" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-[#d4af37]/20 blur-3xl animate-pulse" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-primary/30 blur-3xl animate-pulse" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-accent-strong/20 blur-3xl animate-pulse" />
 
       {/* Back Button */}
       <Link
         to="/"
-        className={`absolute top-6 left-6 flex items-center space-x-2 hover:text-[#c9983a] transition-colors font-medium ${
+        className={`absolute top-6 left-6 flex items-center space-x-2 hover:text-primary transition-colors font-medium ${
           theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
         }`}
       >
@@ -92,7 +92,7 @@ export function SignInPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex items-center space-x-3 justify-center mb-8">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#c9983a] to-[#d4af37] shadow-[0_2px_8px_rgba(201,152,58,0.4)]" />
+              <div className="w-10 h-10 rounded-lg bg-accent-gradient shadow-[0_2px_8px_rgba(201,152,58,0.4)]" />
               <span className={`text-2xl font-semibold transition-colors ${
                 theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
               }`}>Grainlify</span>
@@ -157,7 +157,7 @@ export function SignInPage() {
             theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
           }`}>
             Don't have an account?{' '}
-            <Link to="/signup" className="text-[#c9983a] hover:text-[#d4af37] font-medium">
+            <Link to="/signup" className="text-primary hover:text-accent-strong font-medium">
               Sign Up
             </Link>
           </p>
