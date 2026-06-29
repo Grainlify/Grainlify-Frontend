@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ArrowLeft, Github } from 'lucide-react';
 import { getGitHubLoginUrl } from '../../../shared/api/client';
+import { useTranslation } from '../../../shared/i18n';
 
 const AUTH_RETURN_TO_KEY = 'authReturnTo';
 
@@ -24,6 +25,7 @@ function isValidAuthReturnTo(returnTo: string | null): returnTo is string {
 
 export function SignInPage() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -79,7 +81,7 @@ export function SignInPage() {
         }`}
       >
         <ArrowLeft className="w-5 h-5" />
-        <span>Back to Home</span>
+        <span>{t('auth.signin.backToHome')}</span>
       </Link>
 
       {/* Sign In Form */}
@@ -99,10 +101,10 @@ export function SignInPage() {
             </div>
             <h2 className={`text-3xl font-bold mb-2 transition-colors ${
               theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
-            }`}>Welcome Back</h2>
+            }`}>{t('auth.signin.title')}</h2>
             <p className={`transition-colors ${
               theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
-            }`}>Sign in with your GitHub account</p>
+            }`}>{t('auth.signin.subtitle')}</p>
           </div>
 
           {/* GitHub Sign In */}
@@ -115,12 +117,12 @@ export function SignInPage() {
               {isRedirecting ? (
                 <>
                   <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Redirecting...</span>
+                  <span>{t('auth.signin.redirecting')}</span>
                 </>
               ) : (
                 <>
                   <Github className="w-6 h-6" />
-                  <span>Sign in with GitHub</span>
+                  <span>{t('auth.signin.githubButton')}</span>
                 </>
               )}
             </button>
@@ -133,7 +135,7 @@ export function SignInPage() {
                 <span className={`px-4 bg-transparent transition-colors ${
                   theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
                 }`}>
-                  Secure authentication via GitHub OAuth
+                  {t('auth.signin.oauthSecurity')}
                 </span>
               </div>
             </div>
@@ -146,8 +148,7 @@ export function SignInPage() {
               <p className={`text-xs text-center transition-colors ${
                 theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
               }`}>
-                By signing in, you agree to share your public GitHub profile information.
-                We never access your private repositories without explicit permission.
+                {t('auth.signin.consentDisclaimer')}
               </p>
             </div>
           </div>
@@ -156,9 +157,9 @@ export function SignInPage() {
           <p className={`text-center mt-6 transition-colors ${
             theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
           }`}>
-            Don't have an account?{' '}
+            {t('auth.signin.signupPrompt')}{' '}
             <Link to="/signup" className="text-[#c9983a] hover:text-[#d4af37] font-medium">
-              Sign Up
+              {t('auth.signin.signupLink')}
             </Link>
           </p>
         </div>

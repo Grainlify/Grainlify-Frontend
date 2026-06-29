@@ -33,6 +33,16 @@ export const DEFAULT_LOCALE: Locale = 'en'
  *   extracted from `src/features/landing/components/Navbar.tsx`.
  * - `dashboardNav.*` — the authenticated dashboard sidebar navigation,
  *   extracted from `src/features/dashboard/DashboardLayout.tsx`.
+ * - `auth.signin.*` — the sign-in page's static OAuth labels, consent copy,
+ *   and navigation links. Values are static strings only; no markup or
+ *   untrusted interpolation is allowed in this namespace.
+ * - `auth.signup.*` — the sign-up page's static OAuth labels, access summary,
+ *   legal-link text, and navigation links. Legal links compose adjacent static
+ *   messages in JSX rather than using rich-text interpolation.
+ * - `invoices.*` — the billing invoices tab's section copy, table labels,
+ *   empty state, row actions, status labels, and fallback download error.
+ *   Dynamic invoice data stays outside the catalog and is rendered as escaped
+ *   React text.
  *
  * `as const` keeps every value a string literal so {@link MessageId} can be
  * derived from the keys with full type-safety.
@@ -57,6 +67,56 @@ export const en = {
   'dashboardNav.data': 'Data',
   'dashboardNav.leaderboard': 'Leaderboard',
   'dashboardNav.blog': 'Grainlify Blog',
+
+  // ── Sign-in auth page — src/features/auth/pages/SignInPage.tsx ──
+  'auth.signin.backToHome': 'Back to Home',
+  'auth.signin.title': 'Welcome Back',
+  'auth.signin.subtitle': 'Sign in with your GitHub account',
+  'auth.signin.redirecting': 'Redirecting...',
+  'auth.signin.githubButton': 'Sign in with GitHub',
+  'auth.signin.oauthSecurity': 'Secure authentication via GitHub OAuth',
+  'auth.signin.consentDisclaimer':
+    'By signing in, you agree to share your public GitHub profile information. We never access your private repositories without explicit permission.',
+  'auth.signin.signupPrompt': "Don't have an account?",
+  'auth.signin.signupLink': 'Sign Up',
+
+  // ── Sign-up auth page — src/features/auth/pages/SignUpPage.tsx ──
+  'auth.signup.backToHome': 'Back to Home',
+  'auth.signup.title': 'Get Started',
+  'auth.signup.subtitle': 'Create your account with GitHub',
+  'auth.signup.redirecting': 'Redirecting...',
+  'auth.signup.githubButton': 'Sign up with GitHub',
+  'auth.signup.oauthSecurity': 'Secure authentication via GitHub OAuth',
+  'auth.signup.accessHeading': "What we'll access:",
+  'auth.signup.accessPublicProfile': 'Your public profile information',
+  'auth.signup.accessPublicRepositories': 'Your public repositories and contributions',
+  'auth.signup.accessActivity': 'Your GitHub activity for matching projects',
+  'auth.signup.privateReposDisclaimer':
+    'We never access private repositories without your explicit permission.',
+  'auth.signup.termsPrefix': 'By continuing, you agree to our',
+  'auth.signup.termsOfService': 'Terms of Service',
+  'auth.signup.termsConnector': 'and',
+  'auth.signup.privacyPolicy': 'Privacy Policy',
+  'auth.signup.signinPrompt': 'Already have an account?',
+  'auth.signup.signinLink': 'Sign In',
+
+  // ── Billing invoices tab — src/features/settings/components/billing/InvoicesTab.tsx ──
+  'invoices.title': 'Invoices',
+  'invoices.description': 'View and download your billing invoices.',
+  'invoices.table.invoice': 'Invoice',
+  'invoices.table.date': 'Date',
+  'invoices.table.amount': 'Amount',
+  'invoices.table.period': 'Period',
+  'invoices.table.status': 'Status',
+  'invoices.table.action': 'Action',
+  'invoices.empty.title': 'No invoices yet',
+  'invoices.empty.description': 'Your billing invoices will appear here',
+  'invoices.actions.downloadInvoice': 'Download Invoice',
+  'invoices.actions.downloading': 'Downloading…',
+  'invoices.status.paid': 'paid',
+  'invoices.status.pending': 'pending',
+  'invoices.status.overdue': 'overdue',
+  'invoices.errors.downloadFailed': 'Download failed. Please try again.',
 } as const
 
 /**

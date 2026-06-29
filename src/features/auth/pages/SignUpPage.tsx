@@ -4,9 +4,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ArrowLeft, Github } from 'lucide-react';
 import { getGitHubLoginUrl } from '../../../shared/api/client';
+import { useTranslation } from '../../../shared/i18n';
 
 export function SignUpPage() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -49,7 +51,7 @@ export function SignUpPage() {
         }`}
       >
         <ArrowLeft className="w-5 h-5" />
-        <span>Back to Home</span>
+        <span>{t('auth.signup.backToHome')}</span>
       </Link>
 
       {/* Sign Up Form */}
@@ -69,10 +71,10 @@ export function SignUpPage() {
             </div>
             <h2 className={`text-3xl font-bold mb-2 transition-colors ${
               theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
-            }`}>Get Started</h2>
+            }`}>{t('auth.signup.title')}</h2>
             <p className={`transition-colors ${
               theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
-            }`}>Create your account with GitHub</p>
+            }`}>{t('auth.signup.subtitle')}</p>
           </div>
 
           {/* GitHub Sign Up */}
@@ -85,12 +87,12 @@ export function SignUpPage() {
               {isRedirecting ? (
                 <>
                   <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Redirecting...</span>
+                  <span>{t('auth.signup.redirecting')}</span>
                 </>
               ) : (
                 <>
                   <Github className="w-6 h-6" />
-                  <span>Sign up with GitHub</span>
+                  <span>{t('auth.signup.githubButton')}</span>
                 </>
               )}
             </button>
@@ -103,7 +105,7 @@ export function SignUpPage() {
                 <span className={`px-4 bg-transparent transition-colors ${
                   theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
                 }`}>
-                  Secure authentication via GitHub OAuth
+                  {t('auth.signup.oauthSecurity')}
                 </span>
               </div>
             </div>
@@ -118,19 +120,19 @@ export function SignUpPage() {
               }`}>
                 <strong className={`transition-colors ${
                   theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
-                }`}>What we'll access:</strong>
+                }`}>{t('auth.signup.accessHeading')}</strong>
               </p>
               <ul className={`text-xs space-y-1 list-disc list-inside transition-colors ${
                 theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
               }`}>
-                <li>Your public profile information</li>
-                <li>Your public repositories and contributions</li>
-                <li>Your GitHub activity for matching projects</li>
+                <li>{t('auth.signup.accessPublicProfile')}</li>
+                <li>{t('auth.signup.accessPublicRepositories')}</li>
+                <li>{t('auth.signup.accessActivity')}</li>
               </ul>
               <p className={`text-xs italic mt-2 transition-colors ${
                 theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
               }`}>
-                We never access private repositories without your explicit permission.
+                {t('auth.signup.privateReposDisclaimer')}
               </p>
             </div>
 
@@ -138,13 +140,13 @@ export function SignUpPage() {
               <p className={`text-xs transition-colors ${
                 theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
               }`}>
-                By continuing, you agree to our{' '}
+                {t('auth.signup.termsPrefix')}{' '}
                 <a href="#" className="text-[#c9983a] hover:text-[#d4af37] underline font-medium">
-                  Terms of Service
+                  {t('auth.signup.termsOfService')}
                 </a>{' '}
-                and{' '}
+                {t('auth.signup.termsConnector')}{' '}
                 <a href="#" className="text-[#c9983a] hover:text-[#d4af37] underline font-medium">
-                  Privacy Policy
+                  {t('auth.signup.privacyPolicy')}
                 </a>
               </p>
             </div>
@@ -154,9 +156,9 @@ export function SignUpPage() {
           <p className={`text-center mt-6 transition-colors ${
             theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
           }`}>
-            Already have an account?{' '}
+            {t('auth.signup.signinPrompt')}{' '}
             <Link to="/signin" className="text-[#c9983a] hover:text-[#d4af37] font-medium">
-              Sign In
+              {t('auth.signup.signinLink')}
             </Link>
           </p>
         </div>

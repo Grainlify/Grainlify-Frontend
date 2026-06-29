@@ -4,6 +4,7 @@ import { Download, FileText, CheckCircle2, Clock, AlertCircle, Loader2 } from 'l
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { Invoice, InvoiceStatus } from '../../types';
 import { downloadInvoice } from '../../../../shared/api/client';
+import { useTranslation, type MessageId } from '../../../../shared/i18n';
 
 interface InvoicesTabProps {
   invoices: Invoice[];
@@ -13,8 +14,26 @@ function sanitizeFilename(raw: string): string {
   return raw.replace(/[^a-zA-Z0-9\-_]/g, '-');
 }
 
+/** Catalog ids for the invoice table headers, kept in display order. */
+const INVOICE_TABLE_HEADER_IDS = [
+  'invoices.table.invoice',
+  'invoices.table.date',
+  'invoices.table.amount',
+  'invoices.table.period',
+  'invoices.table.status',
+  'invoices.table.action',
+] as const satisfies readonly MessageId[];
+
+/** Static status-label lookup; invoice status values never become message ids. */
+const INVOICE_STATUS_MESSAGE_IDS: Record<InvoiceStatus, MessageId> = {
+  paid: 'invoices.status.paid',
+  pending: 'invoices.status.pending',
+  overdue: 'invoices.status.overdue',
+};
+
 export function InvoicesTab({ invoices }: InvoicesTabProps) {
   const { theme } = useTheme();
+  const { t, locale } = useTranslation();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>({});
 
@@ -61,7 +80,7 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
       link.click();
       URL.revokeObjectURL(objectUrl);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Download failed. Please try again.';
+      const message = err instanceof Error ? err.message : t('invoices.errors.downloadFailed');
       setDownloadErrors((prev) => ({ ...prev, [invoice.id]: message }));
     } finally {
       setDownloadingId(null);
@@ -78,11 +97,11 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
       <div className="mb-6">
         <h3 className={`text-[20px] font-bold mb-2 transition-colors ${
           theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
-        }`}>Invoices</h3>
+        }`}>{t('invoices.title')}</h3>
         <p className={`text-[14px] transition-colors ${
           theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
         }`}>
-          View and download your billing invoices.
+          {t('invoices.description')}
         </p>
       </div>
 
@@ -95,10 +114,10 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
               <div className={`grid grid-cols-[1.2fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-4 px-6 py-3 border-b-2 transition-colors ${
                 theme === 'dark' ? 'border-white/20' : 'border-white/20'
               }`}>
-                {['Invoice', 'Date', 'Amount', 'Period', 'Status', 'Action'].map((col) => (
-                  <div key={col} className={`text-[12px] font-bold uppercase tracking-wide transition-colors ${
+                {INVOICE_TABLE_HEADER_IDS.map((id) => (
+                  <div key={id} className={`text-[12px] font-bold uppercase tracking-wide transition-colors ${
                     theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
-                  }`}>{col}</div>
+                  }`}>{t(id)}</div>
                 ))}
               </div>
 
@@ -142,7 +161,7 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                         <span className={`text-[13px] transition-colors ${
                           theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                         }`}>
-                          {new Date(invoice.date).toLocaleDateString('en-US', {
+                          {new Date(invoice.date).toLocaleDateString(locale, {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
@@ -155,7 +174,7 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                         <span className={`text-[15px] font-bold transition-colors ${
                           theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                         }`}>
-                          {invoice.amount.toLocaleString('en-US', {
+                          {invoice.amount.toLocaleString(locale, {
                             style: 'currency',
                             currency: invoice.currency,
                           })}
@@ -176,7 +195,7 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] border ${statusConfig.bg} ${statusConfig.border}`}>
                           <StatusIcon className={`w-3 h-3 ${statusConfig.text}`} />
                           <span className={`text-[11px] font-semibold capitalize ${statusConfig.text}`}>
-                            {invoice.status}
+                            {t(INVOICE_STATUS_MESSAGE_IDS[invoice.status])}
                           </span>
                         </div>
                       </div>
@@ -186,7 +205,11 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                         <button
                           onClick={() => handleDownloadInvoice(invoice)}
                           disabled={isDownloading}
-                          aria-label={isDownloading ? 'Downloading…' : 'Download Invoice'}
+                          aria-label={
+                            isDownloading
+                              ? t('invoices.actions.downloading')
+                              : t('invoices.actions.downloadInvoice')
+                          }
                           className={`p-2.5 rounded-[10px] transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                             theme === 'dark'
                               ? 'hover:bg-white/[0.15] text-[#c9983a]'
@@ -229,12 +252,12 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
           <p className={`text-[14px] mb-2 transition-colors ${
             theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
           }`}>
-            No invoices yet
+            {t('invoices.empty.title')}
           </p>
           <p className={`text-[13px] transition-colors ${
             theme === 'dark' ? 'text-[#8a7e70]' : 'text-[#9a8b7a]'
           }`}>
-            Your billing invoices will appear here
+            {t('invoices.empty.description')}
           </p>
         </div>
       )}
