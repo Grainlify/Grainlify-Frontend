@@ -95,6 +95,66 @@ describe("RewardsTab", () => {
     expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
   });
 
+  it("labels filter and columns controls when rewards are empty", async () => {
+    mockGetProfileRewards.mockResolvedValue({ rewards: [] });
+
+    renderRewardsTab();
+
+    expect(await screen.findByText("No rewards yet")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /filter rewards/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /choose rewards table columns/i }),
+    ).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("exposes a named rewards table with scoped column headers", async () => {
+    mockGetProfileRewards.mockResolvedValue({
+      rewards: [
+        {
+          id: "reward-a11y",
+          date: "2026-06-22T00:00:00Z",
+          project_name: "Accessible Project",
+          amount: 25,
+          currency: "USD",
+          status: "Complete",
+        },
+      ],
+    });
+
+    renderRewardsTab();
+
+    const table = await screen.findByRole("table", { name: /rewards history/i });
+    expect(table).toBeInTheDocument();
+    expect(screen.getByText("Rewards history", { selector: "caption" })).toHaveClass(
+      "sr-only",
+    );
+
+    for (const name of ["Date", "ID", "Project", "Amount", "Status"]) {
+      expect(screen.getByRole("columnheader", { name })).toHaveAttribute(
+        "scope",
+        "col",
+      );
+    }
+  });
+
+  it("updates columns control aria-expanded as its menu opens and closes", async () => {
+    mockGetProfileRewards.mockResolvedValue({ rewards: [] });
+    renderRewardsTab();
+
+    const columnsButton = screen.getByRole("button", {
+      name: /choose rewards table columns/i,
+    });
+    expect(columnsButton).toHaveAttribute("aria-expanded", "false");
+
+    await userEvent.click(columnsButton);
+    expect(columnsButton).toHaveAttribute("aria-expanded", "true");
+
+    await userEvent.click(screen.getByRole("button", { name: /complete/i }));
+    expect(columnsButton).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("shows an error state and retries successfully", async () => {
     mockGetProfileRewards.mockRejectedValueOnce(new Error("network"));
 
@@ -179,7 +239,7 @@ describe("RewardsTab", () => {
 
       expect(screen.queryByText("Rewards columns")).not.toBeInTheDocument();
       await userEvent.click(
-        screen.getByRole("button", { name: /toggle column visibility/i }),
+        screen.getByRole("button", { name: /choose rewards table columns/i }),
       );
       expect(screen.getByText("Rewards columns")).toBeInTheDocument();
     });
@@ -189,7 +249,7 @@ describe("RewardsTab", () => {
       renderRewardsTab();
 
       await userEvent.click(
-        screen.getByRole("button", { name: /toggle column visibility/i }),
+        screen.getByRole("button", { name: /choose rewards table columns/i }),
       );
       expect(screen.getByText("Rewards columns")).toBeInTheDocument();
 
@@ -202,7 +262,7 @@ describe("RewardsTab", () => {
       renderRewardsTab();
 
       await userEvent.click(
-        screen.getByRole("button", { name: /toggle column visibility/i }),
+        screen.getByRole("button", { name: /choose rewards table columns/i }),
       );
       expect(screen.getByText("Rewards columns")).toBeInTheDocument();
 
@@ -215,7 +275,7 @@ describe("RewardsTab", () => {
       renderRewardsTab();
 
       await userEvent.click(
-        screen.getByRole("button", { name: /toggle column visibility/i }),
+        screen.getByRole("button", { name: /choose rewards table columns/i }),
       );
 
       // The search input inside the popover has placeholder "Search"
@@ -237,7 +297,7 @@ describe("RewardsTab", () => {
       renderRewardsTab();
 
       await userEvent.click(
-        screen.getByRole("button", { name: /toggle column visibility/i }),
+        screen.getByRole("button", { name: /choose rewards table columns/i }),
       );
 
       // Deselect "Status"
@@ -263,7 +323,7 @@ describe("RewardsTab", () => {
       renderRewardsTab();
 
       await userEvent.click(
-        screen.getByRole("button", { name: /toggle column visibility/i }),
+        screen.getByRole("button", { name: /choose rewards table columns/i }),
       );
       await userEvent.click(screen.getByRole("button", { name: /^date$/i }));
 
@@ -385,7 +445,7 @@ describe("RewardsTab", () => {
       renderRewardsTab();
 
       await userEvent.click(
-        screen.getByRole("button", { name: /toggle column visibility/i }),
+        screen.getByRole("button", { name: /choose rewards table columns/i }),
       );
       expect(screen.getByText("Rewards columns")).toBeInTheDocument();
 
