@@ -409,7 +409,13 @@ keeps the main `index-*.js` chunk lean and improves long-term caching.
 > downloads on first load (the provider is mounted at the app root). Its benefit is
 > better caching and keeping the _measured_ main chunk (`index-*.js`) within budget.
 > After adding i18n the main chunk is `~1,738 KB` (within the `1,800 KB` budget),
-> with `react-intl` (`~69 KB`) living in the `i18n-vendor` chunk.
+with `react-intl` (`~69 KB`) living in the `i18n-vendor` chunk. After isolating
+charting and mapping libraries, the main chunk stays well within budget at `~1,115 KB`.
+
+The `viz-vendor` chunk (`~682 KB`) contains `recharts`, `react-simple-maps`, `d3`,
+and `d3-geo`. These are heavy dependencies used only on specific analytics and
+mapping pages, so splitting them out allows them to be cached independently and
+keeps them out of the critical path for users who do not visit those pages.
 
 ### Route-level code splitting
 
