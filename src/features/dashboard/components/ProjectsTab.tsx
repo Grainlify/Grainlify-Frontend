@@ -2,13 +2,23 @@ import { Github, ChevronDown } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useMemo, useCallback, memo } from "react";
 
+/**
+ * Props for the ProjectRow component.
+ */
 interface ProjectRowProps {
+  /** The project data to display. */
   project: any;
+  /** The index of the row, used for alternating background colors. */
   idx: number;
+  /** The current theme ("dark" or "light"). */
   theme: string;
+  /** Helper function to get the icon and color for a given language. */
   getLanguageIcon: (lang: string) => { icon: string; color: string };
 }
 
+/**
+ * Renders a single row in the desktop projects table.
+ */
 const ProjectRow = memo(({ project, idx, theme, getLanguageIcon }: ProjectRowProps) => (
   <tr
     className={`border-b border-white/10 hover:bg-white/[0.05] transition-colors ${
@@ -160,12 +170,21 @@ const ProjectRow = memo(({ project, idx, theme, getLanguageIcon }: ProjectRowPro
   </tr>
 ));
 
+/**
+ * Props for the ProjectMobileCard component.
+ */
 interface ProjectMobileCardProps {
+  /** The project data to display. */
   project: any;
+  /** The current theme ("dark" or "light"). */
   theme: string;
+  /** Helper function to get the icon and color for a given language. */
   getLanguageIcon: (lang: string) => { icon: string; color: string };
 }
 
+/**
+ * Renders a project as a card for mobile views.
+ */
 const ProjectMobileCard = memo(({ project, theme, getLanguageIcon }: ProjectMobileCardProps) => (
   <div
     className={`backdrop-blur-[30px] bg-white/[0.12] rounded-[16px] border border-white/20 p-4 transition-colors hover:bg-white/[0.15] ${
@@ -311,6 +330,10 @@ const ProjectMobileCard = memo(({ project, theme, getLanguageIcon }: ProjectMobi
   </div>
 ));
 
+/**
+ * ProjectsTab component displays a list of projects in either a table view (desktop)
+ * or a card view (mobile).
+ */
 export function ProjectsTab() {
   const { theme } = useTheme();
 
@@ -406,9 +429,11 @@ export function ProjectsTab() {
       <div className="hidden md:block backdrop-blur-[30px] bg-white/[0.12] rounded-[20px] border border-white/20 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
+            <caption className="sr-only">Projects List</caption>
             <thead className="backdrop-blur-[20px] bg-white/[0.08] border-b border-white/20">
               <tr>
                 <th
+                  scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
                     theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                   }`}
@@ -416,6 +441,7 @@ export function ProjectsTab() {
                   Project name
                 </th>
                 <th
+                  scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
                     theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                   }`}
@@ -423,6 +449,7 @@ export function ProjectsTab() {
                   Project lead
                 </th>
                 <th
+                  scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
                     theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                   }`}
@@ -430,6 +457,7 @@ export function ProjectsTab() {
                   Contributors
                 </th>
                 <th
+                  scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
                     theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                   }`}
@@ -437,6 +465,7 @@ export function ProjectsTab() {
                   Available issues
                 </th>
                 <th
+                  scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
                     theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                   }`}
@@ -444,6 +473,7 @@ export function ProjectsTab() {
                   My contributions
                 </th>
                 <th
+                  scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
                     theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                   }`}
@@ -451,6 +481,7 @@ export function ProjectsTab() {
                   My rewards
                 </th>
                 <th
+                  scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
                     theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                   }`}
@@ -458,6 +489,7 @@ export function ProjectsTab() {
                   Languages
                 </th>
                 <th
+                  scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
                     theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                   }`}
@@ -465,6 +497,7 @@ export function ProjectsTab() {
                   Repositories
                 </th>
                 <th
+                  scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
                     theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                   }`}
@@ -472,6 +505,7 @@ export function ProjectsTab() {
                   Billing profile
                 </th>
                 <th
+                  scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
                     theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                   }`}
