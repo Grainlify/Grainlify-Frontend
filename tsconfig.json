@@ -16,6 +16,10 @@
         "isolatedModules": true,
         "noEmit": true,
         "jsx": "react-jsx",
+        "types": [
+            "node",
+            "vitest/globals"
+        ],
         /* Linting */
         "strict": true,
         "noUnusedLocals": true,
