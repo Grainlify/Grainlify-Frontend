@@ -82,3 +82,38 @@ describe('PullRequestsTab empty states', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
+
+describe('PullRequestsTab accessibility', () => {
+  beforeEach(() => {
+    mockGetProjectPRs.mockReset();
+  });
+
+  it('has a table with an accessible caption and column scopes', async () => {
+    mockGetProjectPRs.mockResolvedValue({ prs: PRS });
+
+    renderWithTheme(<PullRequestsTab selectedProjects={PROJECTS} />);
+
+    // Check for table caption
+    const table = await screen.findByRole('table');
+    expect(table).toBeInTheDocument();
+
+    const caption = within(table).getByText('Pull Requests List');
+    expect(caption).toBeInTheDocument();
+
+    // Check for column headers and their scope
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers).toHaveLength(4);
+
+    expect(headers[0]).toHaveTextContent('Pull Request');
+    expect(headers[0]).toHaveAttribute('scope', 'col');
+
+    expect(headers[1]).toHaveTextContent('Author');
+    expect(headers[1]).toHaveAttribute('scope', 'col');
+
+    expect(headers[2]).toHaveTextContent('Repository');
+    expect(headers[2]).toHaveAttribute('scope', 'col');
+
+    expect(headers[3]).toHaveTextContent('Indicators');
+    expect(headers[3]).toHaveAttribute('scope', 'col');
+  });
+});

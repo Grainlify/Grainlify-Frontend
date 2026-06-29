@@ -13,9 +13,21 @@ import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { PullRequest } from '../../types'
 
 interface PRRowProps {
+  /**
+   * The pull request data to display in the row.
+   */
   pr: PullRequest
 }
 
+/**
+ * Renders a single row in the pull requests table.
+ *
+ * This component uses semantic table tags (`tr`, `td`) with ARIA roles
+ * to maintain accessibility while using a grid-based layout for styling.
+ *
+ * @param props - The component props.
+ * @returns A table row representing a pull request.
+ */
 export function PRRow({ pr }: PRRowProps) {
   const { theme } = useTheme()
   const [authorImgFailed, setAuthorImgFailed] = useState(false)
@@ -69,8 +81,9 @@ export function PRRow({ pr }: PRRowProps) {
   }
 
   return (
-    <div
+    <tr
       onClick={handleClick}
+      role="row"
       className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border transition-all cursor-pointer group ${
         theme === 'dark'
           ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.15] hover:border-[#c9983a]/30'
@@ -78,7 +91,7 @@ export function PRRow({ pr }: PRRowProps) {
       }`}
     >
       {/* Pull Request Info */}
-      <div>
+      <td role="cell">
         <div className="flex items-start gap-3 mb-2">
           <GitPullRequest className={`w-4 h-4 mt-0.5 flex-shrink-0 ${getPRStatusColor()}`} />
           <div className="flex-1 min-w-0">
@@ -94,10 +107,10 @@ export function PRRow({ pr }: PRRowProps) {
             </p>
           </div>
         </div>
-      </div>
+      </td>
 
       {/* Author Info */}
-      <div>
+      <td role="cell">
         <div className="flex items-center gap-2 mb-2">
           {authorImgFailed ? (
             <div
@@ -135,10 +148,10 @@ export function PRRow({ pr }: PRRowProps) {
             ))}
           </div>
         )}
-      </div>
+      </td>
 
       {/* Repository Info */}
-      <div>
+      <td role="cell">
         <div className="flex items-center gap-2 mb-1">
           {(() => {
             const [owner] = pr.org ? [pr.org] : pr.repo.split('/')
@@ -171,10 +184,10 @@ export function PRRow({ pr }: PRRowProps) {
         <p className={`text-[11px] ml-7 ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
           {pr.org}
         </p>
-      </div>
+      </td>
 
       {/* Indicators */}
-      <div className="flex items-center gap-2">
+      <td role="cell" className="flex items-center gap-2">
         {pr.indicators.map((indicator, idx) => {
           const { Icon, color } = getIndicatorIcon(indicator)
           return (
@@ -188,7 +201,7 @@ export function PRRow({ pr }: PRRowProps) {
             </div>
           )
         })}
-      </div>
-    </div>
+      </td>
+    </tr>
   )
 }
