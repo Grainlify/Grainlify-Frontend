@@ -13,7 +13,7 @@ import { getProfileRewards, type ProfileReward } from '../../../shared/api/clien
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useLocalStorage } from '../../../shared/hooks/useLocalStorage'
-import { Popover, PopoverContent, PopoverTrigger } from '../../../app/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '../../../shared/components/ui/popover'
 
 type RewardRow = {
   id: string

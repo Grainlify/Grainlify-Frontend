@@ -1,12 +1,15 @@
-import { useParams, useNavigate, useLocation, Navigate } from 'react-router-dom'
-import { OpenSourceWeekPage } from './pages/OpenSourceWeekPage'
-import { OpenSourceWeekDetailPage } from './pages/OpenSourceWeekDetailPage'
-import { EcosystemsPage } from './pages/EcosystemsPage'
-import { EcosystemDetailPage } from './pages/EcosystemDetailPage'
-import { MaintainersPage } from '../maintainers/pages/MaintainersPage'
-import { ProjectDetailPage } from './pages/ProjectDetailPage'
-import { IssueDetailPage } from './pages/IssueDetailPage'
-import { SearchPage } from './pages/SearchPage'
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { OpenSourceWeekPage } from './pages/OpenSourceWeekPage';
+import { OpenSourceWeekDetailPage } from './pages/OpenSourceWeekDetailPage';
+import { EcosystemsPage } from './pages/EcosystemsPage';
+import { EcosystemDetailPage } from './pages/EcosystemDetailPage';
+import { MaintainersPage } from '../maintainers/pages/MaintainersPage';
+import { ProjectDetailPage } from './pages/ProjectDetailPage';
+import { IssueDetailPage } from './pages/IssueDetailPage';
+import { SearchPage } from './pages/SearchPage';
+import { BlogArticlePage } from '../blog/pages/BlogArticlePage';
+import { ResourceNotFound } from '../../shared/components/ResourceNotFound';
+import { isValidRouteParam } from '../../shared/utils/validation';
 
 // Open Source Week Page Wrapper
 export function OpenSourceWeekPageRoute() {
@@ -27,7 +30,15 @@ export function OpenSourceWeekDetailPageRoute() {
   const state = (location.state as { eventName?: string }) || {}
   const eventName = state.eventName || ''
 
-  if (!eventId) return <Navigate to="/dashboard/open-source-week" replace />
+  if (!isValidRouteParam(eventId)) {
+    return (
+      <ResourceNotFound
+        title="Event not found"
+        backTo="/dashboard/open-source-week"
+        backLabel="Back to Open Source Week"
+      />
+    );
+  }
 
   const handleBack = () => {
     navigate('/dashboard/open-source-week')
@@ -56,17 +67,24 @@ export function EcosystemsPageRoute() {
 
 // Ecosystem Detail Page Wrapper
 export function EcosystemDetailPageRoute() {
-  const { ecosystemId } = useParams<{ ecosystemId: string }>()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const state =
-    (location.state as {
-      ecosystemName?: string
-      description?: string | null
-      logoUrl?: string | null
-    }) || {}
+  const { ecosystemId } = useParams<{ ecosystemId: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as {
+    ecosystemName?: string;
+    description?: string | null;
+    logoUrl?: string | null;
+  } || {};
 
-  if (!ecosystemId) return <Navigate to="/dashboard/ecosystems" replace />
+  if (!isValidRouteParam(ecosystemId)) {
+    return (
+      <ResourceNotFound
+        title="Ecosystem not found"
+        backTo="/dashboard/ecosystems"
+        backLabel="Back to Ecosystems"
+      />
+    );
+  }
 
   const handleBack = () => {
     navigate('/dashboard/ecosystems')
@@ -108,7 +126,15 @@ export function ProjectDetailPageRoute() {
   const location = useLocation()
   const state = (location.state as { backTarget?: string }) || {}
 
-  if (!projectId) return <Navigate to="/dashboard/browse" replace />
+  if (!isValidRouteParam(projectId)) {
+    return (
+      <ResourceNotFound
+        title="Project not found"
+        backTo="/dashboard/browse"
+        backLabel="Back to Browse"
+      />
+    );
+  }
 
   const handleBack = () => {
     if (state.backTarget) {
@@ -154,14 +180,41 @@ export function IssueDetailPageRoute() {
   const { projectId, issueId } = useParams<{ projectId: string; issueId: string }>()
   const navigate = useNavigate()
 
-  if (!projectId) return <Navigate to="/dashboard/browse" replace />
-  if (!issueId) return <Navigate to={`/dashboard/projects/${projectId}`} replace />
+  if (!isValidRouteParam(projectId) || !isValidRouteParam(issueId)) {
+    return (
+      <ResourceNotFound
+        title="Issue not found"
+        backTo="/dashboard/browse"
+        backLabel="Back to Browse"
+      />
+    );
+  }
 
   const handleClose = () => {
     navigate(`/dashboard/projects/${projectId}`)
   }
 
   return <IssueDetailPage issueId={issueId} projectId={projectId} onClose={handleClose} />
+}
+
+/**
+ * Blog Article Page Wrapper
+ * Validates the `:slug` parameter before rendering the article page.
+ */
+export function BlogArticlePageRoute() {
+  const { slug } = useParams<{ slug: string }>();
+
+  if (!isValidRouteParam(slug)) {
+    return (
+      <ResourceNotFound
+        title="Article not found"
+        backTo="/dashboard/blog"
+        backLabel="Back to Blog"
+      />
+    );
+  }
+
+  return <BlogArticlePage />;
 }
 
 // Search Page Wrapper
