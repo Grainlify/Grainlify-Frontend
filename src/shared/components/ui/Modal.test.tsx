@@ -244,6 +244,66 @@ describe('Modal building blocks', () => {
     expect(onChange).toHaveBeenCalled()
   })
 
+  describe('ModalInput accessibility (ARIA)', () => {
+    it('sets aria-invalid="true" and links error via aria-describedby when error is present (input)', () => {
+      renderWithTheme(
+        <ModalInput value="hello" onChange={() => {}} error="This field is required" />
+      )
+      const input = screen.getByDisplayValue('hello')
+      expect(input.tagName).toBe('INPUT')
+      expect(input).toHaveAttribute('aria-invalid', 'true')
+
+      const describedBy = input.getAttribute('aria-describedby')
+      expect(describedBy).toBeTruthy()
+      expect(document.getElementById(describedBy!)).toHaveTextContent('This field is required')
+    })
+
+    it('sets aria-invalid="true" and links error via aria-describedby when error is present (textarea)', () => {
+      renderWithTheme(
+        <ModalInput value="bio text" onChange={() => {}} rows={3} error="Must not be empty" />
+      )
+      const textarea = screen.getByDisplayValue('bio text')
+      expect(textarea.tagName).toBe('TEXTAREA')
+      expect(textarea).toHaveAttribute('aria-invalid', 'true')
+
+      const describedBy = textarea.getAttribute('aria-describedby')
+      expect(describedBy).toBeTruthy()
+      expect(document.getElementById(describedBy!)).toHaveTextContent('Must not be empty')
+    })
+
+    it('omits aria-invalid and aria-describedby when no error is set (input)', () => {
+      renderWithTheme(<ModalInput value="hello" onChange={() => {}} />)
+      const input = screen.getByDisplayValue('hello')
+      expect(input).not.toHaveAttribute('aria-invalid')
+      expect(input).not.toHaveAttribute('aria-describedby')
+    })
+
+    it('omits aria-invalid and aria-describedby when no error is set (textarea)', () => {
+      renderWithTheme(<ModalInput value="notes" onChange={() => {}} rows={2} />)
+      const textarea = screen.getByDisplayValue('notes')
+      expect(textarea).not.toHaveAttribute('aria-invalid')
+      expect(textarea).not.toHaveAttribute('aria-describedby')
+    })
+
+    it('removes aria-invalid and aria-describedby when error is cleared', () => {
+      const { rerender } = renderWithTheme(
+        <ModalInput value="test" onChange={() => {}} error="Something wrong" />
+      )
+      const input = screen.getByDisplayValue('test')
+      expect(input).toHaveAttribute('aria-invalid', 'true')
+
+      rerender(<ModalInput value="test" onChange={() => {}} error={null} />)
+      expect(input).not.toHaveAttribute('aria-invalid')
+      expect(input).not.toHaveAttribute('aria-describedby')
+      expect(screen.queryByText('Something wrong')).not.toBeInTheDocument()
+    })
+
+    it('does not render an error paragraph when error is null', () => {
+      renderWithTheme(<ModalInput value="test" onChange={() => {}} />)
+      expect(screen.queryByText(/this field is required/i)).not.toBeInTheDocument()
+    })
+  })
+
   it('ModalSelect renders a labelled trigger with the selected value', () => {
     renderWithTheme(
       <ModalSelect

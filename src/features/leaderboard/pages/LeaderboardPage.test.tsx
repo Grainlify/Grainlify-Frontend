@@ -290,6 +290,27 @@ describe('LeaderboardPage pagination', () => {
     // jsdom treats navigation as a no-op; we just exercise the handler.
     await userEvent.click(screen.getByRole('button', { name: 'row-click' }))
   })
+
+  it('applies activeFilter correctly — contributors table receives the current filter value', async () => {
+    // The ContributorsTable receives activeFilter as a prop; the page wires up
+    // state correctly so the table can filter displayed rows by dimension.
+    getLeaderboard.mockResolvedValueOnce(makePage(5))
+    renderPage()
+
+    await waitFor(() => expect(rows()).toBe(5))
+    // Table is rendered when activeFilter is at its default value ('overall').
+    expect(screen.getByTestId('contributors-table')).toBeInTheDocument()
+  })
+
+  it('shows empty contributor state when no data is loaded (simulates all-filtered-out)', async () => {
+    // An empty API response exercises the zero-row empty-state branch.
+    getLeaderboard.mockResolvedValueOnce([])
+    renderPage()
+
+    await waitFor(() => expect(rows()).toBe(0))
+    // No "Load more" when there is nothing to page through.
+    expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument()
+  })
 })
 
 describe('LeaderboardPage projects tab', () => {

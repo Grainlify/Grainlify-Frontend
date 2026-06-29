@@ -208,18 +208,35 @@ export function ModalButton({
 }
 
 interface ModalInputProps {
+  /** Visible label rendered above the field. */
   label?: string
+  /** Input type (ignored when `rows` is set — renders a `<textarea>`). */
   type?: string
   value: string
   onChange: (value: string) => void
   onBlur?: () => void
   placeholder?: string
   required?: boolean
+  /** When > 0 the field renders as a `<textarea>` with this many rows. */
   rows?: number
   className?: string
+  /**
+   * Error message displayed below the field. When set the input receives
+   * `aria-invalid="true"` and the message is linked via `aria-describedby`.
+   * Error text is rendered as plain text (no markup).
+   */
   error?: string | null
 }
 
+/**
+ * Accessible labelled input / textarea with error-state ARIA wiring.
+ *
+ * When `error` is set:
+ * - `aria-invalid="true"` is applied to the native input/textarea.
+ * - `aria-describedby` points at the rendered error paragraph.
+ * - The error text is rendered as plain React children (no
+ *   `dangerouslySetInnerHTML`).
+ */
 export function ModalInput({
   label,
   type = 'text',
@@ -235,6 +252,7 @@ export function ModalInput({
   const { theme } = useTheme()
 
   const isError = !!error
+  const errorId = useId()
 
   const inputClasses = `w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none transition-all text-[14px] ${
     isError
@@ -267,6 +285,8 @@ export function ModalInput({
           onBlur={onBlur}
           className={`${inputClasses} resize-none`}
           placeholder={placeholder}
+          aria-invalid={isError || undefined}
+          aria-describedby={isError ? errorId : undefined}
         />
       ) : (
         <input
@@ -277,10 +297,13 @@ export function ModalInput({
           onBlur={onBlur}
           className={inputClasses}
           placeholder={placeholder}
+          aria-invalid={isError || undefined}
+          aria-describedby={isError ? errorId : undefined}
         />
       )}
       {isError && (
         <p
+          id={errorId}
           className={`text-[12px] mt-1.5 transition-colors ${
             theme === 'dark' ? 'text-red-400' : 'text-red-600'
           }`}
