@@ -137,4 +137,114 @@ describe('IssueListSidebar', () => {
 
     expect(screen.getByText('99+')).toBeInTheDocument()
   })
+
+  it('shows spinner and sets aria-busy while search is pending', () => {
+    vi.useFakeTimers()
+
+    const { container } = renderWithTheme(
+      <IssueListSidebar
+        issues={[]}
+        issueFilter={'All'}
+        setIssueFilter={vi.fn()}
+        searchQuery={''}
+        setSearchQuery={vi.fn()}
+        isFilterDropdownOpen={false}
+        setIsFilterDropdownOpen={vi.fn()}
+        appliedFilterCount={1}
+        onFilterClick={vi.fn()}
+        onIssueSelect={vi.fn()}
+      />
+    )
+
+    const input = screen.getByPlaceholderText('Search') as HTMLInputElement
+
+    act(() => {
+      fireEvent.change(input, { target: { value: 'hello' } })
+    })
+
+    // Spinner should appear immediately on typing
+    expect(container.querySelector('.animate-spin')).toBeInTheDocument()
+
+    // Results region should be marked busy
+    expect(screen.getByLabelText('Issues list')).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('hides spinner and clears aria-busy after debounce settles', () => {
+    vi.useFakeTimers()
+
+    const { container } = renderWithTheme(
+      <IssueListSidebar
+        issues={[]}
+        issueFilter={'All'}
+        setIssueFilter={vi.fn()}
+        searchQuery={''}
+        setSearchQuery={vi.fn()}
+        isFilterDropdownOpen={false}
+        setIsFilterDropdownOpen={vi.fn()}
+        appliedFilterCount={1}
+        onFilterClick={vi.fn()}
+        onIssueSelect={vi.fn()}
+      />
+    )
+
+    const input = screen.getByPlaceholderText('Search') as HTMLInputElement
+
+    act(() => {
+      fireEvent.change(input, { target: { value: 'hello' } })
+    })
+
+    // Advance beyond the debounce delay so it settles
+    act(() => {
+      vi.advanceTimersByTime(350)
+    })
+
+    // Spinner should be gone
+    expect(container.querySelector('.animate-spin')).not.toBeInTheDocument()
+
+    // aria-busy should be cleared
+    expect(screen.getByLabelText('Issues list')).toHaveAttribute('aria-busy', 'false')
+  })
+
+  it('keeps spinner visible during rapid typing before debounce settles', () => {
+    vi.useFakeTimers()
+
+    const { container } = renderWithTheme(
+      <IssueListSidebar
+        issues={[]}
+        issueFilter={'All'}
+        setIssueFilter={vi.fn()}
+        searchQuery={''}
+        setSearchQuery={vi.fn()}
+        isFilterDropdownOpen={false}
+        setIsFilterDropdownOpen={vi.fn()}
+        appliedFilterCount={1}
+        onFilterClick={vi.fn()}
+        onIssueSelect={vi.fn()}
+      />
+    )
+
+    const input = screen.getByPlaceholderText('Search') as HTMLInputElement
+
+    // Type multiple characters in quick succession (before debounce fires)
+    act(() => {
+      fireEvent.change(input, { target: { value: 'h' } })
+    })
+    act(() => {
+      fireEvent.change(input, { target: { value: 'he' } })
+    })
+    act(() => {
+      fireEvent.change(input, { target: { value: 'hel' } })
+    })
+
+    // Spinner should still be visible since debounce hasn't fired yet
+    expect(container.querySelector('.animate-spin')).toBeInTheDocument()
+
+    // Advance timers past debounce
+    act(() => {
+      vi.advanceTimersByTime(350)
+    })
+
+    // Spinner should now be gone
+    expect(container.querySelector('.animate-spin')).not.toBeInTheDocument()
+  })
 })

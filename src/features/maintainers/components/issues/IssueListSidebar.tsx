@@ -1,4 +1,4 @@
-import { Search, Filter } from 'lucide-react'
+import { Search, Filter, Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { useDebouncedValue } from '../../../../shared/hooks/useDebouncedValue'
@@ -38,6 +38,11 @@ function formatCountBadge(count: number): string {
  * so list filtering doesn't run on every keystroke. Renders a distinct
  * empty state when there are no issues at all versus when search/filters
  * exclude every issue.
+ *
+ * While a search is pending (debounce window + parent re-filter) the
+ * results region receives `aria-busy="true"` and an inline spinner is
+ * shown inside the search input. Both clear automatically once the
+ * debounced value settles and the parent re-renders with updated issues.
  */
 export function IssueListSidebar({
   issues,
@@ -70,6 +75,13 @@ export function IssueListSidebar({
     }
     setSearchQuery(debouncedSearch)
   }, [debouncedSearch, setSearchQuery])
+
+  // Track whether a search is in-flight: covers the debounce window
+  // (draft !== debounced) and the brief synchronous re-filter by the parent.
+  const [isSearching, setIsSearching] = useState(false)
+  useEffect(() => {
+    setIsSearching(debouncedSearch !== draftSearch)
+  }, [debouncedSearch, draftSearch])
 
   const badgeText = useMemo(() => formatCountBadge(appliedFilterCount), [appliedFilterCount])
 
@@ -119,17 +131,25 @@ export function IssueListSidebar({
             placeholder="Search"
             value={draftSearch}
             onChange={(e) => setDraftSearch(e.target.value)}
-            className={`w-full pl-11 pr-4 py-3 rounded-[14px] backdrop-blur-[25px] border text-[14px] focus:outline-none focus:border-[#c9983a]/40 focus:ring-2 focus:ring-[#c9983a]/20 transition-all ${
+            className={`w-full pl-11 pr-11 py-3 rounded-[14px] backdrop-blur-[25px] border text-[14px] focus:outline-none focus:border-[#c9983a]/40 focus:ring-2 focus:ring-[#c9983a]/20 transition-all ${
               theme === 'dark'
                 ? 'bg-white/[0.08] border-white/15 text-[#e8dfd0] placeholder:text-[#8a7b6a] focus:bg-white/[0.12]'
                 : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder:text-[#9a8b7a] focus:bg-white/[0.2]'
             }`}
           />
+          {isSearching && (
+            <Loader2
+              className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin transition-colors ${
+                theme === 'dark' ? 'text-[#c9983a]' : 'text-[#c9983a]'
+              }`}
+              aria-hidden="true"
+            />
+          )}
         </div>
       </div>
 
       {/* Scrollable Issues List */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
+      <div className="flex-1 overflow-y-auto px-6 pb-6" aria-busy={isSearching} aria-label="Issues list">
         <div className="space-y-3">
           {showNoIssuesFound && (
             <div
