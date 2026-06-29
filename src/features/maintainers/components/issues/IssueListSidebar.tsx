@@ -1,24 +1,22 @@
-
-
-import { Search, Filter } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useTheme } from '../../../../shared/contexts/ThemeContext';
-import { useDebouncedValue } from '../../../../shared/hooks/useDebouncedValue';
-import { Issue } from '../../types';
-import { IssueCard } from './IssueCard';
-import { IssueFilterDropdown } from './IssueFilterDropdown';
+import { Search, Filter } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTheme } from '../../../../shared/contexts/ThemeContext'
+import { useDebouncedValue } from '../../../../shared/hooks/useDebouncedValue'
+import { Issue } from '../../types'
+import { IssueCard } from './IssueCard'
+import { IssueFilterDropdown } from './IssueFilterDropdown'
 
 interface IssueListSidebarProps {
-  issues: Issue[];
-  issueFilter: string;
-  setIssueFilter: (filter: string) => void;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  isFilterDropdownOpen: boolean;
-  setIsFilterDropdownOpen: (open: boolean) => void;
-  appliedFilterCount: number;
-  onFilterClick: () => void;
-  onIssueSelect: (issue: Issue) => void;
+  issues: Issue[]
+  issueFilter: string
+  setIssueFilter: (filter: string) => void
+  searchQuery: string
+  setSearchQuery: (query: string) => void
+  isFilterDropdownOpen: boolean
+  setIsFilterDropdownOpen: (open: boolean) => void
+  appliedFilterCount: number
+  onFilterClick: () => void
+  onIssueSelect: (issue: Issue) => void
 }
 
 /**
@@ -28,9 +26,9 @@ interface IssueListSidebarProps {
  * - >= 100 => "99+"
  */
 function formatCountBadge(count: number): string {
-  const safe = Number.isFinite(count) ? Math.max(0, count) : 0;
-  if (safe >= 100) return '99+';
-  return String(Math.trunc(safe));
+  const safe = Number.isFinite(count) ? Math.max(0, count) : 0
+  if (safe >= 100) return '99+'
+  return String(Math.trunc(safe))
 }
 
 /**
@@ -53,39 +51,37 @@ export function IssueListSidebar({
   onFilterClick,
   onIssueSelect,
 }: IssueListSidebarProps) {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
 
   // Debounce search updates to avoid expensive filtering on each keystroke.
-  const [draftSearch, setDraftSearch] = useState(searchQuery);
-  const debouncedSearch = useDebouncedValue(draftSearch, 300);
+  const [draftSearch, setDraftSearch] = useState(searchQuery)
+  const debouncedSearch = useDebouncedValue(draftSearch, 300)
 
   useEffect(() => {
-    setDraftSearch(searchQuery);
-  }, [searchQuery]);
+    setDraftSearch(searchQuery)
+  }, [searchQuery])
 
   // Skip the first run so mounting doesn't re-emit the initial search value.
-  const hasMounted = useRef(false);
+  const hasMounted = useRef(false)
   useEffect(() => {
     if (!hasMounted.current) {
-      hasMounted.current = true;
-      return;
+      hasMounted.current = true
+      return
     }
-    setSearchQuery(debouncedSearch);
-  }, [debouncedSearch, setSearchQuery]);
+    setSearchQuery(debouncedSearch)
+  }, [debouncedSearch, setSearchQuery])
 
-  const badgeText = useMemo(() => formatCountBadge(appliedFilterCount), [appliedFilterCount]);
+  const badgeText = useMemo(() => formatCountBadge(appliedFilterCount), [appliedFilterCount])
 
-  const isDefaultFilter = issueFilter === 'All';
-  const hasActiveSearch = searchQuery.trim().length > 0;
-  const showNoIssuesFound = issues.length === 0 && !hasActiveSearch && isDefaultFilter;
-  const showNoMatches = issues.length === 0 && !showNoIssuesFound;
+  const isDefaultFilter = issueFilter === 'All'
+  const hasActiveSearch = searchQuery.trim().length > 0
+  const showNoIssuesFound = issues.length === 0 && !hasActiveSearch && isDefaultFilter
+  const showNoMatches = issues.length === 0 && !showNoIssuesFound
 
   return (
     <div
       className={`w-[380px] backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col transition-colors ${
-        theme === 'dark'
-          ? 'bg-[#2d2820]/[0.4] border-white/10'
-          : 'bg-white/[0.12] border-white/20'
+        theme === 'dark' ? 'bg-[#2d2820]/[0.4] border-white/10' : 'bg-white/[0.12] border-white/20'
       }`}
     >
       {/* Fixed Header Section */}
@@ -136,14 +132,18 @@ export function IssueListSidebar({
       <div className="flex-1 overflow-y-auto px-6 pb-6">
         <div className="space-y-3">
           {showNoIssuesFound && (
-            <div className={`px-6 py-10 text-center ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+            <div
+              className={`px-6 py-10 text-center ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+            >
               <p className="text-[14px] font-medium mb-1">No issues found</p>
               <p className="text-[12px]">Select repositories or refresh the list.</p>
             </div>
           )}
 
           {showNoMatches && (
-            <div className={`px-6 py-10 text-center ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+            <div
+              className={`px-6 py-10 text-center ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}
+            >
               <p className="text-[14px] font-medium mb-1">No matches for search/filters</p>
               <p className="text-[12px]">Try clearing search or changing filters.</p>
             </div>
@@ -159,7 +159,6 @@ export function IssueListSidebar({
                 onClick={() => onIssueSelect(issue)}
               />
             ))}
-
         </div>
       </div>
 
@@ -178,6 +177,5 @@ export function IssueListSidebar({
         </span>
       </div>
     </div>
-  );
+  )
 }
-

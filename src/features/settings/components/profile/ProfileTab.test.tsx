@@ -130,7 +130,7 @@ describe('ProfileTab', () => {
 
     await waitFor(() => {
       expect(mockUpdateProfile).toHaveBeenCalledWith(
-        expect.objectContaining({ first_name: 'Jane' }),
+        expect.objectContaining({ first_name: 'Jane' })
       )
     })
     expect(toast.success).toHaveBeenCalledWith('Profile updated successfully!')
@@ -153,9 +153,7 @@ describe('ProfileTab', () => {
     await user.click(screen.getByRole('button', { name: /^save$/i }))
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(
-        'Failed to update profile. Please try again.',
-      )
+      expect(toast.error).toHaveBeenCalledWith('Failed to update profile. Please try again.')
     })
   })
 

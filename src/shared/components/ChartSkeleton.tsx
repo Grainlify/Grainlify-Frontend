@@ -1,4 +1,4 @@
-import { SkeletonLoader } from './SkeletonLoader';
+import { SkeletonLoader } from './SkeletonLoader'
 
 export function ChartSkeleton() {
   return (
@@ -16,9 +16,9 @@ export function ChartSkeleton() {
           {[...Array(6)].map((_, idx) => (
             <div key={idx} className="flex-1 flex flex-col items-center gap-2">
               {/* Bar skeleton */}
-              <SkeletonLoader 
-                variant="default" 
-                width="100%" 
+              <SkeletonLoader
+                variant="default"
+                width="100%"
                 height={`${Math.random() * 60 + 40}%`}
                 className="rounded-t-[8px]"
               />
@@ -41,5 +41,5 @@ export function ChartSkeleton() {
         </div>
       </div>
     </div>
-  );
+  )
 }

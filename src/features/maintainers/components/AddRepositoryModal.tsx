@@ -1,21 +1,21 @@
-import { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { createProject, getEcosystems } from '../../../shared/api/client';
-import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
-import { addRepositorySchema, AddRepositoryFormData } from './addRepositorySchema';
+import { useState, useEffect } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { createProject, getEcosystems } from '../../../shared/api/client'
+import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
+import { addRepositorySchema, AddRepositoryFormData } from './addRepositorySchema'
 
 interface AddRepositoryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
+  isOpen: boolean
+  onClose: () => void
+  onSuccess: () => void
 }
 
 export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepositoryModalProps) {
-  const { theme } = useTheme();
-  const darkTheme = theme === 'dark';
+  const { theme } = useTheme()
+  const darkTheme = theme === 'dark'
 
   const {
     register,
@@ -34,50 +34,50 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
       tags: '',
       category: '',
     },
-  });
+  })
 
   useEffect(() => {
     if (isOpen) {
-      trigger();
+      trigger()
     }
-  }, [isOpen, trigger]);
+  }, [isOpen, trigger])
 
-  const [ecosystems, setEcosystems] = useState<Array<{ name: string; slug: string }>>([]);
-  const [isLoadingEcosystems, setIsLoadingEcosystems] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [ecosystems, setEcosystems] = useState<Array<{ name: string; slug: string }>>([])
+  const [isLoadingEcosystems, setIsLoadingEcosystems] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   // Load ecosystems on mount
   useEffect(() => {
     if (isOpen) {
-      loadEcosystems();
+      loadEcosystems()
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   const loadEcosystems = async () => {
-    setIsLoadingEcosystems(true);
-    setError(null);
+    setIsLoadingEcosystems(true)
+    setError(null)
     try {
-      const data = await getEcosystems();
-      setEcosystems(data.ecosystems.map(eco => ({ name: eco.name, slug: eco.slug })));
+      const data = await getEcosystems()
+      setEcosystems(data.ecosystems.map((eco) => ({ name: eco.name, slug: eco.slug })))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load ecosystems');
+      setError(err instanceof Error ? err.message : 'Failed to load ecosystems')
     } finally {
-      setIsLoadingEcosystems(false);
+      setIsLoadingEcosystems(false)
     }
-  };
+  }
 
   const onSubmit = async (data: AddRepositoryFormData) => {
-    setError(null);
-    setSuccess(false);
-    setIsSubmitting(true);
+    setError(null)
+    setSuccess(false)
+    setIsSubmitting(true)
 
     try {
       const tagsArray = (data.tags || '')
         .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag.length > 0);
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0)
 
       await createProject({
         github_full_name: data.githubFullName.trim(),
@@ -85,55 +85,56 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
         language: data.language?.trim() || undefined,
         tags: tagsArray.length > 0 ? tagsArray : undefined,
         category: data.category?.trim() || undefined,
-      });
+      })
 
-      setSuccess(true);
-      reset();
+      setSuccess(true)
+      reset()
 
       setTimeout(() => {
-        onSuccess();
-        onClose();
-        setSuccess(false);
-      }, 1500);
+        onSuccess()
+        onClose()
+        setSuccess(false)
+      }, 1500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add repository');
+      setError(err instanceof Error ? err.message : 'Failed to add repository')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleClose = () => {
     if (!isSubmitting) {
-      setError(null);
-      setSuccess(false);
-      reset();
-      onClose();
+      setError(null)
+      setSuccess(false)
+      reset()
+      onClose()
     }
-  };
+  }
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={handleClose}
-      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Modal */}
-      <div className={`relative w-full max-w-[520px] rounded-[24px] border-2 shadow-[0_16px_64px_rgba(0,0,0,0.4)] transition-colors ${
-        darkTheme
-          ? 'bg-[#3a3228] border-white/30'
-          : 'bg-[#d4c5b0] border-white/40'
-      }`}>
+      <div
+        className={`relative w-full max-w-[520px] rounded-[24px] border-2 shadow-[0_16px_64px_rgba(0,0,0,0.4)] transition-colors ${
+          darkTheme ? 'bg-[#3a3228] border-white/30' : 'bg-[#d4c5b0] border-white/40'
+        }`}
+      >
         {/* Header */}
-        <div className={`flex items-center justify-between px-6 py-5 border-b-2 transition-colors ${
-          darkTheme ? 'border-white/20' : 'border-white/30'
-        }`}>
-          <h2 className={`text-[20px] font-bold transition-colors ${
-            darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-          }`}>
+        <div
+          className={`flex items-center justify-between px-6 py-5 border-b-2 transition-colors ${
+            darkTheme ? 'border-white/20' : 'border-white/30'
+          }`}
+        >
+          <h2
+            className={`text-[20px] font-bold transition-colors ${
+              darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+            }`}
+          >
             Add a Repository
           </h2>
           <button
@@ -153,11 +154,13 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
           {/* Error Message */}
           {error && (
-            <div className={`flex items-center gap-3 p-4 rounded-[12px] border-2 ${
-              darkTheme
-                ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                : 'bg-red-100 border-red-300 text-red-700'
-            }`}>
+            <div
+              className={`flex items-center gap-3 p-4 rounded-[12px] border-2 ${
+                darkTheme
+                  ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                  : 'bg-red-100 border-red-300 text-red-700'
+              }`}
+            >
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <span className="text-[14px] font-medium">{error}</span>
             </div>
@@ -165,11 +168,13 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
 
           {/* Success Message */}
           {success && (
-            <div className={`flex items-center gap-3 p-4 rounded-[12px] border-2 ${
-              darkTheme
-                ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                : 'bg-green-100 border-green-300 text-green-700'
-            }`}>
+            <div
+              className={`flex items-center gap-3 p-4 rounded-[12px] border-2 ${
+                darkTheme
+                  ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                  : 'bg-green-100 border-green-300 text-green-700'
+              }`}
+            >
               <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
               <span className="text-[14px] font-medium">Repository added successfully!</span>
             </div>
@@ -177,7 +182,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
 
           {/* Repository Name */}
           <div>
-            <label 
+            <label
               htmlFor="github-fullname-input"
               className={`block text-[14px] font-semibold mb-2 transition-colors ${
                 darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
@@ -193,7 +198,9 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
               disabled={isSubmitting}
               maxLength={140}
               aria-invalid={!!errors.githubFullName}
-              aria-describedby={errors.githubFullName ? "github-fullname-error" : "github-fullname-help"}
+              aria-describedby={
+                errors.githubFullName ? 'github-fullname-error' : 'github-fullname-help'
+              }
               className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
                 darkTheme
                   ? 'bg-white/10 border-white/20 text-[#e8dfd0] placeholder:text-[#b8a898] focus:border-[#c9983a] focus:bg-white/15'
@@ -217,13 +224,16 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
                 darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
               }`}
             >
-              Enter the full repository name in format: owner/repository. Owner name can contain letters, numbers, and hyphens (max 39 characters, no leading/trailing/consecutive hyphens). Repository name can contain letters, numbers, hyphens, underscores, and periods (max 100 characters).
+              Enter the full repository name in format: owner/repository. Owner name can contain
+              letters, numbers, and hyphens (max 39 characters, no leading/trailing/consecutive
+              hyphens). Repository name can contain letters, numbers, hyphens, underscores, and
+              periods (max 100 characters).
             </p>
           </div>
 
           {/* Ecosystem */}
           <div>
-            <label 
+            <label
               htmlFor="ecosystem-select"
               className={`block text-[14px] font-semibold mb-2 transition-colors ${
                 darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
@@ -243,7 +253,7 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
                     {...field}
                     disabled={isSubmitting || ecosystems.length === 0}
                     aria-invalid={!!errors.ecosystemName}
-                    aria-describedby={errors.ecosystemName ? "ecosystem-error" : undefined}
+                    aria-describedby={errors.ecosystemName ? 'ecosystem-error' : undefined}
                     className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
                       darkTheme
                         ? 'bg-white/10 border-white/20 text-[#e8dfd0] focus:border-[#c9983a] focus:bg-white/15'
@@ -275,9 +285,11 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
 
           {/* Language */}
           <div>
-            <label className={`block text-[14px] font-semibold mb-2 transition-colors ${
-              darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-            }`}>
+            <label
+              className={`block text-[14px] font-semibold mb-2 transition-colors ${
+                darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+              }`}
+            >
               Language (Optional)
             </label>
             <input
@@ -295,9 +307,11 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
 
           {/* Tags */}
           <div>
-            <label className={`block text-[14px] font-semibold mb-2 transition-colors ${
-              darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-            }`}>
+            <label
+              className={`block text-[14px] font-semibold mb-2 transition-colors ${
+                darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+              }`}
+            >
               Tags (Optional)
             </label>
             <input
@@ -311,18 +325,22 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
                   : 'bg-white/40 border-white/50 text-[#2d2820] placeholder:text-[#7a6b5a] focus:border-[#c9983a] focus:bg-white/60'
               } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
-            <p className={`mt-1.5 text-[12px] transition-colors ${
-              darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-            }`}>
+            <p
+              className={`mt-1.5 text-[12px] transition-colors ${
+                darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+              }`}
+            >
               Separate multiple tags with commas
             </p>
           </div>
 
           {/* Category */}
           <div>
-            <label className={`block text-[14px] font-semibold mb-2 transition-colors ${
-              darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-            }`}>
+            <label
+              className={`block text-[14px] font-semibold mb-2 transition-colors ${
+                darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+              }`}
+            >
               Category (Optional)
             </label>
             <input
@@ -376,8 +394,5 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
         </form>
       </div>
     </div>
-  );
+  )
 }
-
-
-

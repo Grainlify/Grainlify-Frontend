@@ -335,22 +335,22 @@ const ProjectMobileCard = memo(({ project, theme, getLanguageIcon }: ProjectMobi
  * or a card view (mobile).
  */
 export function ProjectsTab() {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
 
   // Language icon helper
   const getLanguageIcon = useCallback((language: string) => {
     const icons: { [key: string]: { icon: string; color: string } } = {
-      TypeScript: { icon: "TS", color: "bg-blue-500" },
-      JavaScript: { icon: "JS", color: "bg-yellow-500" },
-      Python: { icon: "Py", color: "bg-green-600" },
-      Java: { icon: "Jv", color: "bg-red-600" },
-      Rust: { icon: "Rs", color: "bg-orange-600" },
-      Go: { icon: "Go", color: "bg-cyan-600" },
-    };
+      TypeScript: { icon: 'TS', color: 'bg-blue-500' },
+      JavaScript: { icon: 'JS', color: 'bg-yellow-500' },
+      Python: { icon: 'Py', color: 'bg-green-600' },
+      Java: { icon: 'Jv', color: 'bg-red-600' },
+      Rust: { icon: 'Rs', color: 'bg-orange-600' },
+      Go: { icon: 'Go', color: 'bg-cyan-600' },
+    }
     return (
       icons[language] || {
         icon: language.substring(0, 2),
-        color: "bg-gray-500",
+        color: 'bg-gray-500',
       }
     );
   }, []);
@@ -435,7 +435,7 @@ export function ProjectsTab() {
                 <th
                   scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   Project name
@@ -443,7 +443,7 @@ export function ProjectsTab() {
                 <th
                   scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   Project lead
@@ -451,7 +451,7 @@ export function ProjectsTab() {
                 <th
                   scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   Contributors
@@ -459,7 +459,7 @@ export function ProjectsTab() {
                 <th
                   scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   Available issues
@@ -467,7 +467,7 @@ export function ProjectsTab() {
                 <th
                   scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   My contributions
@@ -475,7 +475,7 @@ export function ProjectsTab() {
                 <th
                   scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   My rewards
@@ -483,7 +483,7 @@ export function ProjectsTab() {
                 <th
                   scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   Languages
@@ -491,7 +491,7 @@ export function ProjectsTab() {
                 <th
                   scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   Repositories
@@ -499,7 +499,7 @@ export function ProjectsTab() {
                 <th
                   scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   Billing profile
@@ -507,7 +507,7 @@ export function ProjectsTab() {
                 <th
                   scope="col"
                   className={`px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   Actions
@@ -541,5 +541,5 @@ export function ProjectsTab() {
         ))}
       </div>
     </>
-  );
+  )
 }
