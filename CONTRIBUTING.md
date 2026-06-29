@@ -64,6 +64,7 @@ src/
 └── shared/                 # Reusable helpers and generic utilities
     ├── api/                # API client helper and centralized endpoint calls
     ├── components/         # Generic UI components (e.g., Modals, Guards, Toasts)
+    │   └── ui/             # Canonical shadcn-style UI primitives
     ├── config/             # Config files, constants, and API base URL configurations
     ├── contexts/           # Contexts shared across multiple features
     ├── hooks/              # Shared Custom React Hooks (e.g., i18n, window dimensions)
@@ -148,6 +149,19 @@ Grainlify implements a premium **Glassmorphism Design** featuring frosted overla
   - **Dark mode**: Charcoal/dark brown background (`#1a1512`), semi-transparent overlays, adjusted gold/yellow contrast highlights.
 - **Utility Classes**: Tailwind CSS v4 classes are used for layout and margins. Do not write ad-hoc style utilities or inline CSS rules.
 - **Transitions**: Use smooth transition utility classes (e.g. `transition-all duration-300`) on interactive states like hover, active, or toggle switches.
+
+### Semantic Status Tokens
+
+Status colors are centralized in `src/styles/theme.css` and must be consumed through CSS variables instead of hardcoded hex utilities.
+
+| Token | Meaning | Typical Usage |
+| :---- | :------ | :------------ |
+| `--status-success` | Completed / paid / verified outcomes | Positive badges, success icon accents |
+| `--status-error` | Failures / overdue / blocked outcomes | Error badges, alert icon accents |
+| `--status-warning` | Cautionary but not blocked outcomes | Warning badges, caution callouts |
+| `--status-pending` | Waiting / in-progress outcomes | Pending badges and progress states |
+
+Companion variables (`-foreground`, `-bg`, `-border`) define text, surface, and border values. Apply accessibility fixes by updating these token values once, not by introducing ad-hoc component-level status colors.
 
 ---
 

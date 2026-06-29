@@ -3,10 +3,10 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { Calendar } from "../../../app/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../app/components/ui/popover";
+import { Calendar } from "./calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { useTheme } from "../../contexts/ThemeContext";
-import { cn } from "../../../app/components/ui/utils";
+import { cn } from "./utils";
 
 interface DatePickerProps {
   label?: string;

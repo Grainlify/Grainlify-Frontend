@@ -9,7 +9,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../../app/components/ui/dropdown-menu';
+} from './ui/dropdown-menu';
 
 interface UserProfileDropdownProps {
   onPageChange?: (page: string) => void;
