@@ -9,12 +9,24 @@
  * - {@link resolveMessages} / {@link en} / {@link MessageId} — catalog + types.
  */
 export { I18nProvider, type I18nProviderProps } from './I18nProvider'
+export {
+  LocaleProvider,
+  useLocale,
+  readStoredLocale,
+  LOCALE_STORAGE_KEY,
+  type LocaleProviderProps,
+  type LocaleContextValue,
+} from './LocaleProvider'
+export { LocaleSwitcher, type LocaleSwitcherProps } from './LocaleSwitcher'
 export { handleIntlError } from './errors'
 export { useTranslation, type TranslationValues, type UseTranslation } from './useTranslation'
 export {
   en,
+  es,
   catalogs,
   resolveMessages,
+  isLocale,
+  LOCALES,
   DEFAULT_LOCALE,
   type Locale,
   type MessageId,

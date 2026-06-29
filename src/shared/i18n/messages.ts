@@ -19,10 +19,33 @@
  * Supported locale codes. English is the base/default locale; add new codes
  * here as their catalogs are introduced.
  */
-export type Locale = 'en'
+export type Locale = 'en' | 'es'
 
 /** The default (and base) locale used as the fallback for every key. */
 export const DEFAULT_LOCALE: Locale = 'en'
+
+/**
+ * Every supported locale paired with a human-readable display name, in the
+ * order they should appear in the locale switcher. The single source of truth
+ * for "which locales exist", used both to render the selector and to validate
+ * any persisted locale before it is applied.
+ */
+export const LOCALES: ReadonlyArray<{ code: Locale; label: string }> = [
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+] as const
+
+/**
+ * Narrows an arbitrary value to a supported {@link Locale}. Used to validate
+ * persisted / user-supplied locale codes before they are applied, so unknown
+ * values can never reach the IntlProvider (they resolve to `en`).
+ *
+ * @param value - Any value (e.g. a string read from `localStorage`).
+ * @returns `true` if `value` is one of the supported locale codes.
+ */
+export function isLocale(value: unknown): value is Locale {
+  return typeof value === 'string' && LOCALES.some((l) => l.code === value)
+}
 
 /**
  * English message catalog — the base locale and source of truth for every key.
@@ -70,12 +93,27 @@ export type MessageId = keyof typeof en
 export type Messages = Record<MessageId, string>
 
 /**
+ * Spanish message catalog — an intentionally partial stub. Only a handful of
+ * keys are translated; everything else transparently falls back to {@link en}
+ * via {@link resolveMessages}. This demonstrates the multi-locale machinery and
+ * gives the locale switcher something to switch to.
+ */
+export const es: Partial<Messages> = {
+  'landingNav.features': 'Características',
+  'landingNav.getStarted': 'Comenzar',
+  'dashboardNav.discover': 'Descubrir',
+  'dashboardNav.browse': 'Explorar',
+  'dashboardNav.leaderboard': 'Clasificación',
+}
+
+/**
  * Per-locale message catalogs. `en` is always present and complete; future
  * locales may be partial and inherit any missing keys from `en` via
  * {@link resolveMessages}.
  */
 export const catalogs: Record<Locale, Partial<Messages>> = {
   en,
+  es,
 }
 
 /**
