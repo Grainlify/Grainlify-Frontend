@@ -505,4 +505,86 @@ describe('NewProjectSetupModal', () => {
       expect(payload.description).not.toBe('Tampered draft for A');
     });
   });
+
+  describe('tags length bound', () => {
+    it('bounds the tags input and renders an accessible live counter', async () => {
+      renderWithTheme(
+        <NewProjectSetupModal
+          isOpen
+          project={makeProject({ tags: [] })}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => expect(getTags()).toHaveValue(''));
+      const input = getTags();
+      expect(input).toHaveAttribute('maxlength', '120');
+
+      const counter = screen.getByText('0/120');
+      expect(counter).toHaveAttribute('aria-live', 'polite');
+      expect(input.getAttribute('aria-describedby')).toContain(counter.id);
+    });
+
+    it('updates the counter as the user types', async () => {
+      const user = userEvent.setup();
+      renderWithTheme(
+        <NewProjectSetupModal
+          isOpen
+          project={makeProject({ tags: [] })}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => expect(getTags()).toHaveValue(''));
+      await user.type(getTags(), 'DeFi');
+      expect(screen.getByText('4/120')).toBeInTheDocument();
+    });
+
+    it('surfaces a per-tag error, marks the field invalid, and blocks submit for an over-long tag', async () => {
+      const user = userEvent.setup();
+      renderWithTheme(
+        <NewProjectSetupModal
+          isOpen
+          project={makeProject({ tags: [] })}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => expect(getTags()).toHaveValue(''));
+      const input = getTags();
+      await user.type(input, 'a'.repeat(31));
+
+      const error = await screen.findByText(/Each tag must be 30 characters or fewer/i);
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      expect(input.getAttribute('aria-describedby')).toContain(error.id);
+
+      const submit = screen.getByRole('button', { name: /save & continue/i });
+      expect(submit).toBeDisabled();
+      await user.click(submit);
+      expect(updateProjectMetadata).not.toHaveBeenCalled();
+    });
+
+    it('accepts multiple tags within the per-tag bound', async () => {
+      const user = userEvent.setup();
+      renderWithTheme(
+        <NewProjectSetupModal
+          isOpen
+          project={makeProject({ tags: [] })}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => expect(getTags()).toHaveValue(''));
+      const input = getTags();
+      await user.type(input, 'Payments, DeFi, Tooling');
+
+      expect(screen.queryByText(/Each tag must be/i)).not.toBeInTheDocument();
+      expect(input).not.toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByRole('button', { name: /save & continue/i })).toBeEnabled();
+    });
+  });
 });

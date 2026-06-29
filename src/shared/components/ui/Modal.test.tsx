@@ -252,6 +252,50 @@ describe('Modal building blocks', () => {
     expect(onChange).toHaveBeenCalled();
   });
 
+  it('ModalInput forwards maxLength and renders a live counter linked to the field', () => {
+    renderWithTheme(
+      <ModalInput label="Tagline" value="hello" onChange={() => {}} maxLength={20} />,
+    );
+    const input = screen.getByDisplayValue('hello');
+    expect(input).toHaveAttribute('maxlength', '20');
+
+    const counter = screen.getByText('5/20');
+    expect(counter).toHaveAttribute('aria-live', 'polite');
+    // The field points at the counter so screen readers announce the remaining room.
+    expect(input.getAttribute('aria-describedby')).toContain(counter.id);
+  });
+
+  it('ModalInput renders no counter when maxLength is unset', () => {
+    renderWithTheme(<ModalInput label="Name" value="abc" onChange={() => {}} />);
+    expect(screen.queryByText(/^\d+\/\d+$/)).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('abc')).not.toHaveAttribute('maxlength');
+  });
+
+  it('ModalInput caps typed input at maxLength and updates the counter', async () => {
+    const user = userEvent.setup();
+    function Harness() {
+      const [value, setValue] = useState('');
+      return <ModalInput label="Code" value={value} onChange={setValue} maxLength={3} placeholder="code" />;
+    }
+    renderWithTheme(<Harness />);
+    const input = screen.getByPlaceholderText('code');
+
+    await user.type(input, 'abcdef');
+    // Native maxLength stops input at the bound, including the at-limit counter.
+    expect(input).toHaveValue('abc');
+    expect(screen.getByText('3/3')).toBeInTheDocument();
+  });
+
+  it('ModalInput forwards maxLength to the textarea variant', () => {
+    renderWithTheme(
+      <ModalInput label="Bio" value="hi" onChange={() => {}} rows={3} maxLength={140} />,
+    );
+    const textarea = screen.getByDisplayValue('hi');
+    expect(textarea.tagName).toBe('TEXTAREA');
+    expect(textarea).toHaveAttribute('maxlength', '140');
+    expect(screen.getByText('2/140')).toBeInTheDocument();
+  });
+
   it('ModalSelect renders a labelled trigger with the selected value', () => {
     renderWithTheme(
       <ModalSelect

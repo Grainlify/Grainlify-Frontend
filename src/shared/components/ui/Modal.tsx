@@ -210,6 +210,14 @@ interface ModalInputProps {
   rows?: number;
   className?: string;
   error?: string | null;
+  /**
+   * Optional maximum character length. When set, it is forwarded to the
+   * underlying `input`/`textarea` (so the browser caps typing and paste) and a
+   * live character counter (`current/max`) is rendered beneath the field. The
+   * counter is announced to assistive tech via `aria-live="polite"` and linked
+   * to the field with `aria-describedby`.
+   */
+  maxLength?: number;
 }
 
 export function ModalInput({
@@ -222,11 +230,21 @@ export function ModalInput({
   required = false,
   rows,
   className = '',
-  error
+  error,
+  maxLength
 }: ModalInputProps) {
   const { theme } = useTheme();
 
   const isError = !!error;
+  const fieldId = useId();
+  const counterId = `${fieldId}-counter`;
+  const errorId = `${fieldId}-error`;
+  const showCounter = typeof maxLength === 'number';
+  const atLimit = showCounter && value.length >= maxLength;
+  const describedBy =
+    [isError ? errorId : null, showCounter ? counterId : null]
+      .filter(Boolean)
+      .join(' ') || undefined;
 
   const inputClasses = `w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none transition-all text-[14px] ${isError
     ? theme === 'dark'
@@ -253,6 +271,9 @@ export function ModalInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
+          maxLength={maxLength}
+          aria-describedby={describedBy}
+          aria-invalid={isError || undefined}
           className={`${inputClasses} resize-none`}
           placeholder={placeholder}
         />
@@ -263,14 +284,29 @@ export function ModalInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
+          maxLength={maxLength}
+          aria-describedby={describedBy}
+          aria-invalid={isError || undefined}
           className={inputClasses}
           placeholder={placeholder}
         />
       )}
       {isError && (
-        <p className={`text-[12px] mt-1.5 transition-colors ${theme === 'dark' ? 'text-red-400' : 'text-red-600'
+        <p id={errorId} className={`text-[12px] mt-1.5 transition-colors ${theme === 'dark' ? 'text-red-400' : 'text-red-600'
           }`}>
           {error}
+        </p>
+      )}
+      {showCounter && (
+        <p
+          id={counterId}
+          aria-live="polite"
+          className={`text-[12px] mt-1.5 text-right transition-colors ${atLimit
+            ? theme === 'dark' ? 'text-[#e8c571]' : 'text-[#c9983a]'
+            : theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+        >
+          {value.length}/{maxLength}
         </p>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
@@ -8,6 +8,11 @@ import {
   type PendingSetupProject,
 } from '../../../shared/api/client';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
+
+/** Maximum length of any single comma-separated tag. */
+const MAX_TAG_LENGTH = 30;
+/** Maximum length of the entire tags field (all tags plus separators). */
+const MAX_TAGS_LENGTH = 120;
 
 interface NewProjectSetupModalProps {
   isOpen: boolean;
@@ -41,6 +46,11 @@ export function NewProjectSetupModal({
   const [success, setSuccess] = useState(false);
   const [ecosystemDropdownOpen, setEcosystemDropdownOpen] = useState(false);
   const ecosystemDropdownRef = useRef<HTMLDivElement>(null);
+
+  const tagsFieldId = useId();
+  const tagsCounterId = `${tagsFieldId}-counter`;
+  const tagsHintId = `${tagsFieldId}-hint`;
+  const tagsErrorId = `${tagsFieldId}-error`;
 
   /**
    * Tracks the live `isOpen` value for async callbacks. A submission started
@@ -141,6 +151,11 @@ export function NewProjectSetupModal({
       return;
     }
 
+    if (tags.split(',').some((tag) => tag.trim().length > MAX_TAG_LENGTH)) {
+      setError(`Each tag must be ${MAX_TAG_LENGTH} characters or fewer`);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -192,6 +207,15 @@ export function NewProjectSetupModal({
   };
 
   if (!isOpen || !project) return null;
+
+  // Any individual (trimmed, non-empty) tag that exceeds the per-tag bound.
+  const overLongTags = tags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > MAX_TAG_LENGTH);
+  const tagsTooLong = overLongTags.length > 0;
+  const tagsAtLimit = tags.length >= MAX_TAGS_LENGTH;
+  const tagsDescribedBy = `${tagsHintId} ${tagsCounterId}${tagsTooLong ? ` ${tagsErrorId}` : ''}`;
 
   const modalContent = (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
@@ -403,19 +427,46 @@ export function NewProjectSetupModal({
               onChange={(e) => setTags(e.target.value)}
               placeholder="e.g., Payments, DeFi, Tooling"
               disabled={isSubmitting}
+              maxLength={MAX_TAGS_LENGTH}
+              aria-describedby={tagsDescribedBy}
+              aria-invalid={tagsTooLong || undefined}
               className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all ${
                 darkTheme
                   ? 'bg-white/10 border-white/20 text-[#e8dfd0] placeholder:text-[#b8a898] focus:border-[#c9983a] focus:bg-white/15'
                   : 'bg-white/40 border-white/50 text-[#2d2820] placeholder:text-[#7a6b5a] focus:border-[#c9983a] focus:bg-white/60'
-              } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              } ${tagsTooLong ? '!border-red-500/60' : ''} ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
-            <p
-              className={`mt-1.5 text-[12px] transition-colors ${
-                darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-              }`}
-            >
-              Separate multiple tags with commas
-            </p>
+            <div className="mt-1.5 flex items-start justify-between gap-3">
+              <p
+                id={tagsHintId}
+                className={`text-[12px] transition-colors ${
+                  darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                }`}
+              >
+                Separate multiple tags with commas
+              </p>
+              <span
+                id={tagsCounterId}
+                aria-live="polite"
+                className={`text-[12px] flex-shrink-0 transition-colors ${
+                  tagsAtLimit
+                    ? darkTheme ? 'text-[#e8c571]' : 'text-[#c9983a]'
+                    : darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                }`}
+              >
+                {tags.length}/{MAX_TAGS_LENGTH}
+              </span>
+            </div>
+            {tagsTooLong && (
+              <p
+                id={tagsErrorId}
+                className={`mt-1 text-[12px] transition-colors ${
+                  darkTheme ? 'text-red-400' : 'text-red-600'
+                }`}
+              >
+                Each tag must be {MAX_TAG_LENGTH} characters or fewer.
+              </p>
+            )}
           </div>
 
           {/* Category */}
@@ -444,12 +495,12 @@ export function NewProjectSetupModal({
           <div className="flex items-center gap-3 pt-2">
             <button
               type="submit"
-              disabled={isSubmitting || success}
+              disabled={isSubmitting || success || tagsTooLong}
               className={`flex-1 px-5 py-3 rounded-[12px] border-2 font-semibold text-[14px] transition-all ${
                 darkTheme
                   ? 'bg-gradient-to-br from-[#c9983a]/40 to-[#d4af37]/30 border-[#c9983a]/70 text-[#fef5e7] hover:from-[#c9983a]/50 hover:to-[#d4af37]/40 shadow-[0_4px_16px_rgba(201,152,58,0.4)]'
                   : 'bg-gradient-to-br from-[#c9983a]/30 to-[#d4af37]/25 border-[#c9983a]/50 text-[#2d2820] hover:from-[#c9983a]/40 hover:to-[#d4af37]/35 shadow-[0_4px_16px_rgba(201,152,58,0.25)]'
-              } ${isSubmitting || success ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              } ${isSubmitting || success || tagsTooLong ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
