@@ -6,6 +6,7 @@ import { PayoutTab } from '../components/payout/PayoutTab';
 import { BillingTab } from '../components/billing/BillingTab';
 import { TermsTab } from '../components/terms/TermsTab';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { useTranslation } from '../../../shared/i18n';
 import { BillingProfilesProvider } from '../contexts/BillingProfilesContext';
 import { useTranslation } from '../../../shared/i18n';
 
