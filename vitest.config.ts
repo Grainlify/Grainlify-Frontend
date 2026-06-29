@@ -1,9 +1,9 @@
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
@@ -11,7 +11,13 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/cypress/**', '**/.{idea,git,cache,output,temp}/**'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/e2e/**',
+      '**/cypress/**',
+      '**/.{idea,git,cache,output,temp}/**',
+    ],
     // Provide the backend URL the app config validates at import time so tests
     // that pull in the shared module barrel don't trip env validation.
     env: {
@@ -53,4 +59,4 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-});
+})
