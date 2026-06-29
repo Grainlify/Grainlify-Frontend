@@ -12,6 +12,7 @@ vi.mock('../api/client', () => ({
 
 vi.mock('../i18n', () => ({
   useTranslation: () => ({ locale: 'en', t: (id: string) => id }),
+  I18nProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 const PAYLOAD: LandingStats = {
