@@ -14,6 +14,9 @@ import {
   getAuthToken,
   setAuthToken,
   removeAuthToken,
+  RateLimitError,
+  parseRetryAfter,
+  DEFAULT_RETRY_AFTER_SECONDS,
 } from './client';
 import { API_BASE_URL } from '../config/api';
 
@@ -336,6 +339,107 @@ describe('apiRequest - Core Request Helper', () => {
       });
 
       await expect(apiRequest('/test')).rejects.toThrow('Bad request error');
+    });
+
+    it('should throw RateLimitError for 429 with numeric Retry-After header', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 429,
+        headers: { get: (name: string) => (name === 'Retry-After' ? '30' : null) },
+        json: async () => ({ message: 'Too Many Requests' }),
+      });
+
+      const error = await apiRequest('/test').catch(e => e);
+      expect(error).toBeInstanceOf(RateLimitError);
+      expect((error as RateLimitError).retryAfterSeconds).toBe(30);
+      expect(error.message).toContain('30');
+    });
+
+    it('should throw RateLimitError for 429 with HTTP-date Retry-After header', async () => {
+      const futureDate = new Date(Date.now() + 45_000).toUTCString();
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 429,
+        headers: { get: (name: string) => (name === 'Retry-After' ? futureDate : null) },
+        json: async () => ({}),
+      });
+
+      const error = await apiRequest('/test').catch(e => e);
+      expect(error).toBeInstanceOf(RateLimitError);
+      // Allow ±2s rounding tolerance
+      expect((error as RateLimitError).retryAfterSeconds).toBeGreaterThanOrEqual(43);
+      expect((error as RateLimitError).retryAfterSeconds).toBeLessThanOrEqual(47);
+    });
+
+    it('should throw RateLimitError with default delay when Retry-After header is absent', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 429,
+        headers: { get: () => null },
+        json: async () => ({}),
+      });
+
+      const error = await apiRequest('/test').catch(e => e);
+      expect(error).toBeInstanceOf(RateLimitError);
+      expect((error as RateLimitError).retryAfterSeconds).toBe(DEFAULT_RETRY_AFTER_SECONDS);
+    });
+
+    it('RateLimitError should have name "RateLimitError"', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 429,
+        headers: { get: () => null },
+        json: async () => ({}),
+      });
+
+      const error = await apiRequest('/test').catch(e => e);
+      expect(error.name).toBe('RateLimitError');
+    });
+  });
+
+  describe('parseRetryAfter', () => {
+    it('should return default delay for null header', () => {
+      expect(parseRetryAfter(null)).toBe(DEFAULT_RETRY_AFTER_SECONDS);
+    });
+
+    it('should return default delay for empty string header', () => {
+      expect(parseRetryAfter('')).toBe(DEFAULT_RETRY_AFTER_SECONDS);
+    });
+
+    it('should parse a valid numeric delay-seconds header', () => {
+      expect(parseRetryAfter('30')).toBe(30);
+    });
+
+    it('should parse zero as a valid delay', () => {
+      expect(parseRetryAfter('0')).toBe(0);
+    });
+
+    it('should floor fractional numeric values', () => {
+      expect(parseRetryAfter('30.9')).toBe(30);
+    });
+
+    it('should return default delay for negative numeric value', () => {
+      expect(parseRetryAfter('-10')).toBe(DEFAULT_RETRY_AFTER_SECONDS);
+    });
+
+    it('should return default delay for non-finite numeric value (Infinity)', () => {
+      expect(parseRetryAfter('Infinity')).toBe(DEFAULT_RETRY_AFTER_SECONDS);
+    });
+
+    it('should parse a future HTTP-date header and return positive seconds', () => {
+      const futureDate = new Date(Date.now() + 60_000).toUTCString();
+      const result = parseRetryAfter(futureDate);
+      expect(result).toBeGreaterThanOrEqual(58);
+      expect(result).toBeLessThanOrEqual(62);
+    });
+
+    it('should return 0 for a past HTTP-date header', () => {
+      const pastDate = new Date(Date.now() - 60_000).toUTCString();
+      expect(parseRetryAfter(pastDate)).toBe(0);
+    });
+
+    it('should return default delay for an unparseable string', () => {
+      expect(parseRetryAfter('invalid-value')).toBe(DEFAULT_RETRY_AFTER_SECONDS);
     });
   });
 
