@@ -2,9 +2,9 @@ import { SkeletonLoader } from './SkeletonLoader';
 
 export function PRRowSkeleton() {
   return (
-    <div className="grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border bg-white/[0.08] border-white/15">
+    <tr role="row" className="grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border bg-white/[0.08] border-white/15">
       {/* Pull Request Info */}
-      <div>
+      <td role="cell">
         <div className="flex items-start gap-3 mb-2">
           {/* Icon Skeleton */}
           <SkeletonLoader variant="circle" width="16px" height="16px" />
@@ -15,10 +15,10 @@ export function PRRowSkeleton() {
             <SkeletonLoader variant="text" width="120px" height="12px" />
           </div>
         </div>
-      </div>
+      </td>
 
       {/* Author Info */}
-      <div>
+      <td role="cell">
         <div className="flex items-center gap-2 mb-2">
           {/* Avatar Skeleton */}
           <SkeletonLoader variant="circle" width="28px" height="28px" />
@@ -30,10 +30,10 @@ export function PRRowSkeleton() {
           <SkeletonLoader variant="text" width="50px" height="20px" />
           <SkeletonLoader variant="text" width="60px" height="20px" />
         </div>
-      </div>
+      </td>
 
       {/* Repository Info */}
-      <div>
+      <td role="cell">
         <div className="flex items-center gap-2 mb-1">
           {/* Repo Avatar Skeleton */}
           <SkeletonLoader variant="default" width="20px" height="20px" className="rounded-md" />
@@ -42,28 +42,13 @@ export function PRRowSkeleton() {
         </div>
         {/* Org Skeleton */}
         <SkeletonLoader variant="text" width="60px" height="11px" className="ml-7" />
-      </div>
+      </td>
 
       {/* Indicators Skeleton */}
-      <div className="flex items-center gap-2">
+      <td role="cell" className="flex items-center gap-2">
         <SkeletonLoader variant="circle" width="28px" height="28px" />
         <SkeletonLoader variant="circle" width="28px" height="28px" />
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -30,7 +30,13 @@ interface Project {
 }
 
 interface PullRequestsTabProps {
+  /**
+   * The list of projects for which to display pull requests.
+   */
   selectedProjects: Project[];
+  /**
+   * Optional callback to refresh the pull requests data.
+   */
   onRefresh?: () => void;
 }
 
@@ -71,6 +77,16 @@ function getEmptyStateKind({
   return null;
 }
 
+/**
+ * Renders the Pull Requests tab for maintainers.
+ *
+ * This component displays a searchable and filterable list of pull requests
+ * from the selected projects. It uses a semantic table structure with
+ * accessible headers and captions.
+ *
+ * @param props - The component props.
+ * @returns The Pull Requests tab component.
+ */
 export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -255,147 +271,158 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
       </div>
 
       {/* Pull Requests Table */}
-      <div className="space-y-4">
+      <table className="w-full border-separate border-spacing-y-4" role="table">
+        <caption className="sr-only">Pull Requests List</caption>
         {/* Table Header */}
-        <div className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-3 border-b-2 transition-colors ${
-          theme === 'dark' ? 'border-white/20' : 'border-white/20'
-        }`}>
-          <div className={`text-[12px] font-bold uppercase tracking-wide transition-colors ${
-            theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
-          }`}>Pull Request</div>
-          <div className={`text-[12px] font-bold uppercase tracking-wide transition-colors ${
-            theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
-          }`}>Author</div>
-          <div className={`text-[12px] font-bold uppercase tracking-wide transition-colors ${
-            theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
-          }`}>Repository</div>
-          <div className={`text-[12px] font-bold uppercase tracking-wide transition-colors ${
-            theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
-          }`}>Indicators</div>
-        </div>
+        <thead className="block w-full">
+          <tr className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-3 border-b-2 transition-colors ${
+            theme === 'dark' ? 'border-white/20' : 'border-white/20'
+          }`} role="row">
+            <th scope="col" role="columnheader" className={`text-left text-[12px] font-bold uppercase tracking-wide transition-colors ${
+              theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
+            }`}>Pull Request</th>
+            <th scope="col" role="columnheader" className={`text-left text-[12px] font-bold uppercase tracking-wide transition-colors ${
+              theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
+            }`}>Author</th>
+            <th scope="col" role="columnheader" className={`text-left text-[12px] font-bold uppercase tracking-wide transition-colors ${
+              theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
+            }`}>Repository</th>
+            <th scope="col" role="columnheader" className={`text-left text-[12px] font-bold uppercase tracking-wide transition-colors ${
+              theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
+            }`}>Indicators</th>
+          </tr>
+        </thead>
 
         {/* Pull Request Rows */}
-        {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(8)].map((_, idx) => (
+        <tbody className="block w-full space-y-4">
+          {isLoading ? (
+            [...Array(8)].map((_, idx) => (
               <PRRowSkeleton key={idx} />
-            ))}
-          </div>
-        ) : error ? (
-          <div className={`flex items-center gap-3 px-6 py-4 mx-4 rounded-[12px] ${
-            theme === 'dark'
-              ? 'bg-red-500/10 border border-red-500/30 text-red-400'
-              : 'bg-red-100 border border-red-300 text-red-700'
-          }`}>
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="text-[14px] font-medium">{error}</span>
-          </div>
-        ) : filteredPRs.length > 0 ? (
-          filteredPRs.map((pr) => {
-            // Determine status: merged takes priority, then state
-            const status: 'merged' | 'draft' | 'open' | 'closed' = pr.merged 
-              ? 'merged' 
-              : (pr.state === 'open' ? 'open' : 'closed');
-            
-            // Determine which date to use for status detail
-            let statusDate: string;
-            let statusAction: string;
-            if (pr.merged && pr.merged_at) {
-              statusDate = pr.merged_at;
-              statusAction = 'merged';
-            } else if (pr.state === 'closed' && pr.closed_at) {
-              statusDate = pr.closed_at;
-              statusAction = 'closed';
-            } else if (pr.state === 'open' && pr.created_at) {
-              statusDate = pr.created_at;
-              statusAction = 'opened';
-            } else {
-              statusDate = pr.updated_at || pr.last_seen_at;
-              statusAction = pr.state;
-            }
+            ))
+          ) : error ? (
+            <tr role="row">
+              <td colSpan={4} role="cell">
+                <div className={`flex items-center gap-3 px-6 py-4 mx-4 rounded-[12px] ${
+                  theme === 'dark'
+                    ? 'bg-red-500/10 border border-red-500/30 text-red-400'
+                    : 'bg-red-100 border border-red-300 text-red-700'
+                }`}>
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-[14px] font-medium">{error}</span>
+                </div>
+              </td>
+            </tr>
+          ) : filteredPRs.length > 0 ? (
+            filteredPRs.map((pr) => {
+              // Determine status: merged takes priority, then state
+              const status: 'merged' | 'draft' | 'open' | 'closed' = pr.merged
+                ? 'merged'
+                : (pr.state === 'open' ? 'open' : 'closed');
 
-            // Convert API PR to component format
-            const prForComponent = {
-              id: pr.github_pr_id,
-              number: pr.number,
-              title: pr.title,
-              status: status,
-              statusDetail: `${statusAction} ${formatTimeAgo(statusDate)}`,
-              url: pr.url, // Add URL for clicking
-              author: {
-                name: pr.author_login,
-                avatar: '',
-                badges: [],
-              },
-              repo: pr.projectName.split('/')[1] || pr.projectName,
-              org: pr.projectName.split('/')[0] || '',
-              indicators: [] as ('check' | 'x' | 'trophy' | 'eye' | 'code')[],
-            };
-            return <PRRow key={`${pr.github_pr_id}-${pr.projectName}`} pr={prForComponent} />;
-          })
-        ) : (
-          <div
-            className={`text-center py-12 px-6 rounded-[16px] border ${
-              theme === 'dark' ? 'bg-white/[0.04] border-white/10' : 'bg-white/[0.08] border-white/15'
-            }`}
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            {emptyStateKind === 'no-repos' ? (
-              <>
-                <p className={`text-[14px] font-medium mb-1 transition-colors ${
-                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                }`}>
-                  Select one or more repositories to view pull requests
-                </p>
-                <p className={`text-[12px] transition-colors ${
-                  theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
-                }`}>
-                  Use the repository selector above to choose which repositories to include.
-                </p>
-              </>
-            ) : emptyStateKind === 'no-prs' ? (
-              <>
-                <p className={`text-[14px] font-medium mb-1 transition-colors ${
-                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                }`}>
-                  No pull requests were found in the selected repositories
-                </p>
-                <p className={`text-[12px] transition-colors ${
-                  theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
-                }`}>
-                  Try a different repository selection or come back after new pull requests are opened.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className={`text-[14px] font-medium mb-1 transition-colors ${
-                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-                }`}>
-                  No pull requests match the current search or state filters
-                </p>
-                <p className={`text-[12px] mb-4 transition-colors ${
-                  theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
-                }`}>
-                  Clear the search or state filter to bring rows back into view.
-                </p>
-                <button
-                  className={`px-5 py-3 rounded-[14px] backdrop-blur-[25px] border transition-all ${
-                    theme === 'dark'
-                      ? 'bg-white/[0.08] border-white/20 hover:bg-white/[0.12] hover:border-[#c9983a]/30 text-[#b8a898]'
-                      : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:border-[#c9983a]/30 text-[#7a6b5a]'
+              // Determine which date to use for status detail
+              let statusDate: string;
+              let statusAction: string;
+              if (pr.merged && pr.merged_at) {
+                statusDate = pr.merged_at;
+                statusAction = 'merged';
+              } else if (pr.state === 'closed' && pr.closed_at) {
+                statusDate = pr.closed_at;
+                statusAction = 'closed';
+              } else if (pr.state === 'open' && pr.created_at) {
+                statusDate = pr.created_at;
+                statusAction = 'opened';
+              } else {
+                statusDate = pr.updated_at || pr.last_seen_at;
+                statusAction = pr.state;
+              }
+
+              // Convert API PR to component format
+              const prForComponent = {
+                id: pr.github_pr_id,
+                number: pr.number,
+                title: pr.title,
+                status: status,
+                statusDetail: `${statusAction} ${formatTimeAgo(statusDate)}`,
+                url: pr.url, // Add URL for clicking
+                author: {
+                  name: pr.author_login,
+                  avatar: '',
+                  badges: [],
+                },
+                repo: pr.projectName.split('/')[1] || pr.projectName,
+                org: pr.projectName.split('/')[0] || '',
+                indicators: [] as ('check' | 'x' | 'trophy' | 'eye' | 'code')[],
+              };
+              return <PRRow key={`${pr.github_pr_id}-${pr.projectName}`} pr={prForComponent} />;
+            })
+          ) : (
+            <tr role="row">
+              <td colSpan={4} role="cell">
+                <div
+                  className={`text-center py-12 px-6 rounded-[16px] border ${
+                    theme === 'dark' ? 'bg-white/[0.04] border-white/10' : 'bg-white/[0.08] border-white/15'
                   }`}
-                  onClick={handleClearFilters}
-                  type="button"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
                 >
-                  <span className="text-[14px] font-semibold">Clear filters</span>
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
+                  {emptyStateKind === 'no-repos' ? (
+                    <>
+                      <p className={`text-[14px] font-medium mb-1 transition-colors ${
+                        theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                      }`}>
+                        Select one or more repositories to view pull requests
+                      </p>
+                      <p className={`text-[12px] transition-colors ${
+                        theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
+                      }`}>
+                        Use the repository selector above to choose which repositories to include.
+                      </p>
+                    </>
+                  ) : emptyStateKind === 'no-prs' ? (
+                    <>
+                      <p className={`text-[14px] font-medium mb-1 transition-colors ${
+                        theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                      }`}>
+                        No pull requests were found in the selected repositories
+                      </p>
+                      <p className={`text-[12px] transition-colors ${
+                        theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
+                      }`}>
+                        Try a different repository selection or come back after new pull requests are opened.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className={`text-[14px] font-medium mb-1 transition-colors ${
+                        theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                      }`}>
+                        No pull requests match the current search or state filters
+                      </p>
+                      <p className={`text-[12px] mb-4 transition-colors ${
+                        theme === 'dark' ? 'text-[#8a7b6a]' : 'text-[#9a8b7a]'
+                      }`}>
+                        Clear the search or state filter to bring rows back into view.
+                      </p>
+                      <button
+                        className={`px-5 py-3 rounded-[14px] backdrop-blur-[25px] border transition-all ${
+                          theme === 'dark'
+                            ? 'bg-white/[0.08] border-white/20 hover:bg-white/[0.12] hover:border-[#c9983a]/30 text-[#b8a898]'
+                            : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:border-[#c9983a]/30 text-[#7a6b5a]'
+                        }`}
+                        onClick={handleClearFilters}
+                        type="button"
+                      >
+                        <span className="text-[14px] font-semibold">Clear filters</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
