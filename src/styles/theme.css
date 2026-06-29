@@ -2,12 +2,15 @@
 
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Custom scrollbar for dropdowns */
@@ -35,6 +38,7 @@
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -50,6 +54,7 @@
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -61,7 +66,7 @@
 
 :root {
   --font-size: 16px;
-  
+
   /* Glassmorphism Warm Neutral Color Palette - Light Mode */
   --background: #e8dfd0;
   --foreground: #2d2820;
@@ -76,6 +81,8 @@
   --muted: rgba(162, 121, 44, 0.1);
   --muted-foreground: rgba(45, 40, 32, 0.6);
   --accent: rgba(201, 152, 58, 0.15);
+  --accent-strong: #d4af37;
+  --accent-gradient: linear-gradient(135deg, #c9983a 0%, #d4af37 100%);
   --accent-foreground: #2d2820;
   --destructive: #d64545;
   --destructive-foreground: #ffffff;
@@ -86,29 +93,50 @@
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --ring: rgba(201, 152, 58, 0.5);
-  
+
+  /* Semantic status tokens (light theme) */
+  --status-success: #22c55e;
+  --status-success-foreground: #166534;
+  --status-success-bg: #dcfce7;
+  --status-success-border: #86efac;
+
+  --status-error: #ef4444;
+  --status-error-foreground: #991b1b;
+  --status-error-bg: #fee2e2;
+  --status-error-border: #fca5a5;
+
+  --status-warning: #eab308;
+  --status-warning-foreground: #854d0e;
+  --status-warning-bg: #fef3c7;
+  --status-warning-border: #fcd34d;
+
+  --status-pending: #ca8a04;
+  --status-pending-foreground: #78350f;
+  --status-pending-bg: #fef9c3;
+  --status-pending-border: #facc15;
+
   /* Gradient colors */
   --gradient-primary: linear-gradient(135deg, #c9983a 0%, #a67c2e 100%);
   --gradient-secondary: linear-gradient(135deg, #d4c4b0 0%, #b8a898 100%);
   --gradient-accent: linear-gradient(135deg, #c9983a 0%, #b8a590 100%);
-  
+
   /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.35);
   --glass-border: rgba(201, 152, 58, 0.2);
   --glass-blur: 40px;
-  
+
   /* Glow effects */
   --glow-primary: 0 0 20px rgba(201, 152, 58, 0.3);
   --glow-secondary: 0 0 20px rgba(166, 124, 46, 0.3);
   --glow-accent: 0 0 15px rgba(201, 152, 58, 0.2);
-  
+
   /* Chart colors */
   --chart-1: #c9983a;
   --chart-2: #a67c2e;
   --chart-3: #d4c4b0;
   --chart-4: #b8a898;
   --chart-5: #a89780;
-  
+
   --radius: 1rem;
   --sidebar: rgba(255, 255, 255, 0.3);
   --sidebar-foreground: #2d2820;
@@ -142,6 +170,28 @@
   --ring: #a67c2e;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
+
+  /* Semantic status tokens (dark theme) */
+  --status-success: #22c55e;
+  --status-success-foreground: #bbf7d0;
+  --status-success-bg: #14532d;
+  --status-success-border: #16a34a;
+
+  --status-error: #ef4444;
+  --status-error-foreground: #fecaca;
+  --status-error-bg: #7f1d1d;
+  --status-error-border: #dc2626;
+
+  --status-warning: #eab308;
+  --status-warning-foreground: #fde68a;
+  --status-warning-bg: #78350f;
+  --status-warning-border: #ca8a04;
+
+  --status-pending: #ca8a04;
+  --status-pending-foreground: #fef08a;
+  --status-pending-bg: #713f12;
+  --status-pending-border: #a16207;
+
   --chart-1: #c9983a;
   --chart-2: #a67c2e;
   --chart-3: #d4c4b0;
@@ -171,6 +221,8 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-gradient: var(--accent-gradient);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
@@ -179,6 +231,22 @@
   --color-input-background: var(--input-background);
   --color-switch-background: var(--switch-background);
   --color-ring: var(--ring);
+  --color-status-success: var(--status-success);
+  --color-status-success-foreground: var(--status-success-foreground);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-border: var(--status-success-border);
+  --color-status-error: var(--status-error);
+  --color-status-error-foreground: var(--status-error-foreground);
+  --color-status-error-bg: var(--status-error-bg);
+  --color-status-error-border: var(--status-error-border);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-foreground: var(--status-warning-foreground);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-border: var(--status-warning-border);
+  --color-status-pending: var(--status-pending);
+  --color-status-pending-foreground: var(--status-pending-foreground);
+  --color-status-pending-bg: var(--status-pending-bg);
+  --color-status-pending-border: var(--status-pending-border);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -224,8 +292,7 @@ body.modal-open aside {
  * ensures the ring only appears for keyboard interaction, not mouse clicks.
  * A lighter gold is used in dark mode for adequate contrast in both themes.
  */
-:where(
-  a[href],
+:where(a[href],
   button,
   input,
   select,
@@ -233,25 +300,21 @@ body.modal-open aside {
   [tabindex],
   [role='option'],
   [role='menuitem'],
-  [role='dialog']
-):focus-visible {
+  [role='dialog']):focus-visible {
   outline: 2px solid #c9983a;
   outline-offset: 2px;
   border-radius: 6px;
 }
 
-.dark
-  :where(
-    a[href],
-    button,
-    input,
-    select,
-    textarea,
-    [tabindex],
-    [role='option'],
-    [role='menuitem'],
-    [role='dialog']
-  ):focus-visible {
+.dark :where(a[href],
+  button,
+  input,
+  select,
+  textarea,
+  [tabindex],
+  [role='option'],
+  [role='menuitem'],
+  [role='dialog']):focus-visible {
   outline-color: #e8c571;
 }
 
