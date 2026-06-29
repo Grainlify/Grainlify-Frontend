@@ -1,5 +1,6 @@
-import { Component, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { logger } from '../utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -20,9 +21,22 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: any) {
-    // eslint-disable-next-line no-console
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  /**
+   * Lifecycle method called after a descendant throws during rendering.
+   *
+   * @remarks
+   * Only the error message and component stack are forwarded to the logger so
+   * that no full Error object, serialised props, or other PII reaches the
+   * error sink.
+   *
+   * @param error - The thrown error value.
+   * @param errorInfo - React-supplied metadata containing the component stack.
+   */
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    logger.error('ErrorBoundary caught', {
+      message: error.message,
+      componentStack: errorInfo.componentStack,
+    });
   }
 
   handleReset = () => {
