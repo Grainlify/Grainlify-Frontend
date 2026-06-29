@@ -69,14 +69,19 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'html'],
-      include: [
-        'src/shared/api/client.ts',
-        'src/shared/components/AuthGuard.tsx',
-        'src/shared/config/api.ts',
-        'src/shared/contexts/AuthContext.tsx',
-        'src/shared/hooks/useOptimisticData.ts',
-        'src/shared/utils/errorHandler.ts',
-        'src/shared/utils/projectFilter.ts',
+      // Broaden inclusion to all shared and features source to reflect true surface.
+      // Exclude tests, generated code, and assets to keep the report focused on logic.
+      include: ['src/shared/**/*.{ts,tsx}', 'src/features/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/*.spec.{ts,tsx}',
+        'src/test/**',
+        'src/test-setup.ts',
+        'src/**/*.d.ts',
+        'src/main.tsx',
+        'src/app/components/ui/**',
+        'src/imports/**',
+        '**/*.{css,scss,sass,less,svg,png,jpg,jpeg,gif,webp,ico}',
       ],
     },
   },
