@@ -84,6 +84,20 @@ const truncateDescription = (
 type SelectedFilters = { [key: string]: string[] };
 
 /**
+ * Build an accessible label for an active-filter chip remove button.
+ *
+ * Filter names come from the page's known option values and are rendered by
+ * React as text/attribute values, so React escapes any unexpected characters.
+ * Trimming and collapsing whitespace keeps the announced name predictable even
+ * if a future option includes extra spacing.
+ *
+ * @param filterName - The visible active-filter chip text.
+ * @returns A descriptive remove-button label for assistive technology.
+ */
+const getRemoveFilterAriaLabel = (filterName: string): string =>
+  `Remove filter: ${filterName.trim().replace(/\s+/g, " ")}`;
+
+/**
  * Build the `getPublicProjects` query params from the currently selected
  * filters. The API accepts a single value for language/ecosystem/category and
  * a comma-separated list for tags.
@@ -393,9 +407,10 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
                 {value}
                 <button
                   onClick={() => clearFilter(filterType, value)}
-                  className="hover:text-red-200 transition-colors"
+                  aria-label={getRemoveFilterAriaLabel(value)}
+                  className="hover:text-red-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#a17932] rounded-full"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X aria-hidden="true" className="w-3.5 h-3.5" />
                 </button>
               </span>
             )),
