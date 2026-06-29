@@ -144,11 +144,17 @@ export function Navbar() {
           </div>
 
           {/* Mobile Menu Button */}
+          {/*
+           * Mobile menu toggle — minimum 44×44 px touch target per WCAG 2.5.8.
+           * `min-h-[44px] min-w-[44px]` guarantees the hit area even when the
+           * icon is smaller; `flex items-center justify-center` keeps it centred.
+           */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden min-h-[44px] min-w-[44px] p-2.5 flex items-center justify-center rounded-[10px] transition-colors hover:bg-white/[0.1]"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-menu"
           >
             {mobileMenuOpen ? (
               <X className="w-6 h-6" />
@@ -160,7 +166,7 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 space-y-4">
+          <div id="mobile-menu" className="md:hidden mt-4 pb-4 space-y-4">
             <a
               href="#features"
               className={`block transition-colors font-medium ${
