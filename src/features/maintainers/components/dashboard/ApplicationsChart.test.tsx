@@ -133,7 +133,9 @@ describe('ApplicationsChart Component', () => {
     render(<ApplicationsChart data={singleData} />)
 
     const container = screen.getByRole('img')
-    expect(container.getAttribute('aria-label')).toContain('Applications history chart showing 1 month')
+    expect(container.getAttribute('aria-label')).toContain(
+      'Applications history chart showing 1 month'
+    )
     expect(container.getAttribute('aria-label')).toContain('Peak month: Jan with 5 applications')
 
     const table = screen.getByTestId('accessible-applications-table')
@@ -147,7 +149,9 @@ describe('ApplicationsChart Component', () => {
   it('large series renders correctly', () => {
     render(<ApplicationsChart data={mockData} />)
     const container = screen.getByRole('img')
-    expect(container.getAttribute('aria-label')).toContain('Applications history chart showing data for 6 months')
+    expect(container.getAttribute('aria-label')).toContain(
+      'Applications history chart showing data for 6 months'
+    )
     expect(container.getAttribute('aria-label')).toContain('Total applications: 1120')
     expect(container.getAttribute('aria-label')).toContain('Total merged: 775')
     expect(container.getAttribute('aria-label')).toContain('Peak month: Jun with 250 applications')
