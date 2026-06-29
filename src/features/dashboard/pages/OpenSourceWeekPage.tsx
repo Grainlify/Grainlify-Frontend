@@ -1,16 +1,34 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { Calendar } from 'lucide-react';
+import { AlertCircle, Calendar, RefreshCw } from 'lucide-react';
 import { getOpenSourceWeekEvents } from '../../../shared/api/client';
+import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 
+/**
+ * Props for the OpenSourceWeekPage component.
+ * @interface OpenSourceWeekPageProps
+ */
 interface OpenSourceWeekPageProps {
+  /**
+   * Callback function called when an event is clicked.
+   * @param id - The unique identifier of the event.
+   * @param name - The title/name of the event.
+   */
   onEventClick: (id: string, name: string) => void;
 }
 
+/**
+ * OpenSourceWeekPage displays a list of upcoming, running, or completed Open-Source Week events.
+ * It handles loading, error, and empty states with retry capabilities and content-shaped skeletons.
+ *
+ * @param props - Component props
+ * @returns React component
+ */
 export function OpenSourceWeekPage({ onEventClick }: OpenSourceWeekPageProps) {
   const { theme } = useTheme();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<
     Array<{
       id: string;
@@ -23,27 +41,23 @@ export function OpenSourceWeekPage({ onEventClick }: OpenSourceWeekPageProps) {
     }>
   >([]);
 
-  useEffect(() => {
-    let mounted = true;
-    const fetchEvents = async () => {
-      try {
-        setIsLoading(true);
-        const res = await getOpenSourceWeekEvents();
-        if (!mounted) return;
-        setEvents(res.events || []);
-      } catch (e) {
-        if (!mounted) return;
-        setEvents([]);
-      } finally {
-        if (!mounted) return;
-        setIsLoading(false);
-      }
-    };
-    fetchEvents();
-    return () => {
-      mounted = false;
-    };
+  const fetchEvents = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await getOpenSourceWeekEvents();
+      setEvents(res.events || []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load events');
+      setEvents([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   const formattedEvents = useMemo(() => {
     const fmtDate = (iso: string) =>
@@ -91,26 +105,47 @@ export function OpenSourceWeekPage({ onEventClick }: OpenSourceWeekPageProps) {
           <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] ${
             theme === 'dark' ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'
           }`}>
-            <div className="animate-pulse space-y-6">
+            <div className="space-y-6">
               <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                 <div className="flex items-start space-x-4 w-full">
-                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-[16px] shrink-0 ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
+                  <SkeletonLoader variant="default" className="w-12 h-12 sm:w-14 sm:h-14 rounded-[16px] shrink-0" />
                   <div className="space-y-3 w-full">
-                    <div className={`h-6 w-3/4 sm:w-64 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
-                    <div className={`h-8 w-24 sm:w-28 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
+                    <SkeletonLoader variant="text" className="h-6 w-3/4 sm:w-64" />
+                    <SkeletonLoader variant="default" className="h-8 w-24 sm:w-28 rounded-[10px]" />
                   </div>
                 </div>
-                <div className={`h-10 w-full sm:w-48 rounded-[14px] ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
+                <SkeletonLoader variant="default" className="h-10 w-full sm:w-48 rounded-[14px]" />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-8">
+              <div className="pt-6 border-t border-white/10 grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-8">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="space-y-2">
-                    <div className={`h-3 w-20 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
-                    <div className={`h-7 w-24 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
+                    <SkeletonLoader variant="text" className="h-3 w-20" />
+                    <SkeletonLoader variant="text" className="h-7 w-24" />
                   </div>
                 ))}
               </div>
             </div>
+          </div>
+        ) : error ? (
+          <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 sm:p-10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] text-center ${
+            theme === 'dark' ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'
+          }`}>
+            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/50 mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className={`text-[20px] font-bold mb-2 ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>
+              Failed to load events
+            </h3>
+            <p className={`mb-6 ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
+              {error}
+            </p>
+            <button
+              onClick={() => fetchEvents()}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white rounded-[14px] font-semibold text-[14px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_24px_rgba(162,121,44,0.4)] transition-all border border-white/10"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Retry
+            </button>
           </div>
         ) : formattedEvents.length === 0 ? (
           <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 sm:p-10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] text-center ${
@@ -130,11 +165,22 @@ export function OpenSourceWeekPage({ onEventClick }: OpenSourceWeekPageProps) {
           formattedEvents.map((event) => (
           <div
             key={event.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`${event.title}, status: ${event.statusLabel}`}
             onClick={() => onEventClick(event.id, event.title)}
-            className={`backdrop-blur-[40px] rounded-[24px] border p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all cursor-pointer ${
+            onKeyDown={(e) => {
+              // Only handle keys originating on this element, not bubbling from
+              // the nested "Join Event" button, which has its own click handler.
+              if (e.currentTarget === e.target && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                onEventClick(event.id, event.title);
+              }
+            }}
+            className={`backdrop-blur-[40px] rounded-[24px] border p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a]/70 focus-visible:ring-offset-2 ${
               theme === 'dark'
-                ? 'bg-white/[0.08] border-white/10 hover:bg-white/[0.12] hover:shadow-[0_8px_24px_rgba(201,152,58,0.15)]'
-                : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]'
+                ? 'bg-white/[0.08] border-white/10 hover:bg-white/[0.12] hover:shadow-[0_8px_24px_rgba(201,152,58,0.15)] focus-visible:ring-offset-[#1a1a1a]'
+                : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] focus-visible:ring-offset-white'
             }`}
           >
             <div className="flex flex-col sm:flex-row items-start justify-between mb-6 gap-4 sm:gap-0">
@@ -151,6 +197,7 @@ export function OpenSourceWeekPage({ onEventClick }: OpenSourceWeekPageProps) {
                       ? 'bg-[#c9983a]/20 border border-[#c9983a]/40 text-[#e8c77f]'
                       : 'bg-[#c9983a]/15 border border-[#c9983a]/30 text-[#6d5530]'
                   }`}>
+                    <span className="sr-only">Event status: </span>
                     {event.statusLabel}
                   </span>
                 </div>

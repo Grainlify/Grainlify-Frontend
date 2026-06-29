@@ -65,6 +65,27 @@ export function validateEmail(value: string): string | true {
 }
 
 /**
+ * Validates that a route-level parameter (like :slug, :projectId, or :issueId)
+ * is well-formed before it is used in API requests.
+ *
+ * A well-formed parameter must:
+ * 1. Be non-empty.
+ * 2. Contain only alphanumeric characters and hyphens (no slashes, dots, or spaces).
+ * 3. Be between 1 and 100 characters in length.
+ *
+ * This check prevents path traversal (../), markup injection, and oversized
+ * input from reaching backend endpoints.
+ *
+ * @param value - The route parameter to validate.
+ * @returns `true` if valid, otherwise `false`.
+ */
+export function isValidRouteParam(value: string | undefined): value is string {
+  if (!value) return false
+  if (value.length > 100) return false
+  return /^[a-zA-Z0-9-]+$/.test(value)
+}
+
+/**
  * Validates that a value is non-empty after trimming.
  *
  * @param value - The value to check.
