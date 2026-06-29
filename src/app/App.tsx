@@ -29,7 +29,7 @@ import { NotFoundPage } from '../shared/components/NotFoundPage'
 import { RoleGuard } from '../shared/components/RoleGuard'
 import { AuthGuard } from '../shared/components/AuthGuard'
 import Toast from '../shared/components/Toast'
-import { I18nProvider } from '../shared/i18n'
+import { LocaleProvider } from '../shared/i18n'
 import { ScrollToTop } from '../shared/components/ScrollToTop'
 
 /**
@@ -99,7 +99,7 @@ export function AppRoutes() {
 
 export default function App() {
   return (
-    <I18nProvider>
+    <LocaleProvider>
       <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
@@ -175,6 +175,6 @@ export default function App() {
           </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>
-    </I18nProvider>
+    </LocaleProvider>
   )
 }
