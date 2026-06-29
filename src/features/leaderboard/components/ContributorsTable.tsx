@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react'
 import { TrendingUp, TrendingDown, Minus, Award } from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { LeaderData, FilterType } from '../types'
@@ -37,6 +38,15 @@ export function ContributorsTable({
   const handleRowClick = (leader: LeaderData) => {
     if (onUserClick) {
       onUserClick(leader.username, leader.user_id)
+    }
+  }
+
+  // Activate a focused row with Enter or Space, mirroring native button
+  // behaviour. preventDefault on Space stops the page from scrolling.
+  const handleRowKeyDown = (e: KeyboardEvent<HTMLDivElement>, leader: LeaderData) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleRowClick(leader)
     }
   }
 
@@ -93,8 +103,12 @@ export function ContributorsTable({
           {data.map((leader, index) => (
             <div
               key={leader.rank}
+              role="button"
+              tabIndex={0}
+              aria-label={`View contributor ${leader.username}`}
               onClick={() => handleRowClick(leader)}
-              className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group"
+              onKeyDown={(e) => handleRowKeyDown(e, leader)}
+              className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#c9983a]"
               style={{
                 animation: isLoaded
                   ? `slideInLeft 0.5s ease-out ${1.1 + index * 0.1}s both`

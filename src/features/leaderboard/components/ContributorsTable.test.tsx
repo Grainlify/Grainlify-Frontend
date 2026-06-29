@@ -65,3 +65,43 @@ describe('ContributorsTable states', () => {
     expect(screen.queryByText('octocat')).not.toBeInTheDocument()
   })
 })
+
+describe('ContributorsTable row accessibility', () => {
+  it('exposes each clickable row as a focusable button with an accessible name', () => {
+    renderTable()
+    const row = screen.getByRole('button', { name: 'View contributor octocat' })
+    expect(row).toHaveAttribute('tabindex', '0')
+  })
+
+  it('activates a row with the Enter key', async () => {
+    const user = userEvent.setup()
+    const onUserClick = vi.fn()
+    renderTable({ onUserClick })
+
+    const row = screen.getByRole('button', { name: 'View contributor octocat' })
+    row.focus()
+    expect(row).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(onUserClick).toHaveBeenCalledWith('octocat', 'uid-1')
+  })
+
+  it('activates a row with the Space key', async () => {
+    const user = userEvent.setup()
+    const onUserClick = vi.fn()
+    renderTable({ onUserClick })
+
+    const row = screen.getByRole('button', { name: 'View contributor octocat' })
+    row.focus()
+    await user.keyboard(' ')
+    expect(onUserClick).toHaveBeenCalledWith('octocat', 'uid-1')
+  })
+
+  it('still activates a row on pointer click', async () => {
+    const user = userEvent.setup()
+    const onUserClick = vi.fn()
+    renderTable({ onUserClick })
+
+    await user.click(screen.getByRole('button', { name: 'View contributor octocat' }))
+    expect(onUserClick).toHaveBeenCalledWith('octocat', 'uid-1')
+  })
+})
