@@ -33,6 +33,11 @@ import {
 import { bootstrapAdmin } from "../../shared/api/client";
 import { useTranslation } from "../../shared/i18n";
 
+/**
+ * Layout component for the authenticated dashboard area.
+ * Provides a sidebar navigation and a main content region with a skip-to-content link
+ * for keyboard accessibility.
+ */
 export function DashboardLayout() {
   const { login } = useAuth();
   const { t } = useTranslation();
@@ -177,6 +182,14 @@ export function DashboardLayout() {
           : "bg-gradient-to-br from-[#c4b5a0] via-[#b8a590] to-[#a89780]"
       }`}
     >
+      {/* Skip Link */}
+      <a
+        href="#dashboard-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-[#c9983a] focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#c9983a] focus:ring-offset-2 transition-all"
+      >
+        {t("common.skipToContent")}
+      </a>
+
       {/* Subtle Background Texture */}
       <div className="fixed inset-0 opacity-40">
         <div
@@ -318,7 +331,9 @@ export function DashboardLayout() {
 
       {/* Main Content */}
       <main
-        className={`mr-2 my-2 relative z-10 transition-all duration-300 ${isSidebarCollapsed ? "ml-[81px]" : "ml-[240px]"}`}
+        id="dashboard-main"
+        tabIndex={-1}
+        className={`mr-2 my-2 relative z-10 transition-all duration-300 outline-none ${isSidebarCollapsed ? "ml-[81px]" : "ml-[240px]"}`}
       >
         <div className="max-w-[1400px] mx-auto">
           {/* Header */}
