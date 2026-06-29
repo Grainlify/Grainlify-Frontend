@@ -29,7 +29,7 @@ import { NotFoundPage } from '../shared/components/NotFoundPage'
 import { RoleGuard } from '../shared/components/RoleGuard'
 import { AuthGuard } from '../shared/components/AuthGuard'
 import Toast from '../shared/components/Toast'
-import { I18nProvider } from '../shared/i18n'
+import { LocaleProvider } from '../shared/i18n'
 import { useTranslation } from '../shared/i18n/useTranslation'
 import { ScrollToTop } from '../shared/components/ScrollToTop'
 
@@ -122,8 +122,8 @@ export function AppRoutes() {
 
 export default function App() {
   return (
-    <I18nProvider>
-      {/* Syncs <html lang="…"> with the active locale — must be inside I18nProvider */}
+    <LocaleProvider>
+      {/* Syncs <html lang="…"> with the active locale — must be inside LocaleProvider */}
       <HtmlLangSync />
       <BrowserRouter>
         <ThemeProvider>

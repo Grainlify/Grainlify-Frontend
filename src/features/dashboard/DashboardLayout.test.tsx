@@ -9,6 +9,8 @@ const renderWithRouter = (ui: React.ReactElement) => {
   return render(ui, { wrapper: BrowserRouter })
 }
 
+const renderLayout = () => renderWithRouter(<DashboardLayout />)
+
 describe('DashboardLayout Accessibility and Layout', () => {
   test('renders exactly one main landmark role for assistive technologies', () => {
     renderWithRouter(<DashboardLayout />)
