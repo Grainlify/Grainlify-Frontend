@@ -33,6 +33,9 @@ export const DEFAULT_LOCALE: Locale = 'en'
  *   extracted from `src/features/landing/components/Navbar.tsx`.
  * - `dashboardNav.*` — the authenticated dashboard sidebar navigation,
  *   extracted from `src/features/dashboard/DashboardLayout.tsx`.
+ * - `errors.notFound.*` — the 404 Not Found error page,
+ *   extracted from `src/shared/components/NotFoundPage.tsx`.
+ *   All keys are static strings; no dynamic key construction is used here.
  *
  * `as const` keeps every value a string literal so {@link MessageId} can be
  * derived from the keys with full type-safety.
@@ -57,6 +60,13 @@ export const en = {
   'dashboardNav.data': 'Data',
   'dashboardNav.leaderboard': 'Leaderboard',
   'dashboardNav.blog': 'Grainlify Blog',
+
+  // ── 404 Not Found page — src/shared/components/NotFoundPage.tsx ──
+  'errors.notFound.title': 'Page Not Found',
+  'errors.notFound.description': "The page you're looking for doesn't exist or has been moved.",
+  'errors.notFound.goBack': 'Go Back',
+  'errors.notFound.goToDashboard': 'Go to Dashboard',
+  'errors.notFound.supportNote': 'If you believe this is an error, please contact support.',
 } as const
 
 /**
