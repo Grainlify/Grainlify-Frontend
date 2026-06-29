@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { InvoicesTab } from './InvoicesTab'
 import { renderWithTheme } from '../../../../test/renderWithTheme'
+import { I18nProvider, en } from '../../../../shared/i18n'
 import type { Invoice } from '../../types'
 
 // ── Hoisted mock factories ────────────────────────────────────────────────────
@@ -55,6 +56,26 @@ const INVOICE_OVERDUE: Invoice = {
   billingPeriod: 'Mar 2024',
 }
 
+const INVOICES_TRANSLATED_MESSAGES: Record<string, string> = {
+  ...en,
+  'invoices.title': 'Localized invoices title',
+  'invoices.description': 'Localized invoices description',
+  'invoices.table.invoice': 'Localized invoice header',
+  'invoices.table.date': 'Localized date header',
+  'invoices.table.amount': 'Localized amount header',
+  'invoices.table.period': 'Localized period header',
+  'invoices.table.status': 'Localized status header',
+  'invoices.table.action': 'Localized action header',
+  'invoices.empty.title': 'Localized empty title',
+  'invoices.empty.description': 'Localized empty description',
+  'invoices.actions.downloadInvoice': 'Localized download invoice',
+  'invoices.actions.downloading': 'Localized downloading',
+  'invoices.status.paid': 'Localized paid status',
+  'invoices.status.pending': 'Localized pending status',
+  'invoices.status.overdue': 'Localized overdue status',
+  'invoices.errors.downloadFailed': 'Localized download failed',
+}
+
 // ── Setup ─────────────────────────────────────────────────────────────────────
 beforeEach(() => {
   if (!globalThis.localStorage) {
@@ -82,12 +103,29 @@ beforeEach(() => {
   }
 
   // jsdom does not implement these; provide stubs so the component can run.
+  mockDownloadInvoice.mockReset()
   URL.createObjectURL = vi.fn().mockReturnValue('blob:mock-url')
   URL.revokeObjectURL = vi.fn()
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
 })
 
-function setup(invoices: Invoice[] = [INVOICE_PAID]) {
-  return renderWithTheme(<InvoicesTab invoices={invoices} />)
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+function setup(
+  invoices: Invoice[] = [INVOICE_PAID],
+  {
+    messages = en,
+    theme = 'light',
+  }: { messages?: Record<string, string>; theme?: 'light' | 'dark' } = {}
+) {
+  return renderWithTheme(
+    <I18nProvider messages={messages}>
+      <InvoicesTab invoices={invoices} />
+    </I18nProvider>,
+    { theme }
+  )
 }
 
 function parseCssBlock(css: string, selector: ':root' | '.dark'): string {
@@ -175,6 +213,32 @@ describe('InvoicesTab — rendering', () => {
     expect(screen.getByText('paid')).toBeInTheDocument()
     expect(screen.getByText('pending')).toBeInTheDocument()
     expect(screen.getByText('overdue')).toBeInTheDocument()
+  })
+
+  it('renders section copy, table headers, statuses, and actions from the i18n catalog', () => {
+    setup([INVOICE_PAID, INVOICE_PENDING, INVOICE_OVERDUE], {
+      messages: INVOICES_TRANSLATED_MESSAGES,
+    })
+
+    expect(screen.getByRole('heading', { name: 'Localized invoices title' })).toBeInTheDocument()
+    expect(screen.getByText('Localized invoices description')).toBeInTheDocument()
+    expect(screen.getByText('Localized invoice header')).toBeInTheDocument()
+    expect(screen.getByText('Localized date header')).toBeInTheDocument()
+    expect(screen.getByText('Localized amount header')).toBeInTheDocument()
+    expect(screen.getByText('Localized period header')).toBeInTheDocument()
+    expect(screen.getByText('Localized status header')).toBeInTheDocument()
+    expect(screen.getByText('Localized action header')).toBeInTheDocument()
+    expect(screen.getByText('Localized paid status')).toBeInTheDocument()
+    expect(screen.getByText('Localized pending status')).toBeInTheDocument()
+    expect(screen.getByText('Localized overdue status')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Localized download invoice' })).toHaveLength(3)
+  })
+
+  it('renders empty-state copy from the i18n catalog', () => {
+    setup([], { messages: INVOICES_TRANSLATED_MESSAGES })
+
+    expect(screen.getByText('Localized empty title')).toBeInTheDocument()
+    expect(screen.getByText('Localized empty description')).toBeInTheDocument()
   })
 })
 
@@ -302,6 +366,13 @@ describe('InvoicesTab — download error', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Download failed. Please try again.')
   })
 
+  it('shows the fallback download error from the i18n catalog', async () => {
+    mockDownloadInvoice.mockRejectedValue('unexpected string')
+    setup([INVOICE_PAID], { messages: INVOICES_TRANSLATED_MESSAGES })
+    await userEvent.click(screen.getByRole('button', { name: 'Localized download invoice' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Localized download failed')
+  })
+
   it('isolates the error to the failing row only', async () => {
     mockDownloadInvoice
       .mockRejectedValueOnce(new Error('Row 1 failed'))
@@ -384,9 +455,7 @@ describe('InvoicesTab — responsive layout', () => {
 // ── Dark theme — covers the theme === 'dark' branches in every ternary ────────
 describe('InvoicesTab — dark theme', () => {
   it('renders the invoice table in dark theme without error', () => {
-    renderWithTheme(<InvoicesTab invoices={[INVOICE_PAID, INVOICE_PENDING, INVOICE_OVERDUE]} />, {
-      theme: 'dark',
-    })
+    setup([INVOICE_PAID, INVOICE_PENDING, INVOICE_OVERDUE], { theme: 'dark' })
     expect(screen.getByText('INV-2024-001')).toBeInTheDocument()
     expect(screen.getByText('paid')).toBeInTheDocument()
     expect(screen.getByText('pending')).toBeInTheDocument()
@@ -394,13 +463,13 @@ describe('InvoicesTab — dark theme', () => {
   })
 
   it('renders the empty state in dark theme without error', () => {
-    renderWithTheme(<InvoicesTab invoices={[]} />, { theme: 'dark' })
+    setup([], { theme: 'dark' })
     expect(screen.getByText('No invoices yet')).toBeInTheDocument()
   })
 
   it('shows the download error alert in dark theme', async () => {
     mockDownloadInvoice.mockRejectedValue(new Error('Dark theme network error'))
-    renderWithTheme(<InvoicesTab invoices={[INVOICE_PAID]} />, { theme: 'dark' })
+    setup([INVOICE_PAID], { theme: 'dark' })
     await userEvent.click(screen.getByRole('button', { name: /download invoice/i }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Dark theme network error')
   })
