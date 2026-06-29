@@ -40,10 +40,14 @@ export function NotFoundPage() {
 
         {/* Error Message */}
         <div className="text-center mb-8">
-          <h2 className={`text-2xl font-bold mb-2 transition-colors ${textColor.primary}`}>
+          <h1 className={`text-2xl font-bold mb-2 transition-colors ${
+            theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
+          }`}>
             Page Not Found
-          </h2>
-          <p className={`text-sm transition-colors ${textColor.secondary}`}>
+          </h1>
+          <p className={`text-sm transition-colors ${
+            theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
+          }`}>
             The page you're looking for doesn't exist or has been moved.
           </p>
         </div>
