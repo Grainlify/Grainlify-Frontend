@@ -1,3 +1,11 @@
+## Grainlify Design Token Rules
+
+- Use semantic status tokens from `src/styles/theme.css` for status UI: `--status-success`, `--status-error`, `--status-warning`, `--status-pending`.
+- Keep warning and pending semantically distinct. Warning represents caution; pending represents waiting/in-progress.
+- Do not hardcode inline status hex colors in JSX or Tailwind arbitrary values when a status token exists.
+- For status badges and chips, pair the token companions consistently: `-bg` for container background, `-border` for outline, `-foreground` for text/icon.
+- If contrast or colorblind fixes are needed, update token values in `theme.css` instead of patching individual components.
+
 **Add your own guidelines here**
 <!--
 

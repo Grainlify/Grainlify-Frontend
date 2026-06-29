@@ -21,9 +21,9 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
       reportsDirectory: 'coverage',
-      // No `include` — coverage is collected only for files actually imported
-      // by tests. This prevents untested files from appearing as 0% and
-      // dragging the aggregate below the threshold.
+      // Broaden inclusion to all shared and features source to reflect true surface.
+      // Exclude tests, generated code, and assets to keep the report focused on logic.
+      include: ['src/shared/**/*.{ts,tsx}', 'src/features/**/*.{ts,tsx}'],
       exclude: [
         // test files and infrastructure
         'src/**/*.test.{ts,tsx}',
@@ -37,12 +37,14 @@ export default defineConfig({
         'src/app/components/ui/**',
         // Figma-generated import files — not hand-authored logic
         'src/imports/**',
+        // styles and assets
+        '**/*.{css,scss,sass,less,svg,png,jpg,jpeg,gif,webp,ico}',
       ],
       thresholds: {
-        lines: 79,
-        functions: 69,
-        branches: 58,
-        statements: 78,
+        lines: 47,
+        functions: 38,
+        branches: 33,
+        statements: 46,
       },
     },
   },
