@@ -317,6 +317,9 @@ describe("BrowsePage rendering & data mapping", () => {
       screen.getByRole("button", { name: "filter-languages" }),
     );
     await waitFor(() => expect(cards()).toBe(2));
+    expect(
+      screen.getByRole("button", { name: "Remove filter: TypeScript" }),
+    ).toBeInTheDocument();
   });
 
   it("renders correctly under the dark theme", async () => {
@@ -401,18 +404,47 @@ describe("BrowsePage filters", () => {
     await waitFor(() => expect(cards()).toBe(2));
 
     // Select a filter -> a chip appears.
-    await userEvent.click(screen.getByRole("button", { name: "filter-languages" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "filter-languages" }),
+    );
     const chip = await screen.findByText("TypeScript");
     expect(chip).toBeInTheDocument();
 
-    // The chip's X button is the last button rendered inside the chip.
-    const xButton = chip.closest("span")?.querySelector("button");
-    expect(xButton).toBeTruthy();
-    await userEvent.click(xButton as HTMLButtonElement);
+    const removeButton = screen.getByRole("button", {
+      name: "Remove filter: TypeScript",
+    });
+    expect(removeButton).toHaveClass("focus-visible:ring-2");
+    expect(removeButton.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    await userEvent.click(removeButton);
 
     await waitFor(() =>
       expect(screen.queryByText("TypeScript")).not.toBeInTheDocument(),
     );
+  });
+
+  it("labels each remove button when multiple active-filter chips are shown", async () => {
+    getPublicProjects.mockResolvedValue(makeResponse(2, 2));
+    renderPage();
+    await waitFor(() => expect(cards()).toBe(2));
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "filter-languages" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "filter-tags" }));
+
+    const removeButtons = await screen.findAllByRole("button", {
+      name: "Remove filter: TypeScript",
+    });
+    expect(removeButtons).toHaveLength(2);
+    for (const removeButton of removeButtons) {
+      expect(removeButton.querySelector("svg")).toHaveAttribute(
+        "aria-hidden",
+        "true",
+      );
+    }
   });
 });
 
