@@ -1372,3 +1372,19 @@ export const updateNotificationSettings = (settings: NotificationSettings) =>
     body: JSON.stringify(settings),
     requiresAuth: true,
   })
+
+export interface SearchResult {
+  id: string
+  type: 'issue' | 'project' | 'contributor'
+  title: string
+  subtitle?: string
+}
+
+export const searchCatalog = (query: string, options?: ApiRequestOptions) => {
+  const params = new URLSearchParams()
+  params.append('q', query)
+  return apiRequest<SearchResult[]>(`/search?${params.toString()}`, options)
+}
+
+export const getSearchSuggestions = (options?: ApiRequestOptions) =>
+  apiRequest<string[]>('/search/suggestions', options)
