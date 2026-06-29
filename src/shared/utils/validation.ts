@@ -79,7 +79,7 @@ export function validateEmail(value: string): string | true {
  * @param value - The route parameter to validate.
  * @returns `true` if valid, otherwise `false`.
  */
-export function isValidRouteParam(value: string | undefined): boolean {
+export function isValidRouteParam(value: string | undefined): value is string {
   if (!value) return false
   if (value.length > 100) return false
   return /^[a-zA-Z0-9-]+$/.test(value)

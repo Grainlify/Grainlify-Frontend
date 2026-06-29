@@ -1,18 +1,19 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "../shared/contexts/AuthContext";
-import { ThemeProvider } from "../shared/contexts/ThemeContext";
-import { LandingPage } from "../features/landing";
-import { SignInPage, SignUpPage, AuthCallbackPage } from "../features/auth";
-import { DashboardLayout } from "../features/dashboard/DashboardLayout";
-import { DiscoverPage } from "../features/dashboard/pages/DiscoverPage";
-import { BrowsePage } from "../features/dashboard/pages/BrowsePage";
-import { ContributorsPage } from "../features/dashboard/pages/ContributorsPage";
-import { ProfilePage } from "../features/dashboard/pages/ProfilePage";
-import { DataPage } from "../features/dashboard/pages/DataPage";
-import { LeaderboardPage } from "../features/leaderboard/pages/LeaderboardPage";
-import { BlogPage } from "../features/blog/pages/BlogPage";
-import { SettingsPage } from "../features/settings/pages/SettingsPage";
-import { AdminPage } from "../features/admin/pages/AdminPage";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import type { ReactElement } from 'react'
+import { AuthProvider } from '../shared/contexts/AuthContext'
+import { ThemeProvider } from '../shared/contexts/ThemeContext'
+import { LandingPage } from '../features/landing'
+import { SignInPage, SignUpPage, AuthCallbackPage } from '../features/auth'
+import { DashboardLayout } from '../features/dashboard/DashboardLayout'
+import { DiscoverPage } from '../features/dashboard/pages/DiscoverPage'
+import { BrowsePage } from '../features/dashboard/pages/BrowsePage'
+import { ContributorsPage } from '../features/dashboard/pages/ContributorsPage'
+import { ProfilePage } from '../features/dashboard/pages/ProfilePage'
+import { DataPage } from '../features/dashboard/pages/DataPage'
+import { LeaderboardPage } from '../features/leaderboard/pages/LeaderboardPage'
+import { BlogPage } from '../features/blog/pages/BlogPage'
+import { SettingsPage } from '../features/settings/pages/SettingsPage'
+import { AdminPage } from '../features/admin/pages/AdminPage'
 import {
   OpenSourceWeekPageRoute,
   OpenSourceWeekDetailPageRoute,
@@ -23,14 +24,13 @@ import {
   IssueDetailPageRoute,
   SearchPageRoute,
   BlogArticlePageRoute,
-} from "../features/dashboard/routeWrappers";
-import { NotFoundPage } from "../shared/components/NotFoundPage";
-import { RoleGuard } from "../shared/components/RoleGuard";
-import { AuthGuard } from "../shared/components/AuthGuard";
-import Toast from "../shared/components/Toast";
-import { I18nProvider } from "../shared/i18n";
-import { ScrollToTop } from "../shared/components/ScrollToTop";
-import React from 'react';
+} from '../features/dashboard/routeWrappers'
+import { NotFoundPage } from '../shared/components/NotFoundPage'
+import { RoleGuard } from '../shared/components/RoleGuard'
+import { AuthGuard } from '../shared/components/AuthGuard'
+import Toast from '../shared/components/Toast'
+import { I18nProvider } from '../shared/i18n'
+import { ScrollToTop } from '../shared/components/ScrollToTop'
 
 /**
  * Applies the three-state authentication boundary to protected routes.
@@ -39,28 +39,6 @@ import React from 'react';
  */
 export function ProtectedRoute({ children }: { children: ReactElement }) {
   return <AuthGuard>{children}</AuthGuard>
-}
-
-function RouteLoadingFallback() {
-  return (
-    <div
-      className="min-h-[60vh] px-6 py-10"
-      role="status"
-      aria-live="polite"
-      aria-label="Loading route"
-    >
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <SkeletonLoader className="h-10 w-64 max-w-full" />
-        <div className="grid gap-4 md:grid-cols-3">
-          <SkeletonLoader className="h-28" />
-          <SkeletonLoader className="h-28" />
-          <SkeletonLoader className="h-28" />
-        </div>
-        <SkeletonLoader className="h-72" />
-        <span className="sr-only">Loading route</span>
-      </div>
-    </div>
-  )
 }
 
 export function AppRoutes() {
@@ -102,7 +80,7 @@ export function AppRoutes() {
         <Route path="blog" element={<BlogPage />} />
         {/* Deep link to an individual article. The `:slug` param is
             untrusted input — see BlogArticlePage for sanitize+lookup. */}
-        <Route path="blog/:slug" element={<BlogArticlePage />} />
+        <Route path="blog/:slug" element={<BlogArticlePageRoute />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route
           path="admin"
@@ -152,22 +130,42 @@ export default function App() {
                   <Route path="discover" element={<DiscoverPage />} />
                   <Route path="browse" element={<BrowsePage />} />
                   <Route path="open-source-week" element={<OpenSourceWeekPageRoute />} />
-                  <Route path="open-source-week/:eventId" element={<OpenSourceWeekDetailPageRoute />} />
+                  <Route
+                    path="open-source-week/:eventId"
+                    element={<OpenSourceWeekDetailPageRoute />}
+                  />
                   <Route path="ecosystems" element={<EcosystemsPageRoute />} />
                   <Route path="ecosystems/:ecosystemId" element={<EcosystemDetailPageRoute />} />
                   <Route path="contributors" element={<ContributorsPage />} />
-                  <Route path="maintainers" element={<RoleGuard allow={['maintainer', 'admin']}><MaintainersPageRoute /></RoleGuard>} />
+                  <Route
+                    path="maintainers"
+                    element={
+                      <RoleGuard allow={['maintainer', 'admin']}>
+                        <MaintainersPageRoute />
+                      </RoleGuard>
+                    }
+                  />
                   <Route path="profile" element={<ProfilePage />} />
                   <Route path="data" element={<DataPage />} />
                   <Route path="projects/:projectId" element={<ProjectDetailPageRoute />} />
-                  <Route path="projects/:projectId/issues/:issueId" element={<IssueDetailPageRoute />} />
+                  <Route
+                    path="projects/:projectId/issues/:issueId"
+                    element={<IssueDetailPageRoute />}
+                  />
                   <Route path="leaderboard" element={<LeaderboardPage />} />
                   <Route path="blog" element={<BlogPage />} />
                   {/* Deep link to an individual article. The `:slug` param is
                       untrusted input — see BlogArticlePageRoute for validation. */}
                   <Route path="blog/:slug" element={<BlogArticlePageRoute />} />
                   <Route path="settings" element={<SettingsPage />} />
-                  <Route path="admin" element={<RoleGuard allow={['admin']}><AdminPage /></RoleGuard>} />
+                  <Route
+                    path="admin"
+                    element={
+                      <RoleGuard allow={['admin']}>
+                        <AdminPage />
+                      </RoleGuard>
+                    }
+                  />
                   <Route path="search" element={<SearchPageRoute />} />
                 </Route>
                 <Route path="*" element={<NotFoundPage />} />
