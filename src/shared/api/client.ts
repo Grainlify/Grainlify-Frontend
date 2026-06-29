@@ -38,12 +38,90 @@ export interface ApiRequestOptions extends RequestInit {
 }
 
 /**
+ * Default retry delay in seconds when the `Retry-After` header is absent on a
+ * 429 response. Chosen to be safe for public polling endpoints.
+ */
+export const DEFAULT_RETRY_AFTER_SECONDS = 60
+
+/**
+ * Parses the `Retry-After` response header into a number of seconds.
+ *
+ * Supports both formats defined by RFC 9110:
+ * - **Delay-seconds** – a non-negative integer, e.g. `"30"`
+ * - **HTTP-date** – an absolute date/time, e.g. `"Wed, 21 Oct 2025 07:28:00 GMT"`
+ *
+ * The returned value is clamped to a finite non-negative number so that
+ * attacker-controlled header values cannot pass an unexpected delay to
+ * `setTimeout` or similar callers.
+ *
+ * @param headerValue - Raw value of the `Retry-After` header, or `null` if absent.
+ * @returns Retry delay in seconds; falls back to {@link DEFAULT_RETRY_AFTER_SECONDS} when
+ *   the header is absent, unparseable, negative, or non-finite.
+ */
+export function parseRetryAfter(headerValue: string | null): number {
+  if (headerValue === null || headerValue.trim() === '') {
+    return DEFAULT_RETRY_AFTER_SECONDS
+  }
+
+  const trimmed = headerValue.trim()
+
+  // Try numeric (delay-seconds) format first
+  const numeric = Number(trimmed)
+  if (!isNaN(numeric) && isFinite(numeric) && numeric >= 0) {
+    return Math.floor(numeric)
+  }
+
+  // Try HTTP-date format
+  const parsed = Date.parse(trimmed)
+  if (!isNaN(parsed)) {
+    const delaySecs = Math.floor((parsed - Date.now()) / 1000)
+    return delaySecs > 0 ? delaySecs : 0
+  }
+
+  return DEFAULT_RETRY_AFTER_SECONDS
+}
+
+/**
+ * Error thrown when the API responds with HTTP 429 Too Many Requests.
+ *
+ * Callers can inspect `retryAfterSeconds` to implement back-off logic without
+ * hammering the API further.
+ *
+ * @example
+ * ```ts
+ * try {
+ *   await getLeaderboard();
+ * } catch (err) {
+ *   if (err instanceof RateLimitError) {
+ *     console.warn(`Rate limited. Retry after ${err.retryAfterSeconds}s`);
+ *   }
+ * }
+ * ```
+ */
+export class RateLimitError extends Error {
+  /** Number of seconds the caller should wait before retrying. */
+  readonly retryAfterSeconds: number
+
+  constructor(retryAfterSeconds: number) {
+    super(
+      `Rate limit exceeded. Please retry after ${retryAfterSeconds} second${retryAfterSeconds === 1 ? '' : 's'}.`
+    )
+    this.name = 'RateLimitError'
+    this.retryAfterSeconds = retryAfterSeconds
+  }
+}
+
+/**
  * Core API request helper that handles authentication, headers, and error handling
  * @template T - The expected response type
  * @param {string} endpoint - API endpoint path (will be prefixed with API_BASE_URL)
  * @param {ApiRequestOptions} options - Request options including auth requirements
  * @returns {Promise<T>} Parsed JSON response
- * @throws {Error} On network failures, authentication errors, or non-2xx responses
+ * @throws {RateLimitError} When the server responds with 429 Too Many Requests.
+ *   The error exposes `retryAfterSeconds` parsed from the `Retry-After` header
+ *   (numeric or HTTP-date), falling back to {@link DEFAULT_RETRY_AFTER_SECONDS}.
+ *   `apiRequest` does **not** auto-retry; callers are responsible for back-off.
+ * @throws {Error} On network failures, authentication errors, or other non-2xx responses
  * @internal This function is exported for testing purposes
  */
 export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
@@ -115,6 +193,11 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
       throw new Error(
         `Permission denied: ${errorMsg}. You may need admin privileges to perform this action.`
       )
+    }
+
+    if (response.status === 429) {
+      const retryAfterSeconds = parseRetryAfter(response.headers.get('Retry-After'))
+      throw new RateLimitError(retryAfterSeconds)
     }
 
     // Try to parse error response
