@@ -134,14 +134,25 @@ const CONTRIBUTORS_BY_REGION = [
 ];
 
 export function DataPage() {
-  const { theme } = useTheme();
-  const [mapZoom, setMapZoom] = useState(1);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([0, 0]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'contributions'>('overview');
-  const [projectInterval, setProjectInterval] = useState('Monthly interval');
-  const [contributorInterval, setContributorInterval] = useState('Monthly interval');
-  const [showProjectIntervalDropdown, setShowProjectIntervalDropdown] = useState(false);
-  const [showContributorIntervalDropdown, setShowContributorIntervalDropdown] = useState(false);
+  const { theme } = useTheme()
+  const [mapZoom, setMapZoom] = useState(1)
+  const [mapCenter, setMapCenter] = useState<[number, number]>([0, 0])
+  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'contributions'>('overview')
+  const [projectInterval, setProjectInterval] = useState('Monthly interval')
+  const [contributorInterval, setContributorInterval] = useState('Monthly interval')
+  const [showProjectIntervalDropdown, setShowProjectIntervalDropdown] = useState(false)
+  const [showContributorIntervalDropdown, setShowContributorIntervalDropdown] = useState(false)
+
+  // Data States
+  const [projectData, setProjectData] = useState<ActivityDataPoint[]>([])
+  const [contributorData, setContributorData] = useState<ActivityDataPoint[]>([])
+  const [regions, setRegions] = useState<ContributorRegion[]>([])
+  const [stats, setStats] = useState<AnalyticsStats | null>(null)
+
+  // UI States
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [projectFilters, setProjectFilters] = useState({
     new: false,
     reactivated: false,

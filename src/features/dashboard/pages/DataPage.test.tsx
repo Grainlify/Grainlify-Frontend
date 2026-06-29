@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { type ReactNode } from 'react';
-import { ThemeProvider } from '../../../shared/contexts/ThemeContext';
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { type ReactNode } from 'react'
+import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
+import * as apiClient from '../../../shared/api/client'
 
 // --- Mock heavy chart / map libraries ------------------------------------
 
