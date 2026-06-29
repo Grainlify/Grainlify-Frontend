@@ -84,3 +84,33 @@ describe('DashboardLayout i18n nav labels', () => {
     expect(screen.getByText('Data')).toBeInTheDocument()
   })
 })
+
+describe('DashboardLayout sidebar toggle accessibility', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    vi.clearAllMocks()
+    window.innerWidth = 1024
+  })
+
+  it('labels the expanded sidebar toggle with its collapse action and expanded state', () => {
+    renderLayout()
+
+    const toggle = screen.getByRole('button', { name: 'Collapse sidebar' })
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveAttribute('title', 'Collapse sidebar')
+    expect(toggle).toHaveClass('focus-visible:ring-2')
+    expect(toggle).toHaveClass('focus-visible:ring-[#c9983a]')
+  })
+
+  it('updates the sidebar toggle label, title, and expanded state after collapsing', async () => {
+    const user = userEvent.setup()
+    renderLayout()
+
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+
+    const toggle = screen.getByRole('button', { name: 'Expand sidebar' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle).toHaveAttribute('title', 'Expand sidebar')
+  })
+})
