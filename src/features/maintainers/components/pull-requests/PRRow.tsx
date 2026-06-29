@@ -49,6 +49,23 @@ export function PRRow({ pr }: PRRowProps) {
     }
   }
 
+  const getIndicatorLabel = (indicator: string) => {
+    switch (indicator) {
+      case 'check':
+        return 'CI Checks Passed'
+      case 'x':
+        return 'CI Checks Failed'
+      case 'trophy':
+        return 'Top Contributor'
+      case 'eye':
+        return 'Under Review'
+      case 'code':
+        return 'Code Quality'
+      default:
+        return ''
+    }
+  }
+
   const getPRStatusColor = () => {
     switch (pr.status) {
       case 'merged':
@@ -68,9 +85,19 @@ export function PRRow({ pr }: PRRowProps) {
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleClick()
+    }
+  }
+
   return (
     <div
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
       className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border transition-all cursor-pointer group ${
         theme === 'dark'
           ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.15] hover:border-[#c9983a]/30'
@@ -80,7 +107,10 @@ export function PRRow({ pr }: PRRowProps) {
       {/* Pull Request Info */}
       <div>
         <div className="flex items-start gap-3 mb-2">
-          <GitPullRequest className={`w-4 h-4 mt-0.5 flex-shrink-0 ${getPRStatusColor()}`} />
+          <GitPullRequest
+            className={`w-4 h-4 mt-0.5 flex-shrink-0 ${getPRStatusColor()}`}
+            aria-hidden="true"
+          />
           <div className="flex-1 min-w-0">
             <h3
               className={`text-[15px] font-bold group-hover:text-[#c9983a] transition-colors mb-1 line-clamp-1 ${
@@ -105,7 +135,7 @@ export function PRRow({ pr }: PRRowProps) {
               role="img"
               aria-label={pr.author.name}
             >
-              <User className="w-4 h-4 text-white" />
+              <User className="w-4 h-4 text-white" aria-hidden="true" />
             </div>
           ) : (
             <img
@@ -149,7 +179,7 @@ export function PRRow({ pr }: PRRowProps) {
                 role="img"
                 aria-label={pr.repo}
               >
-                <Package className="w-3 h-3 text-white" />
+                <Package className="w-3 h-3 text-white" aria-hidden="true" />
               </div>
             ) : (
               <img
@@ -180,11 +210,13 @@ export function PRRow({ pr }: PRRowProps) {
           return (
             <div
               key={idx}
+              role="img"
+              aria-label={getIndicatorLabel(indicator)}
               className={`w-7 h-7 rounded-full border flex items-center justify-center hover:scale-110 transition-transform ${
                 theme === 'dark' ? 'bg-white/20 border-white/30' : 'bg-white/30 border-white/40'
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${color}`} />
+              <Icon className={`w-3.5 h-3.5 ${color}`} aria-hidden="true" />
             </div>
           )
         })}
