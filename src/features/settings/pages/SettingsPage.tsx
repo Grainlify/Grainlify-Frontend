@@ -1,13 +1,13 @@
-import { useState, KeyboardEvent } from 'react'
-import { SettingsTabType } from '../types'
-import { ProfileTab } from '../components/profile/ProfileTab'
-import { NotificationsTab } from '../components/notifications/NotificationsTab'
-import { PayoutTab } from '../components/payout/PayoutTab'
-import { BillingTab } from '../components/billing/BillingTab'
-import { TermsTab } from '../components/terms/TermsTab'
-import { useTheme } from '../../../shared/contexts/ThemeContext'
-import { BillingProfilesProvider } from '../contexts/BillingProfilesContext'
-import { LocaleSwitcher } from '../../../shared/i18n'
+import { useState, KeyboardEvent } from 'react';
+import { SettingsTabType } from '../types';
+import { ProfileTab } from '../components/profile/ProfileTab';
+import { NotificationsTab } from '../components/notifications/NotificationsTab';
+import { PayoutTab } from '../components/payout/PayoutTab';
+import { BillingTab } from '../components/billing/BillingTab';
+import { TermsTab } from '../components/terms/TermsTab';
+import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { BillingProfilesProvider } from '../contexts/BillingProfilesContext';
+import { useTranslation } from '../../../shared/i18n';
 
 interface SettingsPageProps {
   initialTab?: SettingsTabType
@@ -27,16 +27,17 @@ interface SettingsPageProps {
  * - `role="tabpanel"` on the content container, associated with the active tab via `aria-labelledby`
  */
 export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab)
-  const { theme } = useTheme()
+  const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab);
+  const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const tabs: { id: SettingsTabType; label: string }[] = [
-    { id: 'profile', label: 'Profile' },
-    { id: 'notifications', label: 'Notifications' },
-    { id: 'payout', label: 'Payout Preferences' },
-    { id: 'billing', label: 'Billing Profiles' },
-    { id: 'terms', label: 'Terms and Conditions' },
-  ]
+    { id: 'profile', label: t('settings.tabs.profile') },
+    { id: 'notifications', label: t('settings.tabs.notifications') },
+    { id: 'payout', label: t('settings.tabs.payout') },
+    { id: 'billing', label: t('settings.tabs.billing') },
+    { id: 'terms', label: t('settings.tabs.terms') },
+  ];
 
   const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex = index
