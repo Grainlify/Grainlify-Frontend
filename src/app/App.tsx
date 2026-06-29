@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import type { ReactElement } from 'react'
+import { useEffect, type ReactElement } from 'react'
 import { AuthProvider } from '../shared/contexts/AuthContext'
 import { ThemeProvider } from '../shared/contexts/ThemeContext'
 import { LandingPage } from '../features/landing'
@@ -29,8 +29,31 @@ import { NotFoundPage } from '../shared/components/NotFoundPage'
 import { RoleGuard } from '../shared/components/RoleGuard'
 import { AuthGuard } from '../shared/components/AuthGuard'
 import Toast from '../shared/components/Toast'
-import { LocaleProvider } from '../shared/i18n'
+import { I18nProvider } from '../shared/i18n'
+import { useTranslation } from '../shared/i18n/useTranslation'
 import { ScrollToTop } from '../shared/components/ScrollToTop'
+
+/**
+ * Synchronises `document.documentElement.lang` with the active i18n locale.
+ *
+ * Must be rendered inside {@link I18nProvider} (which supplies the `IntlProvider`
+ * context that `useTranslation` reads). Renders nothing itself; exists purely
+ * for its side-effect. Defaults to `"en"` on mount and updates whenever the
+ * locale changes.
+ *
+ * Keeping this as a separate component rather than an inline `useEffect` in
+ * `App` means it can be unit-tested in isolation and can be relocated under a
+ * future `LocaleProvider` without touching the route tree.
+ */
+function HtmlLangSync() {
+  const { locale } = useTranslation()
+
+  useEffect(() => {
+    document.documentElement.lang = locale
+  }, [locale])
+
+  return null
+}
 
 /**
  * Applies the three-state authentication boundary to protected routes.
@@ -99,7 +122,9 @@ export function AppRoutes() {
 
 export default function App() {
   return (
-    <LocaleProvider>
+    <I18nProvider>
+      {/* Syncs <html lang="…"> with the active locale — must be inside I18nProvider */}
+      <HtmlLangSync />
       <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
