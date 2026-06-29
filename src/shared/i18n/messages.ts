@@ -47,6 +47,13 @@ export const en = {
   'landingNav.signOut': 'Sign Out',
   'landingNav.getStarted': 'Get Started',
 
+  // ── Settings tabs — src/features/settings/pages/SettingsPage.tsx ──
+  'settings.tabs.profile': 'Profile',
+  'settings.tabs.notifications': 'Notifications',
+  'settings.tabs.payout': 'Payout Preferences',
+  'settings.tabs.billing': 'Billing Profiles',
+  'settings.tabs.terms': 'Terms and Conditions',
+
   // ── Dashboard sidebar — src/features/dashboard/DashboardLayout.tsx ──
   'dashboardNav.discover': 'Discover',
   'dashboardNav.browse': 'Browse',
