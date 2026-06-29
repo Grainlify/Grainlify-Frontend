@@ -73,6 +73,21 @@ describe("LandingPage", () => {
       screen.getByRole("heading", { name: /connect with open source/i })
     ).toBeInTheDocument();
   });
+
+  it("provides a skip-to-content link as the first focusable element", () => {
+    renderWithRouter(<LandingPage />);
+    const skipLink = screen.getByRole("link", { name: /common.skipToContent/i });
+    expect(skipLink).toBeInTheDocument();
+    expect(skipLink).toHaveAttribute("href", "#landing-main");
+    expect(skipLink).toHaveClass("sr-only", "focus:not-sr-only");
+  });
+
+  it("has a main element with the correct id and tabIndex for the skip link target", () => {
+    renderWithRouter(<LandingPage />);
+    const main = screen.getByRole("main");
+    expect(main).toHaveAttribute("id", "landing-main");
+    expect(main).toHaveAttribute("tabIndex", "-1");
+  });
 });
 
 describe("Navbar logo image", () => {

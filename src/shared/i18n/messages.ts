@@ -71,6 +71,9 @@ export function isLocale(value: unknown): value is Locale {
  * derived from the keys with full type-safety.
  */
 export const en = {
+  // ── Common labels ──
+  'common.skipToContent': 'Skip to main content',
+
   // ── Landing navbar — src/features/landing/components/Navbar.tsx ──
   'landingNav.features': 'Features',
   'landingNav.howItWorks': 'How it Works',

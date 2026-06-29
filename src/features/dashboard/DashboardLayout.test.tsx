@@ -32,4 +32,19 @@ describe('DashboardLayout Accessibility and Layout', () => {
     const mainLandmark = screen.getByRole('main')
     expect(mainLandmark).toHaveAttribute('tabIndex', '-1')
   })
+
+  it('provides a skip-to-content link as the first focusable element', () => {
+    renderLayout()
+    const skipLink = screen.getByRole('link', { name: /skip to main content/i })
+    expect(skipLink).toBeInTheDocument()
+    expect(skipLink).toHaveAttribute('href', '#dashboard-main')
+    expect(skipLink).toHaveClass('sr-only', 'focus:not-sr-only')
+  })
+
+  it('has a main element with the correct id and tabIndex for the skip link target', () => {
+    renderLayout()
+    const main = screen.getByRole('main')
+    expect(main).toHaveAttribute('id', 'dashboard-main')
+    expect(main).toHaveAttribute('tabIndex', '-1')
+  })
 })

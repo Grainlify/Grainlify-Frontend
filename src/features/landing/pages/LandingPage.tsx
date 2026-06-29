@@ -18,10 +18,17 @@ import { useLandingStats } from "../../../shared/hooks/useLandingStats";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { logger } from "../../../shared/utils/logger";
+import { useTranslation } from "../../../shared/i18n";
 
+/**
+ * Public landing page component.
+ * Includes a top navbar, hero section, features, and other marketing content.
+ * Provides a skip-to-content link for keyboard accessibility.
+ */
 export function LandingPage() {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Check for OAuth callback token in URL (fallback for wrong redirect URL)
   useEffect(() => {
@@ -48,12 +55,22 @@ export function LandingPage() {
           : "bg-gradient-to-br from-[#e8dfd0] via-[#d4c5b0] to-[#c9b89a]"
       }`}
     >
+      {/* Skip Link */}
+      <a
+        href="#landing-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-[#c9983a] focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#c9983a] focus:ring-offset-2 transition-all"
+      >
+        {t("common.skipToContent")}
+      </a>
+
       <Navbar />
-      <Hero />
-      <Features />
-      <HowItWorks />
-      <WhyChooseUs />
-      <Testimonials />
+      <main id="landing-main" tabIndex={-1} className="outline-none">
+        <Hero />
+        <Features />
+        <HowItWorks />
+        <WhyChooseUs />
+        <Testimonials />
+      </main>
       <Footer />
     </div>
   );
