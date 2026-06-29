@@ -1,6 +1,13 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { getCurrentUser, getAuthToken, setAuthToken, removeAuthToken } from '../api/client';
 import { logger } from '../utils/logger';
+
+/**
+ * Public routes that should never trigger a redirect-to-signin on 401.
+ * Matches exact pathnames to prevent false positives (e.g. `/signup-confirm`
+ * should not be listed here even though it starts with `/signup`).
+ */
+const PUBLIC_ROUTES = new Set(['/', '/signin', '/signup', '/auth/callback']);
 
 export type UserRole = 'contributor' | 'maintainer' | 'admin' | null;
 
@@ -35,6 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  /**
+   * Guards against concurrent 401 events triggering multiple simultaneous
+   * navigations. The ref is reset after the redirect completes.
+   */
+  const isRedirectingRef = useRef(false);
 
   const checkAuth = async () => {
     const token = getAuthToken();
@@ -107,6 +119,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener('patchwork-auth-token', onTokenEvent);
       window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  /**
+   * Centralized 401 redirect handler.
+   *
+   * Listens for the `patchwork-auth-401` CustomEvent emitted by `client.ts`
+   * whenever an API response returns HTTP 401. On receipt it:
+   *   1. Skips redirect when the user is already on a public route.
+   *   2. Prevents redirect loops by tracking in-flight redirects via a ref.
+   *   3. Navigates to `/signin?returnTo=<current-relative-path>`, where
+   *      `returnTo` is validated to be a same-origin relative path so that
+   *      open-redirect attacks are not possible.
+   *
+   * The handler is deliberately kept separate from the token-event listener so
+   * that the redirect is only triggered by genuine 401 API responses, not by
+   * programmatic token removal (e.g. logout).
+   */
+  useEffect(() => {
+    const on401 = () => {
+      const pathname = window.location.pathname;
+
+      // Do not redirect from public routes.
+      if (PUBLIC_ROUTES.has(pathname)) {
+        logger.debug('AuthContext - 401 on public route, skipping redirect:', pathname);
+        return;
+      }
+
+      // Prevent redirect loops when multiple concurrent 401s fire.
+      if (isRedirectingRef.current) {
+        logger.debug('AuthContext - 401 redirect already in progress, skipping duplicate');
+        return;
+      }
+
+      isRedirectingRef.current = true;
+      logger.info('AuthContext - 401 detected on protected route, redirecting to signin', { pathname });
+
+      // Build a safe same-origin returnTo value (pathname + search only).
+      const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/signin?returnTo=${returnTo}`;
+
+      // Reset guard after a short delay so a hard navigation on the same page
+      // does not permanently block future redirects (SSR / test environments).
+      setTimeout(() => {
+        isRedirectingRef.current = false;
+      }, 5000);
+    };
+
+    window.addEventListener('patchwork-auth-401', on401);
+    return () => {
+      window.removeEventListener('patchwork-auth-401', on401);
     };
   }, []);
 

@@ -317,3 +317,145 @@ describe('AuthProvider + useAuth', () => {
     );
   });
 });
+
+describe('AuthProvider - 401 redirect handler', () => {
+  let originalHref: string;
+  let hrefSetter: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    vi.useFakeTimers();
+
+    // Capture window.location.href assignments without actually navigating.
+    originalHref = window.location.href;
+    hrefSetter = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: {
+        ...window.location,
+        pathname: '/dashboard',
+        search: '',
+        href: originalHref,
+      },
+    });
+    Object.defineProperty(window.location, 'href', {
+      configurable: true,
+      set: hrefSetter,
+      get: () => originalHref,
+    });
+
+    mockGetAuthToken.mockImplementation(() => localStorage.getItem('patchwork_jwt'));
+    mockRemoveAuthToken.mockImplementation(() => {
+      localStorage.removeItem('patchwork_jwt');
+      window.dispatchEvent(
+        new CustomEvent('patchwork-auth-token', { detail: { token: null } }),
+      );
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('redirects to /signin with returnTo when patchwork-auth-401 fires on a protected route', async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('patchwork-auth-401'));
+    });
+
+    expect(hrefSetter).toHaveBeenCalledWith(
+      expect.stringContaining('/signin?returnTo='),
+    );
+    // The returnTo value must encode the protected pathname.
+    const calledHref: string = hrefSetter.mock.calls[0][0];
+    expect(decodeURIComponent(calledHref)).toContain('/dashboard');
+  });
+
+  it('does not redirect when 401 fires while on a public route', async () => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { ...window.location, pathname: '/signin', search: '' },
+    });
+    Object.defineProperty(window.location, 'href', {
+      configurable: true,
+      set: hrefSetter,
+      get: () => originalHref,
+    });
+
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('patchwork-auth-401'));
+    });
+
+    expect(hrefSetter).not.toHaveBeenCalled();
+  });
+
+  it('does not redirect when 401 fires on root public route (/)', async () => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { ...window.location, pathname: '/', search: '' },
+    });
+    Object.defineProperty(window.location, 'href', {
+      configurable: true,
+      set: hrefSetter,
+      get: () => originalHref,
+    });
+
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('patchwork-auth-401'));
+    });
+
+    expect(hrefSetter).not.toHaveBeenCalled();
+  });
+
+  it('does not redirect on concurrent 401 events (loop prevention)', async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('patchwork-auth-401'));
+      window.dispatchEvent(new CustomEvent('patchwork-auth-401'));
+      window.dispatchEvent(new CustomEvent('patchwork-auth-401'));
+    });
+
+    // Only the first 401 should trigger a redirect.
+    expect(hrefSetter).toHaveBeenCalledTimes(1);
+  });
+
+  it('includes query string in returnTo', async () => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { ...window.location, pathname: '/projects', search: '?tab=open' },
+    });
+    Object.defineProperty(window.location, 'href', {
+      configurable: true,
+      set: hrefSetter,
+      get: () => originalHref,
+    });
+
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('patchwork-auth-401'));
+    });
+
+    const calledHref: string = hrefSetter.mock.calls[0][0];
+    const decoded = decodeURIComponent(calledHref);
+    expect(decoded).toContain('/projects');
+    expect(decoded).toContain('?tab=open');
+  });
+});

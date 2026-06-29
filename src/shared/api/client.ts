@@ -27,6 +27,20 @@ export const removeAuthToken = (): void => {
   }
 }
 
+/**
+ * Emits a `patchwork-auth-401` CustomEvent so that the app layer (e.g.
+ * AuthContext) can redirect the user to sign-in while preserving the current
+ * location as `returnTo`. Kept separate from `removeAuthToken` so that
+ * `client.ts` remains free of any router imports.
+ *
+ * @internal Only called by `apiRequest` and `downloadInvoice` on HTTP 401.
+ */
+export const emit401Event = (): void => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('patchwork-auth-401'))
+  }
+}
+
 // API request helper
 /**
  * Options for API requests extending standard RequestInit
@@ -99,8 +113,9 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
   // Handle errors
   if (!response.ok) {
     if (response.status === 401) {
-      // Token expired or invalid - clear it
+      // Token expired or invalid - clear it and signal the app layer to redirect.
       removeAuthToken()
+      emit401Event()
       throw new Error('Authentication failed. Please sign in again.')
     }
 
@@ -1239,6 +1254,7 @@ export async function downloadInvoice(invoiceId: string): Promise<Blob> {
   if (!response.ok) {
     if (response.status === 401) {
       removeAuthToken()
+      emit401Event()
       throw new Error('Authentication failed. Please sign in again.')
     }
     throw new Error(`Failed to download invoice (${response.status}).`)
