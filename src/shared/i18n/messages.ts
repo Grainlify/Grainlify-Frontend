@@ -92,12 +92,34 @@ export const en = {
   'dashboardNav.data': 'Data',
   'dashboardNav.leaderboard': 'Leaderboard',
   'dashboardNav.blog': 'Grainlify Blog',
-  // ── Settings page tabs — src/features/settings/pages/SettingsPage.tsx ──
-  'settings.tabs.profile': 'Profile',
-  'settings.tabs.notifications': 'Notifications',
-  'settings.tabs.payout': 'Payout Preferences',
-  'settings.tabs.billing': 'Billing Profiles',
-  'settings.tabs.terms': 'Terms and Conditions',
+
+  /**
+   * Maintainers page — src/features/maintainers/pages/MaintainersPage.tsx
+   *
+   * `maintainers.tabs.*`  Tab bar labels rendered in the top navigation bar.
+   * `maintainers.errors.*` Error strings shown in the repository dropdown and
+   *                        the main content area when repository loading fails.
+   *
+   * Tab order MUST remain: Dashboard → Issues → Pull Requests (mirrors
+   * {@link TabType} and the routing logic in MaintainersPage).
+   */
+
+  // ── Maintainers tabs ──
+  /** @see TabType */
+  'maintainers.tabs.dashboard': 'Dashboard',
+  /** @see TabType */
+  'maintainers.tabs.issues': 'Issues',
+  /** @see TabType */
+  'maintainers.tabs.pullRequests': 'Pull Requests',
+
+  // ── Maintainers error messages ──
+  /** Shown when the API responds with 401 / "Authentication failed". */
+  'maintainers.errors.unauthenticated': 'Please sign in to view your repositories',
+  /** Shown when the fetch throws a "Network error" (no server connectivity). */
+  'maintainers.errors.networkError':
+    'Unable to connect to the server. Please check your connection and try again.',
+  /** Generic fallback when repository loading fails for any other reason. */
+  'maintainers.errors.loadFailure': 'Failed to load repositories',
 } as const
 
 /**
