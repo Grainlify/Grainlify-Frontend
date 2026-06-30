@@ -245,4 +245,87 @@ describe('SearchPage Accessibility and Functionality', () => {
     fireEvent.click(backBtn)
     expect(mockOnBack).toHaveBeenCalledTimes(1)
   })
+
+  it('should enforce a maxLength on the search input', () => {
+    renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    expect(searchInput).toHaveAttribute('maxlength', '100')
+    expect(searchInput).toHaveAttribute('aria-describedby', 'search-input-counter')
+  })
+
+  it('should not show the character counter for short queries', () => {
+    const { container } = renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    fireEvent.change(searchInput, { target: { value: 'React' } })
+
+    expect(container.querySelector('#search-input-counter')).not.toBeInTheDocument()
+  })
+
+  it('should show an accessible counter when approaching the limit', () => {
+    const { container } = renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    fireEvent.change(searchInput, { target: { value: 'a'.repeat(85) } })
+
+    const counter = container.querySelector('#search-input-counter')
+    expect(counter).toBeInTheDocument()
+    expect(counter).toHaveAttribute('aria-live', 'polite')
+    expect(counter).toHaveTextContent('85/100')
+    expect(counter).not.toHaveTextContent('Character limit reached')
+  })
+
+  it('should announce when the character limit is reached', () => {
+    const { container } = renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    fireEvent.change(searchInput, { target: { value: 'a'.repeat(100) } })
+
+    const counter = container.querySelector('#search-input-counter')
+    expect(counter).toBeInTheDocument()
+    expect(counter).toHaveTextContent('Character limit reached')
+    expect(counter).toHaveTextContent('100/100')
+  })
+
+  it('should trim leading/trailing whitespace before searching', () => {
+    renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    // Padded query should still match the same results as the trimmed term.
+    fireEvent.change(searchInput, { target: { value: '   React   ' } })
+
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+
+    const heading = screen.getByRole('heading', { name: /Search Results/i })
+    expect(heading).toHaveTextContent('Search Results (3)')
+    expect(screen.getByText('Add dark mode support')).toBeInTheDocument()
+  })
+
+  it('should treat a whitespace-only query as empty (no results list)', () => {
+    renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    fireEvent.change(searchInput, { target: { value: '     ' } })
+
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+
+    expect(screen.queryByRole('heading', { name: /Search Results/i })).not.toBeInTheDocument()
+  })
 })
