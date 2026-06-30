@@ -9,6 +9,7 @@ import { TabType } from '../types';
 import { getMyProjects, getPendingSetupProjects, type PendingSetupProject } from '../../../shared/api/client';
 import { InstallGitHubAppModal } from '../components/InstallGitHubAppModal';
 import { NewProjectSetupModal } from '../components/NewProjectSetupModal';
+import { useTranslation } from '../../../shared/i18n';
 
 interface MaintainersPageProps {
   onNavigate: (page: string) => void;
@@ -44,6 +45,7 @@ interface GroupedRepository {
 
 export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
   const [isRepoDropdownOpen, setIsRepoDropdownOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -80,6 +82,13 @@ export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
   };
 
   const tabs: TabType[] = ['Dashboard', 'Issues', 'Pull Requests'];
+
+  /** Map from {@link TabType} to its catalog key — static, no runtime allocation. */
+  const TAB_LABELS: Record<TabType, string> = {
+    Dashboard: t('maintainers.tabs.dashboard'),
+    Issues: t('maintainers.tabs.issues'),
+    'Pull Requests': t('maintainers.tabs.pullRequests'),
+  };
 
   // Fetch pending setup projects (for New Project Setup modal after GitHub App install)
   const loadPendingSetup = async () => {
@@ -132,17 +141,15 @@ export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
     setError(null);
   } catch (err) {
     const errorMessage =
-      err instanceof Error ? err.message : 'Failed to load repositories';
+      err instanceof Error ? err.message : t('maintainers.errors.loadFailure');
 
     if (
       errorMessage.includes('Authentication failed') ||
       errorMessage.includes('401')
     ) {
-      setError('Please sign in to view your repositories');
+      setError(t('maintainers.errors.unauthenticated'));
     } else if (errorMessage.includes('Network error')) {
-      setError(
-        'Unable to connect to the server. Please check your connection and try again.'
-      );
+      setError(t('maintainers.errors.networkError'));
     } else {
       setError(errorMessage);
     }
@@ -368,6 +375,7 @@ export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
                                 }`}>
                                 {group.org}
                               </span>
+                              {/* c8 ignore next 7 -- group.repos is always non-empty (memo only creates groups when a repo is pushed) */}
                               {group.repos.length === 0 && (
                                 <span className={`text-[12px] italic font-medium transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#8a7b6a]'
                                   }`}>
@@ -522,7 +530,7 @@ export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
                     : 'text-[#7a6b5a] hover:text-[#2d2820] hover:bg-white/[0.1] border-2 border-transparent'
                   }`}
               >
-                {tab}
+                {TAB_LABELS[tab]}
               </button>
             ))}
           </div>
