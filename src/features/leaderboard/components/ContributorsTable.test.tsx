@@ -65,3 +65,53 @@ describe('ContributorsTable states', () => {
     expect(screen.queryByText('octocat')).not.toBeInTheDocument()
   })
 })
+
+describe('ContributorsTable row accessibility', () => {
+  it('exposes contributor rows as named keyboard-focusable buttons', () => {
+    renderTable()
+
+    const row = screen.getByRole('button', { name: /view contributor octocat/i })
+    expect(row).toHaveAttribute('tabindex', '0')
+    expect(row.className).toMatch(/focus-visible:ring-2/)
+  })
+
+  it('activates the contributor row with click, Enter, and Space', async () => {
+    const user = userEvent.setup()
+    const onUserClick = vi.fn()
+    renderTable({ onUserClick })
+
+    const row = screen.getByRole('button', { name: /view contributor octocat/i })
+
+    await user.click(row)
+    expect(onUserClick).toHaveBeenLastCalledWith('octocat', 'uid-1')
+
+    row.focus()
+    await user.keyboard('{Enter}')
+    expect(onUserClick).toHaveBeenCalledTimes(2)
+
+    await user.keyboard(' ')
+    expect(onUserClick).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not activate the contributor row for unrelated keys', async () => {
+    const user = userEvent.setup()
+    const onUserClick = vi.fn()
+    renderTable({ onUserClick })
+
+    screen.getByRole('button', { name: /view contributor octocat/i }).focus()
+    await user.keyboard('{ArrowDown}')
+
+    expect(onUserClick).not.toHaveBeenCalled()
+  })
+
+  it('keeps the View Profile action from double-firing the row handler', async () => {
+    const user = userEvent.setup()
+    const onUserClick = vi.fn()
+    renderTable({ onUserClick })
+
+    await user.click(screen.getByRole('button', { name: /view profile/i }))
+
+    expect(onUserClick).toHaveBeenCalledTimes(1)
+    expect(onUserClick).toHaveBeenCalledWith('octocat', 'uid-1')
+  })
+})
