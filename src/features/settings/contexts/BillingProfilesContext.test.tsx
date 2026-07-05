@@ -57,7 +57,7 @@ describe('BillingProfilesContext', () => {
 
     expect(result.current.profiles).toEqual([])
     expect(logger.error).toHaveBeenCalledWith(
-      'Failed to load billing profiles from storage:',
+      'Failed to parse billing profiles from storage:',
       expect.any(Error)
     )
   })

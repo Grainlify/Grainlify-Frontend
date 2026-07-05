@@ -92,12 +92,56 @@ export const en = {
   'dashboardNav.data': 'Data',
   'dashboardNav.leaderboard': 'Leaderboard',
   'dashboardNav.blog': 'Grainlify Blog',
-  // ── Settings page tabs — src/features/settings/pages/SettingsPage.tsx ──
-  'settings.tabs.profile': 'Profile',
-  'settings.tabs.notifications': 'Notifications',
-  'settings.tabs.payout': 'Payout Preferences',
-  'settings.tabs.billing': 'Billing Profiles',
-  'settings.tabs.terms': 'Terms and Conditions',
+
+  // ── Sign-in auth page — src/features/auth/pages/SignInPage.tsx ──
+  'auth.signin.backToHome': 'Back to Home',
+  'auth.signin.title': 'Welcome Back',
+  'auth.signin.subtitle': 'Sign in with your GitHub account',
+  'auth.signin.redirecting': 'Redirecting...',
+  'auth.signin.githubButton': 'Sign in with GitHub',
+  'auth.signin.oauthSecurity': 'Secure authentication via GitHub OAuth',
+  'auth.signin.consentDisclaimer':
+    'By continuing, you agree to allow Grainlify to access your GitHub public profile and repository activity.',
+  'auth.signin.signupPrompt': "Don't have an account?",
+  'auth.signin.signupLink': 'Sign Up',
+
+  // ── Sign-up auth page — src/features/auth/pages/SignUpPage.tsx ──
+  'auth.signup.backToHome': 'Back to Home',
+  'auth.signup.title': 'Get Started',
+  'auth.signup.subtitle': 'Create your account with GitHub',
+  'auth.signup.redirecting': 'Redirecting...',
+  'auth.signup.githubButton': 'Sign up with GitHub',
+  'auth.signup.oauthSecurity': 'Secure authentication via GitHub OAuth',
+  'auth.signup.accessHeading': "What we'll access:",
+  'auth.signup.accessPublicProfile': 'Your public profile information',
+  'auth.signup.accessPublicRepositories': 'Your public repositories and contributions',
+  'auth.signup.accessActivity': 'Your GitHub activity for matching projects',
+  'auth.signup.privateReposDisclaimer':
+    'We never access private repositories without your explicit permission.',
+  'auth.signup.termsPrefix': 'By continuing, you agree to our',
+  'auth.signup.termsOfService': 'Terms of Service',
+  'auth.signup.termsConnector': 'and',
+  'auth.signup.privacyPolicy': 'Privacy Policy',
+  'auth.signup.signinPrompt': 'Already have an account?',
+  'auth.signup.signinLink': 'Sign In',
+
+  // ── Billing invoices tab — src/features/settings/components/billing/InvoicesTab.tsx ──
+  'invoices.title': 'Invoices',
+  'invoices.description': 'View and download your billing invoices.',
+  'invoices.table.invoice': 'Invoice',
+  'invoices.table.date': 'Date',
+  'invoices.table.amount': 'Amount',
+  'invoices.table.period': 'Period',
+  'invoices.table.status': 'Status',
+  'invoices.table.action': 'Action',
+  'invoices.empty.title': 'No invoices yet',
+  'invoices.empty.description': 'Your billing invoices will appear here',
+  'invoices.actions.downloadInvoice': 'Download Invoice',
+  'invoices.actions.downloading': 'Downloading…',
+  'invoices.status.paid': 'paid',
+  'invoices.status.pending': 'pending',
+  'invoices.status.overdue': 'overdue',
+  'invoices.errors.downloadFailed': 'Download failed. Please try again.',
 } as const
 
 /**

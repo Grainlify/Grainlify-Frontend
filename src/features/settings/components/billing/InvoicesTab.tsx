@@ -4,7 +4,7 @@ import { Download, FileText, CheckCircle2, Clock, AlertCircle, Loader2 } from 'l
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { Invoice, InvoiceStatus } from '../../types'
 import { downloadInvoice } from '../../../../shared/api/client'
-import { useIntlFormatters } from '../../../../shared/i18n'
+import { useIntlFormatters, useTranslation, type MessageId } from '../../../../shared/i18n'
 
 interface InvoicesTabProps {
   invoices: Invoice[]
@@ -33,6 +33,7 @@ const INVOICE_STATUS_MESSAGE_IDS: Record<InvoiceStatus, MessageId> = {
 
 export function InvoicesTab({ invoices }: InvoicesTabProps) {
   const { theme } = useTheme()
+  const { t } = useTranslation()
   const { formatDate, formatCurrency } = useIntlFormatters()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>({})

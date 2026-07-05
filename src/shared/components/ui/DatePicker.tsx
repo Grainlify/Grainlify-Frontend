@@ -9,13 +9,13 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { cn } from './utils'
 
 interface DatePickerProps {
-  label?: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  required?: boolean;
-  className?: string;
-  error?: string | null;
+  label?: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  required?: boolean
+  className?: string
+  error?: string | null
 }
 
 /**
@@ -70,60 +70,85 @@ export function DatePicker({
   onChange,
   placeholder = 'Pick a date',
   required = false,
-  className = "",
-  error
+  className = '',
+  error,
 }: DatePickerProps) {
-  const { theme } = useTheme();
-  const [open, setOpen] = React.useState(false);
-  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const { theme } = useTheme()
+  const [open, setOpen] = React.useState(false)
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
 
-  const isError = !!error;
+  const isError = !!error
 
   const date = React.useMemo(() => {
-    if (!value) return undefined;
+    if (!value) return undefined
     try {
-      const [year, month, day] = value.split('-').map(Number);
-      return new Date(Date.UTC(year, month - 1, day));
-    } catch { return undefined; }
-  }, [value]);
+      const [year, month, day] = value.split('-').map(Number)
+      return new Date(Date.UTC(year, month - 1, day))
+    } catch {
+      return undefined
+    }
+  }, [value])
+
+  // Construct a local Date at noon from the UTC date digits so react-day-picker
+  // (which compares dates in local time) highlights the correct calendar day.
+  const calendarSelected = React.useMemo(() => {
+    if (!date) return undefined
+    return new Date(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      12 // Noon prevents shifting to previous/next day during DST changes
+    )
+  }, [date])
 
   const handleSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
-      onChange(format(selectedDate, "yyyy-MM-dd"));
-      setOpen(false);
+      onChange(format(selectedDate, 'yyyy-MM-dd'))
+      setOpen(false)
       // Return focus to trigger after selection
-      triggerRef.current?.focus();
+      triggerRef.current?.focus()
     }
   }
 
   const inputClasses = cn(
-    "w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none transition-all text-[14px] flex items-center justify-between",
-    isError 
-      ? (theme === 'dark' ? 'border-red-500/40' : 'border-red-500/40') 
-      : (theme === 'dark' ? 'border-white/15' : 'border-white/25'),
+    'w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none transition-all text-[14px] flex items-center justify-between',
+    isError
+      ? theme === 'dark'
+        ? 'border-red-500/40'
+        : 'border-red-500/40'
+      : theme === 'dark'
+        ? 'border-white/15'
+        : 'border-white/25',
     className
-  );
+  )
 
   return (
     <div>
-      {label && <label className="block text-[13px] font-medium mb-2">{label}</label>}
+      {label && (
+        <label className="block text-[13px] font-medium mb-2">
+          {label}
+          {required && <span className="text-red-500 ml-0.5">*</span>}
+        </label>
+      )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             ref={triggerRef}
             type="button"
             className={inputClasses}
-            aria-label={label || "Select date"}
             aria-haspopup="dialog"
             aria-expanded={open}
           >
-            <span>{date ? format(date, "MMM dd, yyyy") : placeholder}</span>
+            <span>{date ? format(date, 'MMM dd, yyyy') : placeholder}</span>
             <CalendarIcon className="h-4 w-4 opacity-50" />
           </button>
         </PopoverTrigger>
-        <PopoverContent 
-          className="w-auto p-0 z-[10001]" 
-          onEscapeKeyDown={() => { setOpen(false); triggerRef.current?.focus(); }}
+        <PopoverContent
+          className="w-auto p-0 z-[10001]"
+          onEscapeKeyDown={() => {
+            setOpen(false)
+            triggerRef.current?.focus()
+          }}
         >
           <Calendar
             mode="single"
@@ -135,5 +160,5 @@ export function DatePicker({
       </Popover>
       {isError && <p className="text-[12px] mt-1.5 text-red-500">{error}</p>}
     </div>
-  );
+  )
 }

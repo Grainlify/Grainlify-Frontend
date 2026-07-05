@@ -99,6 +99,7 @@ vi.mock('../features/dashboard/routeWrappers', () => ({
   ProjectDetailPageRoute: () => <div>Project detail</div>,
   IssueDetailPageRoute: () => <div>Issue detail</div>,
   SearchPageRoute: () => <div>Search content</div>,
+  BlogArticlePageRoute: () => <div>Blog article content</div>,
 }))
 
 import App from './App'

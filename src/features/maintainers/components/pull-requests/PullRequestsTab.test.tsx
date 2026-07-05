@@ -1,16 +1,21 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { PullRequestsTab } from './PullRequestsTab';
-import { renderWithTheme } from '../../../../test/renderWithTheme';
-import { getProjectPRs } from '../../../../shared/api/client';
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { PullRequestsTab } from './PullRequestsTab'
+import { renderWithTheme } from '../../../../test/renderWithTheme'
+import { getMaintainerPRs } from '../../../../shared/api/client'
 
 vi.mock('../../../../shared/api/client', () => ({
-  getProjectPRs: vi.fn(),
-}));
+  getMaintainerPRs: vi.fn(),
+}))
 
-const mockGetProjectPRs = vi.mocked(getProjectPRs);
+// PullRequestsTab reads userRole from useAuth() to gate merge actions.
+vi.mock('../../../../shared/contexts/AuthContext', () => ({
+  useAuth: () => ({ userRole: 'maintainer' }),
+}))
+
+const mockGetProjectPRs = vi.mocked(getMaintainerPRs)
 
 const PROJECTS = [
   {
@@ -18,7 +23,7 @@ const PROJECTS = [
     github_full_name: 'octo-org/frontend-app',
     status: 'active',
   },
-];
+]
 
 const PRS = [
   {
@@ -35,85 +40,92 @@ const PRS = [
     merged_at: null,
     last_seen_at: '2026-06-21T12:00:00Z',
   },
-];
+]
 
 describe('PullRequestsTab empty states', () => {
   beforeEach(() => {
-    mockGetProjectPRs.mockReset();
-  });
+    mockGetProjectPRs.mockReset()
+  })
 
   it('announces that repositories must be selected before pull requests can be shown', async () => {
-    renderWithTheme(<PullRequestsTab selectedProjects={[]} />);
+    renderWithTheme(<PullRequestsTab selectedProjects={[]} />)
 
-    const status = await screen.findByRole('status');
-    expect(status).toHaveTextContent('Select one or more repositories to view pull requests');
-    expect(status).toHaveTextContent('Use the repository selector above to choose which repositories to include.');
-    expect(mockGetProjectPRs).not.toHaveBeenCalled();
-  });
+    const status = await screen.findByRole('status')
+    expect(status).toHaveTextContent('Select one or more repositories to view pull requests')
+    expect(status).toHaveTextContent(
+      'Use the repository selector above to choose which repositories to include.'
+    )
+    expect(mockGetProjectPRs).not.toHaveBeenCalled()
+  })
 
   it('announces that selected repositories currently have no pull requests', async () => {
-    mockGetProjectPRs.mockResolvedValue({ prs: [] });
+    mockGetProjectPRs.mockResolvedValue({ prs: [] })
 
-    renderWithTheme(<PullRequestsTab selectedProjects={PROJECTS} />);
+    renderWithTheme(<PullRequestsTab selectedProjects={PROJECTS} />)
 
-    const status = await screen.findByRole('status');
-    expect(status).toHaveTextContent('No pull requests were found in the selected repositories');
-    expect(status).toHaveTextContent('Try a different repository selection or come back after new pull requests are opened.');
-    expect(mockGetProjectPRs).toHaveBeenCalledWith('repo-1');
-  });
+    const status = await screen.findByRole('status')
+    expect(status).toHaveTextContent('No pull requests were found in the selected repositories')
+    expect(status).toHaveTextContent(
+      'Try a different repository selection or come back after new pull requests are opened.'
+    )
+    expect(mockGetProjectPRs).toHaveBeenCalledWith('repo-1', expect.anything())
+  })
 
   it('announces no matches when filters exclude every pull request and clears back to results', async () => {
-    const user = userEvent.setup();
-    mockGetProjectPRs.mockResolvedValue({ prs: PRS });
+    const user = userEvent.setup()
+    mockGetProjectPRs.mockResolvedValue({ prs: PRS })
 
-    renderWithTheme(<PullRequestsTab selectedProjects={PROJECTS} />);
+    renderWithTheme(<PullRequestsTab selectedProjects={PROJECTS} />)
 
-    expect(await screen.findByText('Fix login bug')).toBeInTheDocument();
+    expect(await screen.findByText('Fix login bug')).toBeInTheDocument()
 
-    await user.type(screen.getByPlaceholderText('Search pull request by title or author name...'), 'does-not-match');
+    await user.type(
+      screen.getByPlaceholderText('Search pull request by title or author name...'),
+      'does-not-match'
+    )
 
-    const status = await screen.findByRole('status');
-    expect(status).toHaveTextContent('No pull requests match the current search or state filters');
-    expect(within(status).getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
+    const status = await screen.findByRole('status')
+    expect(status).toHaveTextContent('No pull requests match the current search or state filters')
+    expect(within(status).getByRole('button', { name: 'Clear filters' })).toBeInTheDocument()
 
-    await user.click(within(status).getByRole('button', { name: 'Clear filters' }));
+    await user.click(within(status).getByRole('button', { name: 'Clear filters' }))
 
-    expect(await screen.findByText('Fix login bug')).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-  });
-});
+    expect(await screen.findByText('Fix login bug')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+})
 
 describe('PullRequestsTab accessibility', () => {
   beforeEach(() => {
-    mockGetProjectPRs.mockReset();
-  });
+    mockGetProjectPRs.mockReset()
+  })
 
   it('has a table with an accessible caption and column scopes', async () => {
-    mockGetProjectPRs.mockResolvedValue({ prs: PRS });
+    mockGetProjectPRs.mockResolvedValue({ prs: PRS })
 
-    renderWithTheme(<PullRequestsTab selectedProjects={PROJECTS} />);
+    renderWithTheme(<PullRequestsTab selectedProjects={PROJECTS} />)
 
     // Check for table caption
-    const table = await screen.findByRole('table');
-    expect(table).toBeInTheDocument();
+    const table = await screen.findByRole('table')
+    expect(table).toBeInTheDocument()
 
-    const caption = within(table).getByText('Pull Requests List');
-    expect(caption).toBeInTheDocument();
+    const caption = within(table).getByText('Pull Requests List')
+    expect(caption).toBeInTheDocument()
 
     // Check for column headers and their scope
-    const headers = screen.getAllByRole('columnheader');
-    expect(headers).toHaveLength(4);
+    const headers = screen.getAllByRole('columnheader')
+    expect(headers).toHaveLength(4)
 
-    expect(headers[0]).toHaveTextContent('Pull Request');
-    expect(headers[0]).toHaveAttribute('scope', 'col');
+    expect(headers[0]).toHaveTextContent('Pull Request')
+    expect(headers[0]).toHaveAttribute('scope', 'col')
 
-    expect(headers[1]).toHaveTextContent('Author');
-    expect(headers[1]).toHaveAttribute('scope', 'col');
+    expect(headers[1]).toHaveTextContent('Author')
+    expect(headers[1]).toHaveAttribute('scope', 'col')
 
-    expect(headers[2]).toHaveTextContent('Repository');
-    expect(headers[2]).toHaveAttribute('scope', 'col');
+    expect(headers[2]).toHaveTextContent('Repository')
+    expect(headers[2]).toHaveAttribute('scope', 'col')
 
-    expect(headers[3]).toHaveTextContent('Indicators');
-    expect(headers[3]).toHaveAttribute('scope', 'col');
-  });
-});
+    expect(headers[3]).toHaveTextContent('Indicators')
+    expect(headers[3]).toHaveAttribute('scope', 'col')
+  })
+})

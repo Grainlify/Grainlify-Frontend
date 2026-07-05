@@ -79,10 +79,14 @@ export function parseRetryAfter(headerValue: string | null): number {
 
   const trimmed = headerValue.trim()
 
-  // Try numeric (delay-seconds) format first
+  // Try numeric (delay-seconds) format first. A negative-but-finite number is
+  // still a well-formed delay-seconds value — just out of range — so it
+  // should fall back to the default rather than be misinterpreted below by
+  // the lenient `Date.parse`, which happily (and wrongly) accepts strings
+  // like "-10" as a legacy date format.
   const numeric = Number(trimmed)
-  if (!isNaN(numeric) && isFinite(numeric) && numeric >= 0) {
-    return Math.floor(numeric)
+  if (!isNaN(numeric) && isFinite(numeric)) {
+    return numeric >= 0 ? Math.floor(numeric) : DEFAULT_RETRY_AFTER_SECONDS
   }
 
   // Try HTTP-date format
