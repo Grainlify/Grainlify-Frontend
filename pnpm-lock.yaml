@@ -21,7 +21,7 @@ importers:
         version: 11.14.1(@emotion/react@11.14.0(@types/react@18.3.1)(react@18.3.1))(@types/react@18.3.1)(react@18.3.1)
       '@hookform/resolvers':
         specifier: ^5.4.0
-        version: 5.4.0(react-hook-form@7.80.0(react@18.3.1))
+        version: 5.4.0(react-hook-form@7.81.0(react@18.3.1))
       '@mui/icons-material':
         specifier: 7.3.5
         version: 7.3.5(@mui/material@7.3.5(@emotion/react@11.14.0(@types/react@18.3.1)(react@18.3.1))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@18.3.1)(react@18.3.1))(@types/react@18.3.1)(react@18.3.1))(@types/react@18.3.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.1)(react@18.3.1)
@@ -155,8 +155,8 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
       react-hook-form:
-        specifier: 7.80.0
-        version: 7.80.0(react@18.3.1)
+        specifier: 7.81.0
+        version: 7.81.0(react@18.3.1)
       react-intl:
         specifier: ^7.1.14
         version: 7.1.14(react@18.3.1)(typescript@6.0.3)
@@ -3717,8 +3717,8 @@ packages:
   react-fast-compare@3.2.2:
     resolution: {integrity: sha512-nsO+KSNgo1SbJqJEYRE9ERzo7YtYbou/OqjSQKxV7jcKox7+usiUVZOAC+XnDOABXggQTno0Y1CpVnuWEc1boQ==}
 
-  react-hook-form@7.80.0:
-    resolution: {integrity: sha512-4P+fk6oXsxY+6xSj7Euhc2sumQD8zQqCuVHoJwoyp9EchP+IUW9OESB7uHFJOKsIBQ4MQqYE84INJFqUCYNoOg==}
+  react-hook-form@7.81.0:
+    resolution: {integrity: sha512-ocbmr2p5KBMoAfj4WCUvped33lVi1Kd5DuDUvQDnB6VEAacOjPI/jMbtDdbhco4y9ct4xUuCmMY0b/C9L0QHjw==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -4984,10 +4984,10 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  '@hookform/resolvers@5.4.0(react-hook-form@7.80.0(react@18.3.1))':
+  '@hookform/resolvers@5.4.0(react-hook-form@7.81.0(react@18.3.1))':
     dependencies:
       '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.80.0(react@18.3.1)
+      react-hook-form: 7.81.0(react@18.3.1)
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -7966,7 +7966,7 @@ snapshots:
 
   react-fast-compare@3.2.2: {}
 
-  react-hook-form@7.80.0(react@18.3.1):
+  react-hook-form@7.81.0(react@18.3.1):
     dependencies:
       react: 18.3.1
 
