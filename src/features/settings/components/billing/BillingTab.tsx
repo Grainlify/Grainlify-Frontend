@@ -182,8 +182,7 @@ export function BillingTab() {
         .then((data) => {
           setProfiles(data);
         })
-        .catch((err) => // eslint-disable-next-line no-console
- console.error('Failed to fetch billing profiles:', err))
+        .catch((err) => logger.error('Failed to fetch billing profiles:', err))
         .finally(() => setLoadingProfiles(false));
     }
   }, [useMock]);

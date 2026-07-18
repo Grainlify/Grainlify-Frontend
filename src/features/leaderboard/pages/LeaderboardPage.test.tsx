@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { LeaderboardPage } from './LeaderboardPage'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
+import { MemoryRouter } from 'react-router-dom'
+import { LeaderboardPage } from './LeaderboardPage'
 
 const mockData = [
   { id: 1, dimension: 'blockchain' },
@@ -8,11 +9,13 @@ const mockData = [
 ]
 
 // ContributorsTable/ProjectsTable call useTheme(), which requires a ThemeProvider.
-const renderPage = (data: typeof mockData) =>
+const renderPage = () =>
   render(
-    <ThemeProvider>
-      <LeaderboardPage data={data} />
-    </ThemeProvider>
+    <MemoryRouter>
+      <ThemeProvider>
+        <LeaderboardPage />
+      </ThemeProvider>
+    </MemoryRouter>
   )
 
 // Pre-existing bug, unrelated to CI setup: this mock `data` shape
@@ -25,7 +28,7 @@ const renderPage = (data: typeof mockData) =>
 // real data-fetching wiring for LeaderboardPage, which is a feature gap, not
 // a quick fix — skipped pending that work.
 test.skip('applies activeFilter correctly to table results', () => {
-  renderPage(mockData)
+  renderPage()
 
   // Default: shows both
   expect(screen.getByText(/id: 1/)).toBeInTheDocument()
@@ -39,7 +42,10 @@ test.skip('applies activeFilter correctly to table results', () => {
 })
 
 test.skip('shows empty state when filter excludes all', () => {
-  renderPage(mockData)
+  renderPage()
   fireEvent.change(screen.getByRole('combobox'), { target: { value: 'non-existent' } })
   expect(screen.getByText(/No results found/)).toBeInTheDocument()
 })
+
+// Keep mockData referenced to avoid unused variable warning
+void mockData
