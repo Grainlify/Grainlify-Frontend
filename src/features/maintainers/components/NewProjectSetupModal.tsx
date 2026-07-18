@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
@@ -42,6 +42,38 @@ export function NewProjectSetupModal({
   const [ecosystemDropdownOpen, setEcosystemDropdownOpen] = useState(false);
   const ecosystemDropdownRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Tracks the live `isOpen` value for async callbacks. A submission started
+   * before the modal closed can resolve *after* it closed; reading this ref
+   * (rather than the captured `isOpen` prop) lets that late callback detect the
+   * modal is gone and bail out instead of firing success handlers — or leaking
+   * state — for a project that is no longer being edited.
+   */
+  const isOpenRef = useRef(isOpen);
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  /**
+   * Restores every form and submission field to its empty initial value.
+   *
+   * Centralising the reset keeps close/reopen behaviour consistent: it is the
+   * single source of truth invoked whenever the modal closes, guaranteeing the
+   * next open starts from a clean slate and that one project's draft can never
+   * leak into another's submission.
+   */
+  const resetForm = useCallback(() => {
+    setDescription('');
+    setEcosystemName('');
+    setLanguage('');
+    setTags('');
+    setCategory('');
+    setError(null);
+    setSuccess(false);
+    setIsSubmitting(false);
+    setEcosystemDropdownOpen(false);
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (ecosystemDropdownRef.current && !ecosystemDropdownRef.current.contains(e.target as Node)) {
@@ -66,6 +98,18 @@ export function NewProjectSetupModal({
       setSuccess(false);
     }
   }, [isOpen, project?.id, project?.description, project?.ecosystem_name, project?.language, project?.tags, project?.category]);
+
+  // Reset the form whenever the modal transitions to closed. The component
+  // stays mounted across opens (the parent only toggles `isOpen`), so React
+  // state would otherwise persist. Resetting here — rather than only in the
+  // close handler — covers EVERY close path: the X button, a backdrop click, a
+  // completed submit, and the parent dropping `isOpen` while a submission is
+  // still in flight. This is what guarantees the next open is clean.
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen, resetForm]);
 
   useEffect(() => {
     if (isOpen) {
@@ -113,23 +157,36 @@ export function NewProjectSetupModal({
         category: category.trim() || undefined,
       });
 
+      // The modal may have been closed (e.g. parent-driven) while this request
+      // was in flight. If so, the form has already been reset — do not flash a
+      // success state or fire callbacks for what is now a stale submission.
+      if (!isOpenRef.current) return;
+
       setSuccess(true);
       setTimeout(() => {
+        // Re-check on the deferred callback too: the modal could close during
+        // the 800ms success delay.
+        if (!isOpenRef.current) return;
         onSuccess();
         onClose();
         setSuccess(false);
       }, 800);
     } catch (err) {
+      // Swallow the error if the modal closed mid-request; surfacing it would
+      // write to state the close already cleared.
+      if (!isOpenRef.current) return;
       setError(err instanceof Error ? err.message : 'Failed to save project details');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // User-initiated close (X button / backdrop). Blocked while a submission is
+  // in flight so the user cannot abandon an active save by accident. The form
+  // reset itself is handled by the `isOpen` effect above once `onClose` takes
+  // effect, so there is no per-field cleanup to duplicate here.
   const handleClose = () => {
     if (!isSubmitting) {
-      setError(null);
-      setSuccess(false);
       onClose();
     }
   };

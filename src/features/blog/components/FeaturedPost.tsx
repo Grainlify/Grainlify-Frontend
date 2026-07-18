@@ -3,11 +3,23 @@ import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { BlogPost } from '../types';
 
 interface FeaturedPostProps {
-  post: BlogPost;
+  /** The post to feature. When `null` or `undefined` a fallback is rendered. */
+  post: BlogPost | null | undefined;
 }
 
 export function FeaturedPost({ post }: FeaturedPostProps) {
   const { theme } = useTheme();
+
+  if (!post) {
+    return (
+      <div
+        className="rounded-[28px] border border-white/25 p-10 text-center opacity-70"
+        aria-label="No featured post available"
+      >
+        <p className="text-sm">No featured post available.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="backdrop-blur-[40px] bg-gradient-to-br from-white/[0.18] to-white/[0.12] rounded-[28px] border border-white/25 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden group hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)] transition-all duration-500 cursor-pointer">

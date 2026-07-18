@@ -1,6 +1,6 @@
 import { logger } from '../../../../shared/utils/logger';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Eye, FileText, GitPullRequest, GitMerge } from 'lucide-react';
+import { FileText, GitPullRequest, GitMerge, AlertCircle, FolderOpen } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { StatsCard } from './StatsCard';
 import { StatsCardSkeleton } from './StatsCardSkeleton';
@@ -17,23 +17,70 @@ interface Project {
   status: string;
 }
 
+/**
+ * Props for the {@link DashboardTab} component.
+ */
 interface DashboardTabProps {
+  /** The list of projects currently selected in the sidebar. */
   selectedProjects: Project[];
-  /** When true, parent is still loading the project list; show loading skeleton instead of empty state */
+  /** When true, parent is still loading the project list; show loading skeleton instead of empty state. */
   isLoadingProjects?: boolean;
   onRefresh?: () => void;
+  /** Called when the user clicks an issue activity row, with the issue id and owning project id. */
   onNavigateToIssue?: (issueId: string, projectId: string) => void;
+  /** Called when the user clicks a PR activity row, with the PR id. */
+  onNavigateToPR?: (prId: string) => void;
 }
 
-export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRefresh, onNavigateToIssue }: DashboardTabProps) {
+/**
+ * Clamps a computed stat value to a safe non-negative integer.
+ * Defends against NaN/Infinity leaking into displayed stats.
+ */
+function safeStatValue(v: number): number {
+  return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
+}
+
+/**
+ * Main dashboard panel for maintainers.
+ *
+ * Fetches issues and PRs for all selected projects, computes aggregate stats,
+ * and renders stat cards, a recent-activity timeline, and a monthly chart.
+ *
+ * Error handling:
+ * - Per-project fetch failures are swallowed so one bad project does not blank
+ *   the entire view.
+ * - An outer-level failure (e.g. unexpected throw) surfaces an error banner with
+ *   a retry button instead of silently staying in skeleton state forever.
+ *
+ * Empty state:
+ * - When no project is selected a CTA prompt is rendered instead of empty data.
+ */
+export function DashboardTab({ selectedProjects, isLoadingProjects = false, onNavigateToIssue, onNavigateToPR }: DashboardTabProps) {
   const { theme } = useTheme();
   const [issues, setIssues] = useState<any[]>([]);
   const [prs, setPrs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showAllActivities, setShowAllActivities] = useState(false);
 
   // Show loading when parent is loading projects OR when we're loading dashboard data
   const showLoading = isLoadingProjects || isLoading;
+
+  /**
+   * Return a navigation handler only when the activity row has a valid destination.
+   * Issue activities require a project destination. PR activities require a PR navigator.
+   */
+  const getActivityClickHandler = (activity: Activity) => {
+    if (activity.type === 'issue' && activity.projectId && onNavigateToIssue) {
+      return () => onNavigateToIssue(activity.id.toString(), activity.projectId!);
+    }
+
+    if (activity.type === 'pr' && onNavigateToPR) {
+      return () => onNavigateToPR(activity.id.toString());
+    }
+
+    return undefined;
+  };
 
   // Fetch data from selected projects (only when parent has finished loading and we have projects)
   useEffect(() => {
@@ -45,6 +92,7 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
 
   const loadData = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       if (selectedProjects.length === 0) {
         setIssues([]);
@@ -52,6 +100,11 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
         setIsLoading(false);
         return;
       }
+
+      // Track how many per-project fetches fail so we can surface an error
+      // if every single request bounces (network down, auth expired, etc.).
+      let fetchFailures = 0;
+      const totalFetches = selectedProjects.length * 2;
 
       // Fetch issues and PRs from all selected projects
       const [issuesData, prsData] = await Promise.all([
@@ -64,6 +117,7 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
             }));
           } catch (err) {
             logger.error(`Failed to fetch issues for ${project.github_full_name}:`, err);
+            fetchFailures++;
             return [];
           }
         })),
@@ -76,10 +130,18 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
             }));
           } catch (err) {
             logger.error(`Failed to fetch PRs for ${project.github_full_name}:`, err);
+            fetchFailures++;
             return [];
           }
         })),
       ]);
+
+      // All fetches failed — surface an error instead of displaying empty data
+      if (fetchFailures >= totalFetches) {
+        setError('Failed to load dashboard data. Please try again.');
+        setIsLoading(false);
+        return;
+      }
 
       const allIssues = issuesData.flat();
       const allPRs = prsData.flat();
@@ -102,8 +164,8 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
       setIsLoading(false);
     } catch (err) {
       logger.error('Failed to load dashboard data:', err);
-      // Keep loading state true to show skeleton forever when backend is down
-      // Don't set isLoading to false - keep showing skeleton
+      setError('Failed to load dashboard data. Please try again.');
+      setIsLoading(false);
     }
   };
 
@@ -134,8 +196,12 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
 
   // Helper function to format time ago (memoized to prevent unnecessary re-renders)
   const formatTimeAgo = useCallback((date: Date): string => {
+    const timeMs = date.getTime();
+    if (isNaN(timeMs)) {
+      return 'unknown time';
+    }
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const diffMs = now.getTime() - timeMs;
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
@@ -148,26 +214,17 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
     return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
   }, []);
 
-  // Helper function to parse time ago for sorting (memoized)
-  const parseTimeAgo = useCallback((timeAgo: string): number => {
-    const now = new Date().getTime();
-    if (timeAgo.includes('minute')) {
-      const mins = parseInt(timeAgo) || 0;
-      return now - mins * 60000;
-    }
-    if (timeAgo.includes('hour')) {
-      const hours = parseInt(timeAgo) || 0;
-      return now - hours * 3600000;
-    }
-    if (timeAgo.includes('day')) {
-      const days = parseInt(timeAgo) || 0;
-      return now - days * 86400000;
-    }
-    if (timeAgo.includes('month')) {
-      const months = parseInt(timeAgo) || 0;
-      return now - months * 30 * 86400000;
-    }
-    return now;
+  /**
+   * Safely parses a date string, returning its Unix timestamp in milliseconds.
+   * Returns 0 if the date string is null, undefined, or invalid to prevent NaN sorting issues.
+   * 
+   * @param dateStr - The date string to parse.
+   * @returns The parsed Unix time in milliseconds, or 0 if invalid.
+   */
+  const safeParseDate = useCallback((dateStr?: string | null): number => {
+    if (!dateStr) return 0;
+    const parsed = Date.parse(dateStr);
+    return isNaN(parsed) ? 0 : parsed;
   }, []);
 
   // Calculate stats from real data
@@ -191,41 +248,33 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
     return [
       {
         id: 1,
-        title: 'Repository Views',
+        title: 'Issue Views',
         subtitle: 'Last 7 days',
-        value: 0,
-        change: -100,
-        icon: Eye,
+        value: safeStatValue(recentIssues.length),
+        change: 0,
+        icon: FileText,
       },
       {
         id: 2,
-        title: 'Issue Views',
+        title: 'Issue Applications',
         subtitle: 'Last 7 days',
-        value: recentIssues.length,
+        value: safeStatValue(recentIssues.reduce((sum, issue) => sum + (issue.comments_count || 0), 0)),
         change: 0,
         icon: FileText,
       },
       {
         id: 3,
-        title: 'Issue Applications',
-        subtitle: 'Last 7 days',
-        value: recentIssues.reduce((sum, issue) => sum + (issue.comments_count || 0), 0),
-        change: 0,
-        icon: FileText,
-      },
-      {
-        id: 4,
         title: 'Pull Requests Opened',
         subtitle: 'Last 7 days',
-        value: openedPRs.length,
+        value: safeStatValue(openedPRs.length),
         change: openedPRs.length > 0 ? 100 : 0,
         icon: GitPullRequest,
       },
       {
-        id: 5,
+        id: 4,
         title: 'Pull Requests Merged',
         subtitle: 'Last 7 days',
-        value: mergedPRs.length,
+        value: safeStatValue(mergedPRs.length),
         change: mergedPRs.length > 0 ? 100 : 0,
         icon: GitMerge,
       },
@@ -238,20 +287,21 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
 
     // Add recent PRs
     prs.slice(0, 10).forEach(pr => {
+      const timestamp = pr.updated_at || pr.last_seen_at || '';
       combined.push({
         id: pr.github_pr_id,
         type: 'pr',
         number: pr.number,
         title: pr.title,
         label: pr.merged ? 'Merged' : pr.state === 'open' ? 'Open' : 'Closed',
-        timeAgo: pr.updated_at
-          ? formatTimeAgo(new Date(pr.updated_at))
-          : formatTimeAgo(new Date(pr.last_seen_at)),
+        timestamp,
+        timeAgo: timestamp ? formatTimeAgo(new Date(timestamp)) : 'unknown time',
       });
     });
 
     // Add recent issues
     issues.slice(0, 10).forEach(issue => {
+      const timestamp = issue.updated_at || issue.last_seen_at || '';
       combined.push({
         id: issue.github_issue_id,
         type: 'issue',
@@ -259,21 +309,24 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
         title: issue.title,
         label: issue.comments_count > 0 ? `${issue.comments_count} comment${issue.comments_count !== 1 ? 's' : ''}` : null,
         projectId: issue.projectId,
-        timeAgo: issue.updated_at
-          ? formatTimeAgo(new Date(issue.updated_at))
-          : formatTimeAgo(new Date(issue.last_seen_at)),
+        timestamp,
+        timeAgo: timestamp ? formatTimeAgo(new Date(timestamp)) : 'unknown time',
       });
     });
 
-    // Sort by time (most recent first)
-    combined.sort((a, b) => {
-      const timeA = parseTimeAgo(a.timeAgo);
-      const timeB = parseTimeAgo(b.timeAgo);
-      return timeB - timeA;
+    // Sort by timestamp (most recent first) with stable tie-breaking
+    const indexed = combined.map((activity, idx) => ({ activity, idx }));
+    indexed.sort((a, b) => {
+      const timeA = safeParseDate(a.activity.timestamp);
+      const timeB = safeParseDate(b.activity.timestamp);
+      if (timeB !== timeA) {
+        return timeB - timeA;
+      }
+      return a.idx - b.idx; // Stable tie-breaking using original array indices
     });
 
-    return combined; // Return all activities (will be sliced in render based on state)
-  }, [issues, prs, formatTimeAgo, parseTimeAgo]);
+    return indexed.map(item => item.activity);
+  }, [issues, prs, formatTimeAgo, safeParseDate]);
 
   // Generate chart data from real data (last 6 months)
   const chartData: ChartDataPoint[] = useMemo(() => {
@@ -304,12 +357,60 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
     });
   }, [issues, prs]);
 
+  // No-project CTA — rendered before skeleton/error so parent loading is still covered
+  if (!showLoading && !error && selectedProjects.length === 0) {
+    return (
+      <div
+        className={`flex flex-col items-center justify-center rounded-[24px] border p-16 text-center ${
+          theme === 'dark'
+            ? 'bg-[#2d2820]/[0.4] border-white/10 text-[#b8a898]'
+            : 'bg-white/[0.12] border-white/20 text-[#7a6b5a]'
+        }`}
+        data-testid="empty-state"
+      >
+        <FolderOpen className="w-12 h-12 mb-4 opacity-40" />
+        <h2 className={`text-[18px] font-bold mb-2 ${theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'}`}>
+          No repository selected
+        </h2>
+        <p className="text-[14px] max-w-xs">
+          Select one or more repositories from the sidebar to view your dashboard stats.
+        </p>
+      </div>
+    );
+  }
+
+  // Error state — replaces all content and offers a retry
+  if (!showLoading && error) {
+    return (
+      <div
+        className={`flex flex-col items-center justify-center rounded-[24px] border p-16 text-center ${
+          theme === 'dark'
+            ? 'bg-[#2d2820]/[0.4] border-white/10 text-[#b8a898]'
+            : 'bg-white/[0.12] border-white/20 text-[#7a6b5a]'
+        }`}
+        data-testid="error-state"
+      >
+        <AlertCircle className="w-12 h-12 mb-4 text-red-400" />
+        <h2 className={`text-[18px] font-bold mb-2 ${theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'}`}>
+          Failed to load dashboard
+        </h2>
+        <p className="text-[14px] mb-6 max-w-xs">{error}</p>
+        <button
+          onClick={loadData}
+          className="px-6 py-2.5 rounded-[10px] backdrop-blur-[25px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/20 border border-[#c9983a]/40 text-[13px] font-semibold text-[#c9983a] hover:from-[#c9983a]/35 hover:to-[#d4af37]/30 hover:scale-105 transition-all duration-200"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Stats Cards */}
-      <div className="grid grid-cols-5 gap-5">
+      <div className="grid grid-cols-4 gap-5">
         {showLoading ? (
-          [...Array(5)].map((_, idx) => (
+          [...Array(4)].map((_, idx) => (
             <StatsCardSkeleton key={idx} />
           ))
         ) : (
@@ -353,11 +454,7 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
                         key={activity.id}
                         activity={activity}
                         index={idx}
-                        onClick={() => {
-                          if (activity.type === 'issue' && activity.projectId && onNavigateToIssue) {
-                            onNavigateToIssue(activity.id.toString(), activity.projectId);
-                          }
-                        }}
+                        onClick={getActivityClickHandler(activity)}
                       />
                     ))
                   )}

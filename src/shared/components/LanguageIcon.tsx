@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import {
   siTypescript,
   siJavascript,
@@ -89,8 +90,8 @@ const cssIconPath = "M1.5 0h21l-1.91 21.563L11.977 24l-8.564-2.438L1.5 0zm17.09 
 // Batchfile (Windows CMD) - terminal-style icon
 const batchfileIconPath = "M2 4h20v16H2V4zm2 2v2h16V6H4zm0 4h16v2H4v-2zm0 4h10v2H4v-2z";
 
-export function LanguageIcon({ language, className = 'w-4 h-4' }: LanguageIconProps) {
-  const config = languageMapping[language];
+export const LanguageIcon = memo(function LanguageIcon({ language, className = 'w-4 h-4' }: LanguageIconProps) {
+  const config = useMemo(() => languageMapping[language], [language]);
 
   // Special handling for CSS (no icon in simple-icons)
   if (language === 'CSS') {
@@ -125,8 +126,13 @@ export function LanguageIcon({ language, className = 'w-4 h-4' }: LanguageIconPr
   }
 
   if (!config) {
-    // Fallback to colored dot if language not found
-    return <div className={`rounded-full bg-[#9b8b7a] ${className}`} />;
+    return (
+      <div
+        role="img"
+        aria-label={language}
+        className={`rounded-full bg-[#9b8b7a] ${className}`}
+      />
+    );
   }
 
   return (
@@ -141,4 +147,4 @@ export function LanguageIcon({ language, className = 'w-4 h-4' }: LanguageIconPr
       <path d={config.icon.path} />
     </svg>
   );
-}
+});
