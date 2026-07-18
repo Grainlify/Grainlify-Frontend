@@ -66,6 +66,27 @@ describe('AddRepositoryModal', () => {
     expect(mockCreateProject).not.toHaveBeenCalled()
   })
 
+  it('surfaces the schema error for a non-GitHub repository URL', async () => {
+    const user = userEvent.setup()
+    renderWithTheme(<AddRepositoryModal {...defaultProps} />)
+    await waitFor(() => {
+      expect(screen.getByText('Ethereum')).toBeInTheDocument()
+    })
+
+    await user.type(
+      screen.getByPlaceholderText(/owner\/repo/i),
+      'https://gitlab.com/owner/repository'
+    )
+
+    expect(
+      await screen.findByText(
+        'Repository name contains invalid characters. Use owner/repo format with letters, numbers, hyphens, underscores, and dots.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /add repository/i })).toBeDisabled()
+    expect(mockCreateProject).not.toHaveBeenCalled()
+  })
+
   it('calls createProject on valid submit', async () => {
     mockCreateProject.mockResolvedValue({ id: '1' })
     const user = userEvent.setup()
