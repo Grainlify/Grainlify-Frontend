@@ -9,7 +9,6 @@ The Settings page has been refactored into a clean, modular, feature-based archi
 /src/features/settings/
 ├── components/
 │   ├── shared/                 # Shared components
-│   │   ├── SkeletonLoader.tsx
 │   │   └── ToggleSwitch.tsx
 │   ├── profile/               # Tab 1: Profile components
 │   │   └── ProfileTab.tsx
@@ -85,8 +84,9 @@ The Settings page has been refactored into a clean, modular, feature-based archi
 
 ### SkeletonLoader
 - Shimmer animation effect
-- Customizable className for flexible sizing
+- Customizable `className`, `variant` (`default` | `circle` | `text`), `width`, and `height` props
 - Used for loading states
+- Shared implementation lives in `src/shared/components/SkeletonLoader.tsx`
 
 ## Key Design Patterns
 

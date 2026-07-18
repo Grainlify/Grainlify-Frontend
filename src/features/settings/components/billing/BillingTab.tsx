@@ -7,7 +7,7 @@ import { sampleInvoices } from '../../data/invoicesData';
 import { BillingProfileCard } from './BillingProfileCard';
 import { PaymentMethodsTab } from './PaymentMethodsTab';
 import { InvoicesTab } from './InvoicesTab';
-import { SkeletonLoader } from '../shared/SkeletonLoader';
+import { SkeletonLoader } from '../../../../shared/components/SkeletonLoader';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { startKYCVerification, getKYCStatus } from '../../../../shared/api/client';
 import { useBillingProfiles } from '../../contexts/BillingProfilesContext';

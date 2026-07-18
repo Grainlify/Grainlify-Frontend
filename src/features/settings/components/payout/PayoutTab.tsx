@@ -1,7 +1,7 @@
 import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect } from 'react';
 import { Info } from 'lucide-react';
-import { SkeletonLoader } from '../shared/SkeletonLoader';
+import { SkeletonLoader } from '../../../../shared/components/SkeletonLoader';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { getProjectsContributed } from '../../../../shared/api/client';
 import { useBillingProfiles } from '../../contexts/BillingProfilesContext';
