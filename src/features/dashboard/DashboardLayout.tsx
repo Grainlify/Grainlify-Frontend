@@ -27,6 +27,7 @@ import { RoleSwitcher } from '../../shared/components/RoleSwitcher'
 import { Modal, ModalFooter, ModalButton, ModalInput } from '../../shared/components/ui/Modal'
 import { bootstrapAdmin } from '../../shared/api/client'
 import { useTranslation } from '../../shared/i18n'
+import { logger } from '../../shared/utils/logger'
 
 /**
  * Layout component for the authenticated dashboard area.
@@ -117,8 +118,7 @@ export function DashboardLayout() {
       setActiveRole('admin')
       handleNavigation('admin')
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Admin authentication failed:', error)
+      logger.error('Admin authentication failed:', error)
       setAdminPassword('')
     } finally {
       setIsAuthenticating(false)
