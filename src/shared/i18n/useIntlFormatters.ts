@@ -16,7 +16,10 @@ export type FormatNumberOptions = Intl.NumberFormatOptions
  * Options accepted by {@link UseIntlFormatters.formatCurrency}.
  * The `currency` field is required; other options are optional.
  */
-export interface FormatCurrencyOptions extends Omit<Intl.NumberFormatOptions, 'style' | 'currency'> {
+export interface FormatCurrencyOptions extends Omit<
+  Intl.NumberFormatOptions,
+  'style' | 'currency'
+> {
   /** ISO 4217 currency code, e.g. `"USD"`. */
   currency: string
 }
@@ -86,6 +89,7 @@ export function useIntlFormatters(): UseIntlFormatters {
 
   const formatDate = (value: Date | number | string, options?: FormatDateOptions): string => {
     const date = value instanceof Date ? value : new Date(value)
+    if (Number.isNaN(date.getTime())) return '—'
     return new Intl.DateTimeFormat(locale, options).format(date)
   }
 
