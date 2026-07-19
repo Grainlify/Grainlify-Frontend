@@ -20,7 +20,7 @@ afterEach(() => {
 })
 
 /** A component that unconditionally throws on render. */
-function ThrowingChild({ message = 'test render error' }: { message?: string }) {
+function ThrowingChild({ message = 'test render error' }: { message?: string }): never {
   throw new Error(message)
 }
 

@@ -1,8 +1,8 @@
 import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect } from 'react';
 import { Info } from 'lucide-react';
+import { SkeletonLoader } from '../../../../shared/components/SkeletonLoader';
 import { toast } from 'sonner';
-import { SkeletonLoader } from '../shared/SkeletonLoader';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import {
   getProjectsContributed,
