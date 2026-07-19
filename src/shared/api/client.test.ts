@@ -851,6 +851,10 @@ describe('apiRequest — retryable status codes (502, 503)', () => {
     })
 
     const promise = apiRequest('/health')
+    // Attach a no-op catch immediately so the rejection is never "unhandled"
+    // while fake timers are advancing — Vitest treats un-caught rejections as
+    // global errors even when the test later asserts on them.
+    promise.catch(() => {})
     await vi.runAllTimersAsync()
 
     await expect(promise).rejects.toThrow('Bad Gateway')
@@ -865,6 +869,7 @@ describe('apiRequest — retryable status codes (502, 503)', () => {
     })
 
     const promise = apiRequest('/health')
+    promise.catch(() => {})
     await vi.runAllTimersAsync()
 
     await expect(promise).rejects.toThrow('Service Unavailable')
@@ -1000,6 +1005,7 @@ describe('apiRequest — network error retry', () => {
     mockFetch.mockRejectedValue(new TypeError('Failed to fetch'))
 
     const promise = apiRequest('/health')
+    promise.catch(() => {})
     await vi.runAllTimersAsync()
 
     await expect(promise).rejects.toThrow(
