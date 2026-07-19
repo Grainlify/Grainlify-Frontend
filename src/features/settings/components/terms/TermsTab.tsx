@@ -3,6 +3,7 @@ import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { getTermsStatus, acceptTerms } from '../../../../shared/api/client'
 import { Skeleton } from '../../../../shared/components/ui/skeleton'
 import { logger } from '../../../../shared/utils/logger'
+import { useTranslation } from '../../../../shared/i18n'
 
 /**
  * Current version of the terms and conditions.
@@ -22,6 +23,8 @@ export const SKELETON_DELAY_MS = 300
  */
 export function TermsTab() {
   const { theme } = useTheme()
+  const { t } = useTranslation()
+  const loadStatusFailedMessage = t('terms.errors.loadStatusFailed')
   const [isLoading, setIsLoading] = useState(true)
   const [isAccepting, setIsAccepting] = useState(false)
   const [isAccepted, setIsAccepted] = useState(false)
@@ -49,7 +52,7 @@ export function TermsTab() {
       } catch (err) {
         logger.error('Failed to fetch terms status:', err)
         if (mounted) {
-          setFetchError(err instanceof Error ? err.message : 'Failed to load terms status.')
+          setFetchError(err instanceof Error ? err.message : loadStatusFailedMessage)
         }
       } finally {
         if (mounted) {
@@ -61,7 +64,7 @@ export function TermsTab() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [loadStatusFailedMessage])
 
   // Delay the skeleton so quick fetches don't cause a flash of loading UI.
   useEffect(() => {
@@ -82,7 +85,7 @@ export function TermsTab() {
       setAcceptedVersion(res.version)
       setAcceptedDate(res.accepted_at)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to accept terms. Please try again.')
+      setError(err instanceof Error ? err.message : t('terms.errors.acceptFailed'))
     } finally {
       setIsAccepting(false)
     }
@@ -103,14 +106,14 @@ export function TermsTab() {
             theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
           }`}
         >
-          Terms and Conditions
+          {t('terms.title')}
         </h2>
         <p
           className={`text-[14px] transition-colors ${
             theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
           }`}
         >
-          Review our terms of service and privacy policy.
+          {t('terms.description')}
         </p>
       </div>
 
@@ -128,19 +131,18 @@ export function TermsTab() {
               theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
             }`}
           >
-            Terms of Service
+            {t('terms.service.title')}
           </h3>
           <p
             className={`text-[14px] leading-relaxed mb-6 transition-colors ${
               theme === 'dark' ? 'text-[#c5b5a2]' : 'text-[#6b5d4d]'
             }`}
           >
-            By using Grainlify, you agree to abide by our{' '}
+            {t('terms.service.bodyPrefix')}{' '}
             <a href="/terms" className="underline hover:opacity-80">
-              terms of service
+              {t('terms.links.termsOfService')}
             </a>
-            . These terms govern your use of the platform and outline your rights and
-            responsibilities as a user.
+            {t('terms.service.bodySuffix')}
           </p>
 
           <h3
@@ -148,18 +150,18 @@ export function TermsTab() {
               theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
             }`}
           >
-            Privacy Policy
+            {t('terms.privacy.title')}
           </h3>
           <p
             className={`text-[14px] leading-relaxed mb-6 transition-colors ${
               theme === 'dark' ? 'text-[#c5b5a2]' : 'text-[#6b5d4d]'
             }`}
           >
-            We take your privacy seriously. Our{' '}
+            {t('terms.privacy.bodyPrefix')}{' '}
             <a href="/privacy" className="underline hover:opacity-80">
-              privacy policy
+              {t('terms.links.privacyPolicy')}
             </a>{' '}
-            explains how we collect, use, and protect your personal information.
+            {t('terms.privacy.bodySuffix')}
           </p>
 
           <h3
@@ -167,15 +169,14 @@ export function TermsTab() {
               theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
             }`}
           >
-            Data Collection
+            {t('terms.dataCollection.title')}
           </h3>
           <p
             className={`text-[14px] leading-relaxed mb-6 transition-colors ${
               theme === 'dark' ? 'text-[#c5b5a2]' : 'text-[#6b5d4d]'
             }`}
           >
-            We collect information necessary to provide our services, including your GitHub profile
-            data, contribution history, and reward preferences.
+            {t('terms.dataCollection.body')}
           </p>
 
           <h3
@@ -183,15 +184,14 @@ export function TermsTab() {
               theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
             }`}
           >
-            User Responsibilities
+            {t('terms.userResponsibilities.title')}
           </h3>
           <p
             className={`text-[14px] leading-relaxed mb-6 transition-colors ${
               theme === 'dark' ? 'text-[#c5b5a2]' : 'text-[#6b5d4d]'
             }`}
           >
-            Users are responsible for maintaining the security of their accounts, providing accurate
-            information, and complying with all applicable laws and regulations.
+            {t('terms.userResponsibilities.body')}
           </p>
         </div>
       </div>
@@ -210,22 +210,22 @@ export function TermsTab() {
               theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
             }`}
           >
-            Accept Terms
+            {t('terms.acceptance.title')}
           </h3>
           <p
             className={`text-[13px] transition-colors ${
               theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
             }`}
           >
-            By clicking accept, you agree to our{' '}
+            {t('terms.acceptance.bodyPrefix')}{' '}
             <a href="/terms" className="underline hover:opacity-80">
-              terms of service
+              {t('terms.links.termsOfService')}
             </a>{' '}
-            and{' '}
+            {t('terms.acceptance.bodyConnector')}{' '}
             <a href="/privacy" className="underline hover:opacity-80">
-              privacy policy
+              {t('terms.links.privacyPolicy')}
             </a>
-            .
+            {t('terms.acceptance.bodySuffix')}
           </p>
 
           {/* Acceptance status region: announced and gated behind a delay so
@@ -234,7 +234,7 @@ export function TermsTab() {
             {isLoading ? (
               showSkeleton ? (
                 <div data-testid="terms-status-skeleton">
-                  <span className="sr-only">Loading terms status…</span>
+                  <span className="sr-only">{t('terms.status.loading')}</span>
                   <Skeleton className="h-4 w-64" />
                 </div>
               ) : null
@@ -242,8 +242,10 @@ export function TermsTab() {
               <p className="text-[12px] text-red-500 font-medium">{fetchError}</p>
             ) : isAccepted && acceptedVersion && acceptedDate ? (
               <p className="text-[12px] text-green-500 font-medium">
-                ✓ Accepted version {acceptedVersion} on{' '}
-                {new Date(acceptedDate).toLocaleDateString()}
+                {t('terms.status.acceptedVersion', {
+                  version: acceptedVersion,
+                  date: new Date(acceptedDate).toLocaleDateString(),
+                })}
               </p>
             ) : null}
           </div>
@@ -262,12 +264,12 @@ export function TermsTab() {
           }`}
         >
           {isLoading
-            ? 'Loading...'
+            ? t('terms.actions.loading')
             : isAccepting
-              ? 'Accepting...'
+              ? t('terms.actions.accepting')
               : isAccepted
-                ? 'Accepted'
-                : 'Accept'}
+                ? t('terms.actions.accepted')
+                : t('terms.actions.accept')}
         </button>
       </div>
     </div>
