@@ -17,6 +17,10 @@ import {
   RateLimitError,
   parseRetryAfter,
   DEFAULT_RETRY_AFTER_SECONDS,
+  getRetryDelay,
+  sleep,
+  MAX_RETRY_ATTEMPTS,
+  RETRY_BASE_DELAY_MS,
 } from './client'
 import { API_BASE_URL } from '../config/api'
 
@@ -747,5 +751,267 @@ describe('Token Management Functions', () => {
         })
       )
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Retry / backoff tests
+// ---------------------------------------------------------------------------
+
+describe('getRetryDelay — exponential backoff', () => {
+  it('returns base delay for attempt 1', () => {
+    expect(getRetryDelay(1)).toBe(RETRY_BASE_DELAY_MS)
+  })
+
+  it('doubles the delay on attempt 2', () => {
+    expect(getRetryDelay(2)).toBe(RETRY_BASE_DELAY_MS * 2)
+  })
+
+  it('quadruples the delay on attempt 3', () => {
+    expect(getRetryDelay(3)).toBe(RETRY_BASE_DELAY_MS * 4)
+  })
+
+  it('uses retryAfterMs when provided and positive', () => {
+    expect(getRetryDelay(1, 3000)).toBe(3000)
+  })
+
+  it('ignores retryAfterMs of 0 and falls back to exponential backoff', () => {
+    expect(getRetryDelay(1, 0)).toBe(RETRY_BASE_DELAY_MS)
+  })
+})
+
+describe('sleep — uses setTimeout (controllable by fake timers)', () => {
+  it('resolves after the specified delay', async () => {
+    vi.useFakeTimers()
+    const resolved = vi.fn()
+    sleep(1000).then(resolved)
+
+    expect(resolved).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(resolved).toHaveBeenCalledOnce()
+
+    vi.useRealTimers()
+  })
+})
+
+describe('apiRequest — retryable status codes (502, 503)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    localStorageMock.clear()
+    mockDispatchEvent.mockClear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('retries up to MAX_RETRY_ATTEMPTS on 502 and eventually succeeds', async () => {
+    let callCount = 0
+    mockFetch.mockImplementation(() => {
+      callCount++
+      if (callCount < MAX_RETRY_ATTEMPTS) {
+        return Promise.resolve({ ok: false, status: 502, json: async () => ({ message: 'Bad Gateway' }) })
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true, service: 'api' }) })
+    })
+
+    const promise = apiRequest<{ ok: boolean; service: string }>('/health')
+    await vi.runAllTimersAsync()
+    const result = await promise
+
+    expect(result).toEqual({ ok: true, service: 'api' })
+    expect(callCount).toBe(MAX_RETRY_ATTEMPTS)
+  })
+
+  it('retries on 503 and eventually succeeds', async () => {
+    let callCount = 0
+    mockFetch.mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve({ ok: false, status: 503, json: async () => ({ message: 'Service Unavailable' }) })
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true, service: 'api' }) })
+    })
+
+    const promise = apiRequest<{ ok: boolean; service: string }>('/health')
+    await vi.runAllTimersAsync()
+    const result = await promise
+
+    expect(result).toEqual({ ok: true, service: 'api' })
+    expect(callCount).toBe(2)
+  })
+
+  it('exhausts all retries on persistent 502 and throws', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => ({ message: 'Bad Gateway' }),
+    })
+
+    const promise = apiRequest('/health')
+    await vi.runAllTimersAsync()
+
+    await expect(promise).rejects.toThrow('Bad Gateway')
+    expect(mockFetch).toHaveBeenCalledTimes(MAX_RETRY_ATTEMPTS)
+  })
+
+  it('exhausts all retries on persistent 503 and throws', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ message: 'Service Unavailable' }),
+    })
+
+    const promise = apiRequest('/health')
+    await vi.runAllTimersAsync()
+
+    await expect(promise).rejects.toThrow('Service Unavailable')
+    expect(mockFetch).toHaveBeenCalledTimes(MAX_RETRY_ATTEMPTS)
+  })
+
+  it('backoff delay grows between attempts (exponential)', () => {
+    const delay1 = getRetryDelay(1)
+    const delay2 = getRetryDelay(2)
+    const delay3 = getRetryDelay(3)
+
+    expect(delay1).toBeLessThan(delay2)
+    expect(delay2).toBeLessThan(delay3)
+  })
+})
+
+describe('apiRequest — non-retryable status codes (4xx except 429)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorageMock.clear()
+    mockDispatchEvent.mockClear()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('does NOT retry on 400 — fails immediately after 1 fetch call', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ message: 'Bad request data' }),
+    })
+
+    await expect(apiRequest('/test')).rejects.toThrow('Bad request data')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('does NOT retry on 401 — clears token and fails after 1 fetch call', async () => {
+    setAuthToken('stale-token')
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: 'Unauthorized' }),
+    })
+
+    await expect(apiRequest('/test', { requiresAuth: true })).rejects.toThrow(
+      'Authentication failed. Please sign in again.'
+    )
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(getAuthToken()).toBeNull()
+  })
+
+  it('does NOT retry on 403 — fails immediately after 1 fetch call', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({ message: 'Admin only' }),
+    })
+
+    await expect(apiRequest('/test')).rejects.toThrow('Permission denied: Admin only.')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('does NOT retry on 404 — fails immediately after 1 fetch call', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ message: 'Not found' }),
+    })
+
+    await expect(apiRequest('/test')).rejects.toThrow('Not found')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('does NOT retry on 422 — fails immediately after 1 fetch call', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => ({ error: 'Validation failed' }),
+    })
+
+    await expect(apiRequest('/test')).rejects.toThrow('Validation failed')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('does NOT retry on 429 — throws RateLimitError immediately after 1 fetch call', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+      json: async () => ({}),
+    })
+
+    const err = await apiRequest('/test').catch((e) => e)
+    expect(err).toBeInstanceOf(RateLimitError)
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('apiRequest — network error retry', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    localStorageMock.clear()
+    mockDispatchEvent.mockClear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('retries on network error and succeeds on subsequent attempt', async () => {
+    let callCount = 0
+    mockFetch.mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.reject(new TypeError('Failed to fetch'))
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true, service: 'api' }) })
+    })
+
+    const promise = apiRequest<{ ok: boolean; service: string }>('/health')
+    await vi.runAllTimersAsync()
+    const result = await promise
+
+    expect(result).toEqual({ ok: true, service: 'api' })
+    expect(callCount).toBe(2)
+  })
+
+  it('exhausts retries on persistent network errors and throws last network error', async () => {
+    mockFetch.mockRejectedValue(new TypeError('Failed to fetch'))
+
+    const promise = apiRequest('/health')
+    await vi.runAllTimersAsync()
+
+    await expect(promise).rejects.toThrow(
+      'Network error: Unable to connect to the server. Please check your connection.'
+    )
+    expect(mockFetch).toHaveBeenCalledTimes(MAX_RETRY_ATTEMPTS)
+  })
+
+  it('does NOT retry non-fetch TypeErrors — throws immediately', async () => {
+    mockFetch.mockRejectedValue(new TypeError('some other type error'))
+
+    await expect(apiRequest('/health')).rejects.toThrow('some other type error')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 })
