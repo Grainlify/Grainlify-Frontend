@@ -328,7 +328,7 @@ describe('AuthProvider - 401 redirect handler', () => {
     })
     Object.defineProperty(window.location, 'href', {
       configurable: true,
-      set: hrefSetter,
+      set: hrefSetter as (v: string) => void,
       get: () => originalHref,
     })
 
@@ -366,7 +366,7 @@ describe('AuthProvider - 401 redirect handler', () => {
     })
     Object.defineProperty(window.location, 'href', {
       configurable: true,
-      set: hrefSetter,
+      set: hrefSetter as (v: string) => void,
       get: () => originalHref,
     })
 
@@ -388,7 +388,7 @@ describe('AuthProvider - 401 redirect handler', () => {
     })
     Object.defineProperty(window.location, 'href', {
       configurable: true,
-      set: hrefSetter,
+      set: hrefSetter as (v: string) => void,
       get: () => originalHref,
     })
 
@@ -424,7 +424,7 @@ describe('AuthProvider - 401 redirect handler', () => {
     })
     Object.defineProperty(window.location, 'href', {
       configurable: true,
-      set: hrefSetter,
+      set: hrefSetter as (v: string) => void,
       get: () => originalHref,
     })
 

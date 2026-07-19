@@ -101,9 +101,9 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
   const {
     data: prs,
     isLoading,
-    hasError,
+    hasError: _hasError,
     error,
-    retry,
+    retry: _retry,
     fetchData,
   } = useOptimisticData<Array<PRFromAPI & { projectName: string }>>([], {
     cacheKey: `maintainer-prs-${selectedProjects.map((p) => p.id).join(',')}`,
