@@ -53,6 +53,53 @@ export function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return nodes.filter(isElementVisible)
 }
 
+// ---------------------------------------------------------------------------
+// Trap stack — supports nested modals (issue #446)
+// ---------------------------------------------------------------------------
+//
+// Instead of a single global keydown listener, we maintain an ordered stack of
+// active trap entries. Only the entry at the *top* of the stack (the innermost,
+// most-recently-opened modal) processes Tab / Escape. When that entry is
+// removed (inner modal closes), the next entry down automatically becomes the
+// active trap, restoring focus containment to the outer modal without ever
+// letting Tab escape to the page body.
+//
+// Each entry owns exactly one keydown handler. Pushing adds the handler to the
+// document; popping removes it and re-enables the handler of the new top entry.
+
+interface TrapEntry {
+  container: HTMLElement
+  handler: (event: KeyboardEvent) => void
+}
+
+const trapStack: TrapEntry[] = []
+
+function pushTrap(entry: TrapEntry): void {
+  // Pause the current top-of-stack handler before adding the new one so only
+  // one handler is active at a time.
+  if (trapStack.length > 0) {
+    const current = trapStack[trapStack.length - 1]
+    document.removeEventListener('keydown', current.handler)
+  }
+  trapStack.push(entry)
+  document.addEventListener('keydown', entry.handler)
+}
+
+function popTrap(entry: TrapEntry): void {
+  document.removeEventListener('keydown', entry.handler)
+  const idx = trapStack.indexOf(entry)
+  if (idx !== -1) {
+    trapStack.splice(idx, 1)
+  }
+  // Re-enable the handler of whatever trap is now on top (the outer modal).
+  if (trapStack.length > 0) {
+    const next = trapStack[trapStack.length - 1]
+    document.addEventListener('keydown', next.handler)
+  }
+}
+
+// ---------------------------------------------------------------------------
+
 /** Options accepted by {@link useFocusTrap}. */
 export interface UseFocusTrapOptions {
   /** Invoked when the user presses <kbd>Escape</kbd> while the trap is active. */
@@ -83,10 +130,15 @@ export interface UseFocusTrapOptions {
  * - On deactivation it restores focus to the original element (unless
  *   {@link UseFocusTrapOptions.returnFocus} is `false`).
  *
- * The single `keydown` listener is always removed on cleanup, so there are no
- * dangling listeners after unmount. Callbacks are read through a ref, so the
- * effect does not re-run (and re-steal focus) when the parent passes a new
- * `onEscape` identity on every render.
+ * Multiple simultaneous traps are supported via an internal stack: only the
+ * innermost (most-recently-activated) trap processes keyboard events. Closing
+ * the inner modal automatically restores trapping to the next-outer modal
+ * rather than releasing focus to the page body (fixes issue #446).
+ *
+ * The keydown listener is always removed on cleanup, so there are no dangling
+ * listeners after unmount. Callbacks are read through a ref, so the effect
+ * does not re-run (and re-steal focus) when the parent passes a new `onEscape`
+ * identity on every render.
  *
  * @typeParam T - The container element type the returned ref is attached to.
  * @returns A ref to attach to the trap container element.
@@ -158,9 +210,11 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>(
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
+    const entry: TrapEntry = { container, handler: handleKeyDown }
+    pushTrap(entry)
+
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
+      popTrap(entry)
       if (returnFocus && previouslyFocused.current && isElementVisible(previouslyFocused.current)) {
         previouslyFocused.current.focus()
       }
