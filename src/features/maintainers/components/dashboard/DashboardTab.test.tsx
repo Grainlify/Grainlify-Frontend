@@ -327,4 +327,24 @@ describe('DashboardTab', () => {
     // The value displayed in the card should be 0 (not NaN)
     expect(card).toHaveTextContent('0')
   })
+
+  it('shows the applications chart skeleton while projects are still loading', () => {
+    render(<DashboardTab selectedProjects={[]} isLoadingProjects={true} />)
+    expect(screen.getByTestId('chart-skeleton')).toBeInTheDocument()
+  })
+
+  it('renders the applications chart and hides the skeleton once data resolves', async () => {
+    vi.mocked(getProjectIssues).mockResolvedValue({ issues: [] } as any)
+    vi.mocked(getProjectPRs).mockResolvedValue({ prs: [] } as any)
+
+    render(<DashboardTab selectedProjects={mockProjects} isLoadingProjects={false} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Issue Views')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByTestId('chart-skeleton')).not.toBeInTheDocument()
+    // Loaded chart exposes its accessible data summary via role="img".
+    expect(screen.getByRole('img')).toBeInTheDocument()
+  })
 })
