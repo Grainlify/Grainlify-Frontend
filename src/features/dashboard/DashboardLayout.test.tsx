@@ -99,3 +99,192 @@ describe('DashboardLayout i18n nav labels', () => {
     expect(main).toHaveAttribute('tabIndex', '-1')
   })
 })
+
+describe('DashboardLayout icon-only controls accessibility', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    vi.clearAllMocks()
+  })
+
+  describe('Sidebar toggle button', () => {
+    it('has accessible name in expanded state', () => {
+      renderLayout()
+      const toggleButton = screen.getByRole('button', { name: 'Collapse sidebar' })
+      expect(toggleButton).toBeInTheDocument()
+      expect(toggleButton).toHaveAttribute('aria-expanded', 'true')
+    })
+
+    it('has accessible name in collapsed state', async () => {
+      const user = userEvent.setup()
+      renderLayout()
+
+      const collapseButton = screen.getByRole('button', { name: 'Collapse sidebar' })
+      await user.click(collapseButton)
+
+      const expandButton = screen.getByRole('button', { name: 'Expand sidebar' })
+      expect(expandButton).toBeInTheDocument()
+      expect(expandButton).toHaveAttribute('aria-expanded', 'false')
+    })
+  })
+
+  describe('Navigation items in collapsed state', () => {
+    it('each nav item has an accessible name when sidebar is collapsed', async () => {
+      const user = userEvent.setup()
+      renderLayout()
+
+      // Collapse sidebar
+      await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+
+      // Check all contributor nav items have accessible names
+      const expectedLabels = [
+        'Discover',
+        'Browse',
+        'Open-Source Week',
+        'Ecosystems',
+        'Contributors',
+        'Leaderboard',
+        'Grainlify Blog',
+      ]
+
+      expectedLabels.forEach((label) => {
+        const navLink = screen.getByRole('link', { name: label })
+        expect(navLink).toBeInTheDocument()
+        expect(navLink).toHaveAttribute('aria-label', label)
+      })
+    })
+
+    it('nav items have no aria-label in expanded state (text visible)', () => {
+      renderLayout()
+
+      // Find all nav links by their visible text
+      const discoverLink = screen.getByRole('link', { name: 'Discover' })
+      expect(discoverLink).toBeInTheDocument()
+      expect(discoverLink).not.toHaveAttribute('aria-label')
+    })
+
+    it('admin-only nav items have accessible names when collapsed', async () => {
+      sessionStorage.setItem('admin_authenticated', 'true')
+      const user = userEvent.setup()
+      renderLayout()
+
+      // Switch to admin role
+      await user.click(screen.getByText('set-admin'))
+
+      // Collapse sidebar
+      await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+
+      // Check admin-only items
+      expect(screen.getByRole('link', { name: 'Maintainers' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Data' })).toBeInTheDocument()
+    })
+
+    it('icons are marked as decorative with aria-hidden in nav items', () => {
+      renderLayout()
+
+      // Icons should be marked aria-hidden since the link text provides the accessible name
+      const links = screen.getAllByRole('link')
+      const navLinks = links.filter((link) => 
+        link.getAttribute('href')?.startsWith('/dashboard/')
+      )
+
+      // At least one nav link should exist with an icon marked aria-hidden
+      expect(navLinks.length).toBeGreaterThan(0)
+      navLinks.forEach((link) => {
+        const icon = link.querySelector('svg')
+        if (icon) {
+          expect(icon).toHaveAttribute('aria-hidden', 'true')
+        }
+      })
+    })
+  })
+
+  describe('Search link', () => {
+    it('has accessible name for screen readers', () => {
+      renderLayout()
+      const searchLink = screen.getByRole('link', { name: 'Search projects, issues, and contributors' })
+      expect(searchLink).toBeInTheDocument()
+      expect(searchLink).toHaveAttribute('href', '/dashboard/search')
+    })
+  })
+
+  describe('Theme toggle button', () => {
+    it('has accessible name for light mode', () => {
+      renderLayout()
+      const themeToggle = screen.getByRole('button', { name: 'Switch to dark mode' })
+      expect(themeToggle).toBeInTheDocument()
+    })
+  })
+
+  describe('Mobile menu button', () => {
+    it('has accessible name when menu is closed', () => {
+      renderLayout()
+      const menuButton = screen.getByRole('button', { name: 'Open navigation menu' })
+      expect(menuButton).toBeInTheDocument()
+      expect(menuButton).toHaveAttribute('aria-expanded', 'false')
+    })
+
+    it('has accessible name when menu is open', async () => {
+      const user = userEvent.setup()
+      renderLayout()
+
+      const openButton = screen.getByRole('button', { name: 'Open navigation menu' })
+      await user.click(openButton)
+
+      const closeButton = screen.getByRole('button', { name: 'Close navigation menu' })
+      expect(closeButton).toBeInTheDocument()
+      expect(closeButton).toHaveAttribute('aria-expanded', 'true')
+    })
+  })
+
+  describe('Complete accessibility coverage - all states', () => {
+    it('ensures all icon-only controls have accessible names in collapsed state', async () => {
+      const user = userEvent.setup()
+      renderLayout()
+
+      // Collapse sidebar to enable icon-only state
+      await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+
+      // Get all interactive elements (buttons and links)
+      const buttons = screen.getAllByRole('button')
+      const links = screen.getAllByRole('link')
+
+      // Every button should have an accessible name
+      buttons.forEach((button) => {
+        const accessibleName = button.getAttribute('aria-label') || button.textContent?.trim()
+        expect(accessibleName).toBeTruthy()
+      })
+
+      // Every link should have an accessible name
+      links.forEach((link) => {
+        const accessibleName = 
+          link.getAttribute('aria-label') || 
+          link.textContent?.trim() ||
+          link.querySelector('img')?.getAttribute('alt')
+        expect(accessibleName).toBeTruthy()
+      })
+    })
+
+    it('ensures all icon-only controls have accessible names in expanded state', () => {
+      renderLayout()
+
+      // Get all interactive elements
+      const buttons = screen.getAllByRole('button')
+      const links = screen.getAllByRole('link')
+
+      // Every button should have an accessible name
+      buttons.forEach((button) => {
+        const accessibleName = button.getAttribute('aria-label') || button.textContent?.trim()
+        expect(accessibleName).toBeTruthy()
+      })
+
+      // Every link should have an accessible name
+      links.forEach((link) => {
+        const accessibleName = 
+          link.getAttribute('aria-label') || 
+          link.textContent?.trim() ||
+          link.querySelector('img')?.getAttribute('alt')
+        expect(accessibleName).toBeTruthy()
+      })
+    })
+  })
+})

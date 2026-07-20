@@ -237,6 +237,8 @@ export function DashboardLayout() {
         {/* Toggle Arrow Button */}
         <button
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!isSidebarCollapsed}
           className={`absolute z-[100] backdrop-blur-[90px] rounded-full border-[0.5px] w-6 h-6 shadow-md hover:shadow-lg transition-all flex items-center justify-center ${
             isSidebarCollapsed ? '-right-3 top-[60px]' : '-right-3 top-[60px]'
           } ${
@@ -296,6 +298,7 @@ export function DashboardLayout() {
                     key={item.id}
                     to={item.path}
                     aria-current={isActive ? 'page' : undefined}
+                    aria-label={isSidebarCollapsed ? item.label : undefined}
                     className={`group w-full flex items-center rounded-[12px] transition-all duration-300 ${
                       isSidebarCollapsed
                         ? 'justify-center px-0 h-[49px]'
@@ -313,6 +316,7 @@ export function DashboardLayout() {
                       className={`w-6 h-6 transition-colors ${isSidebarCollapsed ? '' : 'flex-shrink-0'} ${
                         isActive ? 'text-white' : darkTheme ? 'text-[#e8c77f]' : 'text-[#a2792c]'
                       }`}
+                      aria-hidden="true"
                     />
                     {!isSidebarCollapsed && (
                       <span
@@ -367,6 +371,7 @@ export function DashboardLayout() {
                 </Link>
 
                 <button
+                  aria-label="Close navigation menu"
                   className={`lg:hidden transition-colors self-end ${showMobileNav ? 'block' : 'hidden'} ${
                     theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                   }`}
@@ -380,6 +385,7 @@ export function DashboardLayout() {
             {/* Search */}
             <Link
               to="/dashboard/search"
+              aria-label="Search projects, issues, and contributors"
               className={`relative h-[46px] lg:flex-1 rounded-[23px] overflow-visible backdrop-blur-[40px] shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] ml-[3px] transition-all hover:scale-[1.01] cursor-pointer ${
                 darkTheme ? 'bg-[#2d2820]' : 'bg-[#d4c5b0]'
               } ${showMobileNav ? 'min-h-[46px] w-[80%] max-w-[800px] block' : 'lg:block hidden'}`}
@@ -457,6 +463,7 @@ export function DashboardLayout() {
                 toggleSwitchTheme()
                 closeMobileNav()
               }}
+              aria-label={darkTheme ? 'Switch to light mode' : 'Switch to dark mode'}
               className={`h-[46px] lg:w-[46px] overflow-clip relative items-center justify-center backdrop-blur-[40px] transition-all hover:scale-105 shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] ${
                 darkTheme ? 'bg-[#2d2820] text-[#e8dfd0]' : 'bg-[#d4c5b0] text-[#2d2820]'
               }
@@ -499,6 +506,8 @@ export function DashboardLayout() {
 
             {/* Mobile nav open button */}
             <button
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileMenuOpen}
               className={`lg:hidden transition-colors ml-auto mr-[8px] ${showMobileNav ? 'hidden' : 'block'} ${
                 theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
               }`}
