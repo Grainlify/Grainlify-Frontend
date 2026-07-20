@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react'
 import { TrendingUp, TrendingDown, Minus, Award } from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { LeaderData, FilterType } from '../types'
@@ -24,6 +25,15 @@ const getTrendIcon = (trend: 'up' | 'down' | 'same') => {
   return <Minus className="w-4 h-4 text-[#7a6b5a]" />
 }
 
+/**
+ * Keyboard keys that should activate an interactive contributor row.
+ *
+ * Rows keep their existing div layout because they contain a secondary action
+ * button, but they expose button semantics and mirror native button keyboard
+ * behavior for the primary row action.
+ */
+const ROW_ACTIVATION_KEYS = new Set(['Enter', ' '])
+
 export function ContributorsTable({
   data,
   activeFilter,
@@ -38,6 +48,12 @@ export function ContributorsTable({
     if (onUserClick) {
       onUserClick(leader.username, leader.user_id)
     }
+  }
+
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLDivElement>, leader: LeaderData) => {
+    if (!ROW_ACTIVATION_KEYS.has(event.key)) return
+    event.preventDefault()
+    handleRowClick(leader)
   }
 
   return (
@@ -93,8 +109,12 @@ export function ContributorsTable({
           {data.map((leader, index) => (
             <div
               key={leader.rank}
+              role="button"
+              tabIndex={0}
+              aria-label={`View contributor ${leader.username}`}
               onClick={() => handleRowClick(leader)}
-              className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group"
+              onKeyDown={(event) => handleRowKeyDown(event, leader)}
+              className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
               style={{
                 animation: isLoaded
                   ? `slideInLeft 0.5s ease-out ${1.1 + index * 0.1}s both`
@@ -192,8 +212,9 @@ export function ContributorsTable({
               </div>
 
               {/* Action */}
-              <div className="col-span-2 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-all duration-300">
+              <div className="col-span-2 flex items-center justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-300">
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation()
                     handleRowClick(leader)
