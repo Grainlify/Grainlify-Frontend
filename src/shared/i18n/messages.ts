@@ -58,6 +58,8 @@ export function isLocale(value: unknown): value is Locale {
  *   extracted from `src/features/dashboard/DashboardLayout.tsx`.
  * - `settings.tabs.*` — SettingsPage tab labels,
  *   extracted from `src/features/settings/pages/SettingsPage.tsx`.
+ * - `terms.*` — Settings terms tab copy and consent states,
+ *   extracted from `src/features/settings/components/terms/TermsTab.tsx`.
  *
  * `as const` keeps every value a string literal so {@link MessageId} can be
  * derived from the keys with full type-safety.
@@ -81,6 +83,38 @@ export const en = {
   'settings.tabs.payout': 'Payout Preferences',
   'settings.tabs.billing': 'Billing Profiles',
   'settings.tabs.terms': 'Terms and Conditions',
+
+  // ── Terms settings tab — src/features/settings/components/terms/TermsTab.tsx ──
+  'terms.title': 'Terms and Conditions',
+  'terms.description': 'Review our terms of service and privacy policy.',
+  'terms.service.title': 'Terms of Service',
+  'terms.service.bodyPrefix': 'By using Grainlify, you agree to abide by our',
+  'terms.service.bodySuffix':
+    '. These terms govern your use of the platform and outline your rights and responsibilities as a user.',
+  'terms.privacy.title': 'Privacy Policy',
+  'terms.privacy.bodyPrefix': 'We take your privacy seriously. Our',
+  'terms.privacy.bodySuffix':
+    'explains how we collect, use, and protect your personal information.',
+  'terms.dataCollection.title': 'Data Collection',
+  'terms.dataCollection.body':
+    'We collect information necessary to provide our services, including your GitHub profile data, contribution history, and reward preferences.',
+  'terms.userResponsibilities.title': 'User Responsibilities',
+  'terms.userResponsibilities.body':
+    'Users are responsible for maintaining the security of their accounts, providing accurate information, and complying with all applicable laws and regulations.',
+  'terms.acceptance.title': 'Accept Terms',
+  'terms.acceptance.bodyPrefix': 'By clicking accept, you agree to our',
+  'terms.acceptance.bodyConnector': 'and',
+  'terms.acceptance.bodySuffix': '.',
+  'terms.links.termsOfService': 'terms of service',
+  'terms.links.privacyPolicy': 'privacy policy',
+  'terms.status.loading': 'Loading terms status…',
+  'terms.status.acceptedVersion': '✓ Accepted version {version} on {date}',
+  'terms.actions.loading': 'Loading...',
+  'terms.actions.accepting': 'Accepting...',
+  'terms.actions.accepted': 'Accepted',
+  'terms.actions.accept': 'Accept',
+  'terms.errors.loadStatusFailed': 'Failed to load terms status.',
+  'terms.errors.acceptFailed': 'Failed to accept terms. Please try again.',
 
   // ── Dashboard sidebar — src/features/dashboard/DashboardLayout.tsx ──
   'dashboardNav.discover': 'Discover',

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { TermsTab, CURRENT_TERMS_VERSION, SKELETON_DELAY_MS } from './TermsTab'
 import { getTermsStatus, acceptTerms } from '../../../../shared/api/client'
 import { ThemeProvider } from '../../../../shared/contexts/ThemeContext'
+import { I18nProvider, en } from '../../../../shared/i18n'
 
 // Mock the API client
 vi.mock('../../../../shared/api/client', () => ({
@@ -10,13 +11,59 @@ vi.mock('../../../../shared/api/client', () => ({
   acceptTerms: vi.fn(),
 }))
 
-const renderWithTheme = (ui: React.ReactElement) => {
-  return render(<ThemeProvider>{ui}</ThemeProvider>)
+const renderWithTheme = (ui: React.ReactElement, messages: Record<string, string> = en) => {
+  return render(
+    <I18nProvider messages={messages}>
+      <ThemeProvider>{ui}</ThemeProvider>
+    </I18nProvider>
+  )
 }
 
 describe('TermsTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('renders copy from the i18n catalog', async () => {
+    vi.mocked(getTermsStatus).mockResolvedValue({
+      accepted: false,
+      version: null,
+      accepted_at: null,
+    })
+
+    renderWithTheme(<TermsTab />, {
+      ...en,
+      'terms.title': 'Catalog Terms Title',
+      'terms.description': 'Catalog terms description.',
+      'terms.service.title': 'Catalog Service Heading',
+      'terms.service.bodyPrefix': 'Catalog service prefix',
+      'terms.service.bodySuffix': ' catalog service suffix.',
+      'terms.privacy.title': 'Catalog Privacy Heading',
+      'terms.privacy.bodyPrefix': 'Catalog privacy prefix',
+      'terms.privacy.bodySuffix': 'catalog privacy suffix.',
+      'terms.dataCollection.title': 'Catalog Data Heading',
+      'terms.dataCollection.body': 'Catalog data body.',
+      'terms.userResponsibilities.title': 'Catalog Responsibilities Heading',
+      'terms.userResponsibilities.body': 'Catalog responsibilities body.',
+      'terms.acceptance.title': 'Catalog Accept Heading',
+      'terms.actions.accept': 'Catalog Accept CTA',
+    })
+
+    expect(await screen.findByRole('heading', { name: 'Catalog Terms Title' })).toBeInTheDocument()
+    expect(screen.getByText('Catalog terms description.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Catalog Service Heading' })).toBeInTheDocument()
+    expect(screen.getByText(/Catalog service prefix/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Catalog Privacy Heading' })).toBeInTheDocument()
+    expect(screen.getByText(/Catalog privacy prefix/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Catalog Data Heading' })).toBeInTheDocument()
+    expect(screen.getByText('Catalog data body.')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Catalog Responsibilities Heading' })
+    ).toBeInTheDocument()
+    expect(screen.getByText('Catalog responsibilities body.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Catalog Accept Heading' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Catalog Accept CTA' })).toBeInTheDocument()
+    expect(screen.queryByText('Terms and Conditions')).not.toBeInTheDocument()
   })
 
   it('renders loading state initially', () => {
