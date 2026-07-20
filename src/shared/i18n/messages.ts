@@ -125,6 +125,14 @@ export const en = {
   'auth.signup.signinPrompt': 'Already have an account?',
   'auth.signup.signinLink': 'Sign In',
 
+  // ── Maintainers issues empty state — src/features/maintainers/components/issues/EmptyIssueState.tsx ──
+  'maintainers.issues.empty.title': 'No open issues yet',
+  'maintainers.issues.empty.description':
+    'Create or import issues from GitHub so contributors know where they can help next.',
+  'maintainers.issues.empty.cta': 'Create an issue on GitHub',
+  'maintainers.issues.empty.count':
+    '{count, plural, one {# issue available} other {# issues available}}',
+
   // ── Billing invoices tab — src/features/settings/components/billing/InvoicesTab.tsx ──
   'invoices.title': 'Invoices',
   'invoices.description': 'View and download your billing invoices.',
