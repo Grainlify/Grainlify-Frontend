@@ -129,8 +129,60 @@ export class RateLimitError extends Error {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Retry / backoff configuration
+// ---------------------------------------------------------------------------
+
+/** HTTP status codes that are safe to auto-retry (transient server/infra errors). */
+const RETRYABLE_STATUSES = new Set([502, 503])
+
+/** Maximum number of attempts (1 initial + 2 retries). */
+export const MAX_RETRY_ATTEMPTS = 3
+
+/** Base delay in milliseconds for exponential backoff. */
+export const RETRY_BASE_DELAY_MS = 500
+
 /**
- * Core API request helper that handles authentication, headers, and error handling
+ * Returns the delay (in ms) to wait before retry attempt number `attempt`
+ * (1-indexed, so `attempt=1` is the first retry).
+ *
+ * Uses exponential backoff: `baseDelay * 2^(attempt-1)`
+ *   attempt 1 → 500 ms
+ *   attempt 2 → 1 000 ms
+ *
+ * When `retryAfterMs` is provided and positive it takes precedence (used to
+ * honour a `Retry-After` header returned by the server).
+ */
+export function getRetryDelay(attempt: number, retryAfterMs?: number): number {
+  if (retryAfterMs !== undefined && retryAfterMs > 0) {
+    return retryAfterMs
+  }
+  return RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1)
+}
+
+/**
+ * Resolves after `ms` milliseconds.
+ *
+ * Uses the global `setTimeout` so Vitest's `vi.useFakeTimers()` can advance
+ * time without waiting for real wall-clock delays.
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Core API request helper that handles authentication, headers, error handling,
+ * and automatic retry with exponential backoff for transient failures.
+ *
+ * **Retry policy**
+ * - 502 / 503 and network errors (`TypeError` from `fetch`) are retried up to
+ *   `MAX_RETRY_ATTEMPTS` times with exponential back-off via `getRetryDelay`.
+ * - 429 is **not** auto-retried; a `RateLimitError` is thrown immediately so
+ *   callers can implement their own back-off strategy.
+ * - 4xx errors other than 429 are never retried.
+ *
  * @template T - The expected response type
  * @param {string} endpoint - API endpoint path (will be prefixed with API_BASE_URL)
  * @param {ApiRequestOptions} options - Request options including auth requirements
@@ -138,7 +190,6 @@ export class RateLimitError extends Error {
  * @throws {RateLimitError} When the server responds with 429 Too Many Requests.
  *   The error exposes `retryAfterSeconds` parsed from the `Retry-After` header
  *   (numeric or HTTP-date), falling back to {@link DEFAULT_RETRY_AFTER_SECONDS}.
- *   `apiRequest` does **not** auto-retry; callers are responsible for back-off.
  * @throws {Error} On network failures, authentication errors, or other non-2xx responses
  * @internal This function is exported for testing purposes
  */
@@ -176,71 +227,100 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
     }
   }
 
-  let response: Response
-  try {
-    response = await fetch(url, {
-      ...fetchOptions,
-      headers: requestHeaders,
-    })
-  } catch (err) {
-    // Network error (CORS, connection refused, etc.)
-    if (err instanceof TypeError && err.message.includes('fetch')) {
-      throw new Error(
-        'Network error: Unable to connect to the server. Please check your connection.'
-      )
-    }
-    throw err
-  }
+  let lastError: Error | undefined
 
-  // Handle errors
-  if (!response.ok) {
-    if (response.status === 401) {
-      // Token expired or invalid - clear it and signal the app layer to redirect.
-      removeAuthToken()
-      emit401Event()
-      throw new Error('Authentication failed. Please sign in again.')
+  for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
+    // Wait before retries (not before the first attempt).
+    if (attempt > 0) {
+      await sleep(getRetryDelay(attempt))
     }
 
-    if (response.status === 403) {
-      let errorMsg: string
+    let response: Response
+    try {
+      response = await fetch(url, {
+        ...fetchOptions,
+        headers: requestHeaders,
+      })
+    } catch (err) {
+      // Network error (CORS, connection refused, etc.) — retryable.
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        lastError = new Error(
+          'Network error: Unable to connect to the server. Please check your connection.'
+        )
+        continue
+      }
+      throw err
+    }
+
+    // Handle errors
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Token expired or invalid - clear it and signal the app layer to redirect.
+        // Not retryable.
+        removeAuthToken()
+        emit401Event()
+        throw new Error('Authentication failed. Please sign in again.')
+      }
+
+      if (response.status === 403) {
+        // Permission errors are not retryable.
+        let errorMsg: string
+        try {
+          const errorData = await response.json()
+          errorMsg = errorData.message || errorData.error || 'Access forbidden'
+        } catch {
+          errorMsg = 'Access forbidden'
+        }
+        throw new Error(
+          `Permission denied: ${errorMsg}. You may need admin privileges to perform this action.`
+        )
+      }
+
+      if (response.status === 429) {
+        // Rate limited — surface immediately as RateLimitError; callers handle back-off.
+        const retryAfterSeconds = parseRetryAfter(response.headers.get('Retry-After'))
+        throw new RateLimitError(retryAfterSeconds)
+      }
+
+      // 502 / 503 are retryable transient server errors.
+      if (RETRYABLE_STATUSES.has(response.status)) {
+        let errMsg: string
+        try {
+          const errorData = await response.json()
+          errMsg = errorData.message || errorData.error || 'API request failed'
+        } catch {
+          errMsg = `API request failed with status ${response.status}`
+        }
+        lastError = new Error(errMsg)
+        continue
+      }
+
+      // Any other non-2xx status — non-retryable, fail immediately.
+      let apiErrorMsg: string
       try {
         const errorData = await response.json()
-        errorMsg = errorData.message || errorData.error || 'Access forbidden'
+        apiErrorMsg = errorData.message || errorData.error || 'API request failed'
       } catch {
-        errorMsg = 'Access forbidden'
+        throw new Error(`API request failed with status ${response.status}`)
       }
-      throw new Error(
-        `Permission denied: ${errorMsg}. You may need admin privileges to perform this action.`
-      )
+      throw new Error(apiErrorMsg)
     }
 
-    if (response.status === 429) {
-      const retryAfterSeconds = parseRetryAfter(response.headers.get('Retry-After'))
-      throw new RateLimitError(retryAfterSeconds)
-    }
-
-    // Try to parse error response
-    let apiErrorMsg: string
+    // Parse JSON response
     try {
-      const errorData = await response.json()
-      apiErrorMsg = errorData.message || errorData.error || 'API request failed'
-    } catch {
-      throw new Error(`API request failed with status ${response.status}`)
+      const jsonData = await response.json()
+      return jsonData
+    } catch (err) {
+      // If response is empty or not JSON, return empty array for list endpoints
+      if (endpoint.includes('/projects/mine') || endpoint.includes('/projects')) {
+        return [] as T
+      }
+      throw new Error('Invalid response from server')
     }
-    throw new Error(apiErrorMsg)
   }
 
-  // Parse JSON response
-  try {
-    const jsonData = await response.json()
-    return jsonData
-  } catch (err) {
-    // If response is empty or not JSON, return empty array for list endpoints
-    if (endpoint.includes('/projects/mine') || endpoint.includes('/projects')) {
-      return [] as T
-    }
-    throw new Error('Invalid response from server')
-  }
+  // All attempts exhausted — throw the last recorded error.
+  throw lastError ?? new Error('API request failed after retries')
 }
 
 // API Methods
