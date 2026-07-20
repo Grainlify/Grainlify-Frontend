@@ -22,6 +22,17 @@ interface SearchModalProps {
  * - Submit button is disabled (with `aria-disabled`) while a search is in
  *   flight or the query is empty/whitespace-only.
  *
+ * Keyboard shortcuts:
+ * - <kbd>Escape</kbd>: Close the modal and return focus to the trigger element
+ * - <kbd>Enter</kbd>: Submit the search query (when input is focused and query is non-empty)
+ * - <kbd>Tab</kbd>: Navigate forward through focusable elements (input → submit button → close button → suggestion pills)
+ * - <kbd>Shift</kbd> + <kbd>Tab</kbd>: Navigate backward through focusable elements
+ *
+ * The modal implements a focus trap (via `useFocusTrap`) that prevents keyboard
+ * focus from leaving the dialog while it is open. Tab navigation cycles within
+ * the modal boundaries, and focus is automatically restored to the triggering
+ * element when the modal closes.
+ *
  * @param props.isOpen - Whether the modal is visible.
  * @param props.onClose - Callback to close the modal.
  * @param props.onSearch - Optional async callback invoked with the trimmed
@@ -225,6 +236,21 @@ export function SearchModal({ isOpen, onClose, onSearch }: SearchModalProps) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Keyboard Shortcuts Hint */}
+          <div className={`mt-6 pt-4 border-t text-center text-[12px] transition-colors ${
+            darkTheme 
+              ? 'border-white/5 text-[#b8a898]/60' 
+              : 'border-black/5 text-[#6b5d4d]/60'
+          }`}>
+            <kbd className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+              darkTheme ? 'bg-white/5' : 'bg-black/5'
+            }`}>Esc</kbd> to close · <kbd className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+              darkTheme ? 'bg-white/5' : 'bg-black/5'
+            }`}>Tab</kbd> to navigate · <kbd className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+              darkTheme ? 'bg-white/5' : 'bg-black/5'
+            }`}>Enter</kbd> to search
           </div>
         </div>
       </div>
