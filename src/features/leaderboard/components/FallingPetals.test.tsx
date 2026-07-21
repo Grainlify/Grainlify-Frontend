@@ -27,7 +27,7 @@ function mockMatchMedia(matches: boolean) {
 
 const petals: Petal[] = [
   {
-    id: 'petal-1',
+    id: 1,
     left: 15,
     delay: 0.2,
     duration: 8,
