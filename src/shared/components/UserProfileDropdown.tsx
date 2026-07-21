@@ -9,7 +9,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu'
+} from './ui/dropdown-menu';
+import { UserAvatar } from './UserAvatar';
 
 interface UserProfileDropdownProps {
   onPageChange?: (page: string) => void
@@ -76,17 +77,16 @@ export function UserProfileDropdown({ onPageChange, showMobileNav }: UserProfile
           ${showMobileNav ? ' flex ' : ' hidden lg:flex '}
           `}
         >
-          <div
-            className={`absolute inset-0 pointer-events-none rounded-full ${
-              darkTheme
-                ? 'shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.5),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.11)]'
-                : 'shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.15),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.35)]'
-            }`}
-          />
-          <img
+          <div className={`absolute inset-0 pointer-events-none rounded-full ${
+            darkTheme
+              ? 'shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.5),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.11)]'
+              : 'shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.15),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.35)]'
+          }`} />
+          <UserAvatar
             src={user.github?.avatar_url}
-            alt={user.github?.login}
-            className="w-7 h-7 rounded-full border-2 border-[#c9983a] relative z-10 flex-shrink-0"
+            name={user.github?.name}
+            login={user.github?.login}
+            size="small"
           />
           <div className="flex flex-col items-start relative z-10 min-w-0">
             <span
@@ -120,10 +120,11 @@ export function UserProfileDropdown({ onPageChange, showMobileNav }: UserProfile
           className={`px-4 py-4 border-b ${darkTheme ? 'border-white/10' : 'border-white/20'}`}
         >
           <div className="flex items-center space-x-3">
-            <img
+            <UserAvatar
               src={user.github?.avatar_url}
-              alt={user.github?.login}
-              className="w-12 h-12 rounded-full border-2 border-[#c9983a] shadow-[0_0_12px_rgba(201,152,58,0.4)]"
+              name={user.github?.name}
+              login={user.github?.login}
+              size="large"
             />
             <div className="flex-1">
               <p
@@ -182,5 +183,5 @@ export function UserProfileDropdown({ onPageChange, showMobileNav }: UserProfile
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
