@@ -26,7 +26,6 @@ export default defineConfig({
       }),
   ].filter(Boolean) as any[],
   resolve: {
-    preserveSymlinks: true,
     alias: {
       // Ensure a single React instance is used everywhere
       react: path.resolve(__dirname, 'node_modules/react'),
