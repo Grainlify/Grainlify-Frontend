@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, vi, expect, beforeEach, afterEach } from 'vitest'
 import { DashboardTab } from './DashboardTab'
 import { getProjectIssues, getProjectPRs } from '../../../../shared/api/client'
@@ -346,5 +346,99 @@ describe('DashboardTab', () => {
     expect(screen.queryByTestId('chart-skeleton')).not.toBeInTheDocument()
     // Loaded chart exposes its accessible data summary via role="img".
     expect(screen.getByRole('img')).toBeInTheDocument()
+  })
+
+  // ─── Activity toggle (show more / show less) ───────────────────────────────
+
+  const createIssue = (id: number, title: string, overrides = {}) => ({
+    github_issue_id: id,
+    number: id,
+    title,
+    comments_count: 0,
+    projectId: 'proj-1',
+    updated_at: '2026-06-23T11:00:00Z',
+    ...overrides,
+  })
+
+  const createPR = (id: number, title: string, overrides = {}) => ({
+    github_pr_id: id,
+    number: id,
+    title,
+    state: 'open',
+    merged: false,
+    updated_at: '2026-06-23T11:00:00Z',
+    ...overrides,
+  })
+
+  it('shows only 5 of 6 activities initially and reveals the rest on "View more"', async () => {
+    const issues = [createIssue(1, 'Issue 1'), createIssue(2, 'Issue 2'), createIssue(3, 'Issue 3')]
+    const prs = [createPR(4, 'PR 4'), createPR(5, 'PR 5'), createPR(6, 'PR 6')]
+    vi.mocked(getProjectIssues).mockResolvedValue({ issues } as any)
+    vi.mocked(getProjectPRs).mockResolvedValue({ prs } as any)
+
+    render(<DashboardTab selectedProjects={mockProjects} isLoadingProjects={false} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Issue Views')).toBeInTheDocument()
+    })
+
+    let activityHeadings = getActivityHeadings()
+    expect(activityHeadings).toHaveLength(5)
+
+    const viewMoreBtn = screen.getByText('View more')
+    expect(viewMoreBtn).toBeInTheDocument()
+
+    fireEvent.click(viewMoreBtn)
+
+    activityHeadings = getActivityHeadings()
+    expect(activityHeadings).toHaveLength(6)
+
+    expect(screen.getByText('Show less')).toBeInTheDocument()
+  })
+
+  it('hides the toggle button when there are exactly 5 activities', async () => {
+    const issues = [createIssue(1, 'Issue 1'), createIssue(2, 'Issue 2'), createIssue(3, 'Issue 3')]
+    const prs = [createPR(4, 'PR 4'), createPR(5, 'PR 5')]
+    vi.mocked(getProjectIssues).mockResolvedValue({ issues } as any)
+    vi.mocked(getProjectPRs).mockResolvedValue({ prs } as any)
+
+    render(<DashboardTab selectedProjects={mockProjects} isLoadingProjects={false} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Issue Views')).toBeInTheDocument()
+    })
+
+    expect(getActivityHeadings()).toHaveLength(5)
+    expect(screen.queryByText('View more')).not.toBeInTheDocument()
+    expect(screen.queryByText('Show less')).not.toBeInTheDocument()
+  })
+
+  it('resets expanded state when selectedProjects change', async () => {
+    const issues = [createIssue(1, 'Issue 1'), createIssue(2, 'Issue 2'), createIssue(3, 'Issue 3')]
+    const prs = [createPR(4, 'PR 4'), createPR(5, 'PR 5'), createPR(6, 'PR 6')]
+    vi.mocked(getProjectIssues).mockResolvedValue({ issues } as any)
+    vi.mocked(getProjectPRs).mockResolvedValue({ prs } as any)
+
+    const { rerender } = render(
+      <DashboardTab selectedProjects={mockProjects} isLoadingProjects={false} />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Issue Views')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('View more'))
+    expect(getActivityHeadings()).toHaveLength(6)
+
+    const NEW_PROJECTS = [{ id: 'proj-2', github_full_name: 'other/repo', status: 'active' }]
+    rerender(<DashboardTab selectedProjects={NEW_PROJECTS} isLoadingProjects={false} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Issue Views')).toBeInTheDocument()
+    })
+
+    expect(getActivityHeadings()).toHaveLength(5)
+    expect(screen.getByText('View more')).toBeInTheDocument()
+    expect(screen.queryByText('Show less')).not.toBeInTheDocument()
   })
 })
