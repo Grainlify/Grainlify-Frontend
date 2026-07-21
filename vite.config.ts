@@ -1,4 +1,3 @@
-/// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
@@ -12,6 +11,7 @@ export default defineConfig({
     tailwindcss(),
   ],
   resolve: {
+    preserveSymlinks: true,
     alias: {
       // Ensure a single React instance is used everywhere
       react: path.resolve(__dirname, 'node_modules/react'),
@@ -39,6 +39,7 @@ export default defineConfig({
         'src/shared/hooks/useOptimisticData.ts',
         'src/shared/utils/errorHandler.ts',
         'src/shared/utils/projectFilter.ts',
+        'src/features/settings/contexts/BillingProfilesContext.tsx',
       ],
     },
   },
