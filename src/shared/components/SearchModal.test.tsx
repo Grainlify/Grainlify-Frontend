@@ -218,3 +218,46 @@ describe('SearchModal submit state', () => {
   });
 
 });
+
+describe('SearchModal keyboard shortcuts hint', () => {
+  it('displays keyboard shortcuts hint footer', () => {
+    renderWithTheme(<SearchModal isOpen onClose={() => {}} />);
+    
+    // Check for the hint text
+    expect(screen.getByText(/to close/i)).toBeInTheDocument();
+    expect(screen.getByText(/to navigate/i)).toBeInTheDocument();
+    expect(screen.getByText(/to search/i)).toBeInTheDocument();
+  });
+
+  it('displays all keyboard shortcut keys in the hint', () => {
+    const { container } = renderWithTheme(<SearchModal isOpen onClose={() => {}} />);
+    
+    // Check for kbd elements
+    const kbdElements = container.querySelectorAll('kbd');
+    const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
+    
+    expect(kbdTexts).toContain('Esc');
+    expect(kbdTexts).toContain('Tab');
+    expect(kbdTexts).toContain('Enter');
+  });
+
+  it('renders the hint footer in both light and dark themes', () => {
+    const { container, rerender } = renderWithTheme(
+      <SearchModal isOpen onClose={() => {}} />,
+      { theme: 'light' }
+    );
+    
+    // Light theme
+    let hintFooter = container.querySelector('.border-t');
+    expect(hintFooter).toBeInTheDocument();
+    expect(hintFooter).toHaveClass('border-black/5');
+    
+    // Dark theme
+    rerender(<SearchModal isOpen onClose={() => {}} />);
+    hintFooter = container.querySelector('.border-t');
+    expect(hintFooter).toBeInTheDocument();
+    expect(hintFooter).toHaveClass('border-white/5');
+  });
+});
+
+
