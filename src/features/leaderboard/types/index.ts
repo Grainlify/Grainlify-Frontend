@@ -16,6 +16,13 @@ export interface LeaderData {
 }
 
 export interface ProjectData {
+  /**
+   * Stable project identifier used to deep-link to the project detail route
+   * (`/dashboard/projects/:projectId`). Optional because some static/seed rows
+   * predate per-project routing; rows without an id render a non-navigating
+   * "View Project" control.
+   */
+  id?: string;
   rank: number;
   name: string;
   logo: string;

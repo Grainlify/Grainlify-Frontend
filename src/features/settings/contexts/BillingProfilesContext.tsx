@@ -2,7 +2,18 @@ import { createContext, ReactNode, useContext, useState } from 'react';
 import { logger } from '../../../shared/utils/logger';
 import { BillingProfile } from '../types';
 
+/**
+ * Subset of BillingProfile that is safe to persist in localStorage.
+ * taxId, paymentMethods, and invoices are intentionally excluded to avoid
+ * storing sensitive financial data in plaintext client-side storage.
+ */
+type StoredProfile = Omit<BillingProfile, 'taxId' | 'paymentMethods' | 'invoices'>;
+
+/**
+ * Public API exposed by BillingProfilesContext.
+ */
 interface BillingProfilesContextType {
+  /** Currently loaded billing profiles (in-memory; sensitive fields may be present). */
   profiles: BillingProfile[];
   setProfiles: (profiles: BillingProfile[]) => boolean;
   addProfile: (profile: BillingProfile) => boolean;
@@ -40,6 +51,14 @@ function saveProfilesToStorage(profiles: BillingProfile[]): boolean {
   }
 }
 
+/**
+ * Provides billing profile state to child components.
+ *
+ * Persistence strategy:
+ * - Profiles are loaded once via the useState lazy initialiser (no extra mount effect).
+ * - A single useEffect persists sanitised profiles after every state change.
+ * - Sensitive fields (taxId, paymentMethods, invoices) are stripped before every write.
+ */
 export function BillingProfilesProvider({ children }: { children: ReactNode }) {
   const [profiles, updateProfiles] = useState<BillingProfile[]>(loadProfilesFromStorage);
 
@@ -78,6 +97,10 @@ export function BillingProfilesProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Returns the current billing profiles context.
+ * @throws {Error} if called outside a {@link BillingProfilesProvider}.
+ */
 export function useBillingProfiles() {
   const context = useContext(BillingProfilesContext);
   if (context === undefined) {
