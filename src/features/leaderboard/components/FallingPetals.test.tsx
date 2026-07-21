@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { FallingPetals } from './FallingPetals'
 import { Petal } from '../types'
@@ -66,6 +66,10 @@ describe('FallingPetals', () => {
     await Promise.resolve()
     handler({ matches: true } as MediaQueryListEvent)
 
-    expect(container.firstChild).toBeNull()
+    // The change handler updates state outside of a React-driven event, so
+    // the re-render isn't flushed synchronously — wait for it.
+    await waitFor(() => {
+      expect(container.firstChild).toBeNull()
+    })
   })
 })

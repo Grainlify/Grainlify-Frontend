@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useState } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -10,6 +11,26 @@ const ecosystemOptions = [
   { label: 'All Ecosystems', value: 'all' },
   { label: 'Blockchain', value: 'blockchain' },
 ]
+
+vi.mock('../../../shared/api/client', () => ({
+  getEcosystems: vi.fn().mockResolvedValue({
+    ecosystems: [
+      {
+        id: '1',
+        slug: 'blockchain',
+        name: 'Blockchain',
+        description: null,
+        logo_url: null,
+        website_url: null,
+        status: 'active',
+        project_count: 0,
+        user_count: 0,
+        created_at: '',
+        updated_at: '',
+      },
+    ],
+  }),
+}))
 
 function LocationReader() {
   const location = useLocation()
@@ -27,6 +48,28 @@ function renderFiltersSection({
   const onEcosystemChange = vi.fn()
   const onToggleDropdown = vi.fn()
 
+  // The ecosystem dropdown's visibility is fully controlled by the
+  // `showDropdown` prop (unlike the filter dropdown, which tracks its own
+  // open state internally), so the harness needs to actually own that state
+  // and re-render on toggle — a bare vi.fn() spy never flips it.
+  function Harness() {
+    const [open, setOpen] = useState(showDropdown)
+    return (
+      <FiltersSection
+        activeFilter={activeFilter}
+        onFilterChange={onFilterChange}
+        selectedEcosystem={selectedEcosystem}
+        onEcosystemChange={onEcosystemChange}
+        showDropdown={open}
+        onToggleDropdown={() => {
+          onToggleDropdown()
+          setOpen((prev) => !prev)
+        }}
+        isLoaded={isLoaded}
+      />
+    )
+  }
+
   renderWithTheme(
     <MemoryRouter initialEntries={initialEntries}>
       <Routes>
@@ -34,15 +77,7 @@ function renderFiltersSection({
           path="/leaderboard"
           element={
             <>
-              <FiltersSection
-                activeFilter={activeFilter}
-                onFilterChange={onFilterChange}
-                selectedEcosystem={selectedEcosystem}
-                onEcosystemChange={onEcosystemChange}
-                showDropdown={showDropdown}
-                onToggleDropdown={onToggleDropdown}
-                isLoaded={isLoaded}
-              />
+              <Harness />
               <LocationReader />
             </>
           }
@@ -81,7 +116,7 @@ describe('FiltersSection URL sync', () => {
     const filterButton = screen.getByRole('button', { name: /Overall Leaderboard/i })
     fireEvent.click(filterButton)
 
-    const rewardsOption = screen.getByRole('button', { name: /Total Rewards/i })
+    const rewardsOption = screen.getByRole('option', { name: /Total Rewards/i })
     fireEvent.click(rewardsOption)
 
     expect(screen.getByTestId('location')).toHaveTextContent('filter=rewards')
@@ -93,7 +128,7 @@ describe('FiltersSection URL sync', () => {
 
     const ecosystemToggle = screen.getByRole('button', { name: /All Ecosystems/i })
     fireEvent.click(ecosystemToggle)
-    const ecosystemOption = screen.getByRole('button', { name: /Blockchain/i })
+    const ecosystemOption = await screen.findByRole('option', { name: /Blockchain/i })
     fireEvent.click(ecosystemOption)
 
     expect(screen.getByTestId('location')).toHaveTextContent('ecosystem=blockchain')
