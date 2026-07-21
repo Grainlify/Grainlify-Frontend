@@ -400,6 +400,7 @@ export function DashboardLayout() {
               <div className="relative h-full flex items-center px-2 lg:px-5 justify-between">
                 <div className="flex items-center flex-1">
                   <Search
+                    aria-hidden="true"
                     className={`w-4 h-4 mr-3 flex-shrink-0 transition-colors ${
                       darkTheme ? 'text-[rgba(255,255,255,0.69)]' : 'text-[rgba(45,40,32,0.75)]'
                     }`}
