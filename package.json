@@ -78,7 +78,7 @@
     "react-simple-maps": "^3.0.0",
     "react-slick": "0.31.0",
     "react-theme-switch-animation": "^1.0.0",
-    "recharts": "2.15.2",
+    "recharts": "3.10.0",
     "rehype-sanitize": "^6.0.0",
     "simple-icons": "^16.25.0",
     "sonner": "2.0.7",
