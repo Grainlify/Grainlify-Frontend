@@ -1,21 +1,71 @@
-import { TrendingUp, TrendingDown } from 'lucide-react';
-import { useTheme } from '../../../../shared/contexts/ThemeContext';
-import { StatCard as StatCardType } from '../../types';
+import { AlertCircle, TrendingUp, TrendingDown } from 'lucide-react'
+import { useTheme } from '../../../../shared/contexts/ThemeContext'
+import { StatCard as StatCardType } from '../../types'
+import { StatsCardSkeleton } from './StatsCardSkeleton'
 
 interface StatsCardProps {
-  stat: StatCardType;
-  index: number;
+  /** Populated statistic. Omit it until data has been loaded successfully. */
+  stat?: StatCardType
+  index?: number
+  /** Shows the skeleton and takes precedence over stale data or errors. */
+  loading?: boolean
+  /** Fetch failure message. Rendered only after loading has finished. */
+  error?: string | null
 }
 
-export function StatsCard({ stat, index }: StatsCardProps) {
-  const { theme } = useTheme();
-  const Icon = stat.icon;
-  const isPositive = stat.change > 0;
-  const isNegative = stat.change < 0;
-  const isNeutral = stat.change === 0;
+/**
+ * Renders exactly one explicit statistic state: loading, error, or loaded.
+ *
+ * Missing data is treated as loading so an uninitialized card can never flash
+ * an invented zero value. A real loaded statistic whose value is zero remains
+ * valid and is rendered normally.
+ */
+export function StatsCard({ stat, index = 0, loading = false, error = null }: StatsCardProps) {
+  const { theme } = useTheme()
+
+  if (loading) {
+    return <StatsCardSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div
+        role="alert"
+        data-state="error"
+        data-testid="stats-card-error"
+        className={`backdrop-blur-[40px] rounded-[18px] border p-6 relative overflow-hidden ${
+          theme === 'dark'
+            ? 'bg-red-500/10 border-red-400/40 text-red-300'
+            : 'bg-red-50/70 border-red-500/40 text-red-700'
+        }`}
+        style={{ animationDelay: `${index * 50}ms` }}
+      >
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+          <div>
+            <h3 className="text-[12px] font-bold uppercase tracking-wide mb-1">
+              Unable to load statistic
+            </h3>
+            <p className="text-[11px]">{error}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!stat) {
+    return <StatsCardSkeleton />
+  }
+
+  const Icon = stat.icon
+  const isPositive = stat.change > 0
+  const isNegative = stat.change < 0
+  const isNeutral = stat.change === 0
 
   return (
     <div
+      data-state="loaded"
+      data-testid="stats-card"
       className={`backdrop-blur-[40px] rounded-[18px] border p-6 hover:scale-105 transition-all duration-300 group relative overflow-hidden ${
         theme === 'dark'
           ? 'bg-[#2d2820]/[0.4] border-white/10 hover:bg-[#2d2820]/[0.5]'
@@ -29,27 +79,37 @@ export function StatsCard({ stat, index }: StatsCardProps) {
       {/* Header */}
       <div className="relative flex items-start justify-between mb-4">
         <div className="flex-1">
-          <h3 className={`text-[12px] font-bold uppercase tracking-wide mb-1 transition-colors ${
-            theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-          }`}>
+          <h3
+            className={`text-[12px] font-bold uppercase tracking-wide mb-1 transition-colors ${
+              theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+            }`}
+          >
             {stat.title}
           </h3>
-          <p className={`text-[10px] transition-colors ${
-            theme === 'dark' ? 'text-[#9a8b7a]' : 'text-[#9a8b7a]'
-          }`}>{stat.subtitle}</p>
+          <p
+            className={`text-[10px] transition-colors ${
+              theme === 'dark' ? 'text-[#9a8b7a]' : 'text-[#9a8b7a]'
+            }`}
+          >
+            {stat.subtitle}
+          </p>
         </div>
-        
+
         {/* Icon with trend indicator */}
         <div className="relative">
           <div className="w-10 h-10 rounded-[12px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/15 border border-[#c9983a]/30 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Icon className="w-5 h-5 text-[#c9983a]" />
           </div>
-          
+
           {/* Trend Arrow */}
           {!isNeutral && (
-            <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ${
-              isPositive ? 'bg-gradient-to-br from-[#4ade80] to-[#22c55e]' : 'bg-gradient-to-br from-[#f87171] to-[#ef4444]'
-            }`}>
+            <div
+              className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ${
+                isPositive
+                  ? 'bg-gradient-to-br from-[#4ade80] to-[#22c55e]'
+                  : 'bg-gradient-to-br from-[#f87171] to-[#ef4444]'
+              }`}
+            >
               {isPositive ? (
                 <TrendingUp className="w-3 h-3 text-white" strokeWidth={3} />
               ) : (
@@ -62,25 +122,31 @@ export function StatsCard({ stat, index }: StatsCardProps) {
 
       {/* Value */}
       <div className="relative">
-        <div className={`text-[42px] font-black leading-none mb-2 group-hover:scale-105 transition-all origin-left ${
-          theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
-        }`}>
+        <div
+          data-testid="stats-card-value"
+          className={`text-[42px] font-black leading-none mb-2 group-hover:scale-105 transition-all origin-left ${
+            theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+          }`}
+        >
           {stat.value}
         </div>
-        
+
         {/* Change Percentage */}
         <div className="flex items-center gap-2">
-          <div className={`px-2.5 py-1 rounded-[6px] text-[11px] font-bold ${
-            isPositive 
-              ? 'bg-green-500/20 text-green-700 border border-green-500/30' 
-              : isNegative 
-              ? 'bg-red-500/20 text-red-700 border border-red-500/30'
-              : 'bg-[#7a6b5a]/20 text-[#7a6b5a] border border-[#7a6b5a]/30'
-          }`}>
-            {isPositive && '+'}{stat.change}%
+          <div
+            className={`px-2.5 py-1 rounded-[6px] text-[11px] font-bold ${
+              isPositive
+                ? 'bg-green-500/20 text-green-700 border border-green-500/30'
+                : isNegative
+                  ? 'bg-red-500/20 text-red-700 border border-red-500/30'
+                  : 'bg-[#7a6b5a]/20 text-[#7a6b5a] border border-[#7a6b5a]/30'
+            }`}
+          >
+            {isPositive && '+'}
+            {stat.change}%
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
