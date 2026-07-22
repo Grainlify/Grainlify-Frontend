@@ -5,9 +5,12 @@ import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { Invoice, InvoiceStatus } from '../../types'
 import { downloadInvoice } from '../../../../shared/api/client'
 import { useIntlFormatters, useTranslation, type MessageId } from '../../../../shared/i18n'
+import { SkeletonLoader } from '../../../../shared/components/SkeletonLoader'
 
 interface InvoicesTabProps {
   invoices: Invoice[]
+  isLoading?: boolean
+  error?: string | null
 }
 
 function sanitizeFilename(raw: string): string {
@@ -31,7 +34,7 @@ const INVOICE_STATUS_MESSAGE_IDS: Record<InvoiceStatus, MessageId> = {
   overdue: 'invoices.status.overdue',
 }
 
-export function InvoicesTab({ invoices }: InvoicesTabProps) {
+export function InvoicesTab({ invoices, isLoading = false, error = null }: InvoicesTabProps) {
   const { theme } = useTheme()
   const { t } = useTranslation()
   const { formatDate, formatCurrency } = useIntlFormatters()
@@ -133,7 +136,99 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
         </p>
       </div>
 
-      {invoices.length > 0 ? (
+      {error ? (
+        <div className="text-center py-12" data-testid="invoices-error">
+          <div
+            className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
+              theme === 'dark' ? 'bg-[#ef4444]/10' : 'bg-red-50'
+            }`}
+          >
+            <AlertCircle
+              className={`w-8 h-8 ${theme === 'dark' ? 'text-[#ef4444]' : 'text-red-500'}`}
+            />
+          </div>
+          <p
+            className={`text-[14px] mb-2 font-bold transition-colors ${
+              theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
+            }`}
+          >
+            {t('invoices.errors.downloadFailed')}
+          </p>
+          <p
+            className={`text-[13px] transition-colors ${
+              theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+            }`}
+          >
+            {error}
+          </p>
+        </div>
+      ) : isLoading ? (
+        <div className="space-y-3" data-testid="invoices-loading">
+          <div className="overflow-x-auto">
+            <div className="min-w-[640px]">
+              <div
+                className={`grid grid-cols-[1.2fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-4 px-6 py-3 border-b-2 transition-colors ${
+                  theme === 'dark' ? 'border-white/20' : 'border-white/20'
+                }`}
+              >
+                {INVOICE_TABLE_HEADER_IDS.map((id) => (
+                  <div
+                    key={id}
+                    className={`text-[12px] font-bold uppercase tracking-wide transition-colors ${
+                      theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
+                    }`}
+                  >
+                    {t(id)}
+                  </div>
+                ))}
+              </div>
+
+              {[1, 2, 3].map((index) => (
+                <div key={index} className="mt-3">
+                  <div
+                    className={`grid grid-cols-[1.2fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-4 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border transition-all ${
+                      theme === 'dark'
+                        ? 'bg-white/[0.08] border-white/15'
+                        : 'bg-white/[0.08] border-white/15'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div
+                          className={`w-8 h-8 rounded-[10px] flex items-center justify-center ${
+                            theme === 'dark' ? 'bg-[#c9983a]/20' : 'bg-[#c9983a]/15'
+                          }`}
+                        >
+                          <FileText className="w-4 h-4 text-[#c9983a]" />
+                        </div>
+                        <SkeletonLoader className="h-4 w-32" />
+                      </div>
+                      <div className="ml-10">
+                        <SkeletonLoader className="h-3 w-40" />
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <SkeletonLoader className="h-4 w-20" />
+                    </div>
+                    <div className="flex items-center">
+                      <SkeletonLoader className="h-4 w-16" />
+                    </div>
+                    <div className="flex items-center">
+                      <SkeletonLoader className="h-4 w-24" />
+                    </div>
+                    <div className="flex items-center">
+                      <SkeletonLoader className="h-6 w-20 rounded-[8px]" />
+                    </div>
+                    <div className="flex items-center">
+                      <SkeletonLoader className="h-8 w-8 rounded-[10px]" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : invoices.length > 0 ? (
         <div className="space-y-3">
           {/* overflow-x-auto + min-w prevents the grid from collapsing on narrow screens */}
           <div className="overflow-x-auto">
