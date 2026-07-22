@@ -1,24 +1,25 @@
-import { useState } from 'react';
-import { Filter, Search, X, Circle, ChevronDown, Check } from 'lucide-react';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { useState, useEffect, useRef } from 'react'
+import { Filter, Search, X, Circle, ChevronDown, Check } from 'lucide-react'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { useDebouncedValue } from '../../../shared/hooks/useDebouncedValue'
 
 interface FilterOption {
-  label: string;
-  value: string;
+  label: string
+  value: string
 }
 
 interface SearchWithFilterProps {
-  searchPlaceholder?: string;
-  searchValue?: string;
-  onSearchChange?: (value: string) => void;
+  searchPlaceholder?: string
+  searchValue?: string
+  onSearchChange?: (value: string) => void
   filterSections?: {
-    title: string;
-    options?: FilterOption[];
-    selectedValues?: string[];
-    onToggle?: (value: string) => void;
-    hasSearch?: boolean;
-  }[];
-  onReset?: () => void;
+    title: string
+    options?: FilterOption[]
+    selectedValues?: string[]
+    onToggle?: (value: string) => void
+    hasSearch?: boolean
+  }[]
+  onReset?: () => void
 }
 
 export function SearchWithFilter({
@@ -28,20 +29,47 @@ export function SearchWithFilter({
   filterSections = [],
   onReset,
 }: SearchWithFilterProps) {
-  const { theme } = useTheme();
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const { theme } = useTheme()
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
+
+  const [localSearchValue, setLocalSearchValue] = useState(searchValue)
+  const debouncedSearchValue = useDebouncedValue(localSearchValue, 300)
+  const isInitialMount = useRef(true)
+
+  useEffect(() => {
+    setLocalSearchValue(searchValue)
+  }, [searchValue])
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+    // Only call onSearchChange if we didn't just clear it (which is handled synchronously)
+    // and if the debounced value actually changed from what parent passed
+    if (debouncedSearchValue !== '' && debouncedSearchValue !== searchValue) {
+      onSearchChange?.(debouncedSearchValue)
+    }
+  }, [debouncedSearchValue, onSearchChange, searchValue])
+
+  const handleInputChange = (value: string) => {
+    setLocalSearchValue(value)
+    if (value === '') {
+      onSearchChange?.('')
+    }
+  }
 
   const toggleSection = (sectionTitle: string) => {
-    setOpenSections(prev => ({
+    setOpenSections((prev) => ({
       ...prev,
       [sectionTitle]: !prev[sectionTitle],
-    }));
-  };
+    }))
+  }
 
   const handleReset = () => {
-    onReset?.();
-  };
+    onReset?.()
+  }
 
   return (
     <>
@@ -61,14 +89,16 @@ export function SearchWithFilter({
 
         {/* Search Bar */}
         <div className="relative flex-1">
-          <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 z-10 ${
-            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`} />
+          <Search
+            className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 z-10 ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          />
           <input
             type="text"
             placeholder={searchPlaceholder}
-            value={searchValue}
-            onChange={(e) => onSearchChange?.(e.target.value)}
+            value={localSearchValue}
+            onChange={(e) => handleInputChange(e.target.value)}
             className={`w-full pl-12 pr-4 py-3 rounded-[12px] backdrop-blur-[30px] border focus:outline-none transition-all text-[13px] ${
               theme === 'dark'
                 ? 'bg-white/[0.15] border-white/25 text-[#f5f5f5] placeholder-[#d4d4d4] focus:bg-white/[0.2] focus:border-[#c9983a]/40'
@@ -88,16 +118,22 @@ export function SearchWithFilter({
           />
 
           {/* Filter Panel */}
-          <div className={`fixed top-0 right-0 h-full w-[400px] backdrop-blur-[40px] border-l z-50 shadow-[0_0_40px_rgba(0,0,0,0.15)] p-6 flex flex-col animate-slide-in-right ${
-            theme === 'dark'
-              ? 'bg-[#2d2820]/95 border-white/30'
-              : 'bg-[#e5ddd1]/95 border-white/30'
-          }`}>
+          <div
+            className={`fixed top-0 right-0 h-full w-[400px] backdrop-blur-[40px] border-l z-50 shadow-[0_0_40px_rgba(0,0,0,0.15)] p-6 flex flex-col animate-slide-in-right ${
+              theme === 'dark'
+                ? 'bg-[#2d2820]/95 border-white/30'
+                : 'bg-[#e5ddd1]/95 border-white/30'
+            }`}
+          >
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className={`text-[18px] font-bold ${
-                theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-              }`}>Filter</h2>
+              <h2
+                className={`text-[18px] font-bold ${
+                  theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                }`}
+              >
+                Filter
+              </h2>
               <button
                 onClick={() => setIsFilterOpen(false)}
                 className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${
@@ -119,21 +155,29 @@ export function SearchWithFilter({
                     className="w-full flex items-center justify-between mb-3"
                   >
                     <div className="flex items-center gap-3">
-                      <Circle className={`w-5 h-5 ${
-                        theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                      }`} />
-                      <span className={`text-[14px] font-semibold ${
-                        theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                      }`}>{section.title}</span>
+                      <Circle
+                        className={`w-5 h-5 ${
+                          theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                        }`}
+                      />
+                      <span
+                        className={`text-[14px] font-semibold ${
+                          theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                        }`}
+                      >
+                        {section.title}
+                      </span>
                       {section.selectedValues && section.selectedValues.length > 0 && (
                         <span className="px-2 py-0.5 bg-[#c9983a] text-white text-[11px] font-semibold rounded-full">
                           {section.selectedValues.length}
                         </span>
                       )}
                     </div>
-                    <ChevronDown className={`w-5 h-5 transition-transform ${
-                      openSections[section.title] ? 'rotate-180' : ''
-                    } ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`} />
+                    <ChevronDown
+                      className={`w-5 h-5 transition-transform ${
+                        openSections[section.title] ? 'rotate-180' : ''
+                      } ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}
+                    />
                   </button>
 
                   {openSections[section.title] && (
@@ -141,9 +185,11 @@ export function SearchWithFilter({
                       {/* Search Field if enabled */}
                       {section.hasSearch && (
                         <div className="relative">
-                          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${
-                            theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                          }`} />
+                          <Search
+                            className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${
+                              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                            }`}
+                          />
                           <input
                             type="text"
                             placeholder="Search"
@@ -179,14 +225,20 @@ export function SearchWithFilter({
                           ))}
                         </div>
                       ) : (
-                        <div className={`backdrop-blur-[20px] rounded-[12px] border p-4 ${
-                          theme === 'dark'
-                            ? 'bg-white/[0.1] border-white/20'
-                            : 'bg-white/[0.1] border-white/20'
-                        }`}>
-                          <p className={`text-[12px] text-center ${
-                            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                          }`}>No items found</p>
+                        <div
+                          className={`backdrop-blur-[20px] rounded-[12px] border p-4 ${
+                            theme === 'dark'
+                              ? 'bg-white/[0.1] border-white/20'
+                              : 'bg-white/[0.1] border-white/20'
+                          }`}
+                        >
+                          <p
+                            className={`text-[12px] text-center ${
+                              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                            }`}
+                          >
+                            No items found
+                          </p>
                         </div>
                       )}
                     </div>
@@ -218,5 +270,5 @@ export function SearchWithFilter({
         </>
       )}
     </>
-  );
+  )
 }

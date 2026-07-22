@@ -8,6 +8,8 @@ export type ProfileDetailTabType = 'general' | 'payment' | 'invoices';
 
 export interface BillingProfile {
   id: number;
+  /** The default profile cannot be deleted until another profile is made default. */
+  isDefault?: boolean;
   name: string;
   type: BillingProfileType;
   status: BillingProfileStatus;

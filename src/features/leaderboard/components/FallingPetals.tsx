@@ -1,22 +1,29 @@
-import { useState, useEffect } from 'react';
-import { Petal } from '../types';
+import { useState, useEffect } from 'react'
+import { Petal } from '../types'
 
 interface FallingPetalsProps {
-  petals: Petal[];
+  petals: Petal[]
+}
+
+function getPrefersReducedMotion() {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false
+  }
+
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 export function FallingPetals({ petals }: FallingPetalsProps) {
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(getPrefersReducedMotion)
 
   useEffect(() => {
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReducedMotion(mql.matches);
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, []);
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
 
-  if (reducedMotion) return null;
+  if (reducedMotion) return null
 
   return (
     <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none z-10 overflow-hidden">
@@ -56,5 +63,5 @@ export function FallingPetals({ petals }: FallingPetalsProps) {
         </div>
       ))}
     </div>
-  );
+  )
 }

@@ -1,59 +1,78 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
- * Validates social handle fields.
- * Accepts alphanumerics, underscores, and dots, with an optional leading '@'.
- * Rejects slashes, whitespace, and full URLs.
- * Allows empty strings or undefined for optional inputs.
+ * TSDoc for Profile Schema Module
+ *
+ * Defines the validation rules for the user profile form.
+ * Supports first name, last name, location, website, bio, and social handles.
+ * All fields are optional but subject to specific validation rules (e.g. website URL format).
  */
-export const isValidHandle = (val?: string | null): boolean => {
-  if (!val || val === '') return true;
-  return /^@?[a-zA-Z0-9_.]+$/.test(val);
-};
-
-export const SOCIAL_HANDLE_ERROR_MESSAGE =
-  'Social handle must not contain slashes, whitespace, or full URLs';
-
-export const socialHandleSchema = z
-  .string()
-  .max(100, 'Handle must be at most 100 characters')
-  .optional()
-  .or(z.literal(''))
-  .refine(isValidHandle, {
-    message: SOCIAL_HANDLE_ERROR_MESSAGE,
-  });
-
-export const websiteSchema = z
-  .string()
-  .max(255, 'Website URL must be at most 255 characters')
-  .optional()
-  .or(z.literal(''))
-  .refine(
-    (val) => {
-      if (!val || val === '') return true;
-      try {
-        const url = new URL(val);
-        return url.protocol === 'http:' || url.protocol === 'https:';
-      } catch {
-        return false;
-      }
-    },
-    { message: 'Must be a valid http(s):// URL' }
-  );
-
 export const profileSchema = z.object({
-  firstName: z.string().max(100, 'First name is too long').optional().or(z.literal('')),
-  lastName: z.string().max(100, 'Last name is too long').optional().or(z.literal('')),
-  first_name: z.string().max(100, 'First name is too long').optional().or(z.literal('')),
-  last_name: z.string().max(100, 'Last name is too long').optional().or(z.literal('')),
-  location: z.string().max(150, 'Location is too long').optional().or(z.literal('')),
-  website: websiteSchema,
-  bio: z.string().max(500, 'Bio is too long').optional().or(z.literal('')),
-  telegram: socialHandleSchema,
-  linkedin: socialHandleSchema,
-  whatsapp: socialHandleSchema,
-  twitter: socialHandleSchema,
-  discord: socialHandleSchema,
-});
+  firstName: z
+    .string()
+    .max(50, { message: 'First name must be 50 characters or less' })
+    .optional()
+    .or(z.literal('')),
+  lastName: z
+    .string()
+    .max(50, { message: 'Last name must be 50 characters or less' })
+    .optional()
+    .or(z.literal('')),
+  location: z
+    .string()
+    .max(100, { message: 'Location must be 100 characters or less' })
+    .optional()
+    .or(z.literal('')),
+  website: z
+    .string()
+    .trim()
+    .refine(
+      (val) => {
+        if (!val) return true
+        try {
+          const url = new URL(val)
+          return (url.protocol === 'http:' || url.protocol === 'https:') && !!url.hostname
+        } catch {
+          return false
+        }
+      },
+      { message: 'Please enter a valid URL starting with http:// or https://' }
+    )
+    .optional()
+    .or(z.literal('')),
+  bio: z
+    .string()
+    .max(500, { message: 'Bio must be 500 characters or less' })
+    .optional()
+    .or(z.literal('')),
+  telegram: z
+    .string()
+    .max(32, { message: 'Telegram handle must be 32 characters or less' })
+    .optional()
+    .or(z.literal('')),
+  linkedin: z
+    .string()
+    .max(100, { message: 'LinkedIn handle must be 100 characters or less' })
+    .optional()
+    .or(z.literal('')),
+  whatsapp: z
+    .string()
+    .max(20, { message: 'WhatsApp handle must be 20 characters or less' })
+    .optional()
+    .or(z.literal('')),
+  twitter: z
+    .string()
+    .max(15, { message: 'Twitter handle must be 15 characters or less' })
+    .optional()
+    .or(z.literal('')),
+  discord: z
+    .string()
+    .max(37, { message: 'Discord handle must be 37 characters or less' })
+    .optional()
+    .or(z.literal('')),
+})
 
-export type ProfileFormData = z.infer<typeof profileSchema>;
+/**
+ * Type definition for the profile form data inferred from the schema.
+ */
+export type ProfileFormData = z.infer<typeof profileSchema>
