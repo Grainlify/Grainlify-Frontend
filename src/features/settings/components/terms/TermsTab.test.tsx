@@ -243,4 +243,24 @@ describe('TermsTab', () => {
     expect(status).toHaveAttribute('aria-busy', 'false')
     consoleSpy.mockRestore()
   })
+
+  it('prompts re-acceptance when terms version is outdated', async () => {
+    // Simulate previously accepted older version
+    vi.mocked(getTermsStatus).mockResolvedValue({
+      accepted: true,
+      version: '0.9.0',
+      accepted_at: '2023-10-01T12:00:00Z',
+    })
+
+    renderWithTheme(<TermsTab />)
+
+    // Button should be enabled to allow re-accept
+    const button = await screen.findByRole('button', { name: 'Accept' })
+    expect(button).toBeInTheDocument()
+    expect(button).not.toBeDisabled()
+
+    // Outdated message should be displayed
+    const outdatedMsg = await screen.findByText(/Terms have been updated to version/)
+    expect(outdatedMsg).toBeInTheDocument()
+  })
 })

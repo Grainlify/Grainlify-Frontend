@@ -111,8 +111,9 @@ export const en = {
   'terms.status.acceptedVersion': '✓ Accepted version {version} on {date}',
   'terms.actions.loading': 'Loading...',
   'terms.actions.accepting': 'Accepting...',
-  'terms.actions.accepted': 'Accepted',
   'terms.actions.accept': 'Accept',
+  'terms.actions.accepted': 'Accepted',
+  'terms.status.outdated': '⚠️ Terms have been updated to version {current}. Please re-accept.',
   'terms.errors.loadStatusFailed': 'Failed to load terms status.',
   'terms.errors.acceptFailed': 'Failed to accept terms. Please try again.',
 

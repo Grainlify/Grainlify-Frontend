@@ -31,6 +31,11 @@ export function TermsTab() {
   const [acceptedVersion, setAcceptedVersion] = useState<string | null>(null)
   const [acceptedDate, setAcceptedDate] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Determine if the current acceptance matches the latest terms version
+  const isCurrentAccepted =
+    isAccepted && acceptedVersion === CURRENT_TERMS_VERSION && !!acceptedDate
+  const isVersionMismatch =
+    isAccepted && acceptedVersion && acceptedVersion !== CURRENT_TERMS_VERSION
   /** Set when the initial status fetch fails, so the UI can announce it. */
   const [fetchError, setFetchError] = useState<string | null>(null)
   /**
@@ -240,12 +245,16 @@ export function TermsTab() {
               ) : null
             ) : fetchError ? (
               <p className="text-[12px] text-red-500 font-medium">{fetchError}</p>
-            ) : isAccepted && acceptedVersion && acceptedDate ? (
+            ) : isCurrentAccepted ? (
               <p className="text-[12px] text-green-500 font-medium">
                 {t('terms.status.acceptedVersion', {
                   version: acceptedVersion,
                   date: new Date(acceptedDate).toLocaleDateString(),
                 })}
+              </p>
+            ) : isVersionMismatch ? (
+              <p className="text-[12px] text-yellow-600 font-medium">
+                {t('terms.status.outdated', { current: CURRENT_TERMS_VERSION })}
               </p>
             ) : null}
           </div>
@@ -254,21 +263,21 @@ export function TermsTab() {
         </div>
         <button
           onClick={handleAccept}
-          disabled={isLoading || isAccepting || isAccepted}
+          disabled={isLoading || isAccepting || isCurrentAccepted}
           className={`px-8 py-3 rounded-[16px] font-semibold text-[15px] transition-all border border-white/10 ${
-            isAccepted
+            isCurrentAccepted
               ? 'bg-green-600/20 text-green-500 cursor-not-allowed border-green-500/20 shadow-none'
               : isLoading
                 ? 'bg-gray-500/50 text-gray-300 cursor-wait shadow-none'
                 : 'bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] disabled:opacity-50 disabled:cursor-not-allowed'
           }`}
         >
-          {isLoading
-            ? t('terms.actions.loading')
-            : isAccepting
-              ? t('terms.actions.accepting')
-              : isAccepted
-                ? t('terms.actions.accepted')
+          {isCurrentAccepted
+            ? 'Accepted'
+            : isLoading
+              ? t('terms.actions.loading')
+              : isAccepting
+                ? t('terms.actions.accepting')
                 : t('terms.actions.accept')}
         </button>
       </div>
