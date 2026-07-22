@@ -2,13 +2,16 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useLandingStats } from "../../../shared/hooks/useLandingStats";
+import { SkeletonLoader } from "../../../shared/components/SkeletonLoader";
 
 export function Hero() {
   const { theme } = useTheme();
-  const { display } = useLandingStats();
+  const { display, isLoading } = useLandingStats();
 
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 pt-20">
+      {/* Image placeholder to reserve space for hero illustration */}
+      <div className="relative w-full aspect-w-16 aspect-h-9 bg-gray-200 mb-8" data-testid="hero-image-placeholder" />
       {/* Golden Glassmorphism Orbs (hidden on very small screens to avoid overflow) */}
       <div className="hidden sm:block absolute top-1/4 left-1/4 w-64 sm:w-96 h-64 sm:h-96 rounded-full bg-[#c9983a]/30 blur-3xl animate-pulse" />
       <div className="hidden sm:block absolute bottom-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 rounded-full bg-[#d4af37]/20 blur-3xl animate-pulse delay-1000" />
@@ -101,7 +104,11 @@ export function Hero() {
                   theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
                 }`}
               >
-                {stat.value}
+                {isLoading ? (
+                  <SkeletonLoader className="h-6 w-24 bg-gray-200 rounded" data-testid="stat-skeleton" />
+                ) : (
+                  stat.value
+                )}
               </div>
               <div
                 className={`transition-colors ${
