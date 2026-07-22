@@ -120,6 +120,8 @@ export function EcosystemDetailPage({ ecosystemId, ecosystemName, initialDescrip
             description: (p.description && p.description.trim()) || `${repoName} project`,
             tags: Array.isArray(p.tags) ? p.tags.slice(0, 4) : [],
             color: getProjectColor(repoName),
+            language: p.language ?? null,
+            category: p.category ?? null,
           };
         });
         setEcosystemProjects(mapped);
@@ -204,9 +206,22 @@ export function EcosystemDetailPage({ ecosystemId, ecosystemName, initialDescrip
   };
 
   const filteredProjects = ecosystemProjects.filter(
-    (project) =>
-      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchQuery.toLowerCase())
+    (project) => {
+      const matchesSearch =
+        searchQuery === '' ||
+        project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesLanguage =
+        selectedLanguages.length === 0 ||
+        (project.language != null && selectedLanguages.includes(project.language));
+
+      const matchesCategory =
+        selectedCategories.length === 0 ||
+        (project.category != null && selectedCategories.includes(project.category));
+
+      return matchesSearch && matchesLanguage && matchesCategory;
+    }
   );
 
   const isDark = theme === 'dark';
