@@ -72,6 +72,46 @@ export const profileSchema = z.object({
     .or(z.literal('')),
 })
 
+export const SOCIAL_HANDLE_ERROR_MESSAGE =
+  'Social handle must not contain slashes, whitespace, or full URLs'
+
+export function isValidHandle(value: unknown): boolean {
+  if (value == null || value === '') return true
+  if (typeof value !== 'string') return false
+  if (value.includes('/') || value.includes(' ')) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return /^[a-zA-Z0-9._-]*$/.test(value) || value.startsWith('@')
+  }
+}
+
+export const socialHandleSchema = z
+  .string()
+  .max(100, { message: 'Handle must be 100 characters or less' })
+  .optional()
+  .or(z.literal(''))
+  .refine((val) => !val || isValidHandle(val), { message: SOCIAL_HANDLE_ERROR_MESSAGE })
+
+export const websiteSchema = z
+  .string()
+  .trim()
+  .refine(
+    (val) => {
+      if (!val) return true
+      try {
+        const url = new URL(val)
+        return (url.protocol === 'http:' || url.protocol === 'https:') && !!url.hostname
+      } catch {
+        return false
+      }
+    },
+    { message: 'Please enter a valid URL starting with http:// or https://' }
+  )
+  .optional()
+  .or(z.literal(''))
+
 /**
  * Type definition for the profile form data inferred from the schema.
  */
