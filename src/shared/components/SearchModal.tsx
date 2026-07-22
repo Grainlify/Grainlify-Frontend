@@ -6,6 +6,8 @@ import { useFocusTrap } from '../utils/focusTrap';
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Called when the user submits a valid (non-empty, non-whitespace) query. */
+  onSearch?: (query: string) => Promise<void> | void;
 }
 
 /**
@@ -17,10 +19,30 @@ interface SearchModalProps {
  * - On open, focus moves to the search input; <kbd>Tab</kbd> cycles within the
  *   overlay and <kbd>Escape</kbd> closes it.
  * - On close, focus is restored to the element that opened the overlay.
+ * - Submit button is disabled (with `aria-disabled`) while a search is in
+ *   flight or the query is empty/whitespace-only.
+ *
+ * Keyboard shortcuts:
+ * - <kbd>Escape</kbd>: Close the modal and return focus to the trigger element
+ * - <kbd>Enter</kbd>: Submit the search query (when input is focused and query is non-empty)
+ * - <kbd>Tab</kbd>: Navigate forward through focusable elements (input → submit button → close button → suggestion pills)
+ * - <kbd>Shift</kbd> + <kbd>Tab</kbd>: Navigate backward through focusable elements
+ *
+ * The modal implements a focus trap (via `useFocusTrap`) that prevents keyboard
+ * focus from leaving the dialog while it is open. Tab navigation cycles within
+ * the modal boundaries, and focus is automatically restored to the triggering
+ * element when the modal closes.
+ *
+ * @param props.isOpen - Whether the modal is visible.
+ * @param props.onClose - Callback to close the modal.
+ * @param props.onSearch - Optional async callback invoked with the trimmed
+ *   query on submit. The button remains disabled until the returned promise
+ *   settles.
  */
-export function SearchModal({ isOpen, onClose }: SearchModalProps) {
+export function SearchModal({ isOpen, onClose, onSearch }: SearchModalProps) {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isPending, setIsPending] = useState(false);
   const darkTheme = theme === 'dark';
   const headingId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +58,19 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     "Find the best GraphQL clients for TypeScript",
     "AI-powered tools for reviewing pull requests",
   ];
+
+  const handleSubmit = async () => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed || isPending) return;
+    setIsPending(true);
+    try {
+      await onSearch?.(trimmed);
+    } catch {
+      // Swallow — onSearch errors should not crash the UI.
+    } finally {
+      setIsPending(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -125,7 +160,12 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="markdown editor in t"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSubmit();
+                  }
+                }}
+                placeholder="Search projects, topics, or keywords..."
                 aria-label="Search open source projects"
                 className={`flex-1 bg-transparent outline-none text-[16px] transition-colors ${
                   darkTheme
@@ -136,13 +176,24 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               <button
                 type="button"
                 aria-label="Submit search"
-                className={`w-10 h-10 rounded-full flex items-center justify-center ml-4 flex-shrink-0 transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#c9983a] ${
+                disabled={isPending || !searchQuery.trim()}
+                aria-disabled={isPending || !searchQuery.trim()}
+                onClick={handleSubmit}
+                className={`w-10 h-10 rounded-full flex items-center justify-center ml-4 flex-shrink-0 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#c9983a] ${
+                  isPending || !searchQuery.trim()
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:scale-105'
+                } ${
                   darkTheme
                     ? 'bg-[#c9983a] hover:bg-[#d4a645]'
                     : 'bg-[#c9983a] hover:bg-[#e8c571]'
                 }`}
               >
-                <ArrowRight className="w-5 h-5 text-white" />
+                {isPending ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : (
+                  <ArrowRight className="w-5 h-5 text-white" />
+                )}
               </button>
             </div>
           </div>
@@ -185,6 +236,21 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Keyboard Shortcuts Hint */}
+          <div className={`mt-6 pt-4 border-t text-center text-[12px] transition-colors ${
+            darkTheme 
+              ? 'border-white/5 text-[#b8a898]/60' 
+              : 'border-black/5 text-[#6b5d4d]/60'
+          }`}>
+            <kbd className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+              darkTheme ? 'bg-white/5' : 'bg-black/5'
+            }`}>Esc</kbd> to close · <kbd className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+              darkTheme ? 'bg-white/5' : 'bg-black/5'
+            }`}>Tab</kbd> to navigate · <kbd className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+              darkTheme ? 'bg-white/5' : 'bg-black/5'
+            }`}>Enter</kbd> to search
           </div>
         </div>
       </div>

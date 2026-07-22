@@ -1,88 +1,256 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider, useAuth } from "../shared/contexts/AuthContext";
-import { ThemeProvider } from "../shared/contexts/ThemeContext";
-import { LandingPage } from "../features/landing";
-import { SignInPage, SignUpPage, AuthCallbackPage } from "../features/auth";
-import { DashboardLayout } from "../features/dashboard/DashboardLayout";
-import { DiscoverPage } from "../features/dashboard/pages/DiscoverPage";
-import { BrowsePage } from "../features/dashboard/pages/BrowsePage";
-import { ContributorsPage } from "../features/dashboard/pages/ContributorsPage";
-import { ProfilePage } from "../features/dashboard/pages/ProfilePage";
-import { DataPage } from "../features/dashboard/pages/DataPage";
-import { LeaderboardPage } from "../features/leaderboard/pages/LeaderboardPage";
-import { BlogPage } from "../features/blog/pages/BlogPage";
-import { SettingsPage } from "../features/settings/pages/SettingsPage";
-import { AdminPage } from "../features/admin/pages/AdminPage";
-import {
-  OpenSourceWeekPageRoute,
-  OpenSourceWeekDetailPageRoute,
-  EcosystemsPageRoute,
-  EcosystemDetailPageRoute,
-  MaintainersPageRoute,
-  ProjectDetailPageRoute,
-  IssueDetailPageRoute,
-  SearchPageRoute,
-} from "../features/dashboard/routeWrappers";
-import { NotFoundPage } from "../shared/components/NotFoundPage";
-import { RoleGuard } from "../shared/components/RoleGuard";
-import Toast from "../shared/components/Toast";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect, lazy, Suspense, type ReactElement } from 'react'
+import { AuthProvider } from '../shared/contexts/AuthContext'
+import { ThemeProvider } from '../shared/contexts/ThemeContext'
+import { LandingPage } from '../features/landing'
+import { SignInPage, SignUpPage, AuthCallbackPage } from '../features/auth'
+import { NotFoundPage } from '../shared/components/NotFoundPage'
+import { RoleGuard } from '../shared/components/RoleGuard'
+import { AuthGuard } from '../shared/components/AuthGuard'
+import Toast from '../shared/components/Toast'
+import { LocaleProvider } from '../shared/i18n'
+import { useTranslation } from '../shared/i18n/useTranslation'
+import { ScrollToTop } from '../shared/components/ScrollToTop'
+import { SkeletonLoader } from '../shared/components/SkeletonLoader'
 
-function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { isAuthenticated, isLoading } = useAuth();
-  const location = useLocation();
-  if (isLoading) return children; // let AuthProvider finish initial check
-  if (!isAuthenticated) {
-    const returnTo = location.pathname + (location.search || "");
-    const signinUrl = returnTo ? `/signin?returnTo=${encodeURIComponent(returnTo)}` : "/signin";
-    return <Navigate to={signinUrl} replace />;
-  }
-  return children;
+// Dashboard-area routes are code-split: the landing/auth shell loads eagerly,
+// everything behind the dashboard boots on first navigation.
+const DashboardLayout = lazy(() =>
+  import('../features/dashboard/DashboardLayout').then((module) => ({
+    default: module.DashboardLayout,
+  }))
+)
+const DiscoverPage = lazy(() =>
+  import('../features/dashboard/pages/DiscoverPage').then((module) => ({
+    default: module.DiscoverPage,
+  }))
+)
+const BrowsePage = lazy(() =>
+  import('../features/dashboard/pages/BrowsePage').then((module) => ({
+    default: module.BrowsePage,
+  }))
+)
+const ContributorsPage = lazy(() =>
+  import('../features/dashboard/pages/ContributorsPage').then((module) => ({
+    default: module.ContributorsPage,
+  }))
+)
+const ProfilePage = lazy(() =>
+  import('../features/dashboard/pages/ProfilePage').then((module) => ({
+    default: module.ProfilePage,
+  }))
+)
+const DataPage = lazy(() =>
+  import('../features/dashboard/pages/DataPage').then((module) => ({
+    default: module.DataPage,
+  }))
+)
+const LeaderboardPage = lazy(() =>
+  import('../features/leaderboard/pages/LeaderboardPage').then((module) => ({
+    default: module.LeaderboardPage,
+  }))
+)
+const BlogPage = lazy(() =>
+  import('../features/blog/pages/BlogPage').then((module) => ({
+    default: module.BlogPage,
+  }))
+)
+const SettingsPage = lazy(() =>
+  import('../features/settings/pages/SettingsPage').then((module) => ({
+    default: module.SettingsPage,
+  }))
+)
+const AdminPage = lazy(() =>
+  import('../features/admin/pages/AdminPage').then((module) => ({
+    default: module.AdminPage,
+  }))
+)
+const OpenSourceWeekPageRoute = lazy(() =>
+  import('../features/dashboard/routeWrappers').then((module) => ({
+    default: module.OpenSourceWeekPageRoute,
+  }))
+)
+const OpenSourceWeekDetailPageRoute = lazy(() =>
+  import('../features/dashboard/routeWrappers').then((module) => ({
+    default: module.OpenSourceWeekDetailPageRoute,
+  }))
+)
+const EcosystemsPageRoute = lazy(() =>
+  import('../features/dashboard/routeWrappers').then((module) => ({
+    default: module.EcosystemsPageRoute,
+  }))
+)
+const EcosystemDetailPageRoute = lazy(() =>
+  import('../features/dashboard/routeWrappers').then((module) => ({
+    default: module.EcosystemDetailPageRoute,
+  }))
+)
+const MaintainersPageRoute = lazy(() =>
+  import('../features/dashboard/routeWrappers').then((module) => ({
+    default: module.MaintainersPageRoute,
+  }))
+)
+const ProjectDetailPageRoute = lazy(() =>
+  import('../features/dashboard/routeWrappers').then((module) => ({
+    default: module.ProjectDetailPageRoute,
+  }))
+)
+const IssueDetailPageRoute = lazy(() =>
+  import('../features/dashboard/routeWrappers').then((module) => ({
+    default: module.IssueDetailPageRoute,
+  }))
+)
+const SearchPageRoute = lazy(() =>
+  import('../features/dashboard/routeWrappers').then((module) => ({
+    default: module.SearchPageRoute,
+  }))
+)
+const BlogArticlePageRoute = lazy(() =>
+  import('../features/dashboard/routeWrappers').then((module) => ({
+    default: module.BlogArticlePageRoute,
+  }))
+)
+
+/**
+ * Synchronises `document.documentElement.lang` with the active i18n locale.
+ *
+ * Must be rendered inside {@link I18nProvider} (which supplies the `IntlProvider`
+ * context that `useTranslation` reads). Renders nothing itself; exists purely
+ * for its side-effect. Defaults to `"en"` on mount and updates whenever the
+ * locale changes.
+ *
+ * Keeping this as a separate component rather than an inline `useEffect` in
+ * `App` means it can be unit-tested in isolation and can be relocated under a
+ * future `LocaleProvider` without touching the route tree.
+ */
+function HtmlLangSync() {
+  const { locale } = useTranslation()
+
+  useEffect(() => {
+    document.documentElement.lang = locale
+  }, [locale])
+
+  return null
+}
+
+/**
+ * Applies the three-state authentication boundary to protected routes.
+ * Loading renders only the guard fallback, authenticated renders the route,
+ * and unauthenticated redirects to sign in while preserving `returnTo`.
+ */
+export function ProtectedRoute({ children }: { children: ReactElement }) {
+  return <AuthGuard>{children}</AuthGuard>
+}
+
+/**
+ * Suspense fallback shown while a lazy-loaded route chunk is still resolving.
+ * Themed to match the app's skeleton-loading style so navigating to a
+ * not-yet-fetched route doesn't flash a blank page.
+ */
+function RouteLoadingFallback() {
+  return (
+    <div
+      className="min-h-[60vh] px-6 py-10"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading route"
+    >
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <SkeletonLoader className="h-10 w-64 max-w-full" />
+        <div className="grid gap-4 md:grid-cols-3">
+          <SkeletonLoader className="h-28" />
+          <SkeletonLoader className="h-28" />
+          <SkeletonLoader className="h-28" />
+        </div>
+        <SkeletonLoader className="h-72" />
+        <span className="sr-only">Loading route</span>
+      </div>
+    </div>
+  )
+}
+
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/signin" element={<SignInPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/dashboard/discover" replace />} />
+        <Route path="discover" element={<DiscoverPage />} />
+        <Route path="browse" element={<BrowsePage />} />
+        <Route path="open-source-week" element={<OpenSourceWeekPageRoute />} />
+        <Route path="open-source-week/:eventId" element={<OpenSourceWeekDetailPageRoute />} />
+        <Route path="ecosystems" element={<EcosystemsPageRoute />} />
+        <Route path="ecosystems/:ecosystemId" element={<EcosystemDetailPageRoute />} />
+        <Route path="contributors" element={<ContributorsPage />} />
+        <Route
+          path="maintainers"
+          element={
+            <RoleGuard allow={['maintainer', 'admin']}>
+              <MaintainersPageRoute />
+            </RoleGuard>
+          }
+        />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="data" element={<DataPage />} />
+        <Route path="projects/:projectId" element={<ProjectDetailPageRoute />} />
+        <Route path="projects/:projectId/issues/:issueId" element={<IssueDetailPageRoute />} />
+        <Route path="leaderboard" element={<LeaderboardPage />} />
+        <Route path="blog" element={<BlogPage />} />
+        {/* Deep link to an individual article. The `:slug` param is
+            untrusted input — see BlogArticlePage for sanitize+lookup. */}
+        <Route path="blog/:slug" element={<BlogArticlePageRoute />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route
+          path="admin"
+          element={
+            <RoleGuard allow={['admin']}>
+              <AdminPage />
+            </RoleGuard>
+          }
+        />
+        <Route path="search" element={<SearchPageRoute />} />
+      </Route>
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  )
 }
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <div className="overflow-x-hidden">
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/signin" element={<SignInPage />} />
-              <Route path="/signup" element={<SignUpPage />} />
-              <Route path="/auth/callback" element={<AuthCallbackPage />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Navigate to="/dashboard/discover" replace />} />
-                <Route path="discover" element={<DiscoverPage />} />
-                <Route path="browse" element={<BrowsePage />} />
-                <Route path="open-source-week" element={<OpenSourceWeekPageRoute />} />
-                <Route path="open-source-week/:eventId" element={<OpenSourceWeekDetailPageRoute />} />
-                <Route path="ecosystems" element={<EcosystemsPageRoute />} />
-                <Route path="ecosystems/:ecosystemId" element={<EcosystemDetailPageRoute />} />
-                <Route path="contributors" element={<ContributorsPage />} />
-                <Route path="maintainers" element={<RoleGuard allow={['maintainer', 'admin']}><MaintainersPageRoute /></RoleGuard>} />
-                <Route path="profile" element={<ProfilePage />} />
-                <Route path="data" element={<DataPage />} />
-                <Route path="projects/:projectId" element={<ProjectDetailPageRoute />} />
-                <Route path="projects/:projectId/issues/:issueId" element={<IssueDetailPageRoute />} />
-                <Route path="leaderboard" element={<LeaderboardPage />} />
-                <Route path="blog" element={<BlogPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="admin" element={<RoleGuard allow={['admin']}><AdminPage /></RoleGuard>} />
-                <Route path="search" element={<SearchPageRoute />} />
-              </Route>
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-            <Toast />
-          </div>
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
-  );
+    <LocaleProvider>
+      {/* Syncs <html lang="…"> with the active locale — must be inside I18nProvider */}
+      <HtmlLangSync />
+      <BrowserRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <ScrollToTop />
+            {/* Skip link: visible on keyboard focus, hidden otherwise */}
+            <a
+              href="#main"
+              id="skip-target"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-black focus:shadow"
+            >
+              Skip to main content
+            </a>
+            <main id="main" tabIndex={-1} className="outline-none overflow-x-hidden">
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <AppRoutes />
+              </Suspense>
+              <Toast />
+            </main>
+          </AuthProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </LocaleProvider>
+  )
 }
