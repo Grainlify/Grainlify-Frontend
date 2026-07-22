@@ -1,62 +1,86 @@
-import { Component, ReactNode } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { Component, ErrorInfo, ReactNode, useEffect, useRef } from 'react'
+import { useTheme } from '../contexts/ThemeContext'
+import { logger } from '../utils/logger'
 
 interface Props {
-  children: ReactNode;
+  children: ReactNode
 }
 
 interface State {
-  hasError: boolean;
-  error: Error | null;
+  hasError: boolean
+  error: Error | null
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null };
+    super(props)
+    this.state = { hasError: false, error: null }
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error }
   }
 
-  componentDidCatch(error: Error, errorInfo: any) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  /**
+   * Lifecycle method called after a descendant throws during rendering.
+   *
+   * @remarks
+   * Only the error message and component stack are forwarded to the logger so
+   * that no full Error object, serialised props, or other PII reaches the
+   * error sink.
+   *
+   * @param error - The thrown error value.
+   * @param errorInfo - React-supplied metadata containing the component stack.
+   */
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    logger.error('ErrorBoundary caught', {
+      message: error.message,
+      componentStack: errorInfo.componentStack,
+    })
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
-    window.location.reload();
-  };
+    this.setState({ hasError: false, error: null })
+    window.location.reload()
+  }
 
   render() {
     if (this.state.hasError) {
-      return <ErrorFallback error={this.state.error} onReset={this.handleReset} />;
+      return <ErrorFallback error={this.state.error} onReset={this.handleReset} />
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }
 
 function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () => void }) {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
+  const headingRef = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
 
   return (
-    <div className={`min-h-screen flex items-center justify-center px-6 transition-colors ${
-      theme === 'dark'
-        ? 'bg-gradient-to-br from-[#1a1512] via-[#231c17] to-[#2d241d]'
-        : 'bg-gradient-to-br from-[#e8dfd0] via-[#d4c5b0] to-[#c9b89a]'
-    }`}>
+    <div
+      role="alert"
+      aria-labelledby="error-boundary-title"
+      className={`min-h-screen flex items-center justify-center px-6 transition-colors ${
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-[#1a1512] via-[#231c17] to-[#2d241d]'
+          : 'bg-gradient-to-br from-[#e8dfd0] via-[#d4c5b0] to-[#c9b89a]'
+      }`}
+    >
       {/* Background Effects */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-red-500/20 blur-3xl animate-pulse" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-red-600/10 blur-3xl animate-pulse" />
 
       {/* Error Card */}
-      <div className={`relative z-10 w-full max-w-md backdrop-blur-[40px] border rounded-[28px] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-colors ${
-        theme === 'dark'
-          ? 'bg-white/[0.08] border-white/15'
-          : 'bg-white/[0.15] border-white/25'
-      }`}>
+      <div
+        className={`relative z-10 w-full max-w-md backdrop-blur-[40px] border rounded-[28px] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-colors ${
+          theme === 'dark' ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
+        }`}
+      >
         {/* Error Icon */}
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
@@ -78,31 +102,46 @@ function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () =>
 
         {/* Error Message */}
         <div className="text-center mb-6">
-          <h2 className={`text-2xl font-bold mb-2 transition-colors ${
-            theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
-          }`}>
+          <h2
+            id="error-boundary-title"
+            ref={headingRef}
+            tabIndex={-1}
+            className={`text-2xl font-bold mb-2 transition-colors ${
+              theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
+            }`}
+          >
             Something went wrong
           </h2>
-          <p className={`text-sm transition-colors ${
-            theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
-          }`}>
+          <p
+            className={`text-sm transition-colors ${
+              theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
+            }`}
+          >
             An unexpected error occurred. We've been notified and are working to fix it.
           </p>
         </div>
 
         {/* Error Details (collapsible) */}
         {error && (
-          <details className={`mb-6 rounded-lg p-4 transition-colors ${
-            theme === 'dark' ? 'bg-white/[0.06]' : 'bg-white/[0.12]'
-          }`}>
-            <summary className={`cursor-pointer text-sm font-medium transition-colors ${
-              theme === 'dark' ? 'text-[#d4c5b0] hover:text-[#f5efe5]' : 'text-[#7a6b5a] hover:text-[#2d2820]'
-            }`}>
+          <details
+            className={`mb-6 rounded-lg p-4 transition-colors ${
+              theme === 'dark' ? 'bg-white/[0.06]' : 'bg-white/[0.12]'
+            }`}
+          >
+            <summary
+              className={`cursor-pointer text-sm font-medium transition-colors ${
+                theme === 'dark'
+                  ? 'text-[#d4c5b0] hover:text-[#f5efe5]'
+                  : 'text-[#7a6b5a] hover:text-[#2d2820]'
+              }`}
+            >
               Error Details
             </summary>
-            <pre className={`mt-3 text-xs overflow-auto p-3 rounded transition-colors ${
-              theme === 'dark' ? 'bg-black/[0.3] text-red-400' : 'bg-black/[0.05] text-red-600'
-            }`}>
+            <pre
+              className={`mt-3 text-xs overflow-auto p-3 rounded transition-colors ${
+                theme === 'dark' ? 'bg-black/[0.3] text-red-400' : 'bg-black/[0.05] text-red-600'
+              }`}
+            >
               {error.toString()}
             </pre>
           </details>
@@ -117,7 +156,7 @@ function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () =>
             Reload Page
           </button>
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => (window.location.href = '/')}
             className={`w-full py-3 rounded-[12px] font-medium transition-all ${
               theme === 'dark'
                 ? 'bg-white/[0.08] hover:bg-white/[0.12] text-[#f5efe5] border border-white/15'
@@ -129,12 +168,14 @@ function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () =>
         </div>
 
         {/* Support Info */}
-        <p className={`text-xs text-center mt-6 transition-colors ${
-          theme === 'dark' ? 'text-[#a3a3a3]' : 'text-[#8a7d6f]'
-        }`}>
+        <p
+          className={`text-xs text-center mt-6 transition-colors ${
+            theme === 'dark' ? 'text-[#a3a3a3]' : 'text-[#8a7d6f]'
+          }`}
+        >
           If this problem persists, please contact support or try refreshing the page.
         </p>
       </div>
     </div>
-  );
+  )
 }

@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import {
   siTypescript,
   siJavascript,
@@ -35,11 +36,11 @@ import {
   siWebassembly,
   siDocker,
   siMake,
-} from 'simple-icons';
+} from 'simple-icons'
 
 interface LanguageIconProps {
-  language: string;
-  className?: string;
+  language: string
+  className?: string
 }
 
 const languageMapping: Record<string, { icon: typeof siTypescript; color: string }> = {
@@ -81,19 +82,32 @@ const languageMapping: Record<string, { icon: typeof siTypescript; color: string
   Makefile: { icon: siMake, color: '#2E7D32' },
   // Languages without icons will show fallback colored dot:
   // CSS, Java, C#, MATLAB, PowerShell, D, COBOL
-};
+}
 
 // Custom CSS icon SVG path (CSS3 logo)
-const cssIconPath = "M1.5 0h21l-1.91 21.563L11.977 24l-8.564-2.438L1.5 0zm17.09 4.413L5.41 4.41l.213 2.622h10.125l-.255 2.716h-6.64l.24 2.573h6.182l-.366 3.523-2.91.804-2.955-.81-.188-2.11H6.496l.33 4.171L12 19.288l5.379-1.443.744-8.157H8.957l-.276-2.97h10.999z";
+const cssIconPath =
+  'M1.5 0h21l-1.91 21.563L11.977 24l-8.564-2.438L1.5 0zm17.09 4.413L5.41 4.41l.213 2.622h10.125l-.255 2.716h-6.64l.24 2.573h6.182l-.366 3.523-2.91.804-2.955-.81-.188-2.11H6.496l.33 4.171L12 19.288l5.379-1.443.744-8.157H8.957l-.276-2.97h10.999z'
 
 // Batchfile (Windows CMD) - terminal-style icon
-const batchfileIconPath = "M2 4h20v16H2V4zm2 2v2h16V6H4zm0 4h16v2H4v-2zm0 4h10v2H4v-2z";
+const batchfileIconPath = 'M2 4h20v16H2V4zm2 2v2h16V6H4zm0 4h16v2H4v-2zm0 4h10v2H4v-2z'
 
-export function LanguageIcon({ language, className = 'w-4 h-4' }: LanguageIconProps) {
-  const config = languageMapping[language];
+const lowercaseMapping = Object.entries(languageMapping).reduce(
+  (acc, [key, value]) => {
+    acc[key.toLowerCase()] = value
+    return acc
+  },
+  {} as Record<string, { icon: typeof siTypescript; color: string }>
+)
+
+export const LanguageIcon = memo(function LanguageIcon({
+  language,
+  className = 'w-4 h-4',
+}: LanguageIconProps) {
+  const normalizedLanguage = language.toLowerCase()
+  const config = useMemo(() => lowercaseMapping[normalizedLanguage], [normalizedLanguage])
 
   // Special handling for CSS (no icon in simple-icons)
-  if (language === 'CSS') {
+  if (normalizedLanguage === 'css') {
     return (
       <svg
         role="img"
@@ -105,11 +119,11 @@ export function LanguageIcon({ language, className = 'w-4 h-4' }: LanguageIconPr
         <title>CSS</title>
         <path d={cssIconPath} />
       </svg>
-    );
+    )
   }
 
   // Batchfile (Windows CMD) - custom terminal icon
-  if (language === 'Batchfile') {
+  if (normalizedLanguage === 'batchfile') {
     return (
       <svg
         role="img"
@@ -121,12 +135,13 @@ export function LanguageIcon({ language, className = 'w-4 h-4' }: LanguageIconPr
         <title>Batchfile</title>
         <path d={batchfileIconPath} />
       </svg>
-    );
+    )
   }
 
   if (!config) {
-    // Fallback to colored dot if language not found
-    return <div className={`rounded-full bg-[#9b8b7a] ${className}`} />;
+    return (
+      <div role="img" aria-label={language} className={`rounded-full bg-[#9b8b7a] ${className}`} />
+    )
   }
 
   return (
@@ -140,5 +155,5 @@ export function LanguageIcon({ language, className = 'w-4 h-4' }: LanguageIconPr
       <title>{language}</title>
       <path d={config.icon.path} />
     </svg>
-  );
-}
+  )
+})

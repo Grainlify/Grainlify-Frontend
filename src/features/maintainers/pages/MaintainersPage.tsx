@@ -247,6 +247,11 @@ export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
     setActiveTab('Issues');
   };
 
+  const handleNavigateToPR = (_prId: string) => {
+    // For now, route users to the Pull Requests tab. We may add a focused PR view later.
+    setActiveTab('Pull Requests');
+  };
+
   const currentPendingProject = pendingSetupProjects[0] ?? null;
   // Show modal: after GitHub App redirect / Complete setup click, or when editing a completed project
   const isSetupModalOpen =
@@ -553,6 +558,7 @@ export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
           isLoadingProjects={isLoading}
           onRefresh={refreshAll}
           onNavigateToIssue={handleNavigateToIssue}
+          onNavigateToPR={handleNavigateToPR}
         />
       )}
 

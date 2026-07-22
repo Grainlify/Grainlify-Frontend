@@ -64,14 +64,25 @@ describe('Guarded Logger', () => {
       expect(consoleInfoSpy).not.toHaveBeenCalled();
     });
 
-    it('should NOT call console.warn when logger.warn is called', () => {
-      logger.warn('test warn');
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
+    it('should call console.warn when logger.warn is called in production', () => {
+      logger.warn('prod warning');
+      expect(consoleWarnSpy).toHaveBeenCalledWith('prod warning');
     });
 
-    it('should NOT call console.error when logger.error is called', () => {
-      logger.error('test error');
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
+    it('should call console.warn with multiple params in production', () => {
+      logger.warn('prod warning', { code: 'AUTH_FAILED' });
+      expect(consoleWarnSpy).toHaveBeenCalledWith('prod warning', { code: 'AUTH_FAILED' });
+    });
+
+    it('should call console.error when logger.error is called in production', () => {
+      logger.error('prod error');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('prod error');
+    });
+
+    it('should call console.error with multiple params in production', () => {
+      const err = new Error('something went wrong');
+      logger.error('unhandled exception', err);
+      expect(consoleErrorSpy).toHaveBeenCalledWith('unhandled exception', err);
     });
   });
 });

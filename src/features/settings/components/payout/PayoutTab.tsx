@@ -1,9 +1,14 @@
 import { logger } from '../../../../shared/utils/logger';
 import { useState, useEffect } from 'react';
 import { Info } from 'lucide-react';
-import { SkeletonLoader } from '../shared/SkeletonLoader';
+import { SkeletonLoader } from '../../../../shared/components/SkeletonLoader';
+import { toast } from 'sonner';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
-import { getProjectsContributed } from '../../../../shared/api/client';
+import {
+  getProjectsContributed,
+  getPayoutMappings,
+  savePayoutMappings,
+} from '../../../../shared/api/client';
 import { useBillingProfiles } from '../../contexts/BillingProfilesContext';
 import { LanguageIcon } from '../../../../shared/components/LanguageIcon';
 
@@ -11,6 +16,7 @@ export function PayoutTab() {
   const { theme } = useTheme();
   const { profiles } = useBillingProfiles();
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [projects, setProjects] = useState<Array<{
     id: string;
     github_full_name: string;
@@ -20,24 +26,36 @@ export function PayoutTab() {
     owner_avatar_url?: string;
   }>>([]);
   const [projectMappings, setProjectMappings] = useState<Record<string, number | null>>({});
-const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [savedMappings, setSavedMappings] = useState<Record<string, number | null>>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const isDirty = JSON.stringify(projectMappings) !== JSON.stringify(savedMappings);
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        const response = await getProjectsContributed();
-        setProjects(response || []);
+        const [projectsData, persistedMappings] = await Promise.all([
+          getProjectsContributed(),
+          getPayoutMappings().catch(() => []),
+        ]);
+        setProjects(projectsData || []);
+
+        const mappingsRecord = Object.fromEntries(
+          persistedMappings.map((m) => [m.project_id, m.billing_profile_id]),
+        );
+        setProjectMappings(mappingsRecord);
+        setSavedMappings(mappingsRecord);
       } catch (error) {
         logger.error('Failed to fetch projects:', error);
-        setErrorMessage("Failed to load projects. Please try again later.");
+        setErrorMessage('Failed to load projects. Please try again later.');
         setProjects([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProjects();
+    fetchData();
   }, []);
 
   const handleProfileChange = (projectId: string, profileId: string) => {
@@ -47,9 +65,28 @@ const [errorMessage, setErrorMessage] = useState<string | null>(null);
     }));
   };
 
-  const handleSave = () => {
-    // TODO: Implement save to backend
-    logger.debug('Saving payout preferences:', projectMappings);
+  /**
+   * Persists the current project-to-billing-profile mappings to the backend.
+   * Shows a success or error toast and resets the dirty state on success.
+   */
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const mappings = Object.entries(projectMappings).map(([project_id, billing_profile_id]) => ({
+        project_id,
+        billing_profile_id,
+      }));
+      await savePayoutMappings(mappings);
+      setSavedMappings({ ...projectMappings });
+      toast.success('Payout preferences saved');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to save payout preferences';
+      logger.error('Failed to save payout preferences:', error);
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getProjectInitial = (fullName: string) => {
@@ -68,11 +105,11 @@ const [errorMessage, setErrorMessage] = useState<string | null>(null);
   return (
     <div className="space-y-6">
       {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg mb-4">
-                      {errorMessage}
-                            </div>
-                                )}
-      
+        <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg mb-4">
+          {errorMessage}
+        </div>
+      )}
+
       <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${
         theme === 'dark'
           ? 'bg-[#2d2820]/[0.4] border-white/10'
@@ -254,9 +291,10 @@ const [errorMessage, setErrorMessage] = useState<string | null>(null);
         <div className="flex justify-end">
           <button
             onClick={handleSave}
-            className="px-8 py-3 rounded-[16px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[15px] shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] transition-all border border-white/10"
+            disabled={isSaving || !isDirty}
+            className="px-8 py-3 rounded-[16px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[15px] shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save
+            {isSaving ? 'Saving...' : 'Save'}
           </button>
         </div>
       )}

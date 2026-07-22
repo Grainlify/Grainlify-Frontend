@@ -10,14 +10,26 @@ export interface StatCard {
   icon: LucideIcon;
 }
 
+/**
+ * Represents a maintainer activity entry displayed in the dashboard timeline.
+ */
 export interface Activity {
+  /** The unique identifier of the issue or PR (e.g. GitHub ID) */
   id: number;
+  /** The type of activity, either a Pull Request ('pr') or an Issue ('issue') */
   type: 'pr' | 'issue';
+  /** The GitHub issue or PR number */
   number: number;
+  /** The title of the issue or PR */
   title: string;
+  /** An optional label indicating status or additional metadata (e.g. "Merged", comment counts) */
   label: string | null;
+  /** The formatted relative time string (e.g. "3 days ago") */
   timeAgo: string;
+  /** The unique project ID, required for navigating to issues */
   projectId?: string;
+  /** The actual ISO timestamp of when the activity occurred (used for chronological sorting) */
+  timestamp: string;
 }
 
 export interface ChartDataPoint {
