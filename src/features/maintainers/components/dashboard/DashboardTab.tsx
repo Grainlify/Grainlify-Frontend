@@ -3,7 +3,6 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { FileText, GitPullRequest, GitMerge, AlertCircle, FolderOpen } from 'lucide-react'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { StatsCard } from './StatsCard'
-import { StatsCardSkeleton } from './StatsCardSkeleton'
 import { ActivityItem } from './ActivityItem'
 import { ApplicationsChart } from './ApplicationsChart'
 import { StatCard, Activity, ChartDataPoint } from '../../types'
@@ -437,7 +436,7 @@ export function DashboardTab({
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-5">
         {showLoading
-          ? [...Array(4)].map((_, idx) => <StatsCardSkeleton key={idx} />)
+          ? [...Array(4)].map((_, idx) => <StatsCard key={idx} index={idx} loading />)
           : stats.map((stat, idx) => <StatsCard key={stat.id} stat={stat} index={idx} />)}
       </div>
 
