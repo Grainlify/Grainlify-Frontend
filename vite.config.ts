@@ -39,6 +39,7 @@ export default defineConfig({
         'src/shared/hooks/useOptimisticData.ts',
         'src/shared/utils/errorHandler.ts',
         'src/shared/utils/projectFilter.ts',
+        'src/features/settings/components/profile/profileSchema.ts',
       ],
     },
   },

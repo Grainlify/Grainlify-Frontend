@@ -4,6 +4,7 @@ import { Github, User, Upload, Link as LinkIcon } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { getCurrentUser, updateProfile, updateAvatar, resyncGitHubProfile } from '../../../../shared/api/client';
 import { toast } from 'sonner';
+import { profileSchema } from './profileSchema';
 
 interface CurrentUser {
   id: string;
@@ -50,6 +51,7 @@ export function ProfileTab() {
   const [whatsapp, setWhatsapp] = useState('');
   const [twitter, setTwitter] = useState('');
   const [discord, setDiscord] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [initialValues, setInitialValues] = useState({
     firstName: '',
     lastName: '',
@@ -234,6 +236,33 @@ export function ProfileTab() {
   };
 
   const handleSave = async () => {
+    const validationResult = profileSchema.safeParse({
+      firstName,
+      lastName,
+      location,
+      website,
+      bio,
+      telegram,
+      linkedin,
+      whatsapp,
+      twitter,
+      discord,
+    });
+
+    if (!validationResult.success) {
+      const fieldErrors: Record<string, string> = {};
+      validationResult.error.issues.forEach((issue) => {
+        const fieldName = issue.path[0] as string;
+        if (fieldName && !fieldErrors[fieldName]) {
+          fieldErrors[fieldName] = issue.message;
+        }
+      });
+      setErrors(fieldErrors);
+      toast.error('Please fix validation errors before saving.');
+      return;
+    }
+
+    setErrors({});
     setIsSaving(true);
     try {
       await updateProfile({
@@ -468,12 +497,19 @@ export function ProfileTab() {
               type="text"
               placeholder="Enter your website"
               value={website}
-              onChange={(e) => setWebsite(e.target.value)}
+              aria-invalid={!!errors.website}
+              onChange={(e) => {
+                setWebsite(e.target.value);
+                if (errors.website) setErrors((prev) => ({ ...prev, website: '' }));
+              }}
               className={`w-full px-4 py-3 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                 ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
                 : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
-                }`}
+                } ${errors.website ? 'border-red-500' : ''}`}
             />
+            {errors.website && (
+              <p className="mt-1 text-[12px] text-red-500">{errors.website}</p>
+            )}
           </div>
         </div>
 
@@ -515,16 +551,23 @@ export function ProfileTab() {
               <input
                 type="text"
                 value={telegram}
-                onChange={(e) => setTelegram(e.target.value)}
+                aria-invalid={!!errors.telegram}
+                onChange={(e) => {
+                  setTelegram(e.target.value);
+                  if (errors.telegram) setErrors((prev) => ({ ...prev, telegram: '' }));
+                }}
                 placeholder="Enter your telegram handle"
                 className={`w-full px-4 py-3 pr-10 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                   ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
                   : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
-                  }`}
+                  } ${errors.telegram ? 'border-red-500' : ''}`}
               />
               <LinkIcon className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${theme === 'dark' ? 'text-[#8a7e70]' : 'text-[#7a6b5a]'
                 }`} />
             </div>
+            {errors.telegram && (
+              <p className="mt-1 text-[12px] text-red-500">{errors.telegram}</p>
+            )}
           </div>
 
           {/* LinkedIn */}
@@ -535,16 +578,23 @@ export function ProfileTab() {
               <input
                 type="text"
                 value={linkedin}
-                onChange={(e) => setLinkedin(e.target.value)}
+                aria-invalid={!!errors.linkedin}
+                onChange={(e) => {
+                  setLinkedin(e.target.value);
+                  if (errors.linkedin) setErrors((prev) => ({ ...prev, linkedin: '' }));
+                }}
                 placeholder="Enter your linkedin handle"
                 className={`w-full px-4 py-3 pr-10 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                   ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
                   : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
-                  }`}
+                  } ${errors.linkedin ? 'border-red-500' : ''}`}
               />
               <LinkIcon className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`} />
             </div>
+            {errors.linkedin && (
+              <p className="mt-1 text-[12px] text-red-500">{errors.linkedin}</p>
+            )}
           </div>
 
           {/* WhatsApp */}
@@ -555,16 +605,23 @@ export function ProfileTab() {
               <input
                 type="text"
                 value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
+                aria-invalid={!!errors.whatsapp}
+                onChange={(e) => {
+                  setWhatsapp(e.target.value);
+                  if (errors.whatsapp) setErrors((prev) => ({ ...prev, whatsapp: '' }));
+                }}
                 placeholder="Enter your whatsApp handle"
                 className={`w-full px-4 py-3 pr-10 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                   ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
                   : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
-                  }`}
+                  } ${errors.whatsapp ? 'border-red-500' : ''}`}
               />
               <LinkIcon className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`} />
             </div>
+            {errors.whatsapp && (
+              <p className="mt-1 text-[12px] text-red-500">{errors.whatsapp}</p>
+            )}
           </div>
 
           {/* Twitter */}
@@ -575,16 +632,23 @@ export function ProfileTab() {
               <input
                 type="text"
                 value={twitter}
-                onChange={(e) => setTwitter(e.target.value)}
+                aria-invalid={!!errors.twitter}
+                onChange={(e) => {
+                  setTwitter(e.target.value);
+                  if (errors.twitter) setErrors((prev) => ({ ...prev, twitter: '' }));
+                }}
                 placeholder="Enter your twitter handle"
                 className={`w-full px-4 py-3 pr-10 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                   ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
                   : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
-                  }`}
+                  } ${errors.twitter ? 'border-red-500' : ''}`}
               />
               <LinkIcon className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`} />
             </div>
+            {errors.twitter && (
+              <p className="mt-1 text-[12px] text-red-500">{errors.twitter}</p>
+            )}
           </div>
 
           {/* Discord - Full Width */}
@@ -595,16 +659,23 @@ export function ProfileTab() {
               <input
                 type="text"
                 value={discord}
-                onChange={(e) => setDiscord(e.target.value)}
+                aria-invalid={!!errors.discord}
+                onChange={(e) => {
+                  setDiscord(e.target.value);
+                  if (errors.discord) setErrors((prev) => ({ ...prev, discord: '' }));
+                }}
                 placeholder="Enter your discord handle"
                 className={`w-full px-4 py-3 pr-10 rounded-[14px] backdrop-blur-[30px] border focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/30 transition-all text-[14px] ${theme === 'dark'
                   ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#f5efe5] placeholder-[#b8a898]'
                   : 'bg-white/[0.15] border-white/25 text-[#2d2820] placeholder-[#7a6b5a]'
-                  }`}
+                  } ${errors.discord ? 'border-red-500' : ''}`}
               />
               <LinkIcon className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`} />
             </div>
+            {errors.discord && (
+              <p className="mt-1 text-[12px] text-red-500">{errors.discord}</p>
+            )}
           </div>
         </div>
       </div>
