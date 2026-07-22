@@ -53,6 +53,37 @@ export function SearchWithFilter({
     }
   }, [debouncedSearchValue, onSearchChange, searchValue])
 
+  // ── Escape key handler & body scroll lock ──────────────────────────────
+  // When the filter panel is open we:
+  //   1. Lock background scroll by setting body overflow to "hidden",
+  //      restoring the previous value when the panel closes or the
+  //      component unmounts.
+  //   2. Listen for the Escape key and close the panel, mirroring the
+  //      backdrop-click-to-close behaviour.
+  useEffect(() => {
+    if (!isFilterOpen) {
+      return
+    }
+
+    // Save the original overflow so we can restore it later (handles
+    // cases where the consumer had already set a custom value).
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFilterOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isFilterOpen])
+
   const handleInputChange = (value: string) => {
     setLocalSearchValue(value)
     if (value === '') {
