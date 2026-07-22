@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import { SignUpPage } from './SignUpPage'
 import { I18nProvider, en } from '../../../shared/i18n'
 
@@ -48,11 +48,6 @@ vi.mock('../../../shared/utils/logger', () => ({
   },
 }))
 
-function LocationProbe() {
-  const location = useLocation()
-  return <div data-testid="location">{location.pathname + location.search}</div>
-}
-
 function I18nTestProvider({
   children,
   messages = en,
@@ -74,9 +69,32 @@ function renderSignUp(path: string, messages: Record<string, string> = en) {
   )
 }
 
+const originalLocation = window.location
+
 describe('SignUpPage', () => {
   beforeEach(() => {
     mockGetGitHubLoginUrl.mockReturnValue('https://github.com/login/oauth')
+
+    // Prevent jsdom's "Not implemented: navigation" error by absorbing
+    // window.location.href assignments in the test environment.
+    const descriptors = Object.getOwnPropertyDescriptors(originalLocation)
+    Object.defineProperty(window, 'location', {
+      value: Object.create(Object.getPrototypeOf(originalLocation), {
+        ...descriptors,
+        href: {
+          configurable: true,
+          enumerable: true,
+          get() {
+            return originalLocation.href
+          },
+          set(_v: string) {
+            /* no-op */
+          },
+        },
+      }),
+      configurable: true,
+      writable: true,
+    })
   })
 
   afterEach(() => {
