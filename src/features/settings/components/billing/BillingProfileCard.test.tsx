@@ -78,11 +78,35 @@ describe('BillingProfileCard', () => {
     expect(screen.getByText('Missing Verification')).toBeInTheDocument()
   })
 
+  it('renders the missing-verification status badge alongside processing state', () => {
+    renderWithTheme(
+      <BillingProfileCard
+        profile={{ ...baseProfile, status: 'missing-verification' }}
+        onClick={vi.fn()}
+        isProcessing
+      />
+    )
+    expect(screen.getByText('Missing Verification')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Processing' })).toBeInTheDocument()
+  })
+
   it('renders the limit-reached status badge', () => {
     renderWithTheme(
       <BillingProfileCard profile={{ ...baseProfile, status: 'limit-reached' }} onClick={vi.fn()} />
     )
     expect(screen.getByText('Individual Limit Reached')).toBeInTheDocument()
+  })
+
+  it('renders the limit-reached status badge alongside processing state', () => {
+    renderWithTheme(
+      <BillingProfileCard
+        profile={{ ...baseProfile, status: 'limit-reached' }}
+        onClick={vi.fn()}
+        isProcessing
+      />
+    )
+    expect(screen.getByText('Individual Limit Reached')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Processing' })).toBeInTheDocument()
   })
 
   it('formats non-organization type labels', () => {
