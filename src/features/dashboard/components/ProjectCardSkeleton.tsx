@@ -1,16 +1,18 @@
-import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 
 export function ProjectCardSkeleton() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   return (
+    // CONVENTION: This skeleton must closely mirror the outer structural shape and key
+    // layout classes of ProjectCard.tsx to prevent layout shifts when data loads.
+    // If you change the padding, border radius, or grid structure of ProjectCard,
+    // update this skeleton accordingly.
     <div
-      className={`backdrop-blur-[30px] rounded-[18px] border p-5 ${
-        isDark
-          ? 'bg-white/[0.08] border-white/15'
-          : 'bg-white/[0.15] border-white/25'
+      className={`w-full text-left backdrop-blur-[30px] rounded-[18px] border p-5 ${
+        isDark ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
       }`}
     >
       {/* Icon */}
@@ -20,7 +22,7 @@ export function ProjectCardSkeleton() {
 
       {/* Title */}
       <SkeletonLoader className="h-5 w-3/4 mb-2" />
-      
+
       {/* Description */}
       <SkeletonLoader className="h-3 w-full mb-1" />
       <SkeletonLoader className="h-3 w-5/6 mb-4" />
@@ -54,19 +56,5 @@ export function ProjectCardSkeleton() {
         <SkeletonLoader className="h-6 w-16 rounded-[8px]" />
       </div>
     </div>
-  );
+  )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

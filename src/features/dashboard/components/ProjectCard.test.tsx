@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { renderWithTheme } from '../../../test/renderWithTheme'
 import { ProjectCard, type Project } from './ProjectCard'
+import { ProjectCardSkeleton } from './ProjectCardSkeleton'
 
 const project: Project = {
   id: 42,
@@ -64,5 +65,69 @@ describe('ProjectCard', () => {
 
     expect(container).toBeEmptyDOMElement()
     expect(onClick).not.toHaveBeenCalled()
+  })
+})
+
+describe('ProjectCard Layout Parity', () => {
+  it('skeleton and real card share the same outer container structure', () => {
+    const { container: skeletonContainer } = renderWithTheme(<ProjectCardSkeleton />)
+    const skeletonElement = skeletonContainer.firstElementChild as HTMLElement
+
+    const { container: cardContainer } = renderWithTheme(<ProjectCard project={project} />)
+    const cardElement = cardContainer.firstElementChild as HTMLElement
+
+    // Note: Visual regression testing is ideal here, but asserting shared layout classes
+    // is a good unit-test proxy to prevent layout shifts.
+    const sharedClasses = [
+      'w-full',
+      'text-left',
+      'backdrop-blur-[30px]',
+      'rounded-[18px]',
+      'border',
+      'p-5',
+    ]
+    sharedClasses.forEach((cls) => {
+      expect(skeletonElement).toHaveClass(cls)
+      expect(cardElement).toHaveClass(cls)
+    })
+  })
+
+  it('maintains layout bounds even with missing optional fields or long wrapping text', () => {
+    // Edge case: card with a long title/description wrapping to two lines
+    // and missing an optional field (e.g. no tags) vs skeleton's fixed placeholders.
+    const edgeCaseProject = {
+      ...project,
+      name: 'A very very long project name that will likely wrap into multiple lines if the container is narrow enough to force it',
+      description:
+        'An extremely long description that takes up a lot of vertical space and pushes content down, which might cause layout shift if the skeleton does not account for typical wrapping bounds.',
+      tags: [], // missing optional field
+    }
+
+    const { container: edgeCardContainer } = renderWithTheme(
+      <ProjectCard project={edgeCaseProject} />
+    )
+    const cardElement = edgeCardContainer.firstElementChild as HTMLElement
+
+    const { container: skeletonContainer } = renderWithTheme(<ProjectCardSkeleton />)
+    const skeletonElement = skeletonContainer.firstElementChild as HTMLElement
+
+    // Asserting class structure is maintained despite edge case content
+    const sharedClasses = [
+      'w-full',
+      'text-left',
+      'backdrop-blur-[30px]',
+      'rounded-[18px]',
+      'border',
+      'p-5',
+    ]
+    sharedClasses.forEach((cls) => {
+      expect(cardElement).toHaveClass(cls)
+      expect(skeletonElement).toHaveClass(cls)
+    })
+
+    // Check that tags container is present but empty, verifying structural integrity
+    const tagContainer = edgeCardContainer.querySelector('.flex.flex-wrap.gap-1\\.5')
+    expect(tagContainer).toBeInTheDocument()
+    expect(tagContainer?.children).toHaveLength(0)
   })
 })
