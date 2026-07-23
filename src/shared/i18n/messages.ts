@@ -185,6 +185,16 @@ export const en = {
   'invoices.status.pending': 'pending',
   'invoices.status.overdue': 'overdue',
   'invoices.errors.downloadFailed': 'Download failed. Please try again.',
+
+  // ── Backend API Error Taxonomy ──
+  'errors.generic': 'An unexpected error occurred. Please try again.',
+  'errors.code.UNAUTHORIZED': 'Your session has expired. Please sign in again.',
+  'errors.code.FORBIDDEN': 'You do not have permission to perform this action.',
+  'errors.code.NOT_FOUND': 'The requested resource could not be found.',
+  'errors.code.RATE_LIMITED': 'Too many requests. Please try again later.',
+  'errors.code.BAD_REQUEST': 'Invalid request parameters. Please check your input and try again.',
+  'errors.code.INTERNAL_ERROR': 'Our servers are experiencing issues. Please try again later.',
+  'errors.code.SERVICE_UNAVAILABLE': 'Service is temporarily unavailable. Please try again later.',
 } as const
 
 /**
@@ -209,6 +219,10 @@ export const es: Partial<Messages> = {
   'dashboardNav.discover': 'Descubrir',
   'dashboardNav.browse': 'Explorar',
   'dashboardNav.leaderboard': 'Clasificación',
+  'errors.generic': 'Ocurrió un error inesperado. Por favor, inténtelo de nuevo.',
+  'errors.code.UNAUTHORIZED': 'Su sesión ha expirado. Por favor, inicie sesión de nuevo.',
+  'errors.code.FORBIDDEN': 'No tiene permiso para realizar esta acción.',
+  'errors.code.NOT_FOUND': 'El recurso solicitado no se pudo encontrar.',
 }
 
 /**
