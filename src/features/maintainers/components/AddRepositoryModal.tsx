@@ -96,7 +96,17 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
         setSuccess(false)
       }, 1500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add repository')
+      let errorMessage = err instanceof Error ? err.message : 'Failed to add repository'
+      const lowerError = errorMessage.toLowerCase()
+      if (
+        lowerError.includes('already exists') ||
+        lowerError.includes('duplicate') ||
+        lowerError.includes('conflict') ||
+        lowerError.includes('unique constraint')
+      ) {
+        errorMessage = 'This repository is already added'
+      }
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }
