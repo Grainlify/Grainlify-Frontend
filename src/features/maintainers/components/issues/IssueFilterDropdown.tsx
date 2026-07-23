@@ -178,7 +178,7 @@ export function IssueFilterDropdown({ value, onChange, isOpen, onToggle, onClose
                   }}
                   type="button"
                   role="option"
-                  aria-selected={value === option}
+                  aria-selected={value.split(',').map((v) => v.trim()).includes(option)}
                   tabIndex={-1}
                   className={`w-full px-6 py-3.5 flex items-center justify-between transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#c9983a] ${
                     isDark
@@ -194,7 +194,7 @@ export function IssueFilterDropdown({ value, onChange, isOpen, onToggle, onClose
                   }`}>
                     {option}
                   </span>
-                  {value === option && (
+                  {value.split(',').map((v) => v.trim()).includes(option) && (
                     <Check className={`w-5 h-5 ${
                       isDark ? 'text-[#e8c571]' : 'text-[#c9983a]'
                     }`} strokeWidth={2.5} aria-hidden="true" />

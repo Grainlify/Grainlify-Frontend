@@ -234,4 +234,157 @@ describe('IssueFilterDropdown', () => {
     expect(trigger).toHaveTextContent('<img src=x onerror=alert(1)>');
     expect(trigger.querySelector('img')).toBeNull();
   });
+
+  describe('Multi-select functionality', () => {
+    const MOCK_ISSUES = [
+      { id: 1, status: 'Waiting for review' },
+      { id: 2, status: 'In progress' },
+      { id: 3, status: 'Stale' },
+      { id: 4, status: 'All' }, // matches anything or dummy
+    ];
+
+    function MultiSelectIssueFilterHarness({
+      onChange,
+      initialValue = 'All',
+    }: {
+      onChange?: (value: string) => void;
+      initialValue?: string;
+    }) {
+      const [value, setValue] = useState(initialValue);
+      const [isOpen, setIsOpen] = useState(false);
+
+      const handleFilterChange = (next: string) => {
+        let nextValue = next;
+        if (next === 'All') {
+          nextValue = 'All';
+        } else {
+          const currentSelections = value
+            .split(',')
+            .map((v) => v.trim())
+            .filter((v) => v !== 'All' && v !== '');
+
+          if (currentSelections.includes(next)) {
+            // Deselect
+            const updated = currentSelections.filter((v) => v !== next);
+            nextValue = updated.length > 0 ? updated.join(', ') : 'All';
+          } else {
+            // Select
+            currentSelections.push(next);
+            nextValue = currentSelections.join(', ');
+          }
+        }
+        setValue(nextValue);
+        onChange?.(nextValue);
+      };
+
+      // Filter semantics: OR logic between active filter values
+      const activeFilters = value.split(',').map((v) => v.trim());
+      const filteredIssues = MOCK_ISSUES.filter((issue) => {
+        if (activeFilters.includes('All')) return true;
+        return activeFilters.includes(issue.status);
+      });
+
+      return (
+        <div>
+          <IssueFilterDropdown
+            value={value}
+            onChange={handleFilterChange}
+            isOpen={isOpen}
+            onToggle={() => setIsOpen((open) => !open)}
+            onClose={() => setIsOpen(false)}
+          />
+          <div data-testid="filtered-count">{filteredIssues.length}</div>
+          <ul data-testid="filtered-list">
+            {filteredIssues.map((issue) => (
+              <li key={issue.id}>{issue.id} - {issue.status}</li>
+            ))}
+          </ul>
+          <button data-testid="clear-all" onClick={() => handleFilterChange('All')}>
+            Clear All
+          </button>
+        </div>
+      );
+    }
+
+    const getTrigger = () => screen.getAllByRole('button')[0];
+
+    it('asserts that selecting multiple filter values matches OR semantics (union of matched issues)', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      renderWithTheme(<MultiSelectIssueFilterHarness onChange={onChange} initialValue="Waiting for review" />);
+
+      // Verify initial state: only 1 issue matches "Waiting for review"
+      expect(screen.getByTestId('filtered-count')).toHaveTextContent('1');
+
+      // Open dropdown and select "In progress" to combine them
+      const trigger = getTrigger();
+      await user.click(trigger);
+      const optionInProgress = screen.getByRole('option', { name: 'In progress' });
+      await user.click(optionInProgress);
+
+      // Verify that value updated to combined list
+      expect(onChange).toHaveBeenLastCalledWith('Waiting for review, In progress');
+      expect(getTrigger()).toHaveTextContent('Waiting for review, In progress');
+
+      // Verify OR semantics: both "Waiting for review" (id 1) and "In progress" (id 2) issues match
+      expect(screen.getByTestId('filtered-count')).toHaveTextContent('2');
+      const listItems = screen.getAllByRole('listitem').map((li) => li.textContent);
+      expect(listItems).toContain('1 - Waiting for review');
+      expect(listItems).toContain('2 - In progress');
+    });
+
+    it('asserts that deselecting one of several active filters leaves the rest applied', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      renderWithTheme(
+        <MultiSelectIssueFilterHarness
+          onChange={onChange}
+          initialValue="Waiting for review, In progress"
+        />,
+      );
+
+      // Verify initial state: 2 issues match
+      expect(screen.getByTestId('filtered-count')).toHaveTextContent('2');
+
+      // Open dropdown and click "Waiting for review" to deselect it
+      const trigger = getTrigger();
+      await user.click(trigger);
+      const optionWaiting = screen.getByRole('option', { name: 'Waiting for review' });
+      await user.click(optionWaiting);
+
+      // Verify that only "In progress" remains
+      expect(onChange).toHaveBeenLastCalledWith('In progress');
+      expect(getTrigger()).toHaveTextContent('In progress');
+
+      // Verify filtered set updated to show only "In progress" issue
+      expect(screen.getByTestId('filtered-count')).toHaveTextContent('1');
+      const listItems = screen.getAllByRole('listitem').map((li) => li.textContent);
+      expect(listItems).toEqual(['2 - In progress']);
+    });
+
+    it('asserts that a clear all filters action resets to the unfiltered view', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      renderWithTheme(
+        <MultiSelectIssueFilterHarness
+          onChange={onChange}
+          initialValue="Waiting for review, In progress"
+        />,
+      );
+
+      // Verify initial state is filtered (2 issues match)
+      expect(screen.getByTestId('filtered-count')).toHaveTextContent('2');
+
+      // Click clear all button
+      await user.click(screen.getByTestId('clear-all'));
+
+      // Verify state reset to "All"
+      expect(onChange).toHaveBeenLastCalledWith('All');
+      expect(getTrigger()).toHaveTextContent('All');
+
+      // Verify unfiltered view: all 4 mock issues match
+      expect(screen.getByTestId('filtered-count')).toHaveTextContent('4');
+    });
+  });
 });
+
