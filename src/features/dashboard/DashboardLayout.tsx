@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom'
 import {
   Search,
@@ -72,6 +72,17 @@ export function DashboardLayout() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null)
+  const mobileMenuCloseRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (mobileMenuOpen && mobileMenuCloseRef.current) {
+      mobileMenuCloseRef.current.focus()
+    } else if (!mobileMenuOpen && mobileMenuTriggerRef.current) {
+      mobileMenuTriggerRef.current.focus()
+    }
+  }, [mobileMenuOpen])
 
   // Get current page from URL path
   const getCurrentPage = () => {
@@ -371,6 +382,7 @@ export function DashboardLayout() {
                 </Link>
 
                 <button
+                  ref={mobileMenuCloseRef}
                   aria-label="Close navigation menu"
                   className={`lg:hidden transition-colors self-end ${showMobileNav ? 'block' : 'hidden'} ${
                     theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
@@ -507,6 +519,7 @@ export function DashboardLayout() {
 
             {/* Mobile nav open button */}
             <button
+              ref={mobileMenuTriggerRef}
               aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
               aria-expanded={mobileMenuOpen}
               className={`lg:hidden transition-colors ml-auto mr-[8px] ${showMobileNav ? 'hidden' : 'block'} ${
