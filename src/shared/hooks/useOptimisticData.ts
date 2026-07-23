@@ -256,12 +256,12 @@ export function useOptimisticData<T>(
     }, delay)
   }, [fetchData, maxRetries, baseDelay, clearBackoffTimer])
 
-  const retry = useCallback(() => {
+  /*const retry = useCallback(() => {
     if (retryCount < MAX_RETRIES && lastFetchFnRef.current) {
       setRetryCount((c) => c + 1);
       fetchData(lastFetchFnRef.current, true);
     }
-  }, [retryCount, fetchData]);
+  }, [retryCount, fetchData]);*/
 
   const clearCache = useCallback(() => {
     cacheRef.current.clear()
