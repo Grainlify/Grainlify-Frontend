@@ -18,7 +18,7 @@ export {
   type LocaleContextValue,
 } from './LocaleProvider'
 export { LocaleSwitcher, type LocaleSwitcherProps } from './LocaleSwitcher'
-export { handleIntlError } from './errors'
+export { handleIntlError, ERROR_CODE_TAXONOMY, getErrorCodeMessage, useErrorCodeMessage } from './errors'
 export { useTranslation, type TranslationValues, type UseTranslation } from './useTranslation'
 export { useIntlFormatters, type UseIntlFormatters, type FormatDateOptions, type FormatNumberOptions, type FormatCurrencyOptions } from './useIntlFormatters'
 export {
