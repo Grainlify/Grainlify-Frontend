@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -285,6 +285,86 @@ describe('DashboardLayout icon-only controls accessibility', () => {
           link.querySelector('img')?.getAttribute('alt')
         expect(accessibleName).toBeTruthy()
       })
+    })
+  })
+
+  describe('DashboardLayout responsive sidebar collapse and drawer', () => {
+    let originalInnerWidth: number
+
+    beforeEach(() => {
+      originalInnerWidth = window.innerWidth
+    })
+
+    afterEach(() => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: originalInnerWidth,
+      })
+    })
+
+    function setWidthAndResize(width: number) {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: width,
+      })
+      window.dispatchEvent(new Event('resize'))
+    }
+
+    it('collapses/hides sidebar labels at narrow viewport widths', () => {
+      // Set width below 768px breakpoint before rendering
+      setWidthAndResize(500)
+      const { container } = renderLayout()
+
+      // Assert that the sidebar collapses
+      // The sidebar toggle button should be in collapsed state ("Expand sidebar")
+      const expandButton = screen.getByRole('button', { name: 'Expand sidebar' })
+      expect(expandButton).toBeInTheDocument()
+      expect(expandButton).toHaveAttribute('aria-expanded', 'false')
+
+      // Sidebar aside element should have collapsed width class (w-[65px])
+      const aside = container.querySelector('aside')
+      expect(aside).toHaveClass('w-[65px]')
+    })
+
+    it('keeps the main content area visible and usable in collapsed state', () => {
+      setWidthAndResize(500)
+      renderLayout()
+
+      const main = screen.getByRole('main')
+      expect(main).toBeInTheDocument()
+      expect(main).not.toHaveClass('hidden')
+      // Should have collapsed layout margin class
+      expect(main).toHaveClass('ml-[81px]')
+    })
+
+    it('provides a keyboard-operable mobile menu toggle and manages focus sensibly', async () => {
+      const user = userEvent.setup()
+      // Small device width (below 1024px) to show the mobile toggle button
+      setWidthAndResize(800)
+      renderLayout()
+
+      // Find the toggle (open menu button)
+      const openBtn = screen.getByRole('button', { name: 'Open navigation menu' })
+      expect(openBtn).toBeInTheDocument()
+
+      // Ensure it is keyboard operable - focus and press Enter/Space
+      openBtn.focus()
+      expect(document.activeElement).toBe(openBtn)
+
+      await user.keyboard('{Enter}')
+
+      // The mobile menu close button should now be focused (our sensible focus management)
+      const closeBtn = screen.getByRole('button', { name: 'Close navigation menu' })
+      expect(closeBtn).toBeInTheDocument()
+      expect(document.activeElement).toBe(closeBtn)
+
+      // Press Space or Enter to close it
+      await user.keyboard(' ')
+
+      // Focus should be returned to the open button (sensible focus restoration)
+      expect(document.activeElement).toBe(openBtn)
     })
   })
 })
