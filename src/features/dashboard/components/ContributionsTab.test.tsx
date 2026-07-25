@@ -87,12 +87,29 @@ describe('ContributionsTab', () => {
     expect(mockGetProfileContributions).toHaveBeenCalledTimes(1)
   })
 
-  it('shows loading skeletons while contribution items are loading', () => {
+  it('shows loading skeletons while contribution items are loading without flashing empty state', () => {
     mockGetProfileContributions.mockReturnValue(new Promise(() => {}))
 
     renderContributionsTab()
 
     expect(screen.getByLabelText('Loading contributions')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByTestId('contribution-empty-board')).not.toBeInTheDocument()
+    expect(screen.queryByText(/no contributions yet/i)).not.toBeInTheDocument()
+  })
+
+  it('shows a friendly empty state when a user has zero total contributions', async () => {
+    mockGetProfileContributions.mockResolvedValue({ contributions: [] })
+
+    renderContributionsTab()
+
+    const emptyBoard = await screen.findByTestId('contribution-empty-board')
+    expect(emptyBoard).toBeInTheDocument()
+    expect(screen.getByText('No contributions yet')).toBeInTheDocument()
+    expect(screen.getByText(/when you start contributing to projects/i)).toBeInTheDocument()
+
+    // Ensure 4 blank columns are not shown
+    expect(screen.queryByText('No applied contributions')).not.toBeInTheDocument()
+    expect(screen.queryByText('No complete contributions')).not.toBeInTheDocument()
   })
 
   it('shows an empty state for each column that has no matching contributions', async () => {
