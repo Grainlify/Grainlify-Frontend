@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { act, renderHook } from '@testing-library/react'
+import { Component, type ReactNode } from 'react'
+import { act, render, renderHook, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -9,6 +9,30 @@ import {
   useLocale,
 } from './LocaleProvider'
 import { DEFAULT_LOCALE, type Locale } from './messages'
+
+class TestErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+
+  render() {
+    if (this.state.error) {
+      return <span>{this.state.error.message}</span>
+    }
+
+    return this.props.children
+  }
+}
+
+function LocaleConsumer() {
+  useLocale()
+  return null
+}
 
 describe('readStoredLocale', () => {
   beforeEach(() => {
@@ -114,9 +138,11 @@ describe('LocaleProvider', () => {
   })
 
   it('keeps the in-memory locale when localStorage.setItem throws', () => {
-    const setItemSpy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
-      throw new Error('storage unavailable')
-    })
+    const setItemSpy = vi
+      .spyOn(window.localStorage, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('storage unavailable')
+      })
 
     const { result } = renderHook(() => useLocale(), {
       wrapper: createWrapper('en'),
@@ -153,10 +179,13 @@ describe('LocaleProvider', () => {
   it('throws a clear error when useLocale is called outside LocaleProvider', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
-    expect(() => renderHook(() => useLocale())).toThrow(
-      'useLocale must be used within a LocaleProvider'
+    render(
+      <TestErrorBoundary>
+        <LocaleConsumer />
+      </TestErrorBoundary>
     )
 
+    expect(screen.getByText('useLocale must be used within a LocaleProvider')).toBeInTheDocument()
     consoleError.mockRestore()
   })
 })
