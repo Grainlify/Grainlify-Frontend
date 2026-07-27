@@ -105,7 +105,7 @@
     "cross-env": "^10.1.0",
     "esbuild": "0.25.3",
     "eslint": "^10.7.0",
-    "eslint-config-prettier": "^9.1.2",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "~0.4.26",
     "husky": "^9.1.7",
