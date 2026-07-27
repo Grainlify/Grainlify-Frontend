@@ -1,4 +1,11 @@
-import { memo, useCallback, useMemo } from 'react'
+import {
+  memo,
+  useCallback,
+  useMemo,
+  type CSSProperties,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react'
 import { TrendingUp, TrendingDown, Minus, Award } from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { LeaderData, FilterType } from '../types'
@@ -6,7 +13,7 @@ import { getAvatarGradient } from '../data/leaderboardData'
 import { LeaderboardTableState } from './LeaderboardTableState'
 
 // ---------------------------------------------------------------------------
-// Stable icon map — avoids creating new JSX nodes on every getTrendIcon call.
+// Stable icon map - avoids creating new JSX nodes on every getTrendIcon call.
 // ---------------------------------------------------------------------------
 const TREND_ICONS = {
   up: <TrendingUp className="w-4 h-4 text-green-600" />,
@@ -17,21 +24,19 @@ const TREND_ICONS = {
 const getTrendIcon = (trend: 'up' | 'down' | 'same') => TREND_ICONS[trend]
 
 // ---------------------------------------------------------------------------
-// ContributorRow props
+// Keyboard keys that should activate an interactive contributor row.
 // ---------------------------------------------------------------------------
+const ROW_ACTIVATION_KEYS = new Set(['Enter', ' '])
+
 interface ContributorRowProps {
   leader: LeaderData
   index: number
   activeFilter: FilterType
   theme: string
-  animationStyle: React.CSSProperties
+  animationStyle: CSSProperties
   onClick: (leader: LeaderData) => void
 }
 
-// ---------------------------------------------------------------------------
-// ContributorRow — memoized with a custom equality check so it only re-renders
-// when its own data or the active filter actually changes.
-// ---------------------------------------------------------------------------
 const ContributorRow = memo(
   function ContributorRow({
     leader,
@@ -43,17 +48,29 @@ const ContributorRow = memo(
   }: ContributorRowProps) {
     const handleClick = useCallback(() => onClick(leader), [onClick, leader])
     const handleButtonClick = useCallback(
-      (e: React.MouseEvent) => {
+      (e: MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation()
         onClick(leader)
       },
       [onClick, leader]
     )
+    const handleKeyDown = useCallback(
+      (event: KeyboardEvent<HTMLDivElement>) => {
+        if (!ROW_ACTIVATION_KEYS.has(event.key)) return
+        event.preventDefault()
+        onClick(leader)
+      },
+      [leader, onClick]
+    )
 
     return (
       <div
+        role="button"
+        tabIndex={0}
+        aria-label={`View contributor ${leader.username}`}
         onClick={handleClick}
-        className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group"
+        onKeyDown={handleKeyDown}
+        className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
         style={animationStyle}
       >
         {/* Rank */}
@@ -147,8 +164,9 @@ const ContributorRow = memo(
         </div>
 
         {/* Action */}
-        <div className="col-span-2 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-all duration-300">
+        <div className="col-span-2 flex items-center justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-300">
           <button
+            type="button"
             onClick={handleButtonClick}
             className="px-4 py-2 rounded-[10px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white text-[12px] font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 border border-white/10"
           >
@@ -158,8 +176,6 @@ const ContributorRow = memo(
       </div>
     )
   },
-  // Custom equality — skip re-render unless the row's own data or the filter
-  // type (which controls which sub-info is shown) actually changes.
   (prev, next) =>
     prev.leader === next.leader &&
     prev.activeFilter === next.activeFilter &&
@@ -168,9 +184,6 @@ const ContributorRow = memo(
     prev.onClick === next.onClick
 )
 
-// ---------------------------------------------------------------------------
-// ContributorsTable props
-// ---------------------------------------------------------------------------
 interface ContributorsTableProps {
   data: LeaderData[]
   activeFilter: FilterType
@@ -185,9 +198,6 @@ interface ContributorsTableProps {
   onRetry?: () => void
 }
 
-// ---------------------------------------------------------------------------
-// ContributorsTable
-// ---------------------------------------------------------------------------
 export function ContributorsTable({
   data,
   activeFilter,
@@ -198,7 +208,6 @@ export function ContributorsTable({
 }: ContributorsTableProps) {
   const { theme } = useTheme()
 
-  // Stable callback — only recreates when onUserClick identity changes.
   const handleRowClick = useCallback(
     (leader: LeaderData) => {
       if (onUserClick) {
@@ -208,17 +217,13 @@ export function ContributorsTable({
     [onUserClick]
   )
 
-  // Pre-compute per-row animation styles so each row receives a stable object
-  // reference across renders where isLoaded hasn't changed.
-  const rowAnimationStyles = useMemo<React.CSSProperties[]>(
+  const rowAnimationStyles = useMemo<CSSProperties[]>(
     () =>
       data.map((_, index) => ({
         animation: isLoaded
           ? `slideInLeft 0.5s ease-out ${1.1 + index * 0.1}s both`
           : 'none',
       })),
-    // Recompute only when the list length or isLoaded flag changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [data.length, isLoaded]
   )
 
@@ -262,7 +267,7 @@ export function ContributorsTable({
         <div className="col-span-2"></div>
       </div>
 
-      {/* Table Rows — or an empty / error state in their place. */}
+      {/* Table Rows - or an empty / error state in their place. */}
       {error || data.length === 0 ? (
         <LeaderboardTableState
           error={error}
@@ -279,7 +284,7 @@ export function ContributorsTable({
               index={index}
               activeFilter={activeFilter}
               theme={theme}
-              animationStyle={rowAnimationStyles[index]}
+              animationStyle={rowAnimationStyles[index] ?? { animation: 'none' }}
               onClick={handleRowClick}
             />
           ))}

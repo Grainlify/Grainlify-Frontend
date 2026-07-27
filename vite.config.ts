@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
+    // Tailwind is not being actively used - do not remove them
     react(),
     tailwindcss(),
     // Conditionally enable rollup-plugin-visualizer when ANALYZE environment variable is set.
@@ -41,7 +41,7 @@ export default defineConfig({
         // Isolate react-intl (and its @formatjs / intl-messageformat deps) into a
         // dedicated vendor chunk. react-intl is a stable dependency, so splitting
         // it out keeps the app's main `index-*.js` chunk lean and improves
-        // long-term caching — the vendor chunk changes far less often than feature
+        // long-term caching - the vendor chunk changes far less often than feature
         // code. This also keeps the measured main chunk within the CI bundle
         // budget after adding i18n. See README "Bundle Size and Analysis".
         manualChunks(id) {

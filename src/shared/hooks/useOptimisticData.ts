@@ -262,29 +262,6 @@ export function useOptimisticData<T>(
     }, delay)
   }, [fetchData, maxRetries, baseDelay, clearBackoffTimer])
 
-  const applyOptimisticUpdate = useCallback(
-    async (optimisticData: T | ((current: T) => T), promise: Promise<unknown>) => {
-      const previousData = dataRef.current
-      const currentVersion = ++updateVersionRef.current
-
-      const nextData =
-        typeof optimisticData === 'function'
-          ? (optimisticData as (current: T) => T)(previousData)
-          : optimisticData
-
-      updateData(nextData)
-
-      try {
-        await promise
-      } catch (err) {
-        if (updateVersionRef.current === currentVersion) {
-          updateData(previousData)
-        }
-      }
-    },
-    [updateData]
-  )
-
   const clearCache = useCallback(() => {
     cacheRef.current.clear()
   }, [])

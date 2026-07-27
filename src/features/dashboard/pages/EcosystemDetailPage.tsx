@@ -16,7 +16,7 @@ import {
   type EcosystemDetail,
 } from '../../../shared/api/client'
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
-import { useTranslation } from '../../../shared/i18n'
+import { filterProjects } from '../../../shared/utils/projectFilter'
 
 const formatNumber = (num: number): string => {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
@@ -64,7 +64,6 @@ export function EcosystemDetailPage({
   onProjectClick,
 }: EcosystemDetailPageProps) {
   const { theme } = useTheme()
-  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'community'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
@@ -228,7 +227,7 @@ export function EcosystemDetailPage({
     (initialDescription != null && initialDescription !== ''
       ? String(initialDescription).trim()
       : '') ||
-    t('ecosystems.detail.noDescription')
+    'No description provided'
   const displayLogoUrl =
     apiLogoUrl ||
     (initialLogoUrl != null && initialLogoUrl !== '' ? String(initialLogoUrl).trim() : null)
@@ -290,21 +289,10 @@ export function EcosystemDetailPage({
     technologies: hasDetail && apiTechnologies.length > 0 ? apiTechnologies : [],
   }
 
-  const filteredProjects = ecosystemProjects.filter((project) => {
-    const matchesSearch =
-      searchQuery === '' ||
-      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchQuery.toLowerCase())
-
-    const matchesLanguage =
-      selectedLanguages.length === 0 ||
-      (project.language != null && selectedLanguages.includes(project.language))
-
-    const matchesCategory =
-      selectedCategories.length === 0 ||
-      (project.category != null && selectedCategories.includes(project.category))
-
-    return matchesSearch && matchesLanguage && matchesCategory
+  const filteredProjects = filterProjects(ecosystemProjects, {
+    searchQuery,
+    languages: selectedLanguages,
+    categories: selectedCategories,
   })
 
   const isDark = theme === 'dark'
@@ -321,7 +309,7 @@ export function EcosystemDetailPage({
               : 'text-[#7a6b5a] hover:text-[#a67c2a] active:text-[#a67c2a]'
           }`}
         >
-          {t('ecosystems.detail.breadcrumb')}
+          Ecosystems
         </button>
         <ChevronRight
           className={`w-3 h-3 md:w-4 md:h-4 flex-shrink-0 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
@@ -341,7 +329,7 @@ export function EcosystemDetailPage({
             isDark ? 'text-[#c9983a]' : 'text-[#a67c2a]'
           }`}
         >
-          {t('ecosystems.detail.overview')}
+          Overview
         </span>
       </div>
 
@@ -372,7 +360,7 @@ export function EcosystemDetailPage({
                     isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
                   }`}
                 >
-                  {t('ecosystems.detail.ecosystemLabel').replace('{name}', ecosystemData.name)}
+                  {ecosystemData.name} Ecosystem
                 </h1>
                 <div className="flex items-center gap-3 md:gap-4 mt-1">
                   <div className="flex items-center gap-1.5 md:gap-2">
@@ -407,7 +395,7 @@ export function EcosystemDetailPage({
                 isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
               }`}
             >
-              {t('ecosystems.detail.descriptionLabel')}
+              Description
             </h2>
             <p
               className={`text-[12px] md:text-[13px] leading-relaxed transition-colors ${
@@ -426,7 +414,7 @@ export function EcosystemDetailPage({
                   isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
                 }`}
               >
-                {t('ecosystems.detail.languagesLabel')}
+                Languages
               </h2>
               <div className="flex flex-wrap gap-2 md:gap-3">
                 {ecosystemData.languages.map((lang, idx) => (
@@ -456,7 +444,7 @@ export function EcosystemDetailPage({
                   isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
                 }`}
               >
-                {t('ecosystems.detail.linksLabel')}
+                Links
               </h2>
               {ecosystemData.links && ecosystemData.links.length > 0 ? (
                 <div className="space-y-2 md:space-y-3">
@@ -492,7 +480,7 @@ export function EcosystemDetailPage({
                 <p
                   className={`text-[12px] md:text-[13px] ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
                 >
-                  {t('ecosystems.detail.noLinks')}
+                  No links available
                 </p>
               )}
             </div>
@@ -512,7 +500,7 @@ export function EcosystemDetailPage({
                       : 'backdrop-blur-[40px] bg-white/[0.12] border border-white/20 text-[#7a6b5a] hover:bg-white/[0.15] active:bg-white/[0.2]'
                 }`}
               >
-                {t('ecosystems.detail.overview')}
+                Overview
               </button>
               <button
                 onClick={() => setActiveTab('projects')}
@@ -524,7 +512,7 @@ export function EcosystemDetailPage({
                       : 'backdrop-blur-[40px] bg-white/[0.12] border border-white/20 text-[#7a6b5a] hover:bg-white/[0.15] active:bg-white/[0.2]'
                 }`}
               >
-                {t('ecosystems.detail.projects')}
+                Projects
               </button>
               <button
                 onClick={() => setActiveTab('community')}
@@ -536,7 +524,7 @@ export function EcosystemDetailPage({
                       : 'backdrop-blur-[40px] bg-white/[0.12] border border-white/20 text-[#7a6b5a] hover:bg-white/[0.15] active:bg-white/[0.2]'
                 }`}
               >
-                {t('ecosystems.detail.community')}
+                Community
               </button>
             </div>
 
@@ -554,7 +542,7 @@ export function EcosystemDetailPage({
                           isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                         }`}
                       >
-                        {t('ecosystems.detail.stats.contributors')}
+                        Active Contributors
                       </span>
                     </div>
                     <div className="flex items-end gap-2">
@@ -576,7 +564,7 @@ export function EcosystemDetailPage({
                           isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                         }`}
                       >
-                        {t('ecosystems.detail.stats.projects')}
+                        Active Projects
                       </span>
                     </div>
                     <div className="flex items-end gap-2">
@@ -598,7 +586,7 @@ export function EcosystemDetailPage({
                           isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                         }`}
                       >
-                        {t('ecosystems.detail.stats.issues')}
+                        Available Issues
                       </span>
                     </div>
                     <div className="flex items-end gap-2">
@@ -620,7 +608,7 @@ export function EcosystemDetailPage({
                           isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                         }`}
                       >
-                        {t('ecosystems.detail.stats.prs')}
+                        Open PRs
                       </span>
                     </div>
                     <div className="flex items-end gap-2">
@@ -640,14 +628,12 @@ export function EcosystemDetailPage({
                       isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
                     }`}
                   >
-                    {t('ecosystems.detail.about').replace('{name}', ecosystemName)}
+                    About {ecosystemName}
                   </h2>
                   <p
                     className={`text-[12px] md:text-[14px] leading-relaxed transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
                   >
-                    {ecosystemData.about?.trim()
-                      ? ecosystemData.about
-                      : t('ecosystems.detail.noDescription')}
+                    {ecosystemData.about?.trim() ? ecosystemData.about : 'No description provided'}
                   </p>
                 </div>
 
@@ -658,7 +644,7 @@ export function EcosystemDetailPage({
                       isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
                     }`}
                   >
-                    {t('ecosystems.detail.keyAreas')}
+                    Key Areas
                   </h2>
                   <ul className="space-y-2 md:space-y-3">
                     {ecosystemData.keyAreas && ecosystemData.keyAreas.length > 0 ? (
@@ -689,7 +675,7 @@ export function EcosystemDetailPage({
                       <p
                         className={`text-[12px] md:text-[13px] ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
                       >
-                        {t('ecosystems.detail.noKeyAreas')}
+                        No key areas available
                       </p>
                     )}
                   </ul>
@@ -702,12 +688,12 @@ export function EcosystemDetailPage({
                       isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
                     }`}
                   >
-                    {t('ecosystems.detail.technologies')}
+                    Technologies
                   </h2>
                   <p
                     className={`text-[11px] md:text-[13px] mb-2 md:mb-3 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
                   >
-                    {t('ecosystems.detail.techDescription')}
+                    Supported technologies for ecosystem projects:
                   </p>
                   <ul className="space-y-1.5 md:space-y-2">
                     {ecosystemData.technologies && ecosystemData.technologies.length > 0 ? (
@@ -731,7 +717,7 @@ export function EcosystemDetailPage({
                       <p
                         className={`text-[12px] md:text-[13px] ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
                       >
-                        {t('ecosystems.detail.noTechnologies')}
+                        No technologies available
                       </p>
                     )}
                   </ul>
@@ -743,12 +729,12 @@ export function EcosystemDetailPage({
               <div className="space-y-4 md:space-y-6">
                 {/* Search and Filter */}
                 <SearchWithFilter
-                  searchPlaceholder={t('ecosystems.detail.searchPlaceholder')}
+                  searchPlaceholder="Search"
                   searchValue={searchQuery}
                   onSearchChange={setSearchQuery}
                   filterSections={[
                     {
-                      title: t('ecosystems.detail.languagesLabel'),
+                      title: 'Languages',
                       hasSearch: true,
                       options: [
                         { label: 'TypeScript', value: 'typescript' },
@@ -764,7 +750,7 @@ export function EcosystemDetailPage({
                       },
                     },
                     {
-                      title: t('ecosystems.detail.categoriesLabel'),
+                      title: 'Categories',
                       hasSearch: false,
                       options: [
                         { label: 'Frontend', value: 'frontend' },
@@ -817,10 +803,10 @@ export function EcosystemDetailPage({
                     <FolderGit2
                       className={`w-10 h-10 mx-auto mb-3 ${isDark ? 'text-[#b8a898]' : 'text-[#8a7b6a]'}`}
                     />
-                    <p className="text-[14px] font-semibold">
-                      {t('ecosystems.detail.noProjects').replace('{name}', ecosystemName)}
+                    <p className="text-[14px] font-semibold">No projects in {ecosystemName} yet</p>
+                    <p className="text-[12px] mt-1">
+                      Projects added under this ecosystem will appear here.
                     </p>
-                    <p className="text-[12px] mt-1">{t('ecosystems.detail.noProjectsDesc')}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
@@ -844,7 +830,7 @@ export function EcosystemDetailPage({
                     isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                   }`}
                 >
-                  {t('ecosystems.detail.communitySoon')}
+                  Community view coming soon
                 </p>
               </div>
             )}
