@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
-import { useState } from 'react'
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ErrorBoundary } from './ErrorBoundary'
 import { logger } from '../utils/logger'
 import { renderWithTheme } from '../../test/renderWithTheme'
@@ -20,30 +19,31 @@ const preventUnhandledErrorLog = (event: ErrorEvent) => {
 }
 
 /** Throws during render so tests exercise React's error boundary path. */
-function FailingChild({ message = 'Boundary boom' }: { message?: string }) {
+function ThrowingChild({ message = 'Boundary boom' }: { message?: string }) {
   throw new Error(message)
 }
 
-function MaybeFailingChild({ shouldThrow }: { shouldThrow: boolean }) {
-  if (shouldThrow) {
-    throw new Error('Recoverable render failure')
-  }
-
-  return <p>Recovered child</p>
+/** A component that renders normally. */
+function SafeChild() {
+  return <p>Safe content</p>
 }
 
-/** Test harness that clears the child error before invoking the boundary reset. */
-function RecoveryHarness() {
-  const [shouldThrow, setShouldThrow] = useState(true)
+function ControllableChild({ shouldThrow, message }: { shouldThrow: boolean; message: string }) {
+  if (shouldThrow) {
+    throw new Error(message)
+  }
 
-  return (
-    <>
-      <button onClick={() => setShouldThrow(false)}>Resolve failure</button>
-      <ErrorBoundary>
-        <MaybeFailingChild shouldThrow={shouldThrow} />
-      </ErrorBoundary>
-    </>
-  )
+  return <button>Recovered child action</button>
+}
+
+function mockLocationReload() {
+  const reloadMock = vi.fn()
+  Object.defineProperty(window, 'location', {
+    value: { ...window.location, reload: reloadMock },
+    writable: true,
+  })
+
+  return reloadMock
 }
 
 describe('ErrorBoundary', () => {
@@ -69,22 +69,32 @@ describe('ErrorBoundary', () => {
     consoleErrorSpy.mockRestore()
   })
 
-  it('renders the fallback and reports render errors through the guarded logger', () => {
+  it('renders children when no error is thrown', () => {
     renderWithTheme(
       <ErrorBoundary>
-        <FailingChild />
+        <SafeChild />
       </ErrorBoundary>
     )
 
-    expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument()
-    expect(screen.getByText(/An unexpected error occurred/i)).toBeInTheDocument()
-    expect(loggerError).toHaveBeenCalledWith(
-      'ErrorBoundary caught an error:',
-      expect.objectContaining({ message: 'Boundary boom' }),
-      expect.objectContaining({ componentStack: expect.any(String) })
+    expect(screen.getByText('Safe content')).toBeInTheDocument()
+  })
+
+  it('renders an accessible fallback and reports sanitized render errors', () => {
+    renderWithTheme(
+      <ErrorBoundary>
+        <ThrowingChild />
+      </ErrorBoundary>
     )
+
+    expect(screen.getByRole('alert', { name: 'Something went wrong' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Something went wrong' })).toHaveFocus()
+    expect(screen.getByText(/An unexpected error occurred/i)).toBeInTheDocument()
+    expect(loggerError).toHaveBeenCalledWith('ErrorBoundary caught', {
+      message: 'Boundary boom',
+      componentStack: expect.any(String),
+    })
     expect(consoleErrorSpy).not.toHaveBeenCalledWith(
-      'ErrorBoundary caught an error:',
+      'ErrorBoundary caught',
       expect.anything(),
       expect.anything()
     )
@@ -96,7 +106,7 @@ describe('ErrorBoundary', () => {
   ] as const)('applies the %s fallback theme classes', (theme, expectedClass) => {
     const { container } = renderWithTheme(
       <ErrorBoundary>
-        <FailingChild />
+        <ThrowingChild />
       </ErrorBoundary>,
       { theme }
     )
@@ -106,23 +116,36 @@ describe('ErrorBoundary', () => {
     expect(fallbackRoot?.className).toContain(expectedClass)
   })
 
-  it('recovers and re-renders children when the reset action is clicked', async () => {
+  it('resets the boundary and re-renders children after the error clears', async () => {
     const user = userEvent.setup()
-    renderWithTheme(<RecoveryHarness />)
+    const reloadMock = mockLocationReload()
 
-    expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument()
+    const { rerender } = renderWithTheme(
+      <ErrorBoundary>
+        <ControllableChild shouldThrow message="initial failure" />
+      </ErrorBoundary>
+    )
 
-    await user.click(screen.getByRole('button', { name: 'Resolve failure' }))
-    await user.click(screen.getByRole('button', { name: 'Try Again' }))
+    expect(screen.getByRole('alert', { name: 'Something went wrong' })).toBeInTheDocument()
 
-    await waitFor(() => expect(screen.getByText('Recovered child')).toBeInTheDocument())
-    expect(screen.queryByRole('heading', { name: 'Something went wrong' })).not.toBeInTheDocument()
+    rerender(
+      <ErrorBoundary>
+        <ControllableChild shouldThrow={false} message="initial failure" />
+      </ErrorBoundary>
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Reload Page' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Recovered child action' })).toBeInTheDocument()
+    )
+    expect(reloadMock).toHaveBeenCalledOnce()
   })
 
   it('keeps the home navigation action available from the fallback', () => {
     renderWithTheme(
       <ErrorBoundary>
-        <FailingChild />
+        <ThrowingChild />
       </ErrorBoundary>
     )
 
@@ -134,7 +157,7 @@ describe('ErrorBoundary', () => {
 
     renderWithTheme(
       <ErrorBoundary>
-        <FailingChild message="secret stack context" />
+        <ThrowingChild message="secret stack context" />
       </ErrorBoundary>
     )
 

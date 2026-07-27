@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronDown, ChevronRight, Plus, Settings as SettingsIcon, AlertCircle, Package } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
@@ -63,14 +63,36 @@ export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
   /** Project opened for editing metadata (completed-setup repos). */
   const [editingProject, setEditingProject] = useState<PendingSetupProject | null>(null);
 
+  const hasInitializedRef = useRef(false);
+  const prevProjectIdsRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
-  if (projects && projects.length > 0) {
-    // Extraemos los IDs de todos los proyectos cargados
-    const allIds = projects.map(project => project.id);
-    // Inicializamos el Set con todos los IDs seleccionados
-    setSelectedRepoIds(new Set(allIds));
-  }
-}, [projects]);
+    if (!projects || projects.length === 0) return;
+
+    const currentIds = new Set(projects.map((project) => project.id));
+
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      setSelectedRepoIds(currentIds);
+    } else {
+      const prevProjectIds = prevProjectIdsRef.current;
+      setSelectedRepoIds((prevSelected) => {
+        const next = new Set<string>();
+        for (const id of currentIds) {
+          if (!prevProjectIds.has(id)) {
+            // Newly added project: default to selected
+            next.add(id);
+          } else if (prevSelected.has(id)) {
+            // Existing project that was selected: keep selected
+            next.add(id);
+          }
+        }
+        return next;
+      });
+    }
+
+    prevProjectIdsRef.current = currentIds;
+  }, [projects]);
 
 
   // Helper function to get GitHub repository avatar (owner's avatar)
@@ -223,6 +245,11 @@ export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
     setTargetIssueId(issueId);
     setTargetProjectId(projectId);
     setActiveTab('Issues');
+  };
+
+  const handleNavigateToPR = (_prId: string) => {
+    // For now, route users to the Pull Requests tab. We may add a focused PR view later.
+    setActiveTab('Pull Requests');
   };
 
   const currentPendingProject = pendingSetupProjects[0] ?? null;
@@ -531,6 +558,7 @@ export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
           isLoadingProjects={isLoading}
           onRefresh={refreshAll}
           onNavigateToIssue={handleNavigateToIssue}
+          onNavigateToPR={handleNavigateToPR}
         />
       )}
 

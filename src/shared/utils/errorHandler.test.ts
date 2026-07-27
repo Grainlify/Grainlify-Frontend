@@ -98,6 +98,31 @@ describe('getUserFriendlyError', () => {
     ).toBe('Something went wrong. Please try again later.');
   });
 
+  it('does not expose raw internal details in fallback messages', () => {
+    const rawError =
+      'DatabaseError: password reset token abc123 failed for /internal/users/42';
+
+    const friendlyMessage = getUserFriendlyError(new Error(rawError));
+
+    expect(friendlyMessage).toBe('Something went wrong. Please try again later.');
+    expect(friendlyMessage).not.toContain('DatabaseError');
+    expect(friendlyMessage).not.toContain('abc123');
+    expect(friendlyMessage).not.toContain('/internal/users/42');
+  });
+
+  it('does not echo raw details for mapped API errors', () => {
+    const rawError =
+      'API request failed: upstream returned traceId=secret-trace-789';
+
+    const friendlyMessage = getUserFriendlyError(new Error(rawError));
+
+    expect(friendlyMessage).toBe(
+      'Unable to complete your request. Please try again.',
+    );
+    expect(friendlyMessage).not.toContain('secret-trace-789');
+    expect(friendlyMessage).not.toContain('upstream');
+  });
+
   it('handles string input directly', () => {
     expect(getUserFriendlyError('Network error')).toBe(
       'Unable to connect to the server. Please check your internet connection and try again.',

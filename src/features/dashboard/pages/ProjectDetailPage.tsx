@@ -1,5 +1,5 @@
 import { logger } from '../../../shared/utils/logger';
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ExternalLink, Copy, Circle, ArrowLeft, GitPullRequest } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
@@ -7,6 +7,7 @@ import { getPublicProject, getPublicProjectIssues, getPublicProjectPRs } from '.
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 import ReactMarkdown from 'react-markdown';
 import { LanguageIcon } from '../../../shared/components/LanguageIcon';
+import { ResourceNotFound } from '../../../shared/components/ResourceNotFound';
 
 const InPreContext = createContext(false);
 
@@ -108,9 +109,11 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
   const { theme } = useTheme();
   const { projectId: paramProjectId } = useParams<{ projectId: string }>();
   const projectId = propProjectId || paramProjectId;
+  const [retryCount, setRetryCount] = useState(0);
   const [activeIssueTab, setActiveIssueTab] = useState('all');
   const [copiedLink, setCopiedLink] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<null | { message: string; notFound?: boolean }>(null);
   const [project, setProject] = useState<null | Awaited<ReturnType<typeof getPublicProject>>>(null);
   const [issues, setIssues] = useState<Array<{
     github_issue_id: number;
@@ -141,14 +144,15 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
 
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
       if (!projectId) {
         logger.warn('ProjectDetailPage: No projectId provided');
+        setError({ message: 'Project not found', notFound: true });
         setIsLoading(false);
         return;
       }
       setIsLoading(true);
+      setError(null);
       try {
         logger.debug('ProjectDetailPage: Fetching project data for ID:', projectId);
         const [p, i, pr] = await Promise.all([
@@ -157,6 +161,10 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
           getPublicProjectPRs(projectId),
         ]);
         if (cancelled) return;
+        if (!p) {
+          setError({ message: 'Project not found', notFound: true });
+          return;
+        }
         logger.debug('ProjectDetailPage: Data fetched successfully', {
           project: p,
           issuesCount: i?.issues?.length || 0,
@@ -165,20 +173,25 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         setProject(p);
         setIssues(i?.issues || []);
         setPRs(pr?.prs || []);
-        setIsLoading(false);
-      } catch (e) {
+      } catch (e: any) {
         if (cancelled) return;
         logger.error('ProjectDetailPage: Error loading project data', e);
-        // Keep loading state true to show skeleton forever when backend is down
-        // Don't set isLoading to false - keep showing skeleton
+        const status = e?.response?.status;
+        if (status === 404) {
+          setError({ message: 'Project not found', notFound: true });
+        } else {
+          setError({ message: 'Failed to load project data. Please try again.' });
+        }
+      } finally {
+        if (cancelled) return;
+        setIsLoading(false);
       }
     };
-
     load();
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, retryCount]);
 
   const repoName = useMemo(() => {
     const full = project?.github_full_name || '';
@@ -397,6 +410,52 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
+
+  if (!isLoading && error?.notFound) {
+    return (
+      <ResourceNotFound
+        title="Project not found"
+        message="We couldn't find what you're looking for. It may have been moved or removed."
+        backTo="/dashboard/browse"
+        backLabel={backLabel || 'Back to Browse'}
+      />
+    );
+  }
+
+  if (!isLoading && error && !error.notFound) {
+    return (
+      <div className="space-y-6">
+        <div
+          className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-10 text-center transition-colors ${
+            theme === 'dark' ? 'bg-white/[0.12] border-white/20' : 'bg-white/[0.2] border-white/30'
+          }`}
+        >
+          <div role="alert" className="space-y-4">
+            <h2
+              className={`text-[24px] font-bold transition-colors ${
+                theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+              }`}
+            >
+              Failed to load project
+            </h2>
+            <p
+              className={`text-[15px] transition-colors ${
+                theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#6b5d4d]'
+              }`}
+            >
+              {error.message}
+            </p>
+            <button
+              onClick={() => setRetryCount((c) => c + 1)}
+              className="px-6 py-2.5 bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[14px] rounded-[14px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_24px_rgba(162,121,44,0.5)] transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex gap-6 h-[calc(100vh-120px)] max-h-[calc(100vh-120px)]">

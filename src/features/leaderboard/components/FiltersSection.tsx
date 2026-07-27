@@ -1,29 +1,31 @@
-import { logger } from '../../../shared/utils/logger';
-import { useState, useEffect, useCallback } from "react";
-import { ChevronDown } from "lucide-react";
-import { useTheme } from "../../../shared/contexts/ThemeContext";
-import { getEcosystems } from "../../../shared/api/client";
-import { FilterType } from "../types";
-import { useOptimisticData } from "../../../shared/hooks/useOptimisticData";
+import { useState, useEffect } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { useSearchParams } from 'react-router-dom'
+import { getEcosystems } from '../../../shared/api/client'
+import { FilterType } from '../types'
+import { useOptimisticData } from '../../../shared/hooks/useOptimisticData'
+
+const VALID_FILTERS: FilterType[] = ['overall', 'rewards', 'contributions', 'ecosystems']
 
 interface FiltersSectionProps {
-  activeFilter: FilterType;
-  onFilterChange: (filter: FilterType) => void;
-  selectedEcosystem: EcosystemOption;
-  onEcosystemChange: (ecosystem: EcosystemOption) => void;
-  showDropdown: boolean;
-  onToggleDropdown: () => void;
-  isLoaded: boolean;
+  activeFilter: FilterType
+  onFilterChange: (filter: FilterType) => void
+  selectedEcosystem: EcosystemOption
+  onEcosystemChange: (ecosystem: EcosystemOption) => void
+  showDropdown: boolean
+  onToggleDropdown: () => void
+  isLoaded: boolean
 }
 
 interface EcosystemOption {
-  label: string;
-  value: string;
+  label: string
+  value: string
 }
 
 interface FilterOption {
-  label: string;
-  value: FilterType;
+  label: string
+  value: FilterType
 }
 
 export function FiltersSection({
@@ -35,14 +37,15 @@ export function FiltersSection({
   onToggleDropdown,
   isLoaded,
 }: FiltersSectionProps) {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [ecosystemOptions, setEcosystemOptions] = useState<EcosystemOption[]>([
-    { label: "All Ecosystems", value: "all" },
-  ]);
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    { label: 'All Ecosystems', value: 'all' },
+  ])
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
 
-  const cacheKey = `ecosystems-${activeFilter}-${selectedEcosystem.value}`;
+  const cacheKey = `ecosystems-${activeFilter}-${selectedEcosystem.value}`
   const {
     data: cachedEcosystems,
     isLoading: loading,
@@ -50,49 +53,112 @@ export function FiltersSection({
   } = useOptimisticData<{ ecosystems: any[] }>(
     { ecosystems: [] },
     { cacheDuration: 30000, cacheKey }
-  );
+  )
 
   // Define filter options
   const filterOptions: FilterOption[] = [
-    { label: "Overall Leaderboard", value: "overall" },
-    { label: "Total Rewards", value: "rewards" },
-    { label: "Total Contributions", value: "contributions" },
-  ];
+    { label: 'Overall Leaderboard', value: 'overall' },
+    { label: 'Total Rewards', value: 'rewards' },
+    { label: 'Total Contributions', value: 'contributions' },
+  ]
 
   // Get the label for the currently active filter
   const getActiveFilterLabel = () => {
-    const activeOption = filterOptions.find(
-      (option) => option.value === activeFilter
-    );
-    return activeOption?.label || "Overall Leaderboard";
-  };
+    const activeOption = filterOptions.find((option) => option.value === activeFilter)
+    return activeOption?.label || 'Overall Leaderboard'
+  }
 
   useEffect(() => {
     fetchEcosystemsData(async () => {
-      return await getEcosystems();
-    });
-  }, [fetchEcosystemsData]);
+      return await getEcosystems()
+    })
+  }, [fetchEcosystemsData])
+
+  useEffect(() => {
+    const filterParam = searchParams.get('filter')
+    const ecosystemParam = searchParams.get('ecosystem')
+
+    if (filterParam) {
+      if (VALID_FILTERS.includes(filterParam as FilterType)) {
+        if (filterParam !== activeFilter) {
+          onFilterChange(filterParam as FilterType)
+        }
+      } else {
+        const normalized = new URLSearchParams(searchParams)
+        normalized.delete('filter')
+        setSearchParams(normalized, { replace: true })
+      }
+    }
+
+    if (ecosystemParam && ecosystemParam !== selectedEcosystem.value) {
+      onEcosystemChange({ label: ecosystemParam, value: ecosystemParam })
+    }
+  }, [
+    searchParams,
+    activeFilter,
+    selectedEcosystem.value,
+    onFilterChange,
+    onEcosystemChange,
+    setSearchParams,
+  ])
+
+  useEffect(() => {
+    if (selectedEcosystem.value === 'all') return
+
+    const matchingEcosystem = ecosystemOptions.find((eco) => eco.value === selectedEcosystem.value)
+
+    if (matchingEcosystem && matchingEcosystem.label !== selectedEcosystem.label) {
+      onEcosystemChange(matchingEcosystem)
+    }
+  }, [ecosystemOptions, selectedEcosystem, onEcosystemChange])
+
+  const updateSearchParams = (nextFilter: FilterType, nextEcosystem: EcosystemOption) => {
+    const nextParams = new URLSearchParams(searchParams)
+
+    if (nextFilter === 'overall') {
+      nextParams.delete('filter')
+    } else {
+      nextParams.set('filter', nextFilter)
+    }
+
+    if (nextEcosystem.value === 'all') {
+      nextParams.delete('ecosystem')
+    } else {
+      nextParams.set('ecosystem', nextEcosystem.value)
+    }
+
+    setSearchParams(nextParams)
+  }
+
+  const handleFilterSelection = (value: FilterType) => {
+    onFilterChange(value)
+    updateSearchParams(value, selectedEcosystem)
+    setShowFilterDropdown(false)
+  }
+
+  const handleEcosystemSelection = (ecosystem: EcosystemOption) => {
+    onEcosystemChange(ecosystem)
+    updateSearchParams(activeFilter, ecosystem)
+    onToggleDropdown()
+  }
 
   useEffect(() => {
     if (cachedEcosystems && cachedEcosystems.ecosystems) {
       const activeEcosystems = cachedEcosystems.ecosystems
-        .filter((e: any) => e.status === "active")
+        .filter((e: any) => e.status === 'active')
         .map((e: any) => ({
           label: e.name,
           value: e.slug,
-        }));
+        }))
 
-      setEcosystemOptions([
-        { label: "All Ecosystems", value: "all" },
-        ...activeEcosystems,
-      ]);
+      setEcosystemOptions([{ label: 'All Ecosystems', value: 'all' }, ...activeEcosystems])
     }
-  }, [cachedEcosystems]);
+  }, [cachedEcosystems])
 
   return (
     <div
       className={`backdrop-blur-[40px] bg-white/[0.12] rounded-[20px] border border-white/20 shadow-[0_4px_16px_rgba(0,0,0,0.06)] p-5 transition-all duration-700 delay-900 relative z-50 ${
-        isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
       }`}
     >
       <div className="flex items-center justify-end flex-wrap gap-4">
@@ -102,33 +168,33 @@ export function FiltersSection({
             aria-haspopup="listbox"
             aria-expanded={showFilterDropdown}
             onClick={() => {
-              setShowFilterDropdown(!showFilterDropdown);
+              setShowFilterDropdown(!showFilterDropdown)
               if (showDropdown) {
-                onToggleDropdown();
+                onToggleDropdown()
               }
             }}
             onKeyDown={(e) => {
               if (e.key === 'Escape' && showFilterDropdown) {
-                setShowFilterDropdown(false);
+                setShowFilterDropdown(false)
               }
             }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] backdrop-blur-[30px] border hover:scale-105 transition-all duration-300 ${
-              theme === "dark"
-                ? "bg-white/[0.08] border-white/15 hover:bg-white/[0.12]"
-                : "bg-white/[0.15] border-white/25 hover:bg-white/[0.2]"
+              theme === 'dark'
+                ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.12]'
+                : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2]'
             }`}
           >
             <span
               className={`text-[13px] font-semibold transition-colors ${
-                theme === "dark" ? "text-[#f5f5f5]" : "text-[#2d2820]"
+                theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
               }`}
             >
               {getActiveFilterLabel()}
             </span>
             <ChevronDown
               className={`w-4 h-4 transition-transform duration-300 ${
-                showFilterDropdown ? "rotate-180" : ""
-              } ${theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"}`}
+                showFilterDropdown ? 'rotate-180' : ''
+              } ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
             />
           </button>
           {showFilterDropdown && (
@@ -136,7 +202,7 @@ export function FiltersSection({
               role="listbox"
               aria-label="Filter options"
               className={`absolute right-0 mt-2 w-[220px] border-2 border-white/30 rounded-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden z-[100] animate-dropdown-in ${
-                theme === "dark" ? "bg-[#2d2820]/95" : "bg-white/95"
+                theme === 'dark' ? 'bg-[#2d2820]/95' : 'bg-white/95'
               }`}
             >
               {filterOptions.map((option) => (
@@ -144,15 +210,12 @@ export function FiltersSection({
                   key={option.value}
                   role="option"
                   aria-selected={activeFilter === option.value}
-                  onClick={() => {
-                    onFilterChange(option.value);
-                    setShowFilterDropdown(false);
-                  }}
+                  onClick={() => handleFilterSelection(option.value)}
                   className={`w-full px-4 py-3 text-left text-[13px] font-medium transition-all ${
                     activeFilter === option.value
-                      ? `${theme === "dark" ? "bg-white/[0.08]" : "bg-white/[0.1]"} font-bold ${theme === "dark" ? "hover:bg-white/[0.12]" : "hover:bg-white/[0.15]"}`
-                      : `${theme === "dark" ? "hover:bg-white/[0.08]" : "hover:bg-white/[0.1]"}`
-                  } ${theme === "dark" ? "text-[#f5f5f5]" : "text-[#2d2820]"}`}
+                      ? `${theme === 'dark' ? 'bg-white/[0.08]' : 'bg-white/[0.1]'} font-bold ${theme === 'dark' ? 'hover:bg-white/[0.12]' : 'hover:bg-white/[0.15]'}`
+                      : `${theme === 'dark' ? 'hover:bg-white/[0.08]' : 'hover:bg-white/[0.1]'}`
+                  } ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}
                 >
                   {option.label}
                 </button>
@@ -167,33 +230,33 @@ export function FiltersSection({
             aria-haspopup="listbox"
             aria-expanded={showDropdown}
             onClick={() => {
-              onToggleDropdown();
+              onToggleDropdown()
               if (showFilterDropdown) {
-                setShowFilterDropdown(false);
+                setShowFilterDropdown(false)
               }
             }}
             onKeyDown={(e) => {
               if (e.key === 'Escape' && showDropdown) {
-                onToggleDropdown();
+                onToggleDropdown()
               }
             }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] backdrop-blur-[30px] border hover:scale-105 transition-all duration-300 ${
-              theme === "dark"
-                ? "bg-white/[0.08] border-white/15 hover:bg-white/[0.12]"
-                : "bg-white/[0.15] border-white/25 hover:bg-white/[0.2]"
+              theme === 'dark'
+                ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.12]'
+                : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2]'
             }`}
           >
             <span
               className={`text-[13px] font-semibold transition-colors ${
-                theme === "dark" ? "text-[#f5f5f5]" : "text-[#2d2820]"
+                theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
               }`}
             >
               {selectedEcosystem.label}
             </span>
             <ChevronDown
               className={`w-4 h-4 transition-transform duration-300 ${
-                showDropdown ? "rotate-180" : ""
-              } ${theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"}`}
+                showDropdown ? 'rotate-180' : ''
+              } ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
             />
           </button>
           {showDropdown && (
@@ -201,7 +264,7 @@ export function FiltersSection({
               role="listbox"
               aria-label="Ecosystems"
               className={`absolute right-0 mt-2 w-[200px] border-2 border-white/30 rounded-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden z-[100] animate-dropdown-in ${
-                theme === "dark" ? "bg-[#2d2820]/95" : "bg-white/95"
+                theme === 'dark' ? 'bg-[#2d2820]/95' : 'bg-white/95'
               }`}
             >
               {loading ? (
@@ -214,15 +277,12 @@ export function FiltersSection({
                     key={eco.value}
                     role="option"
                     aria-selected={selectedEcosystem.value === eco.value}
-                    onClick={() => {
-                      onEcosystemChange({ label: eco.label, value: eco.value });
-                      onToggleDropdown();
-                    }}
+                    onClick={() => handleEcosystemSelection({ label: eco.label, value: eco.value })}
                     className={`w-full px-4 py-3 text-left text-[13px] font-medium transition-all ${
                       index === 0
-                        ? `${theme === "dark" ? "bg-white/[0.08]" : "bg-white/[0.1]"} font-bold ${theme === "dark" ? "hover:bg-white/[0.12]" : "hover:bg-white/[0.15]"}`
-                        : `${theme === "dark" ? "hover:bg-white/[0.08]" : "hover:bg-white/[0.1]"}`
-                    } ${theme === "dark" ? "text-[#f5f5f5]" : "text-[#2d2820]"}`}
+                        ? `${theme === 'dark' ? 'bg-white/[0.08]' : 'bg-white/[0.1]'} font-bold ${theme === 'dark' ? 'hover:bg-white/[0.12]' : 'hover:bg-white/[0.15]'}`
+                        : `${theme === 'dark' ? 'hover:bg-white/[0.08]' : 'hover:bg-white/[0.1]'}`
+                    } ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}
                   >
                     {eco.label}
                   </button>
@@ -233,5 +293,5 @@ export function FiltersSection({
         </div>
       </div>
     </div>
-  );
+  )
 }

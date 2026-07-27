@@ -1,0 +1,66 @@
+/* DataState component styling */
+
+:root {
+  --color-bg-glass: rgba(255, 255, 255, 0.12);
+  --color-bg-glass-dark: rgba(0, 0, 0, 0.24);
+  --color-primary: hsl(210, 65%, 55%);
+  --color-error: hsl(0, 70%, 55%);
+  --color-text: #e0e0e0;
+  --radius: 12px;
+  --blur: 10px;
+  --transition: 0.3s ease;
+}
+
+.data-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  border-radius: var(--radius);
+  background: var(--color-bg-glass-dark);
+  backdrop-filter: blur(var(--blur));
+  color: var(--color-text);
+  text-align: center;
+  transition: background var(--transition);
+}
+
+.data-state.loading {
+  background: var(--color-bg-glass);
+}
+
+.data-state.error {
+  background: var(--color-bg-glass);
+  color: var(--color-error);
+}
+
+.data-state .retry-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform var(--transition), background var(--transition);
+}
+
+.data-state .retry-button:hover {
+  transform: scale(1.05);
+  background: hsl(210, 65%, 45%);
+}
+
+/* Simple loading spinner */
+.data-state .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

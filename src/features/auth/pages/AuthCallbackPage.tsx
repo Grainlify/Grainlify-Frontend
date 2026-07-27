@@ -4,6 +4,18 @@ import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { logger } from '../../../shared/utils/logger';
 
+const AUTH_RETURN_TO_KEY = 'authReturnTo';
+
+function isValidAuthReturnTo(returnTo: string | null): returnTo is string {
+  if (!returnTo || returnTo.startsWith('//')) return false;
+  return (
+    returnTo === '/dashboard' ||
+    returnTo.startsWith('/dashboard/') ||
+    returnTo.startsWith('/dashboard?') ||
+    returnTo.startsWith('/dashboard#')
+  );
+}
+
 export function AuthCallbackPage() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
@@ -15,9 +27,9 @@ export function AuthCallbackPage() {
   // Redirect to dashboard (or returnTo from "review their application" link) once authenticated
   useEffect(() => {
     if (isAuthenticated && !error) {
-      const returnTo = sessionStorage.getItem('authReturnTo');
-      sessionStorage.removeItem('authReturnTo');
-      if (returnTo && returnTo.startsWith('/dashboard')) {
+      const returnTo = sessionStorage.getItem(AUTH_RETURN_TO_KEY);
+      sessionStorage.removeItem(AUTH_RETURN_TO_KEY);
+      if (isValidAuthReturnTo(returnTo)) {
         logger.info('User is authenticated, redirecting to', returnTo);
         navigate(returnTo, { replace: true });
       } else {
@@ -78,6 +90,7 @@ export function AuthCallbackPage() {
 
         if (errorParam) {
           logger.error('OAuth Error:', errorParam);
+          sessionStorage.removeItem(AUTH_RETURN_TO_KEY);
           if (errorParam === 'access_denied') {
             setError('Login was cancelled. Please try again.');
           } else {
@@ -91,6 +104,7 @@ export function AuthCallbackPage() {
 
         if (!token) {
           logger.error('No token found in URL');
+          sessionStorage.removeItem(AUTH_RETURN_TO_KEY);
           setError('No authentication token received');
           setIsProcessing(false);
           setTimeout(() => navigate('/signin'), 3000);
@@ -105,6 +119,7 @@ export function AuthCallbackPage() {
         // The redirect will happen via the useEffect watching isAuthenticated
       } catch (err) {
         logger.error('Authentication failed:', err instanceof Error ? err.message : err);
+        sessionStorage.removeItem(AUTH_RETURN_TO_KEY);
         setError(err instanceof Error ? err.message : 'Authentication failed');
         setIsProcessing(false);
         setTimeout(() => navigate('/signin'), 3000);

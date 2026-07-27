@@ -1,4 +1,4 @@
-import { Component, ErrorInfo, ReactNode } from 'react'
+import { Component, ErrorInfo, ReactNode, useEffect, useRef } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 import { logger } from '../utils/logger'
 
@@ -21,12 +21,27 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error }
   }
 
+  /**
+   * Lifecycle method called after a descendant throws during rendering.
+   *
+   * @remarks
+   * Only the error message and component stack are forwarded to the logger so
+   * that no full Error object, serialised props, or other PII reaches the
+   * error sink.
+   *
+   * @param error - The thrown error value.
+   * @param errorInfo - React-supplied metadata containing the component stack.
+   */
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    logger.error('ErrorBoundary caught an error:', error, errorInfo)
+    logger.error('ErrorBoundary caught', {
+      message: error.message,
+      componentStack: errorInfo.componentStack,
+    })
   }
 
   handleReset = () => {
     this.setState({ hasError: false, error: null })
+    window.location.reload()
   }
 
   render() {
@@ -40,9 +55,16 @@ export class ErrorBoundary extends Component<Props, State> {
 
 function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () => void }) {
   const { theme } = useTheme()
+  const headingRef = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
 
   return (
     <div
+      role="alert"
+      aria-labelledby="error-boundary-title"
       className={`min-h-screen flex items-center justify-center px-6 transition-colors ${
         theme === 'dark'
           ? 'bg-gradient-to-br from-[#1a1512] via-[#231c17] to-[#2d241d]'
@@ -81,6 +103,9 @@ function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () =>
         {/* Error Message */}
         <div className="text-center mb-6">
           <h2
+            id="error-boundary-title"
+            ref={headingRef}
+            tabIndex={-1}
             className={`text-2xl font-bold mb-2 transition-colors ${
               theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
             }`}
@@ -128,7 +153,7 @@ function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () =>
             onClick={onReset}
             className="w-full py-3 rounded-[12px] bg-[#c9983a] hover:bg-[#d4af37] text-white font-medium transition-all shadow-[0_4px_12px_rgba(201,152,58,0.3)]"
           >
-            Try Again
+            Reload Page
           </button>
           <button
             onClick={() => (window.location.href = '/')}

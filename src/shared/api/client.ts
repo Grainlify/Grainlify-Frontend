@@ -1,1000 +1,1458 @@
 /**
  * API Client for Patchwork Backend
- * Base URL: http://7nonainmv1.loclx.io
  */
 
-import { API_BASE_URL } from "../config/api";
-import { BillingProfile } from "../../features/settings/types";
-import { BlogPost } from "../../features/blog/types";
+import { API_BASE_URL } from '../config/api'
+import { BillingProfile, NotificationSettings } from '../../features/settings/types'
+import { BlogPost } from '../../features/blog/types'
 
 // Token management
 export const getAuthToken = (): string | null => {
-  return localStorage.getItem("patchwork_jwt");
-};
-
-export const setAuthToken = (token: string): void => {
-  localStorage.setItem("patchwork_jwt", token);
-  // Notify app code (AuthContext) immediately, since storage events don't fire
-  // in the same tab that performed the write.
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(
-      new CustomEvent("patchwork-auth-token", { detail: { token } }),
-    );
-  }
-};
-
-export const removeAuthToken = (): void => {
-  localStorage.removeItem("patchwork_jwt");
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(
-      new CustomEvent("patchwork-auth-token", { detail: { token: null } }),
-    );
-  }
-};
-
-// API request helper
-interface ApiRequestOptions extends RequestInit {
-  requiresAuth?: boolean;
+  return localStorage.getItem('patchwork_jwt')
 }
 
-async function apiRequest<T>(
-  endpoint: string,
-  options: ApiRequestOptions = {},
-): Promise<T> {
-  const { requiresAuth = false, headers = {}, ...fetchOptions } = options;
+export const setAuthToken = (token: string): void => {
+  localStorage.setItem('patchwork_jwt', token)
+  // Notify app code (AuthContext) immediately, since storage events don't fire
+  // in the same tab that performed the write.
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('patchwork-auth-token', { detail: { token } }))
+  }
+}
 
-  const url = `${API_BASE_URL}${endpoint}`;
+export const removeAuthToken = (): void => {
+  localStorage.removeItem('patchwork_jwt')
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('patchwork-auth-token', { detail: { token: null } }))
+  }
+}
+
+/**
+ * Emits a `patchwork-auth-401` CustomEvent so that the app layer (e.g.
+ * AuthContext) can redirect the user to sign-in while preserving the current
+ * location as `returnTo`. Kept separate from `removeAuthToken` so that
+ * `client.ts` remains free of any router imports.
+ *
+ * @internal Only called by `apiRequest` and `downloadInvoice` on HTTP 401.
+ */
+export const emit401Event = (): void => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('patchwork-auth-401'))
+  }
+}
+
+// API request helper
+/**
+ * Options for API requests extending standard RequestInit
+ * @interface ApiRequestOptions
+ * @property {boolean} [requiresAuth] - Whether the request requires authentication token
+ */
+export interface ApiRequestOptions extends RequestInit {
+  requiresAuth?: boolean
+}
+
+/**
+ * Default retry delay in seconds when the `Retry-After` header is absent on a
+ * 429 response. Chosen to be safe for public polling endpoints.
+ */
+export const DEFAULT_RETRY_AFTER_SECONDS = 60
+
+/**
+ * Parses the `Retry-After` response header into a number of seconds.
+ *
+ * Supports both formats defined by RFC 9110:
+ * - **Delay-seconds** – a non-negative integer, e.g. `"30"`
+ * - **HTTP-date** – an absolute date/time, e.g. `"Wed, 21 Oct 2025 07:28:00 GMT"`
+ *
+ * The returned value is clamped to a finite non-negative number so that
+ * attacker-controlled header values cannot pass an unexpected delay to
+ * `setTimeout` or similar callers.
+ *
+ * @param headerValue - Raw value of the `Retry-After` header, or `null` if absent.
+ * @returns Retry delay in seconds; falls back to {@link DEFAULT_RETRY_AFTER_SECONDS} when
+ *   the header is absent, unparseable, negative, or non-finite.
+ */
+export function parseRetryAfter(headerValue: string | null): number {
+  if (headerValue === null || headerValue.trim() === '') {
+    return DEFAULT_RETRY_AFTER_SECONDS
+  }
+
+  const trimmed = headerValue.trim()
+
+  // Try numeric (delay-seconds) format first. A negative-but-finite number is
+  // still a well-formed delay-seconds value — just out of range — so it
+  // should fall back to the default rather than be misinterpreted below by
+  // the lenient `Date.parse`, which happily (and wrongly) accepts strings
+  // like "-10" as a legacy date format.
+  const numeric = Number(trimmed)
+  if (!isNaN(numeric) && isFinite(numeric)) {
+    return numeric >= 0 ? Math.floor(numeric) : DEFAULT_RETRY_AFTER_SECONDS
+  }
+
+  // Try HTTP-date format
+  const parsed = Date.parse(trimmed)
+  if (!isNaN(parsed)) {
+    const delaySecs = Math.floor((parsed - Date.now()) / 1000)
+    return delaySecs > 0 ? delaySecs : 0
+  }
+
+  return DEFAULT_RETRY_AFTER_SECONDS
+}
+
+/**
+ * Error thrown when the API responds with HTTP 429 Too Many Requests.
+ *
+ * Callers can inspect `retryAfterSeconds` to implement back-off logic without
+ * hammering the API further.
+ *
+ * @example
+ * ```ts
+ * try {
+ *   await getLeaderboard();
+ * } catch (err) {
+ *   if (err instanceof RateLimitError) {
+ *     console.warn(`Rate limited. Retry after ${err.retryAfterSeconds}s`);
+ *   }
+ * }
+ * ```
+ */
+export class RateLimitError extends Error {
+  /** Number of seconds the caller should wait before retrying. */
+  readonly retryAfterSeconds: number
+
+  constructor(retryAfterSeconds: number) {
+    super(
+      `Rate limit exceeded. Please retry after ${retryAfterSeconds} second${retryAfterSeconds === 1 ? '' : 's'}.`
+    )
+    this.name = 'RateLimitError'
+    this.retryAfterSeconds = retryAfterSeconds
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Retry / backoff configuration
+// ---------------------------------------------------------------------------
+
+/** HTTP status codes that are safe to auto-retry (transient server/infra errors). */
+const RETRYABLE_STATUSES = new Set([502, 503])
+
+/** Maximum number of attempts (1 initial + 2 retries). */
+export const MAX_RETRY_ATTEMPTS = 3
+
+/** Base delay in milliseconds for exponential backoff. */
+export const RETRY_BASE_DELAY_MS = 500
+
+/**
+ * Returns the delay (in ms) to wait before retry attempt number `attempt`
+ * (1-indexed, so `attempt=1` is the first retry).
+ *
+ * Uses exponential backoff: `baseDelay * 2^(attempt-1)`
+ *   attempt 1 → 500 ms
+ *   attempt 2 → 1 000 ms
+ *
+ * When `retryAfterMs` is provided and positive it takes precedence (used to
+ * honour a `Retry-After` header returned by the server).
+ */
+export function getRetryDelay(attempt: number, retryAfterMs?: number): number {
+  if (retryAfterMs !== undefined && retryAfterMs > 0) {
+    return retryAfterMs
+  }
+  return RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1)
+}
+
+/**
+ * Resolves after `ms` milliseconds.
+ *
+ * Uses the global `setTimeout` so Vitest's `vi.useFakeTimers()` can advance
+ * time without waiting for real wall-clock delays.
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Core API request helper that handles authentication, headers, error handling,
+ * and automatic retry with exponential backoff for transient failures.
+ *
+ * **Retry policy**
+ * - 502 / 503 and network errors (`TypeError` from `fetch`) are retried up to
+ *   `MAX_RETRY_ATTEMPTS` times with exponential back-off via `getRetryDelay`.
+ * - 429 is **not** auto-retried; a `RateLimitError` is thrown immediately so
+ *   callers can implement their own back-off strategy.
+ * - 4xx errors other than 429 are never retried.
+ *
+ * @template T - The expected response type
+ * @param {string} endpoint - API endpoint path (will be prefixed with API_BASE_URL)
+ * @param {ApiRequestOptions} options - Request options including auth requirements
+ * @returns {Promise<T>} Parsed JSON response
+ * @throws {RateLimitError} When the server responds with 429 Too Many Requests.
+ *   The error exposes `retryAfterSeconds` parsed from the `Retry-After` header
+ *   (numeric or HTTP-date), falling back to {@link DEFAULT_RETRY_AFTER_SECONDS}.
+ * @throws {Error} On network failures, authentication errors, or other non-2xx responses
+ * @internal This function is exported for testing purposes
+ */
+export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
+  const { requiresAuth = false, headers = {}, ...fetchOptions } = options
+
+  const url = `${API_BASE_URL}${endpoint}`
   const requestHeaders: Record<string, string> = {
-    ...headers as Record<string, string>,
-  };
+    ...(headers as Record<string, string>),
+  }
 
   // Avoid forcing CORS preflight for simple GET/HEAD requests by only setting
   // Content-Type when we actually send a JSON body.
-  const method = (fetchOptions.method || "GET").toUpperCase();
-  const hasBody = fetchOptions.body !== undefined && fetchOptions.body !== null;
-  if (hasBody && !(fetchOptions.body instanceof FormData)) {
-    requestHeaders["Content-Type"] = "application/json";
+  const method = (fetchOptions.method || 'GET').toUpperCase()
+  const hasBody = fetchOptions.body !== undefined && fetchOptions.body !== null
+  const isFormData = hasBody && fetchOptions.body instanceof FormData
+
+  if (hasBody && !isFormData) {
+    requestHeaders['Content-Type'] = 'application/json'
   } else if (
-    method !== "GET" &&
-    method !== "HEAD" &&
-    !("Content-Type" in requestHeaders)
+    method !== 'GET' &&
+    method !== 'HEAD' &&
+    !isFormData &&
+    !('Content-Type' in requestHeaders)
   ) {
     // Non-GET/HEAD without an explicit content-type: default to JSON for our API.
-    requestHeaders["Content-Type"] = "application/json";
+    requestHeaders['Content-Type'] = 'application/json'
   }
 
   // Add auth token if required
   if (requiresAuth) {
-    const token = getAuthToken();
+    const token = getAuthToken()
     if (token) {
-      requestHeaders["Authorization"] = `Bearer ${token}`;
+      requestHeaders['Authorization'] = `Bearer ${token}`
     }
   }
 
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      ...fetchOptions,
-      headers: requestHeaders,
-    });
-  } catch (err) {
-    // Network error (CORS, connection refused, etc.)
-    if (err instanceof TypeError && err.message.includes("fetch")) {
-      throw new Error(
-        "Network error: Unable to connect to the server. Please check your connection.",
-      );
-    }
-    throw err;
-  }
+  let lastError: Error | undefined
 
-  // Handle errors
-  if (!response.ok) {
-    if (response.status === 401) {
-      // Token expired or invalid - clear it
-      removeAuthToken();
-      throw new Error("Authentication failed. Please sign in again.");
+  for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
+    // Wait before retries (not before the first attempt).
+    if (attempt > 0) {
+      await sleep(getRetryDelay(attempt))
     }
 
-    if (response.status === 403) {
-      let errorMsg: string;
-      try {
-        const errorData = await response.json();
-        errorMsg =
-          errorData.message || errorData.error || "Access forbidden";
-      } catch {
-        errorMsg = "Access forbidden";
-      }
-      throw new Error(
-        `Permission denied: ${errorMsg}. You may need admin privileges to perform this action.`,
-      );
-    }
-
-    // Try to parse error response
-    let apiErrorMsg: string;
+    let response: Response
     try {
-      const errorData = await response.json();
-      apiErrorMsg =
-        errorData.message || errorData.error || "API request failed";
-    } catch {
-      throw new Error(`API request failed with status ${response.status}`);
+      response = await fetch(url, {
+        ...fetchOptions,
+        headers: requestHeaders,
+      })
+    } catch (err) {
+      // Network error (CORS, connection refused, etc.) — retryable.
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        lastError = new Error(
+          'Network error: Unable to connect to the server. Please check your connection.'
+        )
+        continue
+      }
+      throw err
     }
-    throw new Error(apiErrorMsg);
+
+    // Handle errors
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Token expired or invalid - clear it and signal the app layer to redirect.
+        // Not retryable.
+        removeAuthToken()
+        emit401Event()
+        throw new Error('Authentication failed. Please sign in again.')
+      }
+
+      if (response.status === 403) {
+        // Permission errors are not retryable.
+        let errorMsg: string
+        try {
+          const errorData = await response.json()
+          errorMsg = errorData.message || errorData.error || 'Access forbidden'
+        } catch {
+          errorMsg = 'Access forbidden'
+        }
+        throw new Error(
+          `Permission denied: ${errorMsg}. You may need admin privileges to perform this action.`
+        )
+      }
+
+      if (response.status === 429) {
+        // Rate limited — surface immediately as RateLimitError; callers handle back-off.
+        const retryAfterSeconds = parseRetryAfter(response.headers.get('Retry-After'))
+        throw new RateLimitError(retryAfterSeconds)
+      }
+
+      // 502 / 503 are retryable transient server errors.
+      if (RETRYABLE_STATUSES.has(response.status)) {
+        let errMsg: string
+        try {
+          const errorData = await response.json()
+          errMsg = errorData.message || errorData.error || 'API request failed'
+        } catch {
+          errMsg = `API request failed with status ${response.status}`
+        }
+        lastError = new Error(errMsg)
+        continue
+      }
+
+      // Any other non-2xx status — non-retryable, fail immediately.
+      let apiErrorMsg: string
+      try {
+        const errorData = await response.json()
+        apiErrorMsg = errorData.message || errorData.error || 'API request failed'
+      } catch {
+        throw new Error(`API request failed with status ${response.status}`)
+      }
+      throw new Error(apiErrorMsg)
+    }
+
+    // Parse JSON response
+    try {
+      const jsonData = await response.json()
+      return jsonData
+    } catch (err) {
+      // If response is empty or not JSON, return empty array for list endpoints
+      if (endpoint.includes('/projects/mine') || endpoint.includes('/projects')) {
+        return [] as T
+      }
+      throw new Error('Invalid response from server')
+    }
   }
 
-  // Parse JSON response
-  try {
-    const jsonData = await response.json();
-    return jsonData;
-  } catch (err) {
-    // If response is empty or not JSON, return empty array for list endpoints
-    if (endpoint.includes("/projects/mine") || endpoint.includes("/projects")) {
-      return [] as T;
-    }
-    throw new Error("Invalid response from server");
-  }
+  // All attempts exhausted — throw the last recorded error.
+  throw lastError ?? new Error('API request failed after retries')
 }
 
 // API Methods
 
 // Health & Status
-export const checkHealth = () =>
-  apiRequest<{ ok: boolean; service: string }>("/health");
+export const checkHealth = () => apiRequest<{ ok: boolean; service: string }>('/health')
 
-export const checkReady = () =>
-  apiRequest<{ ok: boolean; db: string }>("/ready");
+export const checkReady = () => apiRequest<{ ok: boolean; db: string }>('/ready')
 
 // Landing stats (public)
 export type LandingStats = {
-  active_projects: number;
-  contributors: number;
-  grants_distributed_usd: number;
-};
+  active_projects: number
+  contributors: number
+  grants_distributed_usd: number
+}
 
-export const getLandingStats = () => apiRequest<LandingStats>("/stats/landing");
+export const getLandingStats = () => apiRequest<LandingStats>('/stats/landing')
+
+// Analytics
+export interface ActivityDataPoint {
+  month: string
+  value: number
+  trend: number
+  new: number
+  reactivated: number
+  active: number
+  churned: number
+  prMerged: number
+  rewarded: number
+}
+
+export interface ContributorRegion {
+  name: string
+  value: number
+  percentage: number
+}
+
+export interface AnalyticsStats {
+  billing_profile_count: number
+  total_contributor_count: number
+  active_contributor_count: number
+  total_count: number
+}
+
+export const getProjectActivity = (interval: string) =>
+  apiRequest<ActivityDataPoint[]>(
+    `/stats/project-activity?interval=${encodeURIComponent(interval)}`
+  )
+
+export const getContributorActivity = (interval: string) =>
+  apiRequest<ActivityDataPoint[]>(
+    `/stats/contributor-activity?interval=${encodeURIComponent(interval)}`
+  )
+
+export const getContributorsByRegion = () =>
+  apiRequest<ContributorRegion[]>('/stats/contributors-by-region')
+
+export const getAnalyticsStats = () => apiRequest<AnalyticsStats>('/stats/analytics-summary')
 
 // Authentication
 export const getCurrentUser = () =>
   apiRequest<{
-    id: string;
-    role: string;
-    first_name?: string;
-    last_name?: string;
-    location?: string;
-    website?: string;
-    bio?: string;
-    avatar_url?: string;
-    telegram?: string;
-    linkedin?: string;
-    whatsapp?: string;
-    twitter?: string;
-    discord?: string;
+    id: string
+    role: string
+    first_name?: string
+    last_name?: string
+    location?: string
+    website?: string
+    bio?: string
+    avatar_url?: string
+    telegram?: string
+    linkedin?: string
+    whatsapp?: string
+    twitter?: string
+    discord?: string
     github?: {
-      login: string;
-      avatar_url: string;
-      name?: string;
-      email?: string;
-      location?: string;
-      bio?: string;
-      website?: string;
-    };
-  }>("/me", { requiresAuth: true });
+      login: string
+      avatar_url: string
+      name?: string
+      email?: string
+      location?: string
+      bio?: string
+      website?: string
+    }
+  }>('/me', { requiresAuth: true })
 
 export const resyncGitHubProfile = () =>
   apiRequest<{
     github: {
-      login: string;
-      avatar_url: string;
-      name?: string;
-      email?: string;
-      location?: string;
-      bio?: string;
-      website?: string;
-    };
-  }>("/me/github/resync", { requiresAuth: true, method: "POST" });
+      login: string
+      avatar_url: string
+      name?: string
+      email?: string
+      location?: string
+      bio?: string
+      website?: string
+    }
+  }>('/me/github/resync', { requiresAuth: true, method: 'POST' })
 
 export const getGitHubLoginUrl = () => {
   // Pass the current frontend origin as redirect parameter
   // This allows the backend to redirect back to the correct frontend after OAuth
-  const redirectAfterLogin = window.location.origin;
-  return `${API_BASE_URL}/auth/github/login/start?redirect=${encodeURIComponent(redirectAfterLogin)}`;
-};
+  const redirectAfterLogin = window.location.origin
+  return `${API_BASE_URL}/auth/github/login/start?redirect=${encodeURIComponent(redirectAfterLogin)}`
+}
 
 export const getGitHubStatus = () =>
   apiRequest<{
-    linked: boolean;
-    github?: { id: number; login: string };
-  }>("/auth/github/status", { requiresAuth: true });
+    linked: boolean
+    github?: { id: number; login: string }
+  }>('/auth/github/status', { requiresAuth: true })
 
 // User Profile
 export const getUserProfile = () =>
   apiRequest<{
-    contributions_count: number;
-    projects_contributed_to_count: number;
-    projects_led_count: number;
-    rewards_count: number;
-    languages: Array<{ language: string; contribution_count: number }>;
-    ecosystems: Array<{ ecosystem_name: string; contribution_count: number }>;
-    kyc_verified?: boolean;
+    contributions_count: number
+    projects_contributed_to_count: number
+    projects_led_count: number
+    rewards_count: number
+    languages: Array<{ language: string; contribution_count: number }>
+    ecosystems: Array<{ ecosystem_name: string; contribution_count: number }>
+    kyc_verified?: boolean
     rank: {
-      position: number | null;
-      tier: string;
-      tier_name: string;
-      tier_color: string;
-    };
-  }>("/profile", { requiresAuth: true });
+      position: number | null
+      tier: string
+      tier_name: string
+      tier_color: string
+    }
+  }>('/profile', { requiresAuth: true })
 
 export const getProfileCalendar = (userId?: string, login?: string) => {
-  const params = new URLSearchParams();
-  if (userId) params.append("user_id", userId);
-  if (login) params.append("login", login);
-  const query = params.toString() ? `?${params.toString()}` : "";
+  const params = new URLSearchParams()
+  if (userId) params.append('user_id', userId)
+  if (login) params.append('login', login)
+  const query = params.toString() ? `?${params.toString()}` : ''
   return apiRequest<{
-    calendar: Array<{ date: string; count: number; level: number }>;
-    total: number;
-  }>(`/profile/calendar${query}`, { requiresAuth: true });
-};
+    calendar: Array<{ date: string; count: number; level: number }>
+    total: number
+  }>(`/profile/calendar${query}`, { requiresAuth: true })
+}
 
-export const getProfileActivity = (
-  limit = 50,
-  offset = 0,
-  userId?: string,
-  login?: string,
-) => {
-  const params = new URLSearchParams();
-  params.append("limit", limit.toString());
-  params.append("offset", offset.toString());
-  if (userId) params.append("user_id", userId);
-  if (login) params.append("login", login);
+export const getProfileActivity = (limit = 50, offset = 0, userId?: string, login?: string) => {
+  const params = new URLSearchParams()
+  params.append('limit', limit.toString())
+  params.append('offset', offset.toString())
+  if (userId) params.append('user_id', userId)
+  if (login) params.append('login', login)
   return apiRequest<{
     activities: Array<{
-      type: "pull_request" | "issue";
-      id: string;
-      number: number;
-      title: string;
-      url: string;
-      state?: string;
-      date: string;
-      month_year: string;
-      project_name: string;
-      project_id: string;
-      merged?: boolean;
-      draft?: boolean;
-    }>;
-    total: number;
-    limit: number;
-    offset: number;
-  }>(`/profile/activity?${params.toString()}`, { requiresAuth: true });
-};
+      type: 'pull_request' | 'issue'
+      id: string
+      number: number
+      title: string
+      url: string
+      state?: string
+      date: string
+      month_year: string
+      project_name: string
+      project_id: string
+      merged?: boolean
+      draft?: boolean
+    }>
+    total: number
+    limit: number
+    offset: number
+  }>(`/profile/activity?${params.toString()}`, { requiresAuth: true })
+}
+
+export type ProfileReward = {
+  id: string | number
+  date?: string | null
+  created_at?: string | null
+  awarded_at?: string | null
+  project_name?: string | null
+  project?: string | null
+  project_logo?: string | null
+  owner_avatar_url?: string | null
+  contributor_login?: string | null
+  from?: string | null
+  contribution_title?: string | null
+  contribution?: string | null
+  amount?: number | string | null
+  currency?: string | null
+  status?: string | null
+}
+
+/**
+ * Fetch the authenticated user's reward history.
+ *
+ * @returns Reward records for the current profile. The UI normalizes nullable
+ * fields defensively before rendering so incomplete API rows cannot leak
+ * placeholder text such as `"undefined"` into the rewards table.
+ */
+export const getProfileRewards = () =>
+  apiRequest<{ rewards: ProfileReward[] }>('/profile/rewards', { requiresAuth: true })
+
+export type ProfileContribution = {
+  id: string | number
+  title?: string | null
+  status?: string | null
+  project_name?: string | null
+  project?: string | null
+  repository?: string | null
+  github_full_name?: string | null
+  contributor_login?: string | null
+  author_login?: string | null
+  badge?: string | number | null
+  issue_number?: number | null
+  number?: number | null
+  tag?: string | null
+  label?: string | null
+  labels?: Array<string | { name?: string | null }> | null
+  url?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  submitted_at?: string | null
+  merged_at?: string | null
+  rewarded?: boolean | null
+  is_rewarded?: boolean | null
+  reward_status?: string | null
+  amount?: number | string | null
+}
+
+/**
+ * Fetches the authenticated contributor's board items.
+ *
+ * @returns API contribution rows for the Applied, Assigned, Pending Review,
+ * and Complete board. The UI normalizes nullable fields before rendering so
+ * repository-supplied text is displayed as escaped React text, never HTML.
+ */
+export const getProfileContributions = () =>
+  apiRequest<{ contributions: ProfileContribution[] }>('/profile/contributions', {
+    requiresAuth: true,
+  })
 
 export const getProjectsContributed = (userId?: string, login?: string) => {
-  const params = new URLSearchParams();
-  if (userId) params.append("user_id", userId);
-  if (login) params.append("login", login);
-  const query = params.toString() ? `?${params.toString()}` : "";
+  const params = new URLSearchParams()
+  if (userId) params.append('user_id', userId)
+  if (login) params.append('login', login)
+  const query = params.toString() ? `?${params.toString()}` : ''
   return apiRequest<
     Array<{
-      id: string;
-      github_full_name: string;
-      status: string;
-      ecosystem_name?: string;
-      language?: string;
-      owner_avatar_url?: string;
+      id: string
+      github_full_name: string
+      status: string
+      ecosystem_name?: string
+      language?: string
+      owner_avatar_url?: string
     }>
-  >(`/profile/projects${query}`, { requiresAuth: true });
-};
+  >(`/profile/projects${query}`, { requiresAuth: true })
+}
 
 export const getProjectsLed = (userId?: string, login?: string) => {
-  const params = new URLSearchParams();
-  if (userId) params.append("user_id", userId);
-  if (login) params.append("login", login);
-  const query = params.toString() ? `?${params.toString()}` : "";
+  const params = new URLSearchParams()
+  if (userId) params.append('user_id', userId)
+  if (login) params.append('login', login)
+  const query = params.toString() ? `?${params.toString()}` : ''
   return apiRequest<
     Array<{
-      id: string;
-      github_full_name: string;
-      status: string;
-      ecosystem_name?: string;
-      language?: string;
-      owner_avatar_url?: string;
+      id: string
+      github_full_name: string
+      status: string
+      ecosystem_name?: string
+      language?: string
+      owner_avatar_url?: string
     }>
-  >(`/profile/projects-led${query}`, { requiresAuth: true });
-};
+  >(`/profile/projects-led${query}`, { requiresAuth: true })
+}
 
 export const getPublicProfile = (userId?: string, login?: string) => {
-  const params = new URLSearchParams();
-  if (userId) params.append("user_id", userId);
-  if (login) params.append("login", login);
+  const params = new URLSearchParams()
+  if (userId) params.append('user_id', userId)
+  if (login) params.append('login', login)
   return apiRequest<{
-    login: string;
-    user_id: string;
-    avatar_url?: string;
-    contributions_count: number;
-    projects_contributed_to_count: number;
-    projects_led_count: number;
-    languages: Array<{ language: string; contribution_count: number }>;
-    ecosystems: Array<{ ecosystem_name: string; contribution_count: number }>;
-    bio?: string;
-    website?: string;
-    telegram?: string;
-    linkedin?: string;
-    whatsapp?: string;
-    twitter?: string;
-    discord?: string;
-    kyc_verified?: boolean;
+    login: string
+    user_id: string
+    avatar_url?: string
+    contributions_count: number
+    projects_contributed_to_count: number
+    projects_led_count: number
+    languages: Array<{ language: string; contribution_count: number }>
+    ecosystems: Array<{ ecosystem_name: string; contribution_count: number }>
+    bio?: string
+    website?: string
+    telegram?: string
+    linkedin?: string
+    whatsapp?: string
+    twitter?: string
+    discord?: string
+    kyc_verified?: boolean
     rank: {
-      position: number | null;
-      tier: string;
-      tier_name: string;
-      tier_color: string;
-    };
-  }>(`/profile/public?${params.toString()}`, { requiresAuth: false });
-};
+      position: number | null
+      tier: string
+      tier_name: string
+      tier_color: string
+    }
+  }>(`/profile/public?${params.toString()}`, { requiresAuth: false })
+}
 
 export const updateProfile = (data: {
-  first_name?: string;
-  last_name?: string;
-  location?: string;
-  website?: string;
-  bio?: string;
-  telegram?: string;
-  linkedin?: string;
-  whatsapp?: string;
-  twitter?: string;
-  discord?: string;
+  first_name?: string
+  last_name?: string
+  location?: string
+  website?: string
+  bio?: string
+  telegram?: string
+  linkedin?: string
+  whatsapp?: string
+  twitter?: string
+  discord?: string
 }) =>
-  apiRequest<{ message: string }>("/profile/update", {
-    method: "PUT",
+  apiRequest<{ message: string }>('/profile/update', {
+    method: 'PUT',
     body: JSON.stringify(data),
     requiresAuth: true,
-  });
+  })
 
 export const updateAvatar = (avatarUrl: string) =>
-  apiRequest<{ message: string; avatar_url: string }>("/profile/avatar", {
-    method: "PUT",
+  apiRequest<{ message: string; avatar_url: string }>('/profile/avatar', {
+    method: 'PUT',
     body: JSON.stringify({ avatar_url: avatarUrl }),
     requiresAuth: true,
-  });
+  })
 
 // Projects
 export const getPublicProjects = (params?: {
-  ecosystem?: string;
-  language?: string;
-  category?: string;
-  tags?: string;
-  limit?: number;
-  offset?: number;
+  ecosystem?: string
+  language?: string
+  category?: string
+  tags?: string
+  limit?: number
+  offset?: number
 }) => {
-  const queryParams = new URLSearchParams();
-  if (params?.ecosystem) queryParams.append("ecosystem", params.ecosystem);
-  if (params?.language) queryParams.append("language", params.language);
-  if (params?.category) queryParams.append("category", params.category);
-  if (params?.tags) queryParams.append("tags", params.tags);
-  if (params?.limit) queryParams.append("limit", params.limit.toString());
-  if (params?.offset) queryParams.append("offset", params.offset.toString());
+  const queryParams = new URLSearchParams()
+  if (params?.ecosystem) queryParams.append('ecosystem', params.ecosystem)
+  if (params?.language) queryParams.append('language', params.language)
+  if (params?.category) queryParams.append('category', params.category)
+  if (params?.tags) queryParams.append('tags', params.tags)
+  if (params?.limit) queryParams.append('limit', params.limit.toString())
+  if (params?.offset) queryParams.append('offset', params.offset.toString())
 
-  const queryString = queryParams.toString();
-  const endpoint = queryString ? `/projects?${queryString}` : "/projects";
+  const queryString = queryParams.toString()
+  const endpoint = queryString ? `/projects?${queryString}` : '/projects'
 
   return apiRequest<{
     projects: Array<{
-      id: string;
-      github_full_name: string;
-      language: string | null;
-      tags: string[];
-      category: string | null;
-      stars_count: number;
-      forks_count: number;
-      contributors_count: number;
-      open_issues_count: number;
-      open_prs_count: number;
-      ecosystem_name: string | null;
-      ecosystem_slug: string | null;
-      description?: string;
-      created_at: string;
-      updated_at: string;
-    }>;
-    total: number;
-    limit: number;
-    offset: number;
-  }>(endpoint);
-};
+      id: string
+      github_full_name: string
+      language: string | null
+      tags: string[]
+      category: string | null
+      stars_count: number
+      forks_count: number
+      contributors_count: number
+      open_issues_count: number
+      open_prs_count: number
+      ecosystem_name: string | null
+      ecosystem_slug: string | null
+      description?: string
+      created_at: string
+      updated_at: string
+    }>
+    total: number
+    limit: number
+    offset: number
+  }>(endpoint)
+}
 
 // Get recommended projects (top by contributors count)
 export const getRecommendedProjects = (limit: number = 8) =>
   apiRequest<{
     projects: Array<{
-      id: string;
-      github_full_name: string;
-      language: string | null;
-      tags: string[];
-      category: string | null;
-      stars_count: number;
-      forks_count: number;
-      contributors_count: number;
-      open_issues_count: number;
-      open_prs_count: number;
-      ecosystem_name: string | null;
-      ecosystem_slug: string | null;
-      description?: string;
-      created_at: string;
-      updated_at: string;
-    }>;
-  }>(`/projects/recommended?limit=${limit}`);
+      id: string
+      github_full_name: string
+      language: string | null
+      tags: string[]
+      category: string | null
+      stars_count: number
+      forks_count: number
+      contributors_count: number
+      open_issues_count: number
+      open_prs_count: number
+      ecosystem_name: string | null
+      ecosystem_slug: string | null
+      description?: string
+      created_at: string
+      updated_at: string
+    }>
+  }>(`/projects/recommended?limit=${limit}`)
 
 export const getPublicProject = (projectId: string) =>
   apiRequest<{
-    id: string;
-    github_full_name: string;
-    language: string | null;
-    tags: string[];
-    category: string | null;
-    stars_count: number;
-    forks_count: number;
-    contributors_count: number;
-    open_issues_count: number;
-    open_prs_count: number;
-    ecosystem_name: string | null;
-    ecosystem_slug: string | null;
-    created_at: string;
-    updated_at: string;
-    languages: Array<{ name: string; percentage: number }>;
-    readme?: string;
+    id: string
+    github_full_name: string
+    language: string | null
+    tags: string[]
+    category: string | null
+    stars_count: number
+    forks_count: number
+    contributors_count: number
+    open_issues_count: number
+    open_prs_count: number
+    ecosystem_name: string | null
+    ecosystem_slug: string | null
+    created_at: string
+    updated_at: string
+    languages: Array<{ name: string; percentage: number }>
+    readme?: string
     repo?: {
-      full_name: string;
-      html_url: string;
-      homepage: string;
-      description: string;
-      open_issues_count: number;
-      owner_login: string;
-      owner_avatar_url: string;
-    };
-  }>(`/projects/${projectId}`);
+      full_name: string
+      html_url: string
+      homepage: string
+      description: string
+      open_issues_count: number
+      owner_login: string
+      owner_avatar_url: string
+    }
+  }>(`/projects/${projectId}`)
 
 export const getPublicProjectIssues = (projectId: string) =>
   apiRequest<{
     issues: Array<{
-      github_issue_id: number;
-      number: number;
-      state: string;
-      title: string;
-      description: string | null;
-      author_login: string;
-      labels: any[];
-      url: string;
-      updated_at: string | null;
-      last_seen_at: string;
-    }>;
-  }>(`/projects/${projectId}/issues/public`);
+      github_issue_id: number
+      number: number
+      state: string
+      title: string
+      description: string | null
+      author_login: string
+      labels: any[]
+      url: string
+      updated_at: string | null
+      last_seen_at: string
+      deadline?: string | null
+    }>
+  }>(`/projects/${projectId}/issues/public`)
 
 export const getPublicProjectPRs = (projectId: string) =>
   apiRequest<{
     prs: Array<{
-      github_pr_id: number;
-      number: number;
-      state: string;
-      title: string;
-      author_login: string;
-      url: string;
-      merged: boolean;
-      created_at: string | null;
-      updated_at: string | null;
-      closed_at: string | null;
-      merged_at: string | null;
-      last_seen_at: string;
-    }>;
-  }>(`/projects/${projectId}/prs/public`);
+      github_pr_id: number
+      number: number
+      state: string
+      title: string
+      author_login: string
+      url: string
+      merged: boolean
+      created_at: string | null
+      updated_at: string | null
+      closed_at: string | null
+      merged_at: string | null
+      last_seen_at: string
+    }>
+  }>(`/projects/${projectId}/prs/public`)
 
 export const getProjectFilters = () =>
   apiRequest<{
-    languages: string[];
-    categories: string[];
-    tags: string[];
-  }>("/projects/filters");
+    languages: string[]
+    categories: string[]
+    tags: string[]
+  }>('/projects/filters')
 
 // Ecosystems
 export const getEcosystems = () =>
   apiRequest<{
     ecosystems: Array<{
-      id: string;
-      slug: string;
-      name: string;
-      description: string | null;
-      logo_url: string | null;
-      website_url: string | null;
-      status: string;
-      project_count: number;
-      user_count: number;
-      created_at: string;
-      updated_at: string;
-    }>;
-  }>("/ecosystems");
+      id: string
+      slug: string
+      name: string
+      description: string | null
+      logo_url: string | null
+      website_url: string | null
+      status: string
+      project_count: number
+      user_count: number
+      created_at: string
+      updated_at: string
+    }>
+  }>('/ecosystems')
 
 export type EcosystemDetail = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  website_url: string | null;
-  logo_url: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  about?: string | null;
-  links?: Array<{ label: string; url: string }> | null;
-  key_areas?: Array<{ title: string; description: string }> | null;
-  technologies?: string[] | null;
-  project_count: number;
-  contributors_count: number;
-  open_issues_count: number;
-  open_prs_count: number;
-};
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  website_url: string | null
+  logo_url: string | null
+  status: string
+  created_at: string
+  updated_at: string
+  about?: string | null
+  links?: Array<{ label: string; url: string }> | null
+  key_areas?: Array<{ title: string; description: string }> | null
+  technologies?: string[] | null
+  project_count: number
+  contributors_count: number
+  open_issues_count: number
+  open_prs_count: number
+}
 
-export const getEcosystemDetail = (id: string) =>
-  apiRequest<EcosystemDetail>(`/ecosystems/${id}`);
+export const getEcosystemDetail = (id: string) => apiRequest<EcosystemDetail>(`/ecosystems/${id}`)
+
+/**
+ * Payload for submitting a community request to have a new ecosystem added.
+ * All string fields are pre-trimmed and length-bounded before reaching this
+ * function; callers are expected to enforce those constraints via
+ * {@link sanitizeEcosystemField}.
+ */
+export interface RequestEcosystemPayload {
+  /** Full name of the requester. Max 120 chars. */
+  user_name: string
+  /** Contact e-mail address of the requester. Max 254 chars (RFC 5321). */
+  user_email: string
+  /** Proposed name for the new ecosystem. Max 120 chars. */
+  ecosystem_name: string
+  /** Why the ecosystem should be added. Max 2 000 chars. */
+  reason: string
+  /** Any supplementary information the requester wants to share. Max 1 000 chars. */
+  additional_info?: string
+}
+
+/**
+ * Submit a community request to add a new ecosystem.
+ *
+ * The request is unauthenticated — any visitor may submit one. Back-end
+ * validation is expected to re-enforce field constraints.
+ *
+ * @param data - Validated, trimmed request payload.
+ * @returns Confirmation object with `ok: true` on success.
+ * @throws {Error} On network or API-level failures.
+ *
+ * @example
+ * ```ts
+ * await requestEcosystem({
+ *   user_name: 'Jane Doe',
+ *   user_email: 'jane@example.com',
+ *   ecosystem_name: 'Solana',
+ *   reason: 'Growing DeFi community with dozens of OSS projects.',
+ * });
+ * ```
+ */
+export const requestEcosystem = (data: RequestEcosystemPayload) =>
+  apiRequest<{ ok: boolean }>('/ecosystems/request', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
 
 // Open Source Week
 export const getOpenSourceWeekEvents = () =>
   apiRequest<{
     events: Array<{
-      id: string;
-      title: string;
-      description: string | null;
-      location: string | null;
-      status: string;
-      start_at: string;
-      end_at: string;
-      created_at: string;
-      updated_at: string;
-    }>;
-  }>("/open-source-week/events");
+      id: string
+      title: string
+      description: string | null
+      location: string | null
+      status: string
+      start_at: string
+      end_at: string
+      created_at: string
+      updated_at: string
+    }>
+  }>('/open-source-week/events')
 
 export const getOpenSourceWeekEvent = (id: string) =>
   apiRequest<{
     event: {
-      id: string;
-      title: string;
-      description: string | null;
-      location: string | null;
-      status: string;
-      start_at: string;
-      end_at: string;
-      created_at: string;
-      updated_at: string;
-    };
-  }>(`/open-source-week/events/${id}`);
+      id: string
+      title: string
+      description: string | null
+      location: string | null
+      status: string
+      start_at: string
+      end_at: string
+      created_at: string
+      updated_at: string
+    }
+  }>(`/open-source-week/events/${id}`)
 
 export const getAdminOpenSourceWeekEvents = () =>
   apiRequest<{
     events: Array<{
-      id: string;
-      title: string;
-      description: string | null;
-      location: string | null;
-      status: string;
-      start_at: string;
-      end_at: string;
-      created_at: string;
-      updated_at: string;
-    }>;
-  }>("/admin/open-source-week/events", { requiresAuth: true, method: "GET" });
+      id: string
+      title: string
+      description: string | null
+      location: string | null
+      status: string
+      start_at: string
+      end_at: string
+      created_at: string
+      updated_at: string
+    }>
+  }>('/admin/open-source-week/events', { requiresAuth: true, method: 'GET' })
 
 export const createOpenSourceWeekEvent = (data: {
-  title: string;
-  description?: string;
-  location?: string;
-  status: "upcoming" | "running" | "completed" | "draft";
-  start_at: string; // RFC3339
-  end_at: string; // RFC3339
+  title: string
+  description?: string
+  location?: string
+  status: 'upcoming' | 'running' | 'completed' | 'draft'
+  start_at: string // RFC3339
+  end_at: string // RFC3339
 }) =>
-  apiRequest<{ id: string }>("/admin/open-source-week/events", {
+  apiRequest<{ id: string }>('/admin/open-source-week/events', {
     requiresAuth: true,
-    method: "POST",
+    method: 'POST',
     body: JSON.stringify(data),
-  });
+  })
 
 export const deleteOpenSourceWeekEvent = (id: string) =>
   apiRequest<{ ok: boolean }>(`/admin/open-source-week/events/${id}`, {
     requiresAuth: true,
-    method: "DELETE",
-  });
+    method: 'DELETE',
+  })
 
+/**
+ * Create a new ecosystem (admin only).
+ *
+ * Requires a valid admin JWT. The caller is responsible for sanitizing and
+ * length-limiting all string fields before calling this function.
+ *
+ * @param data - Ecosystem fields. `name` and `status` are required.
+ * @returns The newly created ecosystem record.
+ * @throws {Error} On network failures, 401/403 auth errors, or API rejection
+ *   (e.g. duplicate name).
+ *
+ * @example
+ * ```ts
+ * const eco = await createEcosystem({
+ *   name: 'Solana',
+ *   description: 'A fast, low-cost blockchain.',
+ *   status: 'active',
+ *   website_url: 'https://solana.com',
+ * });
+ * console.log(eco.id); // server-assigned UUID
+ * ```
+ */
 export const createEcosystem = (data: {
-  name: string;
-  description?: string;
-  website_url?: string;
-  logo_url?: string;
-  status: "active" | "inactive";
-  about?: string;
-  links?: Array<{ label: string; url: string }>;
-  key_areas?: Array<{ title: string; description: string }>;
-  technologies?: string[];
+  name: string
+  description?: string
+  website_url?: string
+  logo_url?: string
+  status: 'active' | 'inactive'
+  about?: string
+  links?: Array<{ label: string; url: string }>
+  key_areas?: Array<{ title: string; description: string }>
+  technologies?: string[]
 }) =>
   apiRequest<{
-    id: string;
-    slug: string;
-    name: string;
-    description: string;
-    website_url: string;
-    status: string;
-    project_count: number;
-    user_count: number;
-    created_at: string;
-    updated_at: string;
-  }>("/admin/ecosystems", {
+    id: string
+    slug: string
+    name: string
+    description: string
+    website_url: string
+    status: string
+    project_count: number
+    user_count: number
+    created_at: string
+    updated_at: string
+  }>('/admin/ecosystems', {
     requiresAuth: true,
-    method: "POST",
+    method: 'POST',
     body: JSON.stringify(data),
-  });
+  })
 
 export const getAdminEcosystems = () =>
   apiRequest<{
     ecosystems: Array<{
-      id: string;
-      slug: string;
-      name: string;
-      description: string | null;
-      logo_url: string | null;
-      website_url: string | null;
-      status: string;
-      project_count: number;
-      user_count: number;
-      created_at: string;
-      updated_at: string;
-      about: string | null;
-      links: Array<{ label: string; url: string }> | null;
-      key_areas: Array<{ title: string; description: string }> | null;
-      technologies: string[] | null;
-    }>;
-  }>("/admin/ecosystems", {
+      id: string
+      slug: string
+      name: string
+      description: string | null
+      logo_url: string | null
+      website_url: string | null
+      status: string
+      project_count: number
+      user_count: number
+      created_at: string
+      updated_at: string
+      about: string | null
+      links: Array<{ label: string; url: string }> | null
+      key_areas: Array<{ title: string; description: string }> | null
+      technologies: string[] | null
+    }>
+  }>('/admin/ecosystems', {
     requiresAuth: true,
-    method: "GET",
-  });
+    method: 'GET',
+  })
 
 export const getAdminEcosystem = (id: string) =>
   apiRequest<{
-    id: string;
-    slug: string;
-    name: string;
-    description: string | null;
-    logo_url: string | null;
-    website_url: string | null;
-    status: string;
-    project_count: number;
-    user_count: number;
-    created_at: string;
-    updated_at: string;
-    about: string | null;
-    links: Array<{ label: string; url: string }> | null;
-    key_areas: Array<{ title: string; description: string }> | null;
-    technologies: string[] | null;
+    id: string
+    slug: string
+    name: string
+    description: string | null
+    logo_url: string | null
+    website_url: string | null
+    status: string
+    project_count: number
+    user_count: number
+    created_at: string
+    updated_at: string
+    about: string | null
+    links: Array<{ label: string; url: string }> | null
+    key_areas: Array<{ title: string; description: string }> | null
+    technologies: string[] | null
   }>(`/admin/ecosystems/${id}`, {
     requiresAuth: true,
-    method: "GET",
-  });
+    method: 'GET',
+  })
 
 export const deleteEcosystem = (id: string) =>
   apiRequest<{
-    ok: boolean;
+    ok: boolean
   }>(`/admin/ecosystems/${id}`, {
     requiresAuth: true,
-    method: "DELETE",
-  });
+    method: 'DELETE',
+  })
 
-export const updateEcosystem = (id: string, data: {
-  name: string;
-  description?: string;
-  website_url?: string;
-  logo_url?: string;
-  status: 'active' | 'inactive';
-  about?: string;
-  links?: Array<{ label: string; url: string }>;
-  key_areas?: Array<{ title: string; description: string }>;
-  technologies?: string[];
-}) =>
+export const updateEcosystem = (
+  id: string,
+  data: {
+    name: string
+    description?: string
+    website_url?: string
+    logo_url?: string
+    status: 'active' | 'inactive'
+    about?: string
+    links?: Array<{ label: string; url: string }>
+    key_areas?: Array<{ title: string; description: string }>
+    technologies?: string[]
+  }
+) =>
   apiRequest<{
-    id: string;
-    slug: string;
-    name: string;
-    description: string;
-    website_url: string;
-    status: string;
-    project_count: number;
-    user_count: number;
-    created_at: string;
-    updated_at: string;
+    id: string
+    slug: string
+    name: string
+    description: string
+    website_url: string
+    status: string
+    project_count: number
+    user_count: number
+    created_at: string
+    updated_at: string
   }>(`/admin/ecosystems/${id}`, {
     requiresAuth: true,
     method: 'PUT',
     body: JSON.stringify(data),
-  });
+  })
 
 // Leaderboard
 export const getLeaderboard = (limit = 10, offset = 0, ecosystem?: string) =>
   apiRequest<
     Array<{
-      rank: number;
-      rank_tier: string;
-      rank_tier_name: string;
-      username: string;
-      avatar: string;
-      user_id: string;
-      contributions: number;
-      ecosystems: string[];
-      score: number;
-      trend: "up" | "down" | "same";
-      trendValue: number;
+      rank: number
+      rank_tier: string
+      rank_tier_name: string
+      username: string
+      avatar: string
+      user_id: string
+      contributions: number
+      ecosystems: string[]
+      score: number
+      trend: 'up' | 'down' | 'same'
+      trendValue: number
     }>
-  >(
-    `/leaderboard?limit=${limit}&offset=${offset}${ecosystem ? `&ecosystem=${ecosystem}` : ""
-    }`,
-  );
+  >(`/leaderboard?limit=${limit}&offset=${offset}${ecosystem ? `&ecosystem=${ecosystem}` : ''}`)
 
 // Admin Bootstrap
 export const bootstrapAdmin = (bootstrapToken: string) =>
   apiRequest<{
-    ok: boolean;
-    token: string;
-    role: string;
-  }>("/admin/bootstrap", {
+    ok: boolean
+    token: string
+    role: string
+  }>('/admin/bootstrap', {
     requiresAuth: true,
-    method: "POST",
+    method: 'POST',
     headers: {
-      "X-Admin-Bootstrap-Token": bootstrapToken,
+      'X-Admin-Bootstrap-Token': bootstrapToken,
     },
-  });
+  })
 
 // KYC
 export const startKYCVerification = () =>
   apiRequest<{
-    session_id: string;
-    url: string;
-  }>("/auth/kyc/start", {
+    session_id: string
+    url: string
+  }>('/auth/kyc/start', {
     requiresAuth: true,
-    method: "POST",
-  });
+    method: 'POST',
+  })
 
 export const getKYCStatus = () =>
   apiRequest<{
-    status: string | null;
-    session_id?: string;
-    verified_at?: string;
-    rejection_reason?: string;
-    data?: any;
-    extracted?: any;
-  }>("/auth/kyc/status", { requiresAuth: true });
+    status: string | null
+    session_id?: string
+    verified_at?: string
+    rejection_reason?: string
+    data?: any
+    extracted?: any
+  }>('/auth/kyc/status', { requiresAuth: true })
 
 export const getBillingProfiles = () =>
-  apiRequest<BillingProfile[]>("/billing/profiles", { requiresAuth: true });
+  apiRequest<BillingProfile[]>('/billing/profiles', { requiresAuth: true })
 
-export const getBlogPosts = () =>
-  apiRequest<BlogPost[]>("/blog/posts", { requiresAuth: false });
+/** A single project-to-billing-profile assignment. */
+export type PayoutMappingEntry = {
+  project_id: string
+  billing_profile_id: number | null
+}
 
+/**
+ * Fetches the authenticated user's persisted payout mappings.
+ * Returns an empty array when none have been saved yet.
+ */
+export const getPayoutMappings = () =>
+  apiRequest<PayoutMappingEntry[]>('/profile/payout-mappings', {
+    requiresAuth: true,
+  })
+
+/**
+ * Persists project-to-billing-profile payout mappings for the authenticated user.
+ * Requires a valid session; omitting auth is blocked at the API layer.
+ */
+export const savePayoutMappings = (mappings: PayoutMappingEntry[]) =>
+  apiRequest<{ ok: boolean }>('/profile/payout-mappings', {
+    requiresAuth: true,
+    method: 'PUT',
+    body: JSON.stringify({ mappings }),
+  })
+
+export const getBlogPosts = () => apiRequest<BlogPost[]>('/blog/posts', { requiresAuth: false })
 
 export const getMyProjects = () =>
   apiRequest<
     Array<{
-      id: string;
-      github_full_name: string;
-      github_repo_id: number;
-      status: string;
-      ecosystem_name: string;
-      language: string;
-      tags: string[];
-      category: string;
-      description?: string | null;
-      verification_error: string | null;
-      verified_at: string | null;
-      webhook_created_at: string | null;
-      webhook_id: number | null;
-      webhook_url: string | null;
-      owner_avatar_url?: string;
-      created_at: string;
-      updated_at: string;
-      needs_metadata?: boolean;
+      id: string
+      github_full_name: string
+      github_repo_id: number
+      status: string
+      ecosystem_name: string
+      language: string
+      tags: string[]
+      category: string
+      description?: string | null
+      verification_error: string | null
+      verified_at: string | null
+      webhook_created_at: string | null
+      webhook_id: number | null
+      webhook_url: string | null
+      owner_avatar_url?: string
+      created_at: string
+      updated_at: string
+      needs_metadata?: boolean
     }>
-  >("/projects/mine", { requiresAuth: true });
+  >('/projects/mine', { requiresAuth: true })
 
 export const createProject = (data: {
-  github_full_name: string;
-  ecosystem_name: string;
-  language?: string;
-  tags?: string[];
-  category?: string;
+  github_full_name: string
+  ecosystem_name: string
+  language?: string
+  tags?: string[]
+  category?: string
 }) =>
   apiRequest<{
-    id: string;
-    github_full_name: string;
-    status: string;
-    ecosystem_name: string;
-    language: string;
-    tags: string[];
-    category: string;
-    created_at: string;
-    updated_at: string;
-  }>("/projects", {
+    id: string
+    github_full_name: string
+    status: string
+    ecosystem_name: string
+    language: string
+    tags: string[]
+    category: string
+    created_at: string
+    updated_at: string
+  }>('/projects', {
     requiresAuth: true,
-    method: "POST",
+    method: 'POST',
     body: JSON.stringify(data),
-  });
+  })
 
 export type PendingSetupProject = {
-  id: string;
-  github_full_name: string;
-  description: string | null;
-  ecosystem_id: string;
-  ecosystem_name: string;
-  language: string | null;
-  tags: string[];
-  category: string | null;
-};
+  id: string
+  github_full_name: string
+  description: string | null
+  ecosystem_id: string
+  ecosystem_name: string
+  language: string | null
+  tags: string[]
+  category: string | null
+}
 
 export const getPendingSetupProjects = () =>
-  apiRequest<PendingSetupProject[]>("/projects/pending-setup", {
+  apiRequest<PendingSetupProject[]>('/projects/pending-setup', {
     requiresAuth: true,
-  });
+  })
 
 export const updateProjectMetadata = (
   projectId: string,
   data: {
-    description?: string;
-    ecosystem_name?: string;
-    language?: string;
-    tags?: string[];
-    category?: string;
-  },
+    description?: string
+    ecosystem_name?: string
+    language?: string
+    tags?: string[]
+    category?: string
+  }
 ) =>
   apiRequest<{ ok: boolean }>(`/projects/${projectId}/metadata`, {
     requiresAuth: true,
-    method: "PUT",
+    method: 'PUT',
     body: JSON.stringify(data),
-  });
+  })
 
 export const verifyProject = (projectId: string) =>
   apiRequest<{
-    id: string;
-    status: string;
-    verified_at: string;
-    webhook_id: number;
-    webhook_url: string;
+    id: string
+    status: string
+    verified_at: string
+    webhook_id: number
+    webhook_url: string
   }>(`/projects/${projectId}/verify`, {
     requiresAuth: true,
-    method: "POST",
-  });
+    method: 'POST',
+  })
 
 export const syncProject = (projectId: string) =>
   apiRequest<{
-    ok: boolean;
-    message: string;
+    ok: boolean
+    message: string
   }>(`/projects/${projectId}/sync`, {
     requiresAuth: true,
-    method: "POST",
-  });
+    method: 'POST',
+  })
 
-// Project Data (Issues and PRs)
-export const getProjectIssues = (projectId: string) =>
-  apiRequest<{
-    issues: Array<{
-      github_issue_id: number;
-      number: number;
-      state: string;
-      title: string;
-      description: string | null;
-      author_login: string;
-      assignees: any[];
-      labels: any[];
-      comments_count: number;
-      comments: any[];
-      url: string;
-      updated_at: string | null;
-      last_seen_at: string;
-    }>;
-  }>(`/projects/${projectId}/issues`, { requiresAuth: true });
+export interface MaintainerComment {
+  id: number
+  body: string
+  user: {
+    login: string
+  }
+  created_at: string
+  updated_at: string
+}
 
-export const getProjectPRs = (projectId: string) =>
-  apiRequest<{
-    prs: Array<{
-      github_pr_id: number;
-      number: number;
-      state: string;
-      title: string;
-      author_login: string;
-      url: string;
-      merged: boolean;
-      created_at: string | null;
-      updated_at: string | null;
-      closed_at: string | null;
-      merged_at: string | null;
-      last_seen_at: string;
-    }>;
-  }>(`/projects/${projectId}/prs`, { requiresAuth: true });
+export interface MaintainerIssue {
+  github_issue_id: number
+  number: number
+  state: string
+  title: string
+  description: string | null
+  author_login: string
+  assignees: any[]
+  labels: any[]
+  comments_count: number
+  comments: MaintainerComment[]
+  url: string
+  updated_at: string | null
+  last_seen_at: string
+}
 
-export const applyToIssue = (
-  projectId: string,
-  issueNumber: number,
-  message: string,
-) =>
+export interface MaintainerPR {
+  github_pr_id: number
+  number: number
+  state: string
+  title: string
+  author_login: string
+  url: string
+  merged: boolean
+  created_at: string | null
+  updated_at: string | null
+  closed_at: string | null
+  merged_at: string | null
+  last_seen_at: string
+}
+
+/**
+ * Fetches the list of issues for a specific project.
+ * Requires maintainer authentication (requiresAuth: true).
+ *
+ * @param projectId - The unique identifier of the project
+ * @param options - Optional API request options (e.g. AbortSignal)
+ * @returns Promise resolving to an object containing the project's issues
+ * @throws {Error} If authentication fails or the request is unauthorized
+ */
+export const getMaintainerIssues = (projectId: string, options?: ApiRequestOptions) =>
+  apiRequest<{ issues: MaintainerIssue[] }>(`/projects/${projectId}/issues`, {
+    requiresAuth: true,
+    ...options,
+  })
+
+/**
+ * Fetches the list of pull requests for a specific project.
+ * Requires maintainer authentication (requiresAuth: true).
+ *
+ * @param projectId - The unique identifier of the project
+ * @param options - Optional API request options (e.g. AbortSignal)
+ * @returns Promise resolving to an object containing the project's pull requests
+ * @throws {Error} If authentication fails or the request is unauthorized
+ */
+export const getMaintainerPRs = (projectId: string, options?: ApiRequestOptions) =>
+  apiRequest<{ prs: MaintainerPR[] }>(`/projects/${projectId}/prs`, {
+    requiresAuth: true,
+    ...options,
+  })
+
+// Project Data (Issues and PRs) - Deprecated/Wrapper
+export const getProjectIssues = (projectId: string) => getMaintainerIssues(projectId)
+export const getProjectPRs = (projectId: string) => getMaintainerPRs(projectId)
+
+export const applyToIssue = (projectId: string, issueNumber: number, message: string) =>
   apiRequest<{
-    ok: boolean;
+    ok: boolean
     comment: {
-      id: number;
-      body: string;
-      user: { login: string };
-      created_at: string;
-      updated_at: string;
-    };
+      id: number
+      body: string
+      user: { login: string }
+      created_at: string
+      updated_at: string
+    }
   }>(`/projects/${projectId}/issues/${issueNumber}/apply`, {
     requiresAuth: true,
-    method: "POST",
+    method: 'POST',
     body: JSON.stringify({ message }),
-  });
+  })
 
-export const postBotComment = (
-  projectId: string,
-  issueNumber: number,
-  body: string,
-) =>
+export const postBotComment = (projectId: string, issueNumber: number, body: string) =>
   apiRequest<{
-    ok: boolean;
+    ok: boolean
     comment: {
-      id: number;
-      body: string;
-      user: { login: string };
-      created_at: string;
-      updated_at: string;
-    };
+      id: number
+      body: string
+      user: { login: string }
+      created_at: string
+      updated_at: string
+    }
   }>(`/projects/${projectId}/issues/${issueNumber}/bot-comment`, {
     requiresAuth: true,
-    method: "POST",
+    method: 'POST',
     body: JSON.stringify({ body }),
-  });
+  })
 
-export const withdrawApplication = (
-  projectId: string,
-  issueNumber: number,
-  commentId: number,
-) =>
-  apiRequest<{ ok: boolean }>(
-    `/projects/${projectId}/issues/${issueNumber}/withdraw`,
-    {
-      requiresAuth: true,
-      method: "POST",
-      body: JSON.stringify({ comment_id: commentId }),
-    },
-  );
+export const withdrawApplication = (projectId: string, issueNumber: number, commentId: number) =>
+  apiRequest<{ ok: boolean }>(`/projects/${projectId}/issues/${issueNumber}/withdraw`, {
+    requiresAuth: true,
+    method: 'POST',
+    body: JSON.stringify({ comment_id: commentId }),
+  })
 
-export const assignApplicant = (
-  projectId: string,
-  issueNumber: number,
-  assignee: string,
-) =>
-  apiRequest<{ ok: boolean }>(
-    `/projects/${projectId}/issues/${issueNumber}/assign`,
-    {
-      requiresAuth: true,
-      method: "POST",
-      body: JSON.stringify({ assignee }),
-    },
-  );
+export const assignApplicant = (projectId: string, issueNumber: number, assignee: string) =>
+  apiRequest<{ ok: boolean }>(`/projects/${projectId}/issues/${issueNumber}/assign`, {
+    requiresAuth: true,
+    method: 'POST',
+    body: JSON.stringify({ assignee }),
+  })
 
 export const unassignApplicant = (projectId: string, issueNumber: number) =>
-  apiRequest<{ ok: boolean }>(
-    `/projects/${projectId}/issues/${issueNumber}/unassign`,
-    {
-      requiresAuth: true,
-      method: "POST",
-    },
-  );
+  apiRequest<{ ok: boolean }>(`/projects/${projectId}/issues/${issueNumber}/unassign`, {
+    requiresAuth: true,
+    method: 'POST',
+  })
 
-export const rejectApplication = (
-  projectId: string,
-  issueNumber: number,
-  assignee: string,
-) =>
-  apiRequest<{ ok: boolean }>(
-    `/projects/${projectId}/issues/${issueNumber}/reject`,
+export const rejectApplication = (projectId: string, issueNumber: number, assignee: string) =>
+  apiRequest<{ ok: boolean }>(`/projects/${projectId}/issues/${issueNumber}/reject`, {
+    requiresAuth: true,
+    method: 'POST',
+    body: JSON.stringify({ assignee }),
+  })
+
+/**
+ * Downloads an invoice PDF for the given invoice ID.
+ *
+ * Uses a raw fetch (not `apiRequest`) because the endpoint returns a binary
+ * blob rather than JSON. Mirrors the same auth and error-handling shape as
+ * `apiRequest`: attaches the Bearer token, throws a typed Error on 401 (and
+ * clears the stored token), and throws on any other non-2xx status.
+ *
+ * @param invoiceId - The invoice `id` from the {@link Invoice} type.
+ * @returns The PDF content as a `Blob`.
+ * @throws {Error} On network failure, auth error, or non-2xx response.
+ */
+export async function downloadInvoice(invoiceId: string): Promise<Blob> {
+  const url = `${API_BASE_URL}/billing/invoices/${invoiceId}/download`
+  const headers: Record<string, string> = {}
+
+  const token = getAuthToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  let response: Response
+  try {
+    response = await fetch(url, { headers })
+  } catch (err) {
+    if (err instanceof TypeError && err.message.includes('fetch')) {
+      throw new Error(
+        'Network error: Unable to connect to the server. Please check your connection.'
+      )
+    }
+    throw err
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      removeAuthToken()
+      emit401Event()
+      throw new Error('Authentication failed. Please sign in again.')
+    }
+    throw new Error(`Failed to download invoice (${response.status}).`)
+  }
+
+  return response.blob()
+}
+
+export const getTermsStatus = () =>
+  apiRequest<{ accepted: boolean; version: string | null; accepted_at: string | null }>(
+    '/profile/terms',
     {
       requiresAuth: true,
-      method: "POST",
-      body: JSON.stringify({ assignee }),
-    },
-  );
+    }
+  )
+
+export const acceptTerms = (version: string) =>
+  apiRequest<{ ok: boolean; accepted_at: string; version: string }>('/profile/terms', {
+    requiresAuth: true,
+    method: 'POST',
+    body: JSON.stringify({ version }),
+  })
+
+export const getNotificationSettings = () =>
+  apiRequest<NotificationSettings>('/profile/notifications', {
+    requiresAuth: true,
+  })
+
+export const updateNotificationSettings = (settings: NotificationSettings) =>
+  apiRequest<{ ok: boolean }>('/profile/notifications', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+    requiresAuth: true,
+  })

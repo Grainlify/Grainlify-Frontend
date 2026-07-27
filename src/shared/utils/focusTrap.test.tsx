@@ -197,3 +197,135 @@ describe('useFocusTrap', () => {
     expect(trap).toHaveFocus();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Nested-modal scenario (issue #446)
+// ---------------------------------------------------------------------------
+//
+// This harness renders an outer modal containing a button that opens an inner
+// modal (simulating e.g. a confirm dialog launched from AddRepositoryModal).
+// The test verifies:
+//   1. While both are open, Tab is constrained to the *inner* modal only.
+//   2. Closing the inner modal restores Tab containment to the *outer* modal.
+//   3. The outer modal's trap is not broken by the inner modal's lifecycle.
+
+function NestedTrapHarness() {
+  const [outerActive, setOuterActive] = useState(false);
+  const [innerActive, setInnerActive] = useState(false);
+
+  const outerRef = useFocusTrap<HTMLDivElement>(outerActive && !innerActive, {
+    onEscape: () => setOuterActive(false),
+  });
+  const innerRef = useFocusTrap<HTMLDivElement>(innerActive, {
+    onEscape: () => setInnerActive(false),
+  });
+
+  return (
+    <div>
+      <button onClick={() => setOuterActive(true)}>open-outer</button>
+
+      {outerActive && (
+        <div ref={outerRef} data-testid="outer-trap" tabIndex={-1}>
+          <button>outer-first</button>
+          <button onClick={() => setInnerActive(true)}>open-inner</button>
+          <button onClick={() => setOuterActive(false)}>close-outer</button>
+        </div>
+      )}
+
+      {innerActive && (
+        <div ref={innerRef} data-testid="inner-trap" tabIndex={-1}>
+          <button>inner-first</button>
+          <button>inner-last</button>
+          <button onClick={() => setInnerActive(false)}>close-inner</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+describe('useFocusTrap — nested modals (issue #446)', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('only the innermost trap processes Tab when both modals are open', async () => {
+    const user = userEvent.setup();
+    render(<NestedTrapHarness />);
+
+    // Open outer modal.
+    await user.click(screen.getByText('open-outer'));
+    await waitFor(() => expect(screen.getByText('outer-first')).toHaveFocus());
+
+    // Open inner modal from within the outer modal.
+    await user.click(screen.getByText('open-inner'));
+    await waitFor(() => expect(screen.getByText('inner-first')).toHaveFocus());
+
+    const innerFirst = screen.getByText('inner-first');
+    const innerLast = screen.getByText('inner-last');
+    const closeInner = screen.getByText('close-inner');
+
+    // Tab forward on the last inner element wraps to the first inner element.
+    closeInner.focus();
+    fireEvent.keyDown(closeInner, { key: 'Tab' });
+    expect(innerFirst).toHaveFocus();
+
+    // Shift+Tab on the first inner element wraps to the last inner element.
+    fireEvent.keyDown(innerFirst, { key: 'Tab', shiftKey: true });
+    expect(closeInner).toHaveFocus();
+
+    // Pressing Tab does NOT move focus to any outer-modal control.
+    innerLast.focus();
+    fireEvent.keyDown(innerLast, { key: 'Tab' });
+    const outerTrap = screen.getByTestId('outer-trap');
+    expect(outerTrap.contains(document.activeElement)).toBe(false);
+  });
+
+  it('closing the inner modal restores Tab containment to the outer modal', async () => {
+    const user = userEvent.setup();
+    render(<NestedTrapHarness />);
+
+    // Open both modals.
+    await user.click(screen.getByText('open-outer'));
+    await waitFor(() => expect(screen.getByText('outer-first')).toHaveFocus());
+    await user.click(screen.getByText('open-inner'));
+    await waitFor(() => expect(screen.getByText('inner-first')).toHaveFocus());
+
+    // Close the inner modal.
+    await user.click(screen.getByText('close-inner'));
+
+    // After inner closes the outer trap should be active again.
+    await waitFor(() => {
+      expect(screen.queryByTestId('inner-trap')).not.toBeInTheDocument();
+    });
+
+    const outerFirst = screen.getByText('outer-first');
+    const closeOuter = screen.getByText('close-outer');
+
+    // Tab on the last outer element wraps back to the first outer element.
+    closeOuter.focus();
+    fireEvent.keyDown(closeOuter, { key: 'Tab' });
+    expect(outerFirst).toHaveFocus();
+
+    // Shift+Tab on the first outer element wraps to the last outer element.
+    fireEvent.keyDown(outerFirst, { key: 'Tab', shiftKey: true });
+    expect(closeOuter).toHaveFocus();
+  });
+
+  it('Escape on the inner modal does not propagate to the outer modal', async () => {
+    const user = userEvent.setup();
+    render(<NestedTrapHarness />);
+
+    await user.click(screen.getByText('open-outer'));
+    await user.click(screen.getByText('open-inner'));
+    await waitFor(() => expect(screen.getByText('inner-first')).toHaveFocus());
+
+    // Press Escape while inner modal is focused — it should close the inner modal only.
+    fireEvent.keyDown(screen.getByText('inner-first'), { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('inner-trap')).not.toBeInTheDocument();
+    });
+    // Outer modal must still be present.
+    expect(screen.getByTestId('outer-trap')).toBeInTheDocument();
+  });
+});
