@@ -2,18 +2,10 @@ import { Component, type ReactNode } from 'react'
 import { act, render, renderHook, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  LOCALE_STORAGE_KEY,
-  LocaleProvider,
-  readStoredLocale,
-  useLocale,
-} from './LocaleProvider'
+import { LOCALE_STORAGE_KEY, LocaleProvider, readStoredLocale, useLocale } from './LocaleProvider'
 import { DEFAULT_LOCALE, type Locale } from './messages'
 
-class TestErrorBoundary extends Component<
-  { children: ReactNode },
-  { error: Error | null }
-> {
+class TestErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null }
 
   static getDerivedStateFromError(error: Error) {
@@ -87,6 +79,7 @@ describe('LocaleProvider', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   function createWrapper(initialLocale?: Locale) {
@@ -94,6 +87,18 @@ describe('LocaleProvider', () => {
       return <LocaleProvider initialLocale={initialLocale}>{children}</LocaleProvider>
     }
   }
+
+  it('rehydrates a valid stored locale when initialLocale is omitted', () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, 'es')
+
+    const { result } = renderHook(() => useLocale(), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.locale).toBe('es')
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('es')
+    expect(document.documentElement.lang).toBe('es')
+  })
 
   it('prefers initialLocale over a different persisted locale', () => {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, 'es')
@@ -123,6 +128,25 @@ describe('LocaleProvider', () => {
     expect(document.documentElement.lang).toBe('es')
   })
 
+  it('persists a changed locale when document is unavailable', () => {
+    const { result } = renderHook(() => useLocale(), {
+      wrapper: createWrapper('en'),
+    })
+
+    vi.stubGlobal('document', undefined)
+
+    try {
+      act(() => {
+        result.current.setLocale('es')
+      })
+
+      expect(result.current.locale).toBe('es')
+      expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('es')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('falls back to DEFAULT_LOCALE for an unsupported runtime locale', () => {
     const { result } = renderHook(() => useLocale(), {
       wrapper: createWrapper('es'),
@@ -138,11 +162,9 @@ describe('LocaleProvider', () => {
   })
 
   it('keeps the in-memory locale when localStorage.setItem throws', () => {
-    const setItemSpy = vi
-      .spyOn(window.localStorage, 'setItem')
-      .mockImplementation(() => {
-        throw new Error('storage unavailable')
-      })
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('storage unavailable')
+    })
 
     const { result } = renderHook(() => useLocale(), {
       wrapper: createWrapper('en'),
@@ -178,14 +200,20 @@ describe('LocaleProvider', () => {
 
   it('throws a clear error when useLocale is called outside LocaleProvider', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const preventDefault = (event: ErrorEvent) => event.preventDefault()
+    window.addEventListener('error', preventDefault)
 
-    render(
-      <TestErrorBoundary>
-        <LocaleConsumer />
-      </TestErrorBoundary>
-    )
+    try {
+      render(
+        <TestErrorBoundary>
+          <LocaleConsumer />
+        </TestErrorBoundary>
+      )
 
-    expect(screen.getByText('useLocale must be used within a LocaleProvider')).toBeInTheDocument()
-    consoleError.mockRestore()
+      expect(screen.getByText('useLocale must be used within a LocaleProvider')).toBeInTheDocument()
+    } finally {
+      window.removeEventListener('error', preventDefault)
+      consoleError.mockRestore()
+    }
   })
 })
