@@ -58,6 +58,8 @@ export function SearchPage({
   const isAtSearchLimit = queryLength >= MAX_SEARCH_LENGTH
   const showSearchCounter = queryLength >= SEARCH_COUNTER_THRESHOLD
 
+  const [filter, setFilter] = useState<'all' | 'issue' | 'project' | 'contributor'>('all')
+
   // Debounce the query so filtering only runs once the user pauses typing.
   const debouncedQuery = useDebouncedValue(searchQuery, 300)
 
@@ -106,52 +108,58 @@ export function SearchPage({
     const results: SearchResult[] = []
 
     // Search issues
-    allData.issues.forEach((issue) => {
-      if (
-        issue.title.toLowerCase().includes(query) ||
-        issue.project.toLowerCase().includes(query)
-      ) {
-        results.push({
-          id: issue.id,
-          type: 'issue',
-          title: issue.title,
-          subtitle: issue.project,
-          icon: FileText,
-        })
-      }
-    })
+    if (filter === 'all' || filter === 'issue') {
+      allData.issues.forEach((issue) => {
+        if (
+          issue.title.toLowerCase().includes(query) ||
+          issue.project.toLowerCase().includes(query)
+        ) {
+          results.push({
+            id: issue.id,
+            type: 'issue',
+            title: issue.title,
+            subtitle: issue.project,
+            icon: FileText,
+          })
+        }
+      })
+    }
 
     // Search projects
-    allData.projects.forEach((project) => {
-      if (
-        project.name.toLowerCase().includes(query) ||
-        project.description.toLowerCase().includes(query)
-      ) {
-        results.push({
-          id: project.id,
-          type: 'project',
-          title: project.name,
-          subtitle: project.description,
-          icon: FolderGit2,
-        })
-      }
-    })
+    if (filter === 'all' || filter === 'project') {
+      allData.projects.forEach((project) => {
+        if (
+          project.name.toLowerCase().includes(query) ||
+          project.description.toLowerCase().includes(query)
+        ) {
+          results.push({
+            id: project.id,
+            type: 'project',
+            title: project.name,
+            subtitle: project.description,
+            icon: FolderGit2,
+          })
+        }
+      })
+    }
 
     // Search contributors
-    allData.contributors.forEach((contributor) => {
-      if (contributor.name.toLowerCase().includes(query)) {
-        results.push({
-          id: contributor.id,
-          type: 'contributor',
-          title: contributor.name,
-          subtitle: `${contributor.contributions} contributions`,
-          icon: User,
-        })
-      }
-    })
+    if (filter === 'all' || filter === 'contributor') {
+      allData.contributors.forEach((contributor) => {
+        if (contributor.name.toLowerCase().includes(query)) {
+          results.push({
+            id: contributor.id,
+            type: 'contributor',
+            title: contributor.name,
+            subtitle: `${contributor.contributions} contributions`,
+            icon: User,
+          })
+        }
+      })
+    }
 
     setSearchResults(results)
-  }, [debouncedQuery])
+  }, [debouncedQuery, filter])
 
   const handleResultClick = (result: SearchResult) => {
     if (result.type === 'issue') {
@@ -269,6 +277,27 @@ export function SearchPage({
               <ArrowRight aria-hidden="true" className="w-5 h-5 text-white" />
             </button>
           </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex gap-2 mb-8 justify-center">
+          {(['all', 'issue', 'project', 'contributor'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              aria-pressed={filter === f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                filter === f
+                  ? 'bg-[#c9983a] text-white'
+                  : darkTheme
+                    ? 'bg-[#2d2820]/60 text-[#b8a898] hover:bg-[#2d2820]/80'
+                    : 'bg-white/60 text-[#6b5d4d] hover:bg-white/80'
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
         </div>
 
         {/* Character counter — announced to screen readers near the limit */}
