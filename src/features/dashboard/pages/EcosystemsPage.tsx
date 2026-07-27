@@ -11,6 +11,7 @@ import {
   ModalSelect,
 } from '../../../shared/components/ui/Modal'
 import { getEcosystems, createEcosystem, requestEcosystem } from '../../../shared/api/client'
+import { useTranslation } from '../../../shared/i18n'
 
 // ---------------------------------------------------------------------------
 // Security helpers
@@ -46,6 +47,7 @@ interface EcosystemsPageProps {
 
 export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
   logger.debug('=== EcosystemsPage (features/dashboard) FUNCTION CALLED ===')
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const [showAddModal, setShowAddModal] = useState(false)
   const [formData, setFormData] = useState({
@@ -116,9 +118,9 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
         const colorIndex = eco.name ? eco.name.length % colors.length : 0
         return {
           id: eco.id,
-          name: eco.name || 'Unnamed Ecosystem',
+          name: eco.name || t('ecosystems.card.unnamed'),
           slug: eco.slug || '',
-          description: eco.description || 'No description available.',
+          description: eco.description || t('ecosystems.card.noDescription'),
           projects: eco.project_count || 0,
           contributors: eco.user_count || 0,
           logo_url: eco.logo_url || null,
@@ -165,8 +167,8 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
     const name = sanitize(formData.name, FIELD_LIMITS.name)
     const description = sanitize(formData.description, FIELD_LIMITS.description)
     const errors: { name?: string; description?: string } = {}
-    if (!name) errors.name = 'Ecosystem name is required.'
-    if (!description) errors.description = 'Description is required.'
+    if (!name) errors.name = t('ecosystems.validation.nameRequired')
+    if (!description) errors.description = t('ecosystems.validation.descRequired')
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors)
       return
@@ -181,14 +183,14 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
         status: formData.status as 'active' | 'inactive',
         website_url: sanitize(formData.websiteUrl, FIELD_LIMITS.websiteUrl) || undefined,
       })
-      toast.success('Ecosystem added successfully!')
+      toast.success(t('ecosystems.add.success'))
       setShowAddModal(false)
       setFormData({ name: '', description: '', status: 'active', websiteUrl: '' })
       // Refresh the list so the newly created ecosystem appears immediately.
       fetchEcosystems()
     } catch (error) {
       logger.error('Failed to create ecosystem:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to add ecosystem.')
+      toast.error(error instanceof Error ? error.message : t('ecosystems.add.error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -221,10 +223,10 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
     const additionalInfo = sanitize(requestData.additionalInfo, FIELD_LIMITS.additionalInfo)
 
     const errors: typeof requestErrors = {}
-    if (!userName) errors.userName = 'Your name is required.'
-    if (!userEmail) errors.userEmail = 'Your email is required.'
-    if (!ecosystemName) errors.ecosystemName = 'Ecosystem name is required.'
-    if (!reason) errors.reason = 'Please tell us why you want this ecosystem added.'
+    if (!userName) errors.userName = t('ecosystems.validation.userNameRequired')
+    if (!userEmail) errors.userEmail = t('ecosystems.validation.userEmailRequired')
+    if (!ecosystemName) errors.ecosystemName = t('ecosystems.validation.nameRequired')
+    if (!reason) errors.reason = t('ecosystems.validation.reasonRequired')
     if (Object.keys(errors).length > 0) {
       setRequestErrors(errors)
       return
@@ -240,7 +242,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
         reason,
         additional_info: additionalInfo || undefined,
       })
-      toast.success('Request submitted! The admin will review it shortly.')
+      toast.success(t('ecosystems.request.success'))
       setShowRequestModal(false)
       setRequestData({
         userName: '',
@@ -251,7 +253,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
       })
     } catch (error) {
       logger.error('Failed to submit ecosystem request:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to submit request.')
+      toast.error(error instanceof Error ? error.message : t('ecosystems.request.error'))
     } finally {
       setIsRequestSubmitting(false)
     }
@@ -281,15 +283,14 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
                 theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
               }`}
             >
-              Explore Ecosystems
+              {t('ecosystems.title')}
             </h1>
             <p
               className={`text-[14px] md:text-[16px] max-w-3xl transition-colors ${
                 theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
               }`}
             >
-              Discover a wide range of projects shaping the future of open source, each driving
-              revolutionary change.
+              {t('ecosystems.subtitle')}
             </p>
           </div>
           <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-[#c9983a] to-[#a67c2e] flex items-center justify-center shadow-[0_8px_24px_rgba(162,121,44,0.3)] border border-white/15 flex-shrink-0">
@@ -307,7 +308,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
         />
         <input
           type="text"
-          placeholder="Search ecosystems..."
+          placeholder={t('ecosystems.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className={`w-full pl-10 md:pl-12 pr-4 py-3 md:py-3.5 rounded-[12px] md:rounded-[14px] backdrop-blur-[30px] border focus:outline-none transition-all text-[13px] md:text-[14px] shadow-[inset_0px_0px_4px_0px_rgba(0,0,0,0.12)] relative touch-manipulation ${
@@ -398,13 +399,11 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
           <p
             className={`text-[14px] md:text-[16px] ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
           >
-            {searchQuery
-              ? 'No ecosystems found matching your search.'
-              : 'No ecosystems available yet.'}
+            {searchQuery ? t('ecosystems.empty.noMatch') : t('ecosystems.empty.none')}
           </p>
           {!isLoading && ecosystems.length > 0 && (
             <div className="mt-2 text-[11px] md:text-xs opacity-70">
-              (Filtered from {ecosystems.length} ecosystems)
+              {t('ecosystems.filteredCount').replace('{count}', String(ecosystems.length))}
             </div>
           )}
         </div>
@@ -468,7 +467,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
                         theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                       }`}
                     >
-                      Projects
+                      {t('ecosystems.card.projects')}
                     </div>
                     <div
                       className={`text-[18px] md:text-[20px] font-bold transition-colors ${
@@ -484,7 +483,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
                         theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                       }`}
                     >
-                      Contributors
+                      {t('ecosystems.card.contributors')}
                     </div>
                     <div
                       className={`text-[18px] md:text-[20px] font-bold transition-colors ${
@@ -520,7 +519,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
                         theme === 'dark' ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
                       }`}
                     >
-                      Visit Website
+                      {t('ecosystems.card.visitWebsite')}
                     </a>
                   </div>
                 )}
@@ -553,7 +552,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
                 theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
               }`}
             >
-              Missing Your Ecosystem?
+              {t('ecosystems.request.title')}
             </h3>
 
             <p
@@ -561,8 +560,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
                 theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
               }`}
             >
-              Don't see your ecosystem in the list? No worries! Request the admin to add it to our
-              platform.
+              {t('ecosystems.request.description')}
             </p>
 
             <button
@@ -570,7 +568,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
               className="group px-5 md:px-8 py-3 md:py-4 bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white rounded-[12px] md:rounded-[16px] font-semibold text-[13px] md:text-[15px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_10px_30px_rgba(162,121,44,0.5)] transition-all flex items-center justify-center gap-2 md:gap-3 mx-auto border border-white/10 hover:scale-105 active:scale-100 touch-manipulation min-h-[44px] w-full sm:w-auto"
             >
               <Plus className="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-90 transition-transform flex-shrink-0" />
-              <span className="text-center">Request Ecosystem Addition</span>
+              <span className="text-center">{t('ecosystems.request.button')}</span>
               <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform hidden sm:block flex-shrink-0" />
             </button>
           </div>
@@ -581,46 +579,46 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="Add New Ecosystem"
+        title={t('ecosystems.add.modalTitle')}
         width="md"
       >
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <ModalInput
-              label="Ecosystem Name"
+              label={t('ecosystems.add.nameLabel')}
               value={formData.name}
               onChange={(value) => setFormData({ ...formData, name: value })}
-              placeholder="e.g., Web3 Ecosystem"
+              placeholder={t('ecosystems.add.namePlaceholder')}
               required
               error={formErrors.name}
             />
 
             <ModalInput
-              label="Description"
+              label={t('ecosystems.add.descLabel')}
               value={formData.description}
               onChange={(value) => setFormData({ ...formData, description: value })}
-              placeholder="Describe the ecosystem..."
+              placeholder={t('ecosystems.add.descPlaceholder')}
               rows={4}
               required
               error={formErrors.description}
             />
 
             <ModalSelect
-              label="Status"
+              label={t('ecosystems.add.statusLabel')}
               value={formData.status}
               onChange={(value) => setFormData({ ...formData, status: value })}
               options={[
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' },
+                { value: 'active', label: t('ecosystems.add.statusActive') },
+                { value: 'inactive', label: t('ecosystems.add.statusInactive') },
               ]}
             />
 
             <ModalInput
-              label="Website URL"
+              label={t('ecosystems.add.urlLabel')}
               type="url"
               value={formData.websiteUrl}
               onChange={(value) => setFormData({ ...formData, websiteUrl: value })}
-              placeholder="https://example.com"
+              placeholder={t('ecosystems.add.urlPlaceholder')}
             />
           </div>
 
@@ -633,10 +631,10 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
               variant="secondary"
               disabled={isSubmitting}
             >
-              Cancel
+              {t('ecosystems.add.cancel')}
             </ModalButton>
             <ModalButton type="submit" variant="primary" disabled={isSubmitting}>
-              {isSubmitting ? 'Adding…' : 'Add Ecosystem'}
+              {isSubmitting ? t('ecosystems.add.submitting') : t('ecosystems.add.submit')}
             </ModalButton>
           </ModalFooter>
         </form>
@@ -646,7 +644,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
       <Modal
         isOpen={showRequestModal}
         onClose={() => setShowRequestModal(false)}
-        title="Request Ecosystem Addition"
+        title={t('ecosystems.request.modalTitle')}
         icon={<Sparkles className="w-5 h-5 md:w-6 md:h-6 text-white" />}
         width="lg"
         maxHeight
@@ -656,56 +654,56 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
             theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
           }`}
         >
-          Fill out the form below and we'll review your request
+          {t('ecosystems.request.modalSubtitle')}
         </p>
 
         <form onSubmit={handleRequestSubmit}>
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <ModalInput
-                label="Your Name"
+                label={t('ecosystems.request.nameLabel')}
                 value={requestData.userName}
                 onChange={(value) => setRequestData({ ...requestData, userName: value })}
-                placeholder="John Doe"
+                placeholder={t('ecosystems.request.namePlaceholder')}
                 required
                 error={requestErrors.userName}
               />
 
               <ModalInput
-                label="Your Email"
+                label={t('ecosystems.request.emailLabel')}
                 type="email"
                 value={requestData.userEmail}
                 onChange={(value) => setRequestData({ ...requestData, userEmail: value })}
-                placeholder="john@example.com"
+                placeholder={t('ecosystems.request.emailPlaceholder')}
                 required
                 error={requestErrors.userEmail}
               />
             </div>
 
             <ModalInput
-              label="Ecosystem Name"
+              label={t('ecosystems.request.ecoNameLabel')}
               value={requestData.ecosystemName}
               onChange={(value) => setRequestData({ ...requestData, ecosystemName: value })}
-              placeholder="e.g., Web3 Ecosystem"
+              placeholder={t('ecosystems.request.ecoNamePlaceholder')}
               required
               error={requestErrors.ecosystemName}
             />
 
             <ModalInput
-              label="Why do you want this ecosystem added?"
+              label={t('ecosystems.request.reasonLabel')}
               value={requestData.reason}
               onChange={(value) => setRequestData({ ...requestData, reason: value })}
-              placeholder="Tell us why this ecosystem would be valuable to the community..."
+              placeholder={t('ecosystems.request.reasonPlaceholder')}
               rows={4}
               required
               error={requestErrors.reason}
             />
 
             <ModalInput
-              label="Additional Information (Optional)"
+              label={t('ecosystems.request.infoLabel')}
               value={requestData.additionalInfo}
               onChange={(value) => setRequestData({ ...requestData, additionalInfo: value })}
-              placeholder="Any other details you'd like to share..."
+              placeholder={t('ecosystems.request.infoPlaceholder')}
               rows={3}
             />
           </div>
@@ -718,11 +716,13 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
               }}
               disabled={isRequestSubmitting}
             >
-              Cancel
+              {t('ecosystems.request.cancel')}
             </ModalButton>
             <ModalButton type="submit" variant="primary" disabled={isRequestSubmitting}>
               <Send className="w-4 h-4" />
-              {isRequestSubmitting ? 'Submitting…' : 'Submit Request'}
+              {isRequestSubmitting
+                ? t('ecosystems.request.submitting')
+                : t('ecosystems.request.submit')}
             </ModalButton>
           </ModalFooter>
         </form>
