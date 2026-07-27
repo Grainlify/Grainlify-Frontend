@@ -171,6 +171,31 @@ export function useOptimisticData<T>(
     }
   }, [])
 
+  const applyOptimisticUpdate = useCallback(
+    async (optimisticData: T | ((current: T) => T), promise: Promise<unknown>) => {
+      const previousData = dataRef.current
+      const version = ++updateVersionRef.current
+      const nextData =
+        typeof optimisticData === 'function'
+          ? (optimisticData as (current: T) => T)(previousData)
+          : optimisticData
+      updateData(nextData)
+
+      try {
+        await promise
+      } catch (err: unknown) {
+        if (isAbortError(err)) return
+        // Only roll back if no newer optimistic update has been applied since
+        // this one was dispatched — otherwise we'd clobber a later, still-active
+        // (or already-succeeded) update's state.
+        if (updateVersionRef.current === version) {
+          updateData(previousData)
+        }
+      }
+    },
+    [updateData]
+  )
+
   // Abort any in-flight request and clear timers when the component unmounts
   useEffect(() => {
     return () => {
