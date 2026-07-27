@@ -12,6 +12,7 @@
 import React, { useState } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
 import { I18nProvider } from '../../../shared/i18n'
 
