@@ -37,6 +37,11 @@ export interface UseOptimisticDataReturn<T> {
   isEmpty: boolean
   /** Function to manually fetch data */
   fetchData: (fetchFn: (signal: AbortSignal) => Promise<T>, forceRefresh?: boolean) => Promise<void>
+  /** Apply an optimistic update with rollback on failure */
+  applyOptimisticUpdate: (
+    optimisticData: T | ((current: T) => T),
+    promise: Promise<unknown>
+  ) => Promise<void>
   /** Clear cached data */
   clearCache: () => void
   /** Current retry attempt count */
@@ -144,6 +149,7 @@ export function useOptimisticData<T>(
   const backoffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const emptyPredicate = isEmptyOption ?? defaultIsEmptyValue
   const emptyPredicateRef = useRef<(data: T) => boolean>(emptyPredicate)
+  const updateVersionRef = useRef<number>(0)
 
   useEffect(() => {
     dataRef.current = data
@@ -264,5 +270,17 @@ export function useOptimisticData<T>(
     return emptyPredicate(data)
   }, [data, emptyPredicate])
 
-  return { data, isLoading, hasError, error, retry, isEmpty, fetchData, clearCache, retryCount, isRetrying }
+  return {
+    data,
+    isLoading,
+    hasError,
+    error,
+    retry,
+    isEmpty,
+    fetchData,
+    applyOptimisticUpdate,
+    clearCache,
+    retryCount,
+    isRetrying,
+  }
 }

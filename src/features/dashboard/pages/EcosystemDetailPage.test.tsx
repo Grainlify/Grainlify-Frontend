@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
+import { I18nProvider } from '../../../shared/i18n'
 import { EcosystemDetailPage } from './EcosystemDetailPage'
 
 const mockGetPublicProjects = vi.fn()
@@ -139,14 +140,16 @@ const mockProjects = [
 
 function renderPage() {
   return render(
-    <ThemeProvider>
-      <EcosystemDetailPage
-        ecosystemId="eco-1"
-        ecosystemName="TestEco"
-        onBack={onBack}
-        onProjectClick={onProjectClick}
-      />
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider>
+        <EcosystemDetailPage
+          ecosystemId="eco-1"
+          ecosystemName="TestEco"
+          onBack={onBack}
+          onProjectClick={onProjectClick}
+        />
+      </ThemeProvider>
+    </I18nProvider>
   )
 }
 
