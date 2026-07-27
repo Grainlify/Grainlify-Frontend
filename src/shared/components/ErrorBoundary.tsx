@@ -122,7 +122,7 @@ function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () =>
         </div>
 
         {/* Error Details (collapsible) */}
-        {error && (
+        {!import.meta.env.PROD && error && (
           <details
             className={`mb-6 rounded-lg p-4 transition-colors ${
               theme === 'dark' ? 'bg-white/[0.06]' : 'bg-white/[0.12]'

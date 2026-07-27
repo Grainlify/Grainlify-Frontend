@@ -265,6 +265,25 @@ function ContributionError({ theme, onRetry }: { theme: string; onRetry: () => v
   )
 }
 
+function ContributionEmptyBoard({ theme }: { theme: string }) {
+  return (
+    <div
+      data-testid="contribution-empty-board"
+      className={`text-center py-16 backdrop-blur-[30px] bg-white/[0.12] rounded-[20px] border border-white/20 ${
+        theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+      }`}
+    >
+      <div className="w-14 h-14 mx-auto mb-4 opacity-60 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5">
+        <Star className="w-7 h-7" />
+      </div>
+      <p className="text-[16px] font-semibold">No contributions yet</p>
+      <p className="text-[13px] mt-2 max-w-sm mx-auto opacity-80">
+        When you start contributing to projects, your progress and history will be tracked here.
+      </p>
+    </div>
+  )
+}
+
 function EmptyColumn({ label, theme }: { label: string; theme: string }) {
   return (
     <div
@@ -509,6 +528,8 @@ export function ContributionsTab() {
           <ContributionSkeleton />
         ) : state.status === 'error' ? (
           <ContributionError theme={theme} onRetry={fetchContributions} />
+        ) : state.contributions.length === 0 ? (
+          <ContributionEmptyBoard theme={theme} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
             {contributionColumns.map((column) => (

@@ -61,7 +61,9 @@ describe('AddRepositoryModal', () => {
     await user.clear(screen.getByPlaceholderText(/owner\/repo/i))
     await user.type(screen.getByPlaceholderText(/owner\/repo/i), 'invalidname')
 
-    expect(await screen.findByText('Repository name must be in format: owner/repo')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Repository name must be in format: owner/repo')
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add repository/i })).toBeDisabled()
     expect(mockCreateProject).not.toHaveBeenCalled()
   })
@@ -131,9 +133,7 @@ describe('AddRepositoryModal', () => {
     const user = userEvent.setup()
     const onSuccess = vi.fn()
     const onClose = vi.fn()
-    renderWithTheme(
-      <AddRepositoryModal isOpen={true} onClose={onClose} onSuccess={onSuccess} />,
-    )
+    renderWithTheme(<AddRepositoryModal isOpen={true} onClose={onClose} onSuccess={onSuccess} />)
     await waitFor(() => {
       expect(screen.getByText('Ethereum')).toBeInTheDocument()
     })
@@ -152,7 +152,75 @@ describe('AddRepositoryModal', () => {
         expect(onSuccess).toHaveBeenCalled()
         expect(onClose).toHaveBeenCalled()
       },
-      { timeout: 2000 },
+      { timeout: 2000 }
     )
+  })
+
+  it('surfaces a clear error and preserves form state on duplicate repository submission', async () => {
+    mockCreateProject.mockRejectedValue(new Error('Project already exists in this ecosystem'))
+    const user = userEvent.setup()
+    renderWithTheme(<AddRepositoryModal {...defaultProps} />)
+    await waitFor(() => {
+      expect(screen.getByText('Ethereum')).toBeInTheDocument()
+    })
+
+    const input = screen.getByPlaceholderText(/owner\/repo/i)
+    await user.type(input, 'facebook/react')
+    await user.selectOptions(screen.getByRole('combobox'), 'Ethereum')
+
+    const submitButton = screen.getByRole('button', { name: /add repository/i })
+    await user.click(submitButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('This repository is already added')).toBeInTheDocument()
+    })
+
+    // Form data is preserved
+    expect(input).toHaveValue('facebook/react')
+    expect(screen.getByRole('combobox')).toHaveValue('Ethereum')
+
+    // Submit button returns to enabled/idle state
+    expect(submitButton).not.toBeDisabled()
+    expect(submitButton).toHaveTextContent('Add Repository')
+  })
+
+  it('surfaces generic error on 500 failure', async () => {
+    mockCreateProject.mockRejectedValue(new Error('Internal Server Error'))
+    const user = userEvent.setup()
+    renderWithTheme(<AddRepositoryModal {...defaultProps} />)
+    await waitFor(() => {
+      expect(screen.getByText('Ethereum')).toBeInTheDocument()
+    })
+
+    await user.type(screen.getByPlaceholderText(/owner\/repo/i), 'facebook/react')
+    await user.selectOptions(screen.getByRole('combobox'), 'Ethereum')
+    await user.click(screen.getByRole('button', { name: /add repository/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Internal Server Error')).toBeInTheDocument()
+    })
+  })
+
+  it('surfaces generic error on network failure', async () => {
+    mockCreateProject.mockRejectedValue(
+      new Error('Network error: Unable to connect to the server. Please check your connection.')
+    )
+    const user = userEvent.setup()
+    renderWithTheme(<AddRepositoryModal {...defaultProps} />)
+    await waitFor(() => {
+      expect(screen.getByText('Ethereum')).toBeInTheDocument()
+    })
+
+    await user.type(screen.getByPlaceholderText(/owner\/repo/i), 'facebook/react')
+    await user.selectOptions(screen.getByRole('combobox'), 'Ethereum')
+    await user.click(screen.getByRole('button', { name: /add repository/i }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Network error: Unable to connect to the server. Please check your connection.'
+        )
+      ).toBeInTheDocument()
+    })
   })
 })
