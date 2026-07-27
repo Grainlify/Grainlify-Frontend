@@ -328,4 +328,37 @@ describe('SearchPage Accessibility and Functionality', () => {
 
     expect(screen.queryByRole('heading', { name: /Search Results/i })).not.toBeInTheDocument()
   })
+
+  it('should use the latest filter when changed mid-debounce (stale closure regression)', () => {
+    renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+
+    // Type a query that matches multiple items (e.g. "React" matches issue "Add dark mode support" and project "React Dashboard")
+    fireEvent.change(searchInput, { target: { value: 'React' } })
+
+    // Advance halfway through the 300ms debounce
+    act(() => {
+      vi.advanceTimersByTime(150)
+    })
+
+    // Mid-debounce, change the filter to 'issue'
+    const issueFilterBtn = screen.getByRole('button', { name: 'Issue' })
+    fireEvent.click(issueFilterBtn)
+
+    // Complete the remaining debounce
+    act(() => {
+      vi.advanceTimersByTime(150)
+    })
+
+    // Search results should show up now. Because we updated the filter to 'issue',
+    // the project "React Dashboard" should NOT be in the document.
+    const heading = screen.getByRole('heading', { name: /Search Results/i })
+    expect(heading).toHaveTextContent('Search Results')
+
+    expect(screen.getByText('Add dark mode support')).toBeInTheDocument()
+    expect(screen.queryAllByText('Modern dashboard with React and TypeScript').length).toBe(0)
+  })
 })
