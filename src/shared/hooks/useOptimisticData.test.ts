@@ -328,9 +328,7 @@ describe('useOptimisticData', () => {
   describe('exponential backoff', () => {
     it('retries with a delay instead of immediately', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      const { result } = renderHook(() =>
-        useOptimisticData('initial', { baseDelay: 1000 })
-      )
+      const { result } = renderHook(() => useOptimisticData('initial', { baseDelay: 1000 }))
 
       const fetchFn = vi.fn().mockRejectedValue(new Error('fail'))
 
@@ -430,9 +428,7 @@ describe('useOptimisticData', () => {
       const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.5)
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      const { result } = renderHook(() =>
-        useOptimisticData('initial', { baseDelay: 1000 })
-      )
+      const { result } = renderHook(() => useOptimisticData('initial', { baseDelay: 1000 }))
 
       const fetchFn = vi.fn().mockRejectedValue(new Error('fail'))
 
@@ -544,9 +540,7 @@ describe('useOptimisticData', () => {
       vi.spyOn(Math, 'random').mockReturnValue(0)
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      const { result } = renderHook(() =>
-        useOptimisticData('initial', { maxRetries: 2 })
-      )
+      const { result } = renderHook(() => useOptimisticData('initial', { maxRetries: 2 }))
 
       const fetchFn = vi.fn().mockRejectedValue(new Error('fail'))
 
@@ -592,9 +586,7 @@ describe('useOptimisticData', () => {
       vi.spyOn(Math, 'random').mockReturnValue(0)
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      const { result } = renderHook(() =>
-        useOptimisticData('initial', { maxRetries: 2 })
-      )
+      const { result } = renderHook(() => useOptimisticData('initial', { maxRetries: 2 }))
 
       const failingFetchFn = vi.fn().mockRejectedValue(new Error('fail'))
 
@@ -649,9 +641,7 @@ describe('useOptimisticData', () => {
       vi.spyOn(Math, 'random').mockReturnValue(1)
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      const { result } = renderHook(() =>
-        useOptimisticData('initial', { baseDelay: 1000 })
-      )
+      const { result } = renderHook(() => useOptimisticData('initial', { baseDelay: 1000 }))
 
       const fetchFn = vi.fn().mockRejectedValue(new Error('fail'))
 
@@ -752,9 +742,7 @@ describe('useOptimisticData', () => {
       vi.spyOn(Math, 'random').mockReturnValue(1)
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      const { result } = renderHook(() =>
-        useOptimisticData('initial', { baseDelay: 5000 })
-      )
+      const { result } = renderHook(() => useOptimisticData('initial', { baseDelay: 5000 }))
 
       const failingFn = vi.fn().mockRejectedValue(new Error('fail'))
 
@@ -793,9 +781,7 @@ describe('useOptimisticData', () => {
       vi.spyOn(Math, 'random').mockReturnValue(1)
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      const { result } = renderHook(() =>
-        useOptimisticData('initial', { baseDelay: 2000 })
-      )
+      const { result } = renderHook(() => useOptimisticData('initial', { baseDelay: 2000 }))
 
       const fetchFn = vi.fn().mockRejectedValue(new Error('fail'))
 
@@ -836,9 +822,7 @@ describe('useOptimisticData', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0)
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    const { result } = renderHook(() =>
-      useOptimisticData('initial', { baseDelay: 100 })
-    )
+    const { result } = renderHook(() => useOptimisticData('initial', { baseDelay: 100 }))
 
     const staleFetchFn = vi.fn().mockRejectedValue(new Error('stale request failed'))
     await act(async () => {
@@ -871,5 +855,75 @@ describe('useOptimisticData', () => {
 
     consoleSpy.mockRestore()
     vi.spyOn(Math, 'random').mockRestore()
+  })
+
+  // ─── Optimistic Updates ────────────────────────────────────────────────────────
+
+  describe('optimistic updates', () => {
+    it('applies an optimistic update and rolls back on failure only if it is the latest update', async () => {
+      const { result } = renderHook(() => useOptimisticData('initial'))
+
+      let reject1!: (err: Error) => void
+      const promise1 = new Promise((_, reject) => {
+        reject1 = reject
+      })
+
+      let resolve2!: (value: unknown) => void
+      const promise2 = new Promise((resolve) => {
+        resolve2 = resolve
+      })
+
+      // First optimistic update
+      act(() => {
+        void result.current.applyOptimisticUpdate('optimistic1', promise1)
+      })
+      expect(result.current.data).toBe('optimistic1')
+
+      // Second optimistic update
+      act(() => {
+        void result.current.applyOptimisticUpdate('optimistic2', promise2)
+      })
+      expect(result.current.data).toBe('optimistic2')
+
+      // First update fails
+      await act(async () => {
+        reject1(new Error('fail'))
+        await promise1.catch(() => {})
+      })
+
+      // The state should NOT rollback to 'initial' because the second update is still active/newer
+      expect(result.current.data).toBe('optimistic2')
+
+      // Second update succeeds
+      await act(async () => {
+        resolve2(undefined)
+        await promise2
+      })
+
+      // The state remains 'optimistic2'
+      expect(result.current.data).toBe('optimistic2')
+    })
+
+    it('rolls back completely if the latest optimistic update fails', async () => {
+      const { result } = renderHook(() => useOptimisticData('initial'))
+
+      let reject!: (err: Error) => void
+      const promise = new Promise((_, r) => {
+        reject = r
+      })
+
+      act(() => {
+        void result.current.applyOptimisticUpdate('optimistic', promise)
+      })
+      expect(result.current.data).toBe('optimistic')
+
+      await act(async () => {
+        reject(new Error('fail'))
+        await promise.catch(() => {})
+      })
+
+      // Rolls back to initial
+      expect(result.current.data).toBe('initial')
+    })
   })
 })
