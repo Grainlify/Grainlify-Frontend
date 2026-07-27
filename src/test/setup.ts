@@ -1,9 +1,40 @@
 // Vitest global setup for component tests.
 // Registers jest-dom matchers (toBeInTheDocument, toHaveFocus, toHaveAttribute…)
 // and clears the DOM/mocks between tests so each test starts from a clean slate.
-import '@testing-library/jest-dom/vitest';
-import { afterEach, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest'
+import { afterEach, vi } from 'vitest'
+import { cleanup } from '@testing-library/react'
+
+// Mock localStorage for tests since jsdom has undefined localStorage by default
+const localStorageMock = (() => {
+  let store: Record<string, string> = {}
+
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => {
+      store[key] = value.toString()
+    },
+    removeItem: (key: string) => {
+      delete store[key]
+    },
+    clear: () => {
+      store = {}
+    },
+    length: Object.keys(store).length,
+    key: (index: number) => {
+      const keys = Object.keys(store)
+      return keys[index] || null
+    },
+  }
+})()
+
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'localStorage', {
+    value: localStorageMock,
+    writable: true,
+    configurable: true,
+  })
+}
 
 // jsdom does not implement matchMedia. Components that read media queries
 // (e.g. SkeletonLoader's prefers-reduced-motion check) crash without it, so
@@ -22,14 +53,17 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     }),
-  });
+  })
 }
 
 afterEach(() => {
   // `cleanup` touches the DOM, so it is a no-op for node-environment tests.
   if (typeof document !== 'undefined') {
-    cleanup();
+    cleanup()
   }
-  vi.clearAllMocks();
-});
-
+  // Clear localStorage after each test
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    window.localStorage.clear()
+  }
+  vi.clearAllMocks()
+})

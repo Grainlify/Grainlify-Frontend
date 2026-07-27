@@ -1,64 +1,52 @@
-import { useTheme } from '../../../shared/contexts/ThemeContext'
+import type { ReactNode } from 'react'
 
-/**
- * Props for {@link LeaderboardTableState}.
- *
- * The component renders the non-data states shared by the contributors and
- * projects tables: an accessible empty state and an error state with a retry
- * action. The loading state is intentionally not handled here — callers keep
- * rendering their existing table skeletons during the loading phase.
- */
 export interface LeaderboardTableStateProps {
-  /**
-   * Generic, user-facing error message. When set, the error state takes
-   * precedence over the empty state.
-   *
-   * Security: callers MUST pass copy that reveals no internals (no stack
-   * traces, HTTP status text or backend messages); this value is rendered
-   * verbatim.
-   */
+  /** Error message string. When truthy the error branch (role="alert") is rendered. */
   error?: string | null
-  /**
-   * Retry handler wired to the underlying data source. When provided alongside
-   * an `error`, a "Try again" button is rendered that re-triggers the fetch.
-   */
+  /** Heading shown in the empty branch. */
+  emptyTitle?: string
+  /** Supporting text shown below the empty heading. */
+  emptyHint?: string
+  /** Called when the user clicks "Try again". Only rendered in the error branch. */
   onRetry?: () => void
-  /** Heading shown in the empty state, e.g. "No contributors yet". */
-  emptyTitle: string
-  /** Supporting copy shown beneath the empty-state heading. */
-  emptyHint: string
+  /** Optional child content. Currently unused by this component. */
+  children?: ReactNode
 }
 
-/** Shared visual styling for the retry call-to-action. */
-const RETRY_CLASSES =
-  'mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-[14px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[14px] shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] transition-all border border-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent'
-
 /**
- * Renders the empty or error state for a leaderboard table.
+ * Shared empty / error state renderer for the contributors and projects
+ * leaderboard tables.
  *
- * State changes are announced to assistive technology: the empty state uses a
- * polite `role="status"` live region, while the error state uses an assertive
- * `role="alert"` so failures are surfaced promptly. Both are wrapped in an
- * `aria-live` region so a transition (e.g. data -> error after a failed retry)
- * is read out.
+ * Accessibility contract:
+ * - **Error branch** renders `role="alert"` with `aria-live="assertive"` and
+ *   optionally a "Try again" button (present only when `onRetry` is provided).
+ * - **Empty branch** renders `role="status"` with `aria-live="polite"` and no
+ *   retry action.
+ * - The error branch **always takes precedence** over the empty branch
+ *   whenever `error` is truthy, regardless of the `emptyTitle` / `emptyHint`
+ *   props passed.
  */
 export function LeaderboardTableState({
   error,
-  onRetry,
-  emptyTitle,
+  emptyTitle = 'No data yet',
   emptyHint,
+  onRetry,
 }: LeaderboardTableStateProps) {
-  const { theme } = useTheme()
-  const muted = theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-  const strong = theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-
+  // ── Error branch ──────────────────────────────────────────────────────
   if (error) {
     return (
-      <div role="alert" aria-live="assertive" className="px-8 py-12 text-center">
-        <p className={`text-[15px] font-bold transition-colors ${strong}`}>Something went wrong</p>
-        <p className={`mt-1 text-[13px] transition-colors ${muted}`}>{error}</p>
+      <div
+        role="alert"
+        aria-live="assertive"
+        className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-red-900/20 bg-red-950/10 px-8 py-12 text-center backdrop-blur-xl"
+      >
+        <p className="text-lg font-semibold text-red-400">{error}</p>
         {onRetry && (
-          <button type="button" onClick={onRetry} className={RETRY_CLASSES}>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-xl bg-gradient-to-br from-[#c9983a] to-[#a67c2e] px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:shadow-[#c9983a]/30 active:scale-95"
+          >
             Try again
           </button>
         )}
@@ -66,10 +54,15 @@ export function LeaderboardTableState({
     )
   }
 
+  // ── Empty branch (default) ────────────────────────────────────────────
   return (
-    <div role="status" aria-live="polite" className="px-8 py-12 text-center">
-      <p className={`text-[15px] font-bold transition-colors ${strong}`}>{emptyTitle}</p>
-      <p className={`mt-1 text-[13px] transition-colors ${muted}`}>{emptyHint}</p>
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-8 py-12 text-center backdrop-blur-xl"
+    >
+      <p className="text-lg font-semibold text-[#b8a898]">{emptyTitle}</p>
+      {emptyHint && <p className="text-sm text-[#8a7a6a]">{emptyHint}</p>}
     </div>
   )
 }

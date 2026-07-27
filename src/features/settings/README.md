@@ -9,7 +9,6 @@ The Settings page has been refactored into a clean, modular, feature-based archi
 /src/features/settings/
 ├── components/
 │   ├── shared/                 # Shared components
-│   │   ├── SkeletonLoader.tsx
 │   │   └── ToggleSwitch.tsx
 │   ├── profile/               # Tab 1: Profile components
 │   │   └── ProfileTab.tsx
@@ -63,6 +62,11 @@ The Settings page has been refactored into a clean, modular, feature-based archi
 ### ✅ Tab 4: Billing Profiles
 - **Profile List View** - Grid of billing profile cards
 - **BillingProfileCard** - Individual profile card with status badges
+
+Billing profile mutations are persisted atomically to browser storage. Failed creates,
+updates, or deletes leave the in-memory list unchanged. A profile marked `isDefault`
+must be replaced as the default before it can be deleted. Storage errors are logged as
+fixed summaries so billing or payment data cannot leak through error objects.
 - **Profile Detail View** - Three sub-tabs (General, Payment, Invoices)
 - **General Information** - KYC verification workflow with 2-second simulation
 - **Status Badges** - Verified, Missing Verification, Limit Reached states
@@ -85,8 +89,9 @@ The Settings page has been refactored into a clean, modular, feature-based archi
 
 ### SkeletonLoader
 - Shimmer animation effect
-- Customizable className for flexible sizing
+- Customizable `className`, `variant` (`default` | `circle` | `text`), `width`, and `height` props
 - Used for loading states
+- Shared implementation lives in `src/shared/components/SkeletonLoader.tsx`
 
 ## Key Design Patterns
 

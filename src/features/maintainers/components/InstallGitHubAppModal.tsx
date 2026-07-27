@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { X, FileText, Code, GitBranch, Users, Loader2 } from 'lucide-react'
+import {
+  X,
+  FileText,
+  Code,
+  GitBranch,
+  Users,
+  Loader2,
+  AlertCircle,
+  Info,
+  RefreshCw,
+} from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { API_BASE_URL } from '../../../shared/config/api'
 import { getAuthToken } from '../../../shared/api/client'
@@ -18,16 +28,23 @@ interface InstallGitHubAppModalProps {
   onSuccess: () => void
 }
 
+type InstallStatus = 'idle' | 'installing' | 'confirming' | 'cancelled' | 'error'
+
 /**
  * Modal component for guiding users to install the Grainlify GitHub App.
- * Handles the installation flow, permissions display, and dismissal preferences.
+ * Handles the installation flow, permissions display, cancellation states,
+ * backend confirmation validation, and dismissal preferences.
  */
 export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGitHubAppModalProps) {
   const { theme } = useTheme()
   const darkTheme = theme === 'dark'
-  const [isInstalling, setIsInstalling] = useState(false)
+  const [status, setStatus] = useState<InstallStatus>('idle')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  const [lastInstallationId, setLastInstallationId] = useState<string | null>(null)
   const installAbortControllerRef = useRef<AbortController | null>(null)
+
+  const isInstalling = status === 'installing' || status === 'confirming'
 
   useEffect(() => {
     if (!isOpen) return
@@ -35,17 +52,41 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
       const isDismissed = localStorage.getItem('github_app_modal_dismissed')
       if (isDismissed === 'true') {
         onClose()
+        return
       }
     } catch {
       // Ignore localStorage errors if access is denied
     }
-  }, [isOpen, onClose])
+
+    try {
+      const urlParams = new URLSearchParams(window.location.search)
+      const setupAction = urlParams.get('setup_action')
+      const installationId = urlParams.get('installation_id')
+      const errorParam = urlParams.get('error')
+      const isCancelled = urlParams.get('cancelled') === 'true'
+
+      if (setupAction === 'cancel' || errorParam === 'access_denied' || isCancelled) {
+        setStatus('cancelled')
+        setErrorMessage(null)
+        return
+      }
+
+      if (installationId) {
+        setLastInstallationId(installationId)
+        confirmInstallation(installationId)
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) {
       installAbortControllerRef.current?.abort()
       installAbortControllerRef.current = null
-      setIsInstalling(false)
+      setStatus('idle')
+      setErrorMessage(null)
+      setLastInstallationId(null)
     }
 
     return () => {
@@ -54,11 +95,66 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
     }
   }, [isOpen])
 
+  const confirmInstallation = async (installationId: string) => {
+    installAbortControllerRef.current?.abort()
+    const abortController = new AbortController()
+    installAbortControllerRef.current = abortController
+    setStatus('confirming')
+    setErrorMessage(null)
+
+    try {
+      const token = getAuthToken()
+      if (!token) {
+        throw new Error('Please sign in to confirm the GitHub App installation')
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/github/app/install/confirm`, {
+        method: 'POST',
+        signal: abortController.signal,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ installation_id: installationId }),
+      })
+
+      if (abortController.signal.aborted) return
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        if (abortController.signal.aborted) return
+        throw new Error(error.message || error.error || 'Failed to confirm installation')
+      }
+
+      try {
+        window.history.replaceState({}, '', window.location.pathname)
+      } catch {
+        // ignore history errors
+      }
+
+      setStatus('idle')
+      onSuccess()
+    } catch (err) {
+      if (abortController.signal.aborted) return
+
+      logger.error('Failed to confirm GitHub App installation:', err)
+      const msg = err instanceof Error ? err.message : 'Failed to confirm installation'
+      setErrorMessage(msg)
+      setStatus('error')
+      toast.error(msg)
+    } finally {
+      if (installAbortControllerRef.current === abortController) {
+        installAbortControllerRef.current = null
+      }
+    }
+  }
+
   const handleInstall = async () => {
     installAbortControllerRef.current?.abort()
     const abortController = new AbortController()
     installAbortControllerRef.current = abortController
-    setIsInstalling(true)
+    setStatus('installing')
+    setErrorMessage(null)
 
     try {
       const token = getAuthToken()
@@ -79,7 +175,7 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
       if (abortController.signal.aborted) return
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await response.json().catch(() => ({}))
         if (abortController.signal.aborted) return
         throw new Error(error.message || error.error || 'Failed to start installation')
       }
@@ -105,12 +201,22 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
       if (abortController.signal.aborted) return
 
       logger.error('Failed to start GitHub App installation:', err)
-      toast.error(err instanceof Error ? err.message : 'Failed to start installation')
-      setIsInstalling(false)
+      const msg = err instanceof Error ? err.message : 'Failed to start installation'
+      setErrorMessage(msg)
+      setStatus('error')
+      toast.error(msg)
     } finally {
       if (installAbortControllerRef.current === abortController) {
         installAbortControllerRef.current = null
       }
+    }
+  }
+
+  const handleRetry = () => {
+    if (status === 'error' && lastInstallationId) {
+      confirmInstallation(lastInstallationId)
+    } else {
+      handleInstall()
     }
   }
 
@@ -179,6 +285,62 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
               data.
             </p>
           </div>
+
+          {/* Status Banners */}
+          {status === 'cancelled' && (
+            <div
+              data-testid="github-app-cancelled-state"
+              className={`p-3.5 rounded-[12px] border transition-colors flex items-start gap-3 ${
+                darkTheme
+                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+                  : 'bg-blue-50 border-blue-200 text-blue-800'
+              }`}
+            >
+              <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-[13px] font-semibold">Installation Cancelled</h4>
+                <p className="text-[12px] mt-0.5">
+                  You cancelled the GitHub App installation. No changes were made to your account.
+                  You can retry whenever you're ready.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {status === 'error' && (
+            <div
+              data-testid="github-app-error-state"
+              className={`p-3.5 rounded-[12px] border transition-colors flex items-start gap-3 ${
+                darkTheme
+                  ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                  : 'bg-red-50 border-red-200 text-red-800'
+              }`}
+            >
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-[13px] font-semibold">Installation Failed</h4>
+                <p className="text-[12px] mt-0.5">
+                  {errorMessage || 'Failed to complete GitHub App installation. Please try again.'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {status === 'confirming' && (
+            <div
+              data-testid="github-app-confirming-state"
+              className={`p-3.5 rounded-[12px] border transition-colors flex items-center justify-center gap-2.5 ${
+                darkTheme
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}
+            >
+              <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+              <span className="text-[13px] font-medium">
+                Confirming installation with backend...
+              </span>
+            </div>
+          )}
 
           {/* Required Permissions */}
           <div>
@@ -416,7 +578,7 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
               Cancel
             </button>
             <button
-              onClick={handleInstall}
+              onClick={status === 'cancelled' || status === 'error' ? handleRetry : handleInstall}
               disabled={isInstalling}
               className={`flex-1 px-4 py-2.5 rounded-[10px] border-2 font-semibold text-[13px] transition-all ${
                 darkTheme
@@ -424,10 +586,20 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
                   : 'bg-gradient-to-br from-[#c9983a]/30 to-[#d4af37]/25 border-[#c9983a]/50 text-[#2d2820] hover:from-[#c9983a]/40 hover:to-[#d4af37]/35 shadow-[0_4px_16px_rgba(201,152,58,0.25)]'
               } ${isInstalling ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isInstalling ? (
+              {status === 'confirming' ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Confirming...
+                </span>
+              ) : status === 'installing' ? (
                 <span className="flex items-center justify-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Redirecting...
+                </span>
+              ) : status === 'cancelled' || status === 'error' ? (
+                <span className="flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Retry
                 </span>
               ) : (
                 'Install GitHub App'

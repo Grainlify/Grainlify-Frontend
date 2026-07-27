@@ -621,7 +621,6 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
               value={formData.websiteUrl}
               onChange={(value) => setFormData({ ...formData, websiteUrl: value })}
               placeholder="https://example.com"
-              required
             />
           </div>
 

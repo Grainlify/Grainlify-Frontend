@@ -449,6 +449,21 @@ npm run test:bundle-size
 - [API Integration Guide](./API_INTEGRATION.md) - Backend API integration details
 - [Attributions](./ATTRIBUTIONS.md) - Third-party assets and licenses
 
+## Keyboard Shortcuts
+
+### Search Modal
+
+The search modal (`SearchModal.tsx`) supports the following keyboard shortcuts for efficient navigation:
+
+| Shortcut | Action |
+|----------|--------|
+| <kbd>Escape</kbd> | Close the modal and return focus to the trigger element |
+| <kbd>Enter</kbd> | Submit the search query (when input is focused and query is non-empty) |
+| <kbd>Tab</kbd> | Navigate forward through focusable elements (input → submit button → close button → suggestion pills) |
+| <kbd>Shift</kbd> + <kbd>Tab</kbd> | Navigate backward through focusable elements |
+
+The modal implements a focus trap that prevents keyboard focus from leaving the dialog while it is open. Focus is automatically restored to the triggering element when the modal closes.
+
 ## Support
 
 For issues, questions, or contributions, please open an issue on GitHub.

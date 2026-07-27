@@ -1,4 +1,4 @@
-﻿import { logger } from '../../../shared/utils/logger'
+import { logger } from '../../../shared/utils/logger'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { Heart, Star, GitFork, ArrowUpRight, Target, Zap } from 'lucide-react'
 import { IssueCard } from '../../../shared/components/ui/IssueCard'
@@ -323,7 +323,7 @@ export function DiscoverPage({ onGoToBilling, onGoToOpenSourceWeek }: DiscoverPa
     }
 
     loadRecommendedIssues()
-  }, [projects, fetchIssues])
+  }, [projects, isLoadingProjects, fetchIssues])
 
   // If an issue is selected, show the detail page instead
   if (selectedIssue) {

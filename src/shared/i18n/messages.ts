@@ -58,6 +58,8 @@ export function isLocale(value: unknown): value is Locale {
  *   extracted from `src/features/dashboard/DashboardLayout.tsx`.
  * - `settings.tabs.*` — SettingsPage tab labels,
  *   extracted from `src/features/settings/pages/SettingsPage.tsx`.
+ * - `terms.*` — Settings terms tab copy and consent states,
+ *   extracted from `src/features/settings/components/terms/TermsTab.tsx`.
  *
  * `as const` keeps every value a string literal so {@link MessageId} can be
  * derived from the keys with full type-safety.
@@ -82,6 +84,39 @@ export const en = {
   'settings.tabs.billing': 'Billing Profiles',
   'settings.tabs.terms': 'Terms and Conditions',
 
+  // ── Terms settings tab — src/features/settings/components/terms/TermsTab.tsx ──
+  'terms.title': 'Terms and Conditions',
+  'terms.description': 'Review our terms of service and privacy policy.',
+  'terms.service.title': 'Terms of Service',
+  'terms.service.bodyPrefix': 'By using Grainlify, you agree to abide by our',
+  'terms.service.bodySuffix':
+    '. These terms govern your use of the platform and outline your rights and responsibilities as a user.',
+  'terms.privacy.title': 'Privacy Policy',
+  'terms.privacy.bodyPrefix': 'We take your privacy seriously. Our',
+  'terms.privacy.bodySuffix':
+    'explains how we collect, use, and protect your personal information.',
+  'terms.dataCollection.title': 'Data Collection',
+  'terms.dataCollection.body':
+    'We collect information necessary to provide our services, including your GitHub profile data, contribution history, and reward preferences.',
+  'terms.userResponsibilities.title': 'User Responsibilities',
+  'terms.userResponsibilities.body':
+    'Users are responsible for maintaining the security of their accounts, providing accurate information, and complying with all applicable laws and regulations.',
+  'terms.acceptance.title': 'Accept Terms',
+  'terms.acceptance.bodyPrefix': 'By clicking accept, you agree to our',
+  'terms.acceptance.bodyConnector': 'and',
+  'terms.acceptance.bodySuffix': '.',
+  'terms.links.termsOfService': 'terms of service',
+  'terms.links.privacyPolicy': 'privacy policy',
+  'terms.status.loading': 'Loading terms status…',
+  'terms.status.acceptedVersion': '✓ Accepted version {version} on {date}',
+  'terms.actions.loading': 'Loading...',
+  'terms.actions.accepting': 'Accepting...',
+  'terms.actions.accept': 'Accept',
+  'terms.actions.accepted': 'Accepted',
+  'terms.status.outdated': '⚠️ Terms have been updated to version {current}. Please re-accept.',
+  'terms.errors.loadStatusFailed': 'Failed to load terms status.',
+  'terms.errors.acceptFailed': 'Failed to accept terms. Please try again.',
+
   // ── Dashboard sidebar — src/features/dashboard/DashboardLayout.tsx ──
   'dashboardNav.discover': 'Discover',
   'dashboardNav.browse': 'Browse',
@@ -92,12 +127,74 @@ export const en = {
   'dashboardNav.data': 'Data',
   'dashboardNav.leaderboard': 'Leaderboard',
   'dashboardNav.blog': 'Grainlify Blog',
-  // ── Settings page tabs — src/features/settings/pages/SettingsPage.tsx ──
-  'settings.tabs.profile': 'Profile',
-  'settings.tabs.notifications': 'Notifications',
-  'settings.tabs.payout': 'Payout Preferences',
-  'settings.tabs.billing': 'Billing Profiles',
-  'settings.tabs.terms': 'Terms and Conditions',
+
+  // ── Sign-in auth page — src/features/auth/pages/SignInPage.tsx ──
+  'auth.signin.backToHome': 'Back to Home',
+  'auth.signin.title': 'Welcome Back',
+  'auth.signin.subtitle': 'Sign in with your GitHub account',
+  'auth.signin.redirecting': 'Redirecting...',
+  'auth.signin.githubButton': 'Sign in with GitHub',
+  'auth.signin.oauthSecurity': 'Secure authentication via GitHub OAuth',
+  'auth.signin.consentDisclaimer':
+    'By continuing, you agree to allow Grainlify to access your GitHub public profile and repository activity.',
+  'auth.signin.signupPrompt': "Don't have an account?",
+  'auth.signin.signupLink': 'Sign Up',
+
+  // ── Sign-up auth page — src/features/auth/pages/SignUpPage.tsx ──
+  'auth.signup.backToHome': 'Back to Home',
+  'auth.signup.title': 'Get Started',
+  'auth.signup.subtitle': 'Create your account with GitHub',
+  'auth.signup.redirecting': 'Redirecting...',
+  'auth.signup.githubButton': 'Sign up with GitHub',
+  'auth.signup.oauthSecurity': 'Secure authentication via GitHub OAuth',
+  'auth.signup.accessHeading': "What we'll access:",
+  'auth.signup.accessPublicProfile': 'Your public profile information',
+  'auth.signup.accessPublicRepositories': 'Your public repositories and contributions',
+  'auth.signup.accessActivity': 'Your GitHub activity for matching projects',
+  'auth.signup.privateReposDisclaimer':
+    'We never access private repositories without your explicit permission.',
+  'auth.signup.termsPrefix': 'By continuing, you agree to our',
+  'auth.signup.termsOfService': 'Terms of Service',
+  'auth.signup.termsConnector': 'and',
+  'auth.signup.privacyPolicy': 'Privacy Policy',
+  'auth.signup.signinPrompt': 'Already have an account?',
+  'auth.signup.signinLink': 'Sign In',
+
+  // ── Maintainers issues empty state — src/features/maintainers/components/issues/EmptyIssueState.tsx ──
+  'maintainers.issues.empty.title': 'No open issues yet',
+  'maintainers.issues.empty.description':
+    'Create or import issues from GitHub so contributors know where they can help next.',
+  'maintainers.issues.empty.cta': 'Create an issue on GitHub',
+  'maintainers.issues.empty.count':
+    '{count, plural, one {# issue available} other {# issues available}}',
+
+  // ── Billing invoices tab — src/features/settings/components/billing/InvoicesTab.tsx ──
+  'invoices.title': 'Invoices',
+  'invoices.description': 'View and download your billing invoices.',
+  'invoices.table.invoice': 'Invoice',
+  'invoices.table.date': 'Date',
+  'invoices.table.amount': 'Amount',
+  'invoices.table.period': 'Period',
+  'invoices.table.status': 'Status',
+  'invoices.table.action': 'Action',
+  'invoices.empty.title': 'No invoices yet',
+  'invoices.empty.description': 'Your billing invoices will appear here',
+  'invoices.actions.downloadInvoice': 'Download Invoice',
+  'invoices.actions.downloading': 'Downloading…',
+  'invoices.status.paid': 'paid',
+  'invoices.status.pending': 'pending',
+  'invoices.status.overdue': 'overdue',
+  'invoices.errors.downloadFailed': 'Download failed. Please try again.',
+
+  // ── Backend API Error Taxonomy ──
+  'errors.generic': 'An unexpected error occurred. Please try again.',
+  'errors.code.UNAUTHORIZED': 'Your session has expired. Please sign in again.',
+  'errors.code.FORBIDDEN': 'You do not have permission to perform this action.',
+  'errors.code.NOT_FOUND': 'The requested resource could not be found.',
+  'errors.code.RATE_LIMITED': 'Too many requests. Please try again later.',
+  'errors.code.BAD_REQUEST': 'Invalid request parameters. Please check your input and try again.',
+  'errors.code.INTERNAL_ERROR': 'Our servers are experiencing issues. Please try again later.',
+  'errors.code.SERVICE_UNAVAILABLE': 'Service is temporarily unavailable. Please try again later.',
 } as const
 
 /**
@@ -122,6 +219,10 @@ export const es: Partial<Messages> = {
   'dashboardNav.discover': 'Descubrir',
   'dashboardNav.browse': 'Explorar',
   'dashboardNav.leaderboard': 'Clasificación',
+  'errors.generic': 'Ocurrió un error inesperado. Por favor, inténtelo de nuevo.',
+  'errors.code.UNAUTHORIZED': 'Su sesión ha expirado. Por favor, inicie sesión de nuevo.',
+  'errors.code.FORBIDDEN': 'No tiene permiso para realizar esta acción.',
+  'errors.code.NOT_FOUND': 'El recurso solicitado no se pudo encontrar.',
 }
 
 /**

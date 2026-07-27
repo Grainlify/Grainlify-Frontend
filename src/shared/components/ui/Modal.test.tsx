@@ -94,6 +94,53 @@ describe('Modal accessibility', () => {
     expect(insideTwo).toHaveFocus()
   })
 
+  it('keeps keyboard focus inside the open modal and restores the trigger on Escape', async () => {
+    const user = userEvent.setup()
+    renderWithTheme(
+      <>
+        <button>Background before</button>
+        <ModalHarness title="Settings" />
+        <button>Background after</button>
+      </>
+    )
+
+    const trigger = screen.getByRole('button', { name: 'Open modal' })
+    await user.click(trigger)
+
+    const dialog = screen.getByRole('dialog', { name: 'Settings' })
+    const close = screen.getByRole('button', { name: 'Close dialog' })
+    const insideOne = screen.getByRole('button', { name: 'Inside one' })
+    const insideTwo = screen.getByRole('button', { name: 'Inside two' })
+    const backgroundBefore = screen.getByRole('button', { name: 'Background before' })
+    const backgroundAfter = screen.getByRole('button', { name: 'Background after' })
+
+    await waitFor(() => expect(close).toHaveFocus())
+
+    await user.tab()
+    expect(insideOne).toHaveFocus()
+    await user.tab()
+    expect(insideTwo).toHaveFocus()
+    await user.tab()
+    expect(close).toHaveFocus()
+
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    expect(backgroundAfter).not.toHaveFocus()
+
+    await user.tab({ shift: true })
+    expect(insideTwo).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(insideOne).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(close).toHaveFocus()
+
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    expect(backgroundBefore).not.toHaveFocus()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(trigger).toHaveFocus()
+  })
+
   it('closes on Escape', () => {
     const onClose = vi.fn()
     renderWithTheme(
@@ -307,70 +354,62 @@ describe('Modal building blocks', () => {
   describe('ModalInput accessibility (ARIA)', () => {
     it('sets aria-invalid="true" and links error via aria-describedby when error is present (input)', () => {
       renderWithTheme(
-        <ModalInput value="hello" onChange={() => {}} error="This field is required" />,
-      );
-      const input = screen.getByDisplayValue('hello');
-      expect(input.tagName).toBe('INPUT');
-      expect(input).toHaveAttribute('aria-invalid', 'true');
+        <ModalInput value="hello" onChange={() => {}} error="This field is required" />
+      )
+      const input = screen.getByDisplayValue('hello')
+      expect(input.tagName).toBe('INPUT')
+      expect(input).toHaveAttribute('aria-invalid', 'true')
 
-      const describedBy = input.getAttribute('aria-describedby');
-      expect(describedBy).toBeTruthy();
-      expect(document.getElementById(describedBy!)).toHaveTextContent('This field is required');
-    });
+      const describedBy = input.getAttribute('aria-describedby')
+      expect(describedBy).toBeTruthy()
+      expect(document.getElementById(describedBy!)).toHaveTextContent('This field is required')
+    })
 
     it('sets aria-invalid="true" and links error via aria-describedby when error is present (textarea)', () => {
       renderWithTheme(
-        <ModalInput value="bio text" onChange={() => {}} rows={3} error="Must not be empty" />,
-      );
-      const textarea = screen.getByDisplayValue('bio text');
-      expect(textarea.tagName).toBe('TEXTAREA');
-      expect(textarea).toHaveAttribute('aria-invalid', 'true');
+        <ModalInput value="bio text" onChange={() => {}} rows={3} error="Must not be empty" />
+      )
+      const textarea = screen.getByDisplayValue('bio text')
+      expect(textarea.tagName).toBe('TEXTAREA')
+      expect(textarea).toHaveAttribute('aria-invalid', 'true')
 
-      const describedBy = textarea.getAttribute('aria-describedby');
-      expect(describedBy).toBeTruthy();
-      expect(document.getElementById(describedBy!)).toHaveTextContent('Must not be empty');
-    });
+      const describedBy = textarea.getAttribute('aria-describedby')
+      expect(describedBy).toBeTruthy()
+      expect(document.getElementById(describedBy!)).toHaveTextContent('Must not be empty')
+    })
 
     it('omits aria-invalid and aria-describedby when no error is set (input)', () => {
-      renderWithTheme(
-        <ModalInput value="hello" onChange={() => {}} />,
-      );
-      const input = screen.getByDisplayValue('hello');
-      expect(input).not.toHaveAttribute('aria-invalid');
-      expect(input).not.toHaveAttribute('aria-describedby');
-    });
+      renderWithTheme(<ModalInput value="hello" onChange={() => {}} />)
+      const input = screen.getByDisplayValue('hello')
+      expect(input).not.toHaveAttribute('aria-invalid')
+      expect(input).not.toHaveAttribute('aria-describedby')
+    })
 
     it('omits aria-invalid and aria-describedby when no error is set (textarea)', () => {
-      renderWithTheme(
-        <ModalInput value="notes" onChange={() => {}} rows={2} />,
-      );
-      const textarea = screen.getByDisplayValue('notes');
-      expect(textarea).not.toHaveAttribute('aria-invalid');
-      expect(textarea).not.toHaveAttribute('aria-describedby');
-    });
+      renderWithTheme(<ModalInput value="notes" onChange={() => {}} rows={2} />)
+      const textarea = screen.getByDisplayValue('notes')
+      expect(textarea).not.toHaveAttribute('aria-invalid')
+      expect(textarea).not.toHaveAttribute('aria-describedby')
+    })
 
     it('removes aria-invalid and aria-describedby when error is cleared', () => {
       const { rerender } = renderWithTheme(
-        <ModalInput value="test" onChange={() => {}} error="Something wrong" />,
-      );
-      const input = screen.getByDisplayValue('test');
-      expect(input).toHaveAttribute('aria-invalid', 'true');
+        <ModalInput value="test" onChange={() => {}} error="Something wrong" />
+      )
+      const input = screen.getByDisplayValue('test')
+      expect(input).toHaveAttribute('aria-invalid', 'true')
 
-      rerender(
-        <ModalInput value="test" onChange={() => {}} error={null} />,
-      );
-      expect(input).not.toHaveAttribute('aria-invalid');
-      expect(input).not.toHaveAttribute('aria-describedby');
-      expect(screen.queryByText('Something wrong')).not.toBeInTheDocument();
-    });
+      rerender(<ModalInput value="test" onChange={() => {}} error={null} />)
+      expect(input).not.toHaveAttribute('aria-invalid')
+      expect(input).not.toHaveAttribute('aria-describedby')
+      expect(screen.queryByText('Something wrong')).not.toBeInTheDocument()
+    })
 
     it('does not render an error paragraph when error is null', () => {
-      renderWithTheme(
-        <ModalInput value="test" onChange={() => {}} />,
-      );
-      expect(screen.queryByText(/this field is required/i)).not.toBeInTheDocument();
-    });
-  });
+      renderWithTheme(<ModalInput value="test" onChange={() => {}} />)
+      expect(screen.queryByText(/this field is required/i)).not.toBeInTheDocument()
+    })
+  })
 
   it('ModalSelect renders a labelled trigger with the selected value', () => {
     renderWithTheme(

@@ -1,14 +1,13 @@
-import { useState, KeyboardEvent } from 'react';
-import { SettingsTabType } from '../types';
-import { ProfileTab } from '../components/profile/ProfileTab';
-import { NotificationsTab } from '../components/notifications/NotificationsTab';
-import { PayoutTab } from '../components/payout/PayoutTab';
-import { BillingTab } from '../components/billing/BillingTab';
-import { TermsTab } from '../components/terms/TermsTab';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { useTranslation } from '../../../shared/i18n';
-import { BillingProfilesProvider } from '../contexts/BillingProfilesContext';
-import { useTranslation } from '../../../shared/i18n';
+import { useState, KeyboardEvent } from 'react'
+import { SettingsTabType } from '../types'
+import { ProfileTab } from '../components/profile/ProfileTab'
+import { NotificationsTab } from '../components/notifications/NotificationsTab'
+import { PayoutTab } from '../components/payout/PayoutTab'
+import { BillingTab } from '../components/billing/BillingTab'
+import { TermsTab } from '../components/terms/TermsTab'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { useTranslation, LocaleSwitcher } from '../../../shared/i18n'
+import { BillingProfilesProvider } from '../contexts/BillingProfilesContext'
 
 interface SettingsPageProps {
   initialTab?: SettingsTabType
@@ -28,9 +27,9 @@ interface SettingsPageProps {
  * - `role="tabpanel"` on the content container, associated with the active tab via `aria-labelledby`
  */
 export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab);
-  const { theme } = useTheme();
-  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab)
+  const { theme } = useTheme()
+  const { t } = useTranslation()
 
   const tabs: { id: SettingsTabType; label: string }[] = [
     { id: 'profile', label: t('settings.tabs.profile') },
@@ -38,7 +37,7 @@ export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
     { id: 'payout', label: t('settings.tabs.payout') },
     { id: 'billing', label: t('settings.tabs.billing') },
     { id: 'terms', label: t('settings.tabs.terms') },
-  ];
+  ]
 
   const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex = index

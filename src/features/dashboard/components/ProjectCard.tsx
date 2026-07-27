@@ -14,6 +14,8 @@ export interface Project {
   description: string
   tags: string[]
   color: string
+  language?: string | null
+  category?: string | null
 }
 
 interface ProjectCardProps {
