@@ -134,4 +134,31 @@ describe('getUserFriendlyError', () => {
       'Something went wrong. Please try again later.',
     );
   });
+
+  it('handles TypeError (network failure) with the appropriate network message', () => {
+    expect(getUserFriendlyError(new TypeError('Failed to fetch'))).toBe(
+      'Unable to connect to the server. Please check your internet connection and try again.',
+    );
+  });
+
+  it('handles AbortError gracefully with a generic fallback', () => {
+    const abortError = new DOMException('The operation was aborted', 'AbortError');
+    expect(getUserFriendlyError(abortError)).toBe(
+      'Something went wrong. Please try again later.',
+    );
+  });
+
+  it('handles a thrown plain object correctly', () => {
+    const plainObject = { message: 'Something broke', status: 500 };
+    expect(getUserFriendlyError(plainObject)).toBe(
+      'Something went wrong. Please try again later.',
+    );
+  });
+
+  it('does not leak the plain object string representation', () => {
+    const plainObject = { secret: 'abc123' };
+    const result = getUserFriendlyError(plainObject);
+    expect(result).not.toContain('secret');
+    expect(result).not.toContain('abc123');
+  });
 });
