@@ -442,3 +442,23 @@ describe('DashboardTab', () => {
     expect(screen.queryByText('Show less')).not.toBeInTheDocument()
   })
 })
+
+describe('DashboardTab onRefresh', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls onRefresh when the repositories-refreshed event is dispatched', () => {
+    const onRefresh = vi.fn()
+    vi.mocked(getProjectIssues).mockResolvedValue({ issues: [] } as any)
+    vi.mocked(getProjectPRs).mockResolvedValue({ prs: [] } as any)
+
+    render(<DashboardTab selectedProjects={[{ id: 'proj-1', github_full_name: 'test/repo', status: 'active' }]} isLoadingProjects={false} onRefresh={onRefresh} />)
+
+    expect(onRefresh).not.toHaveBeenCalled()
+
+    window.dispatchEvent(new Event('repositories-refreshed'))
+
+    expect(onRefresh).toHaveBeenCalledTimes(1)
+  })
+})
