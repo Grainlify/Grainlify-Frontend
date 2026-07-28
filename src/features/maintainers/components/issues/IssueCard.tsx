@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Circle, FileText, User, Rocket, Users, User as UserIcon } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { Issue } from '../../types';
@@ -10,6 +11,11 @@ interface IssueCardProps {
 
 export function IssueCard({ issue, index, onClick }: IssueCardProps) {
   const { theme } = useTheme();
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => setImageFailed(false), [issue.user]);
+
+  const initials = issue.user.substring(0, 2).toUpperCase();
   const getIcon = () => {
     const iconColor = theme === 'dark' ? '#b8a898' : '#7a6b5a';
     switch (issue.icon) {
@@ -102,26 +108,18 @@ export function IssueCard({ issue, index, onClick }: IssueCardProps) {
       <div className={`flex items-center gap-2 pt-3 border-t transition-colors ${
         theme === 'dark' ? 'border-white/10' : 'border-white/20'
       }`}>
-        <img
-          src={`https://github.com/${issue.user}.png?size=24`}
-          alt={issue.user}
-          className="w-6 h-6 rounded-full border border-[#c9983a]/40"
-          onError={(e) => {
-            // Fallback to initials if image fails to load
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            const parent = target.parentElement;
-            if (parent) {
-              const fallback = document.createElement('div');
-              fallback.className = 'w-6 h-6 rounded-full bg-gradient-to-br from-[#c9983a]/30 to-[#d4af37]/20 border border-[#c9983a]/40 flex items-center justify-center';
-              const span = document.createElement('span');
-              span.className = 'text-[10px] font-bold text-[#c9983a]';
-              span.textContent = issue.user.substring(0, 2).toUpperCase();
-              fallback.appendChild(span);
-              parent.insertBefore(fallback, target);
-            }
-          }}
-        />
+        {imageFailed ? (
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#c9983a]/30 to-[#d4af37]/20 border border-[#c9983a]/40 flex items-center justify-center flex-shrink-0">
+            <span className="text-[10px] font-bold text-[#c9983a]">{initials}</span>
+          </div>
+        ) : (
+          <img
+            src={`https://github.com/${issue.user}.png?size=24`}
+            alt={issue.user}
+            className="w-6 h-6 rounded-full border border-[#c9983a]/40"
+            onError={() => setImageFailed(true)}
+          />
+        )}
         <span className={`text-[11px] font-semibold transition-colors ${
           theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
         }`}>{issue.user}</span>
