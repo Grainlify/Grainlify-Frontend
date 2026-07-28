@@ -1,8 +1,15 @@
 import { SkeletonLoader } from './SkeletonLoader';
+import { useTheme } from '../contexts/ThemeContext';
 
 export function IssueCardSkeleton() {
+  const { theme } = useTheme();
+
   return (
-    <div className="backdrop-blur-[25px] rounded-[16px] border p-4 bg-white/[0.08] border-white/10">
+    <div className={`backdrop-blur-[25px] rounded-[16px] border p-4 ${
+      theme === 'dark'
+        ? 'bg-white/[0.08] border-white/10'
+        : 'bg-white/[0.15] border-white/25'
+    }`}>
       {/* Issue Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
