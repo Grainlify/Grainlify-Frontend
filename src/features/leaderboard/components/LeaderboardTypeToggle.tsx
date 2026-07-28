@@ -42,6 +42,7 @@ export function LeaderboardTypeToggle({ leaderboardType, onToggle, isLoaded }: L
             <button
               key={key}
               role="tab"
+              id={`leaderboard-tab-${key}`}
               aria-selected={isActive}
               aria-controls={`leaderboard-panel-${key}`}
               tabIndex={isActive ? 0 : -1}

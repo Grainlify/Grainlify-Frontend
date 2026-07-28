@@ -288,7 +288,11 @@ export function LeaderboardPage() {
 
         {/* Contributors table */}
         {leaderboardType === 'contributors' && (
-          <>
+          <div
+            role="tabpanel"
+            id="leaderboard-panel-contributors"
+            aria-labelledby="leaderboard-tab-contributors"
+          >
             {isLoading ? (
               <ContributorsTableSkeleton />
             ) : (
@@ -332,12 +336,16 @@ export function LeaderboardPage() {
                 </div>
               </>
             )}
-          </>
+          </div>
         )}
 
         {/* Projects table */}
         {leaderboardType === 'projects' && (
-          <>
+          <div
+            role="tabpanel"
+            id="leaderboard-panel-projects"
+            aria-labelledby="leaderboard-tab-projects"
+          >
             {isLoadingProjects ? (
               <ContributorsTableSkeleton />
             ) : (
@@ -347,7 +355,7 @@ export function LeaderboardPage() {
                 isLoaded={isLoaded}
               />
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
