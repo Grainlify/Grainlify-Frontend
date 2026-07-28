@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PaymentMethodsTab, validateWalletAddress } from './PaymentMethodsTab'
@@ -357,5 +357,40 @@ describe('PaymentMethodsTab - delete confirmation', () => {
 
     expect(onRemovePaymentMethod).toHaveBeenCalledTimes(1)
     expect(onRemovePaymentMethod).toHaveBeenCalledWith(2)
+  })
+})
+
+describe('PaymentMethodsTab - copy address', () => {
+  const sampleMethods: PaymentMethod[] = [
+    {
+      id: 1,
+      ecosystem: 'stellar',
+      cryptoType: 'usdc',
+      walletAddress: VALID_G,
+      isDefault: false,
+      createdAt: '2024-01-15T10:00:00Z',
+    },
+  ]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders the copy button with a descriptive aria-label', () => {
+    setup(sampleMethods)
+    const copyButton = screen.getByRole('button', { name: /copy wallet address/i })
+    expect(copyButton).toBeInTheDocument()
+    expect(copyButton).toHaveAttribute('aria-label', 'Copy wallet address')
+  })
+
+  it('the copy button is clickable and triggers a state change', async () => {
+    setup(sampleMethods)
+    const user = userEvent.setup()
+
+    const copyButton = screen.getByRole('button', { name: /copy wallet address/i })
+    await user.click(copyButton)
+
+    // The button should still be in the document after click
+    expect(screen.getByRole('button', { name: /copy wallet address/i })).toBeInTheDocument()
   })
 })

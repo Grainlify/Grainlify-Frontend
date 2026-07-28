@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Trash2, Wallet, Copy, CheckCircle2, Star, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { Modal, ModalFooter, ModalButton } from '../../../../shared/components/ui/Modal'
 import { PaymentMethod, EcosystemType, CryptoType } from '../../types'
@@ -90,10 +91,14 @@ export function PaymentMethodsTab({
     setSelectedCrypto('usdc')
   }
 
-  const handleCopyAddress = (id: number, address: string) => {
-    navigator.clipboard.writeText(address)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
+  const handleCopyAddress = async (id: number, address: string) => {
+    try {
+      await navigator.clipboard.writeText(address)
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch {
+      toast.error('Failed to copy wallet address. Please try again.')
+    }
   }
 
   const getEcosystemColor = (_ecosystem: EcosystemType) => '#14B6E7' // Stellar brand color
@@ -187,6 +192,7 @@ export function PaymentMethodsTab({
                       </code>
                       <button
                         onClick={() => handleCopyAddress(method.id, method.walletAddress)}
+                        aria-label="Copy wallet address"
                         className={`p-1.5 rounded-[8px] transition-all ${
                           theme === 'dark' ? 'hover:bg-white/[0.15]' : 'hover:bg-white/[0.2]'
                         }`}
