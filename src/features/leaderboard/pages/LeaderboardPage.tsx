@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { LeaderboardType, FilterType, Petal, LeaderData, ProjectData } from '../types'
 import { getLeaderboard, getRecommendedProjects } from '../../../shared/api/client'
 import { clampLimit, clampOffset, hasMoreByPageSize } from '../../../shared/utils/pagination'
+import { getProjectIcon } from '../../../shared/utils/projectDisplay'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { FallingPetals } from '../components/FallingPetals'
 import { LeaderboardTypeToggle } from '../components/LeaderboardTypeToggle'
@@ -60,12 +61,6 @@ export function LeaderboardPage() {
   // Synchronous guard so a rapid double-click of "Load more" cannot start two
   // concurrent requests before `isLoadingMore` state has flushed.
   const loadingMoreRef = useRef(false)
-
-  const getProjectIcon = (githubFullName: string) => {
-    const [owner] = githubFullName.split('/')
-    // Use higher-resolution owner avatar so leaderboard projects look crisp
-    return `https://github.com/${owner}.png?size=200`
-  }
 
   // Fetch leaderboard data
   useEffect(() => {
