@@ -2,12 +2,20 @@ import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 
 export function ContributorsTableSkeleton() {
-  const { theme: _theme } = useTheme();
+  const { theme } = useTheme();
 
   return (
-    <div className={`backdrop-blur-[40px] bg-white/[0.12] rounded-[24px] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden`}>
+    <div className={`backdrop-blur-[40px] rounded-[24px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-colors ${
+      theme === 'dark'
+        ? 'bg-[#1a1a2e]/[0.3] border border-white/[0.05]'
+        : 'bg-white/[0.12] border border-white/20'
+    }`}>
       {/* Table Header */}
-      <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-white/10 backdrop-blur-[30px] bg-white/[0.08]">
+      <div className={`grid grid-cols-12 gap-4 px-8 py-4 backdrop-blur-[30px] transition-colors ${
+        theme === 'dark'
+          ? 'border-b border-white/[0.05] bg-[#1a1a2e]/[0.2]'
+          : 'border-b border-white/10 bg-white/[0.08]'
+      }`}>
         <div className="col-span-1">
           <SkeletonLoader className="h-4 w-12" />
         </div>
@@ -24,7 +32,9 @@ export function ContributorsTableSkeleton() {
       </div>
 
       {/* Table Rows */}
-      <div className="divide-y divide-white/10">
+      <div className={`divide-y transition-colors ${
+        theme === 'dark' ? 'divide-white/[0.05]' : 'divide-white/10'
+      }`}>
         {[...Array(10)].map((_, index) => (
           <div key={index} className="grid grid-cols-12 gap-4 px-8 py-5">
             {/* Rank */}
@@ -59,4 +69,3 @@ export function ContributorsTableSkeleton() {
     </div>
   );
 }
-
