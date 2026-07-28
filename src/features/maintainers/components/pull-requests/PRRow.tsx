@@ -8,6 +8,8 @@ import {
   Trophy,
   Eye,
   Code,
+  GitMerge,
+  Loader2,
 } from 'lucide-react'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { PullRequest } from '../../types'
@@ -17,6 +19,18 @@ interface PRRowProps {
    * The pull request data to display in the row.
    */
   pr: PullRequest
+  /**
+   * Called when the user clicks the merge button for this PR.
+   * May return a promise; while it is pending the merge button
+   * is disabled and shows a spinner.
+   */
+  onMerge?: (pr: PullRequest) => void | Promise<void>
+  /**
+   * When `true`, the merge button is disabled and shows a spinner
+   * so an in-flight merge action cannot be triggered twice.
+   * @defaultValue false
+   */
+  isProcessing?: boolean
 }
 
 /**
@@ -28,7 +42,7 @@ interface PRRowProps {
  * @param props - The component props.
  * @returns A table row representing a pull request.
  */
-export function PRRow({ pr }: PRRowProps) {
+export function PRRow({ pr, onMerge, isProcessing = false }: PRRowProps) {
   const { theme } = useTheme()
   const [authorImgFailed, setAuthorImgFailed] = useState(false)
   const [repoImgFailed, setRepoImgFailed] = useState(false)
@@ -92,6 +106,7 @@ export function PRRow({ pr }: PRRowProps) {
   }
 
   const handleClick = () => {
+    if (isProcessing) return
     if (pr.url) {
       window.open(pr.url, '_blank', 'noopener,noreferrer')
     }
@@ -104,13 +119,18 @@ export function PRRow({ pr }: PRRowProps) {
     }
   }
 
+  const handleMerge = () => {
+    if (isProcessing || !onMerge) return
+    onMerge(pr)
+  }
+
   return (
     <tr
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
-      className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border transition-all cursor-pointer group ${
+      className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border transition-all cursor-pointer group ${
         theme === 'dark'
           ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.15] hover:border-[#c9983a]/30'
           : 'bg-white/[0.08] border-white/15 hover:bg-white/[0.15] hover:border-[#c9983a]/20'
@@ -232,6 +252,41 @@ export function PRRow({ pr }: PRRowProps) {
             </div>
           )
         })}
+      </td>
+
+      {/* Merge Action */}
+      <td role="cell" className="flex items-center">
+        {pr.status === 'open' && onMerge && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleMerge()
+            }}
+            disabled={isProcessing}
+            aria-busy={isProcessing}
+            aria-label={`Merge PR #${pr.number}`}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[11px] font-semibold border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+              isProcessing
+                ? 'bg-[#c9983a]/20 border-[#c9983a]/30 text-[#c9983a]'
+                : theme === 'dark'
+                  ? 'bg-[#8b5cf6]/20 border-[#8b5cf6]/30 text-[#8b5cf6] hover:bg-[#8b5cf6]/30 hover:border-[#8b5cf6]/50'
+                  : 'bg-[#8b5cf6]/15 border-[#8b5cf6]/25 text-[#8b5cf6] hover:bg-[#8b5cf6]/25 hover:border-[#8b5cf6]/40'
+            }`}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                Merging…
+              </>
+            ) : (
+              <>
+                <GitMerge className="w-3.5 h-3.5" aria-hidden="true" />
+                Merge
+              </>
+            )}
+          </button>
+        )}
       </td>
     </tr>
   )

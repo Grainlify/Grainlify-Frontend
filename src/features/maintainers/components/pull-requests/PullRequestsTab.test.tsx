@@ -114,7 +114,7 @@ describe('PullRequestsTab accessibility', () => {
 
     // Check for column headers and their scope
     const headers = screen.getAllByRole('columnheader')
-    expect(headers).toHaveLength(4)
+    expect(headers).toHaveLength(5)
 
     expect(headers[0]).toHaveTextContent('Pull Request')
     expect(headers[0]).toHaveAttribute('scope', 'col')

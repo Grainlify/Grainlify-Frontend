@@ -97,6 +97,7 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<PRFilterType>('All states')
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
+  const [processingPRId, setProcessingPRId] = useState<string | null>(null)
 
   const {
     data: prs,
@@ -333,7 +334,7 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
         {/* Table Header */}
         <thead className="block w-full">
           <tr
-            className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-3 border-b-2 transition-colors ${
+            className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr_0.5fr] gap-6 px-6 py-3 border-b-2 transition-colors ${
               theme === 'dark' ? 'border-white/20' : 'border-white/20'
             }`}
             role="row"
@@ -373,6 +374,15 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
               }`}
             >
               Indicators
+            </th>
+            <th
+              scope="col"
+              role="columnheader"
+              className={`text-left text-[12px] font-bold uppercase tracking-wide transition-colors ${
+                theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              Actions
             </th>
           </tr>
         </thead>
@@ -443,7 +453,20 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
                 org: pr.projectName.split('/')[0] || '',
                 indicators: [] as ('check' | 'x' | 'trophy' | 'eye' | 'code')[],
               }
-              return <PRRow key={`${pr.github_pr_id}-${pr.projectName}`} pr={prForComponent} />
+              return (
+                <PRRow
+                  key={`${pr.github_pr_id}-${pr.projectName}`}
+                  pr={prForComponent}
+                  onMerge={async () => {
+                    setProcessingPRId(`${pr.github_pr_id}-${pr.projectName}`)
+                    // The actual merge API call can be added here by the parent
+                    // For now, we simulate the loading state pattern
+                    await new Promise((resolve) => setTimeout(resolve, 2000))
+                    setProcessingPRId(null)
+                  }}
+                  isProcessing={processingPRId === `${pr.github_pr_id}-${pr.projectName}`}
+                />
+              )
             })
           ) : (
             <tr role="row">
