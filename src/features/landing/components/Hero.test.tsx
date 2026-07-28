@@ -1,37 +1,53 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { Hero } from './Hero';
+import React from 'react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { Hero } from './Hero'
 
 // Mock the useLandingStats hook
-jest.mock('../../../shared/hooks/useLandingStats', () => ({
-  useLandingStats: jest.fn(),
-}));
+vi.mock('../../../shared/hooks/useLandingStats', () => ({
+  useLandingStats: vi.fn(),
+}))
 
-import { useLandingStats } from '../../../shared/hooks/useLandingStats';
+// Hero only reads `theme` from context; stub it directly rather than mounting
+// the real ThemeProvider (avoids pulling in its localStorage bootstrapping).
+vi.mock('../../../shared/contexts/ThemeContext', () => ({
+  useTheme: () => ({ theme: 'light' }),
+}))
+
+import { useLandingStats } from '../../../shared/hooks/useLandingStats'
+
+function renderHero() {
+  return render(
+    <MemoryRouter>
+      <Hero />
+    </MemoryRouter>
+  )
+}
 
 describe('Hero component layout shift prevention', () => {
   it('renders skeleton placeholders while loading', () => {
-    (useLandingStats as jest.Mock).mockReturnValue({
+    vi.mocked(useLandingStats).mockReturnValue({
       display: { activeProjects: '—', contributors: '—', grantsDistributed: '—' },
       isLoading: true,
-    });
-    render(<Hero />);
+    })
+    renderHero()
     // Image placeholder should be present
-    expect(screen.getByTestId('hero-image-placeholder')).toBeInTheDocument();
+    expect(screen.getByTestId('hero-image-placeholder')).toBeInTheDocument()
     // Stat skeletons should be present
-    const skeletons = screen.getAllByTestId('stat-skeleton');
-    expect(skeletons).toHaveLength(3);
-  });
+    const skeletons = screen.getAllByTestId('stat-skeleton')
+    expect(skeletons).toHaveLength(3)
+  })
 
   it('shows actual stats after loading', () => {
-    (useLandingStats as jest.Mock).mockReturnValue({
+    vi.mocked(useLandingStats).mockReturnValue({
       display: { activeProjects: '10', contributors: '200', grantsDistributed: '5000' },
       isLoading: false,
-    });
-    render(<Hero />);
-    expect(screen.queryByTestId('stat-skeleton')).not.toBeInTheDocument();
-    expect(screen.getByText('10')).toBeInTheDocument();
-    expect(screen.getByText('200')).toBeInTheDocument();
-    expect(screen.getByText('5000')).toBeInTheDocument();
-  });
-});
+    })
+    renderHero()
+    expect(screen.queryByTestId('stat-skeleton')).not.toBeInTheDocument()
+    expect(screen.getByText('10')).toBeInTheDocument()
+    expect(screen.getByText('200')).toBeInTheDocument()
+    expect(screen.getByText('5000')).toBeInTheDocument()
+  })
+})

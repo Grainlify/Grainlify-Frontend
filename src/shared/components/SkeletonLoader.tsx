@@ -6,6 +6,8 @@ interface SkeletonLoaderProps {
   variant?: 'default' | 'circle' | 'text'
   width?: string
   height?: string
+  /** Overrides the default `data-testid="skeleton-loader"` for callers that need a more specific test hook. */
+  'data-testid'?: string
 }
 
 /**
@@ -25,6 +27,7 @@ export function SkeletonLoader({
   variant = 'default',
   width,
   height,
+  'data-testid': testId = 'skeleton-loader',
 }: SkeletonLoaderProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -60,7 +63,7 @@ export function SkeletonLoader({
     <div
       className={`${baseClasses} ${bgColor} ${className || ''}`}
       style={style}
-      data-testid="skeleton-loader"
+      data-testid={testId}
     >
       <div
         className={`absolute inset-0 -translate-x-full bg-gradient-to-r ${shimmerGradient}${reducedMotion ? '' : ' animate-shimmer'}`}

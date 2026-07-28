@@ -33,9 +33,9 @@ const mockUser = {
   avatar_url: null,
   telegram: '@johndoe',
   linkedin: 'johndoe',
-  whatsapp: '+1234567890',
+  whatsapp: '1234567890',
   twitter: '@johndoe',
-  discord: 'johndoe#1234',
+  discord: 'johndoe',
   github: {
     login: 'johndoe',
     avatar_url: 'https://avatars.githubusercontent.com/u/1',
