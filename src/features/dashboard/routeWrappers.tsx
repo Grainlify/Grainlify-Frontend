@@ -195,7 +195,11 @@ export function IssueDetailPageRoute() {
     navigate(`/dashboard/projects/${projectId}`)
   }
 
-  return <IssueDetailPage issueId={issueId} projectId={projectId} onClose={handleClose} />
+  const handleNavigate = (page: string) => {
+    navigate(`/dashboard/${page}`)
+  }
+
+  return <IssueDetailPage issueId={issueId} projectId={projectId} onClose={handleClose} onNavigate={handleNavigate} />
 }
 
 /**

@@ -16,9 +16,10 @@ interface IssueDetailPageProps {
   issueId?: string;
   projectId?: string;
   onClose: () => void;
+  onNavigate?: (page: string) => void;
 }
 
-export function IssueDetailPage({ issueId, projectId, onClose }: IssueDetailPageProps) {
+export function IssueDetailPage({ issueId, projectId, onClose, onNavigate }: IssueDetailPageProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -120,7 +121,7 @@ export function IssueDetailPage({ issueId, projectId, onClose }: IssueDetailPage
         </div>
       ) : (
         <IssuesTab
-          onNavigate={() => {}}
+          onNavigate={onNavigate ?? (() => {})}
           selectedProjects={selectedProjects}
           initialSelectedIssueId={issueId}
           initialSelectedProjectId={projectId}

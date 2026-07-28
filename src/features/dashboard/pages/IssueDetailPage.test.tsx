@@ -27,6 +27,13 @@ vi.mock('../../../shared/contexts/AuthContext', () => ({
   }),
 }))
 
+vi.mock('react-intl', () => ({
+  IntlProvider: ({ children }: { children: React.ReactNode }) => children,
+  useIntl: () => ({ formatMessage: ({ id }: { id: string }) => id, formatDate: (d: Date) => d.toISOString() }),
+  FormattedMessage: ({ id }: { id: string }) => id,
+  defineMessages: (msgs: Record<string, unknown>) => msgs,
+}))
+
 describe('IssueDetailPage — XSS sanitization & GFM rendering', () => {
   beforeEach(() => {
     mockGetMyProjects.mockReset().mockResolvedValue([])
@@ -69,7 +76,10 @@ describe('IssueDetailPage — XSS sanitization & GFM rendering', () => {
 
     renderPage('12345', 'proj-1')
 
-    await waitFor(() => expect(screen.getByText('Test Issue Sanitization')).toBeInTheDocument())
+    await waitFor(() => {
+      const titles = screen.getAllByText('Test Issue Sanitization')
+      expect(titles.length).toBeGreaterThanOrEqual(1)
+    })
 
     const discussionsTab = await screen.findByRole('button', { name: /discussions/i })
     await userEvent.click(discussionsTab)
@@ -120,5 +130,81 @@ Hey @someone check this out
     expect(screen.getByText(/Task 1 completed/i)).toBeInTheDocument()
     expect(screen.getByText(/Task 2 pending/i)).toBeInTheDocument()
     expect(screen.getByText(/@someone/i)).toBeInTheDocument()
+  })
+})
+
+describe('IssueDetailPage — onNavigate profile navigation', () => {
+  beforeEach(() => {
+    mockGetMyProjects.mockReset().mockResolvedValue([])
+    mockGetPublicProject.mockReset().mockResolvedValue({
+      id: 'proj-1',
+      github_full_name: 'org/repo',
+      status: 'verified',
+    })
+    mockGetMaintainerIssues.mockReset()
+  })
+
+  it('calls onNavigate with "profile" when the applicant profile button is clicked', async () => {
+    const onNavigate = vi.fn()
+
+    // Mock an issue with an application comment
+    mockGetMaintainerIssues.mockResolvedValue({
+      issues: [
+        {
+          github_issue_id: 12345,
+          number: 42,
+          state: 'open',
+          title: 'Test Issue',
+          description: 'Issue body',
+          author_login: 'author-user',
+          assignees: [],
+          labels: [],
+          comments_count: 1,
+          comments: [
+            {
+              id: 1,
+              body: '**@applicant-user has applied to work on this issue as part of the Grainlify program**',
+              user: { login: 'applicant-user' },
+              created_at: '2026-07-22T18:00:00Z',
+              updated_at: '2026-07-22T18:00:00Z',
+            },
+          ],
+          url: 'https://github.com/org/repo/issues/42',
+          updated_at: '2026-07-22T18:00:00Z',
+          last_seen_at: '2026-07-22T18:00:00Z',
+        },
+      ],
+    })
+
+    render(
+      <ThemeProvider>
+        <IssueDetailPage issueId="12345" projectId="proj-1" onClose={vi.fn()} onNavigate={onNavigate} />
+      </ThemeProvider>
+    )
+
+    // Wait for the issue to load
+    await waitFor(() => {
+      const titles = screen.getAllByText('Test Issue')
+      expect(titles.length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Click on the issue card (the one inside a button element)
+    const issueCards = screen.getAllByText('Test Issue')
+    const cardButton = issueCards.find(el => el.closest('button'))
+    if (cardButton) {
+      await userEvent.click(cardButton.closest('button')!)
+    }
+
+    // Wait for the applications tab to render with the applicant profile
+    await waitFor(() => {
+      expect(screen.getByText('applicant-user')).toBeInTheDocument()
+    })
+
+    // Click the applicant profile button
+    const applicantProfileButton = screen.getByText('applicant-user').closest('button') || screen.getByText('applicant-user')
+    await userEvent.click(applicantProfileButton)
+
+    // Assert onNavigate was called with 'profile'
+    expect(onNavigate).toHaveBeenCalledWith('profile')
   })
 })
