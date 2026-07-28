@@ -1,10 +1,7 @@
 import { Medal, Trophy, Crown, Sparkles } from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { ProjectData } from '../types'
-
-function isLogoUrl(logo: string): boolean {
-  return typeof logo === 'string' && (logo.startsWith('http://') || logo.startsWith('https://'))
-}
+import { isLogoUrl } from '../../../shared/utils/isLogoUrl'
 
 interface ProjectsPodiumProps {
   topThree: ProjectData[]
