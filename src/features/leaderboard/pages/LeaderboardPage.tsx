@@ -1,27 +1,25 @@
-import { logger } from '../../../shared/utils/logger';
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LeaderboardType, FilterType, Petal, LeaderData, ProjectData } from '../types';
-import { getLeaderboard, getRecommendedProjects } from '../../../shared/api/client';
-import { clampLimit, clampOffset, hasMoreByPageSize } from '../../../shared/utils/pagination';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { FallingPetals } from '../components/FallingPetals';
-import { LeaderboardTypeToggle } from '../components/LeaderboardTypeToggle';
-import { LeaderboardHero } from '../components/LeaderboardHero';
-import { ContributorsPodium } from '../components/ContributorsPodium';
-import { ProjectsPodium } from '../components/ProjectsPodium';
-import { FiltersSection } from '../components/FiltersSection';
-import { ContributorsTable } from '../components/ContributorsTable';
-import { ContributorsTableSkeleton } from '../components/ContributorsTableSkeleton';
-import { ProjectsTable } from '../components/ProjectsTable';
+import { logger } from '../../../shared/utils/logger'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { LeaderboardType, FilterType, Petal, LeaderData, ProjectData } from '../types'
+import { getLeaderboard, getRecommendedProjects } from '../../../shared/api/client'
+import { clampLimit, clampOffset, hasMoreByPageSize } from '../../../shared/utils/pagination'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { FallingPetals } from '../components/FallingPetals'
+import { LeaderboardTypeToggle } from '../components/LeaderboardTypeToggle'
+import { LeaderboardHero } from '../components/LeaderboardHero'
+import { ContributorsPodium } from '../components/ContributorsPodium'
+import { ProjectsPodium } from '../components/ProjectsPodium'
+import { FiltersSection } from '../components/FiltersSection'
+import { ContributorsTable } from '../components/ContributorsTable'
+import { ContributorsTableSkeleton } from '../components/ContributorsTableSkeleton'
+import { ProjectsTable } from '../components/ProjectsTable'
 
 /** Number of contributors fetched per page. */
-const LEADERBOARD_PAGE_SIZE = 20;
+const LEADERBOARD_PAGE_SIZE = 20
 
 /** Transform a raw leaderboard API row into the UI {@link LeaderData} shape. */
-function transformLeader(
-  item: Awaited<ReturnType<typeof getLeaderboard>>[number],
-): LeaderData {
+function transformLeader(item: Awaited<ReturnType<typeof getLeaderboard>>[number]): LeaderData {
   return {
     rank: item.rank,
     rank_tier: item.rank_tier,
@@ -34,92 +32,98 @@ function transformLeader(
     trendValue: item.trendValue,
     contributions: item.contributions,
     ecosystems: item.ecosystems || [],
-  };
+  }
 }
 
 export function LeaderboardPage() {
-  const { theme } = useTheme();
-  const navigate = useNavigate();
-  const [activeFilter, setActiveFilter] = useState<FilterType>('overall');
-  const [leaderboardType, setLeaderboardType] = useState<LeaderboardType>('contributors');
-  const [showEcosystemDropdown, setShowEcosystemDropdown] = useState(false);
+  const { theme } = useTheme()
+  const navigate = useNavigate()
+  const [activeFilter, setActiveFilter] = useState<FilterType>('overall')
+  const [leaderboardType, setLeaderboardType] = useState<LeaderboardType>('contributors')
+  const [showEcosystemDropdown, setShowEcosystemDropdown] = useState(false)
   const [selectedEcosystem, setSelectedEcosystem] = useState({
     label: 'All Ecosystems',
     value: 'all',
-  });
-  const [petals, setPetals] = useState<Petal[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [leaderboardData, setLeaderboardData] = useState<LeaderData[]>([]);
-  const [projectsData, setProjectsData] = useState<ProjectData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  })
+  const [petals, setPetals] = useState<Petal[]>([])
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [leaderboardData, setLeaderboardData] = useState<LeaderData[]>([])
+  const [projectsData, setProjectsData] = useState<ProjectData[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true)
   /** Offset (start index) of the last loaded contributors page. */
-  const [offset, setOffset] = useState(0);
+  const [offset, setOffset] = useState(0)
   /** Whether the API may still have more contributors to load. */
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(true)
   /** True while an additional ("load more") page is being fetched. */
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   // Synchronous guard so a rapid double-click of "Load more" cannot start two
   // concurrent requests before `isLoadingMore` state has flushed.
-  const loadingMoreRef = useRef(false);
+  const loadingMoreRef = useRef(false)
 
   const getProjectIcon = (githubFullName: string) => {
-    const [owner] = githubFullName.split('/');
+    const [owner] = githubFullName.split('/')
     // Use higher-resolution owner avatar so leaderboard projects look crisp
-    return `https://github.com/${owner}.png?size=200`;
-  };
+    return `https://github.com/${owner}.png?size=200`
+  }
 
   // Fetch leaderboard data
   useEffect(() => {
     const fetchLeaderboard = async () => {
       if (leaderboardType === 'contributors') {
-        setIsLoading(true);
+        setIsLoading(true)
         // Changing leaderboard type / filter / ecosystem resets pagination.
-        setOffset(0);
-        setHasMore(true);
-        const limit = clampLimit(LEADERBOARD_PAGE_SIZE);
+        setOffset(0)
+        setHasMore(true)
+        const limit = clampLimit(LEADERBOARD_PAGE_SIZE)
         try {
           const data = await getLeaderboard(
             limit,
             0,
-            selectedEcosystem.value !== 'all' ? selectedEcosystem.value : undefined,
-          );
-          setLeaderboardData(data.map(transformLeader));
+            selectedEcosystem.value !== 'all' ? selectedEcosystem.value : undefined
+          )
+          setLeaderboardData(data.map(transformLeader))
           // A full first page implies more may exist; a short page is the end.
-          setHasMore(hasMoreByPageSize(data.length, limit));
-          setIsLoading(false);
+          setHasMore(hasMoreByPageSize(data.length, limit))
+          setIsLoading(false)
         } catch (err) {
-          logger.error('Failed to fetch leaderboard:', err);
-          setLeaderboardData([]);
-          setHasMore(false);
-          setIsLoading(false);
+          logger.error('Failed to fetch leaderboard:', err)
+          setLeaderboardData([])
+          setHasMore(false)
+          setIsLoading(false)
         }
       } else {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    fetchLeaderboard();
-  }, [leaderboardType, activeFilter, selectedEcosystem.value]);
+    fetchLeaderboard()
+  }, [leaderboardType, activeFilter, selectedEcosystem.value])
 
   // Fetch projects leaderboard (top projects by contributors count)
   useEffect(() => {
-    if (leaderboardType !== 'projects') return;
-    let cancelled = false;
+    if (leaderboardType !== 'projects') return
+    let cancelled = false
     const fetchProjects = async () => {
-      setIsLoadingProjects(true);
+      setIsLoadingProjects(true)
       try {
-        const res = await getRecommendedProjects(50);
-        const projects = res?.projects ?? [];
-        if (cancelled) return;
+        const res = await getRecommendedProjects(50)
+        const projects = res?.projects ?? []
+        if (cancelled) return
         const mapped: ProjectData[] = projects
           .filter((p) => (p.github_full_name.split('/')[1] || '') !== '.github')
           .map((p, idx) => {
-            const repoName = p.github_full_name.split('/')[1] || p.github_full_name;
-            const contributors = p.contributors_count ?? 0;
-            const openIssues = p.open_issues_count ?? 0;
+            const repoName = p.github_full_name.split('/')[1] || p.github_full_name
+            const contributors = p.contributors_count ?? 0
+            const openIssues = p.open_issues_count ?? 0
             const activity =
-              openIssues > 10 ? 'Very High' : openIssues > 5 ? 'High' : openIssues > 2 ? 'Medium' : 'Low';
+              openIssues > 10
+                ? 'Very High'
+                : openIssues > 5
+                  ? 'High'
+                  : openIssues > 2
+                    ? 'Medium'
+                    : 'Low'
             return {
               rank: idx + 1,
               name: repoName,
@@ -130,20 +134,20 @@ export function LeaderboardPage() {
               contributors,
               ecosystems: p.ecosystem_name ? [p.ecosystem_name] : [],
               activity,
-            };
-          });
-        setProjectsData(mapped);
+            }
+          })
+        setProjectsData(mapped)
       } catch (err) {
-        if (!cancelled) setProjectsData([]);
+        if (!cancelled) setProjectsData([])
       } finally {
-        if (!cancelled) setIsLoadingProjects(false);
+        if (!cancelled) setIsLoadingProjects(false)
       }
-    };
-    fetchProjects();
+    }
+    fetchProjects()
     return () => {
-      cancelled = true;
-    };
-  }, [leaderboardType]);
+      cancelled = true
+    }
+  }, [leaderboardType])
 
   /**
    * Append the next page of contributors to the leaderboard.
@@ -154,38 +158,38 @@ export function LeaderboardPage() {
    * being sent to the API.
    */
   const loadMore = async () => {
-    if (loadingMoreRef.current || isLoadingMore || !hasMore) return;
+    if (loadingMoreRef.current || isLoadingMore || !hasMore) return
 
-    loadingMoreRef.current = true;
-    setIsLoadingMore(true);
-    const limit = clampLimit(LEADERBOARD_PAGE_SIZE);
-    const nextOffset = clampOffset(offset + limit);
+    loadingMoreRef.current = true
+    setIsLoadingMore(true)
+    const limit = clampLimit(LEADERBOARD_PAGE_SIZE)
+    const nextOffset = clampOffset(offset + limit)
     try {
       const data = await getLeaderboard(
         limit,
         nextOffset,
-        selectedEcosystem.value !== 'all' ? selectedEcosystem.value : undefined,
-      );
+        selectedEcosystem.value !== 'all' ? selectedEcosystem.value : undefined
+      )
 
       if (data.length > 0) {
-        setLeaderboardData((prev) => [...prev, ...data.map(transformLeader)]);
-        setOffset(nextOffset);
+        setLeaderboardData((prev) => [...prev, ...data.map(transformLeader)])
+        setOffset(nextOffset)
       }
       // Disable "Load more" once a short/empty page signals the end of list.
-      setHasMore(hasMoreByPageSize(data.length, limit));
+      setHasMore(hasMoreByPageSize(data.length, limit))
     } catch (err) {
-      logger.error('Failed to load more leaderboard:', err);
-      setHasMore(false);
+      logger.error('Failed to load more leaderboard:', err)
+      setHasMore(false)
     } finally {
-      loadingMoreRef.current = false;
-      setIsLoadingMore(false);
+      loadingMoreRef.current = false
+      setIsLoadingMore(false)
     }
-  };
+  }
 
   // Generate falling petals on mount
   useEffect(() => {
     const generatePetals = () => {
-      const newPetals: Petal[] = [];
+      const newPetals: Petal[] = []
       for (let i = 0; i < 30; i++) {
         newPetals.push({
           id: i,
@@ -194,21 +198,21 @@ export function LeaderboardPage() {
           duration: 8 + Math.random() * 6,
           rotation: Math.random() * 360,
           size: 0.6 + Math.random() * 0.8,
-        });
+        })
       }
-      setPetals(newPetals);
-    };
+      setPetals(newPetals)
+    }
 
-    generatePetals();
-    const loadTimer = window.setTimeout(() => setIsLoaded(true), 100);
+    generatePetals()
+    const loadTimer = window.setTimeout(() => setIsLoaded(true), 100)
 
     // Regenerate petals every 15 seconds for continuous effect
-    const interval = window.setInterval(generatePetals, 15000);
+    const interval = window.setInterval(generatePetals, 15000)
     return () => {
-      clearTimeout(loadTimer);
-      clearInterval(interval);
-    };
-  }, []);
+      clearTimeout(loadTimer)
+      clearInterval(interval)
+    }
+  }, [])
 
   // Ensure we have at least 3 items for the podium (pad with empty data if needed)
   const contributorTopThree: LeaderData[] = [
@@ -225,7 +229,7 @@ export function LeaderboardPage() {
         contributions: 0,
         ecosystems: [],
       })),
-  ].slice(0, 3) as LeaderData[];
+  ].slice(0, 3) as LeaderData[]
 
   const projectTopThree: ProjectData[] = [
     ...projectsData.slice(0, 3),
@@ -242,7 +246,7 @@ export function LeaderboardPage() {
         ecosystems: [] as string[],
         activity: 'Low',
       })),
-  ].slice(0, 3) as ProjectData[];
+  ].slice(0, 3) as ProjectData[]
 
   return (
     <div
@@ -288,7 +292,11 @@ export function LeaderboardPage() {
 
         {/* Contributors table */}
         {leaderboardType === 'contributors' && (
-          <>
+          <div
+            role="tabpanel"
+            id="leaderboard-panel-contributors"
+            aria-labelledby="leaderboard-tab-contributors"
+          >
             {isLoading ? (
               <ContributorsTableSkeleton />
             ) : (
@@ -298,8 +306,8 @@ export function LeaderboardPage() {
                   activeFilter={activeFilter}
                   isLoaded={isLoaded}
                   onUserClick={(username, userId) => {
-                    const identifier = userId || username;
-                    navigate(`/dashboard?tab=profile&user=${identifier}`);
+                    const identifier = userId || username
+                    navigate(`/dashboard?tab=profile&user=${identifier}`)
                   }}
                 />
                 <div className="flex justify-center mt-6">
@@ -332,24 +340,24 @@ export function LeaderboardPage() {
                 </div>
               </>
             )}
-          </>
+          </div>
         )}
 
         {/* Projects table */}
         {leaderboardType === 'projects' && (
-          <>
+          <div
+            role="tabpanel"
+            id="leaderboard-panel-projects"
+            aria-labelledby="leaderboard-tab-projects"
+          >
             {isLoadingProjects ? (
               <ContributorsTableSkeleton />
             ) : (
-              <ProjectsTable
-                data={projectsData}
-                activeFilter={activeFilter}
-                isLoaded={isLoaded}
-              />
+              <ProjectsTable data={projectsData} activeFilter={activeFilter} isLoaded={isLoaded} />
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
-  );
+  )
 }
