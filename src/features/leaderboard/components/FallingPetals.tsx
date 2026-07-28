@@ -1,27 +1,12 @@
-import { useState, useEffect } from 'react'
 import { Petal } from '../types'
+import { usePrefersReducedMotion } from '../../../shared/hooks/usePrefersReducedMotion'
 
 interface FallingPetalsProps {
   petals: Petal[]
 }
 
-function getPrefersReducedMotion() {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false
-  }
-
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
-
 export function FallingPetals({ petals }: FallingPetalsProps) {
-  const [reducedMotion, setReducedMotion] = useState(getPrefersReducedMotion)
-
-  useEffect(() => {
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+  const reducedMotion = usePrefersReducedMotion()
 
   if (reducedMotion) return null
 

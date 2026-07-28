@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
 import { Crown, Trophy, Star } from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { usePrefersReducedMotion } from '../../../shared/hooks/usePrefersReducedMotion'
 import { LeaderboardType } from '../types'
 
 interface LeaderboardHeroProps {
@@ -9,23 +9,9 @@ interface LeaderboardHeroProps {
   children: React.ReactNode
 }
 
-function getPrefersReducedMotion() {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false
-  }
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
-
 export function LeaderboardHero({ leaderboardType, isLoaded, children }: LeaderboardHeroProps) {
   const { theme } = useTheme()
-  const [reducedMotion, setReducedMotion] = useState(getPrefersReducedMotion)
-
-  useEffect(() => {
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+  const reducedMotion = usePrefersReducedMotion()
 
   return (
     <div
