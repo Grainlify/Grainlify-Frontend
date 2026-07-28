@@ -43,4 +43,15 @@ describe('ActivityItem', () => {
     fireEvent.keyDown(row, { key: ' ' });
     expect(handler).toHaveBeenCalledTimes(2);
   });
+
+  it('renders Review as a non-interactive badge instead of a nested button', () => {
+    const { container } = render(<ActivityItem activity={baseActivity as any} index={0} onClick={vi.fn()} />);
+    // The row itself is the interactive element (role="button")
+    const row = container.firstChild as HTMLElement;
+    expect(row).toHaveAttribute('role', 'button');
+
+    // "Review" should be rendered as text, not a <button> — no nested interactive elements
+    expect(row.textContent).toContain('Review');
+    expect(row.querySelector('button')).toBeNull();
+  });
 });
