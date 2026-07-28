@@ -13,7 +13,7 @@ import {
 import { UserAvatar } from './UserAvatar';
 
 interface UserProfileDropdownProps {
-  onPageChange?: (page: string) => void
+  onPageChange: (page: string) => void
   showMobileNav: boolean
 }
 
@@ -24,19 +24,11 @@ export function UserProfileDropdown({ onPageChange, showMobileNav }: UserProfile
   const darkTheme = theme === 'dark'
 
   const handleProfileClick = () => {
-    if (onPageChange) {
-      onPageChange('profile')
-    } else {
-      navigate('/dashboard?page=profile')
-    }
+    onPageChange('profile')
   }
 
   const handleSettingsClick = () => {
-    if (onPageChange) {
-      onPageChange('settings')
-    } else {
-      navigate('/dashboard?page=settings')
-    }
+    onPageChange('settings')
   }
 
   const handleSignIn = () => {
