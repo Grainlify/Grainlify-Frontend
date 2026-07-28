@@ -83,6 +83,35 @@ describe('BillingProfilesContext', () => {
     expect(result.current.profiles).toEqual([company]);
   });
 
+  it('strips sensitive fields before persisting to localStorage', () => {
+    const profileWithSensitiveData: BillingProfile = {
+      id: 3,
+      name: 'Sensitive',
+      type: 'individual',
+      status: 'verified',
+      taxId: '123-45-6789',
+      paymentMethods: [{ id: 1, ecosystem: 'stellar', cryptoType: 'usdc', walletAddress: 'GA...', isDefault: true, createdAt: '2026-01-01' }],
+      invoices: [{ id: 'inv-1', invoiceNumber: 'INV-001', date: '2026-01-01', amount: 100, currency: 'USD', status: 'paid', description: 'Test', billingPeriod: '2026-Q1' }],
+    };
+
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper });
+
+    act(() => expect(result.current.addProfile(profileWithSensitiveData)).toBe(true));
+
+    // In-memory state retains the full data
+    expect(result.current.profiles[0].taxId).toBe('123-45-6789');
+    expect(result.current.profiles[0].paymentMethods).toHaveLength(1);
+    expect(result.current.profiles[0].invoices).toHaveLength(1);
+
+    // Persisted data has sensitive fields stripped
+    const stored = JSON.parse(localStorage.getItem('billing_profiles')!);
+    expect(stored[0].taxId).toBeUndefined();
+    expect(stored[0].paymentMethods).toBeUndefined();
+    expect(stored[0].invoices).toBeUndefined();
+    // Non-sensitive fields are still present
+    expect(stored[0].name).toBe('Sensitive');
+  });
+
   it('rolls back a create that cannot be persisted without logging sensitive data', () => {
     const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
     const { result } = renderHook(() => useBillingProfiles(), { wrapper });

@@ -30,6 +30,17 @@ function logStorageFailure(operation: 'load' | 'save') {
   logger.error(`Billing profile ${operation} failed`)
 }
 
+/**
+ * Returns a shallow copy of `profile` with sensitive fields (taxId,
+ * paymentMethods, invoices) excluded. The in-memory React state retains
+ * the full data for the current session; only the persisted copy is
+ * sanitised.
+ */
+function toPersistableProfile(profile: BillingProfile): Omit<BillingProfile, 'taxId' | 'paymentMethods' | 'invoices'> {
+  const { taxId, paymentMethods, invoices, ...safe } = profile
+  return safe
+}
+
 function loadProfilesFromStorage(): BillingProfile[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
@@ -42,7 +53,7 @@ function loadProfilesFromStorage(): BillingProfile[] {
 
 function saveProfilesToStorage(profiles: BillingProfile[]): boolean {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles.map(toPersistableProfile)))
     return true
   } catch {
     logStorageFailure('save')
