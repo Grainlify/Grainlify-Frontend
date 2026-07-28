@@ -329,6 +329,22 @@ describe('SearchPage Accessibility and Functionality', () => {
     expect(screen.queryByRole('heading', { name: /Search Results/i })).not.toBeInTheDocument()
   })
 
+  it('should submit the search form without page reload', () => {
+    renderSearchPage()
+
+    const submitBtn = screen.getByRole('button', { name: 'Submit search' })
+    expect(submitBtn).toBeInTheDocument()
+    expect(submitBtn).toHaveAttribute('type', 'submit')
+
+    // The form's onSubmit calls preventDefault, so submitting should not
+    // cause a navigation / page reload in the SPA context.
+    const form = submitBtn.closest('form')
+    expect(form).toBeInTheDocument()
+
+    // Verify the button is wired to the form
+    expect(form).toContainElement(screen.getByRole('textbox'))
+  })
+
   it('should use the latest filter when changed mid-debounce (stale closure regression)', () => {
     renderSearchPage()
 

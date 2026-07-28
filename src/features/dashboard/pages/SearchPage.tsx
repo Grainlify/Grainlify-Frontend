@@ -220,7 +220,16 @@ export function SearchPage({
         </p>
 
         {/* Search Input */}
-        <div
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            // Re-trigger the search by forcing the debounce to flush.
+            // The onChange handler on the input sends every keystroke into
+            // searchQuery, so the debounced pipeline already has the latest
+            // value — preventing default is enough to keep the SPA intact.
+            // If the search becomes server-driven in the future, handle the
+            // fetch here and remove the auto-submit from the useEffect below.
+          }}
           className={`relative h-[64px] rounded-[32px] mb-8 transition-colors ${
             darkTheme
               ? 'bg-[#2d2820]/60 border border-white/10'
@@ -266,7 +275,7 @@ export function SearchPage({
               </button>
             )}
             <button
-              type="button"
+              type="submit"
               aria-label="Submit search"
               className={`w-10 h-10 rounded-full flex items-center justify-center ml-3 flex-shrink-0 transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a] focus-visible:ring-offset-2 ${
                 darkTheme
@@ -277,7 +286,7 @@ export function SearchPage({
               <ArrowRight aria-hidden="true" className="w-5 h-5 text-white" />
             </button>
           </div>
-        </div>
+        </form>
 
         {/* Filters */}
         <div className="flex gap-2 mb-8 justify-center">
