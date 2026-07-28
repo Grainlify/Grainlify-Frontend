@@ -341,4 +341,27 @@ describe('ContributionsTab', () => {
     expect(await screen.findByText('<img src=x onerror=alert(1)>')).toBeInTheDocument()
     expect(document.querySelector('img[src="x"]')).toBeNull()
   })
+
+  it('uses a contributor-specific fallback when contributor_login and author_login are both empty', async () => {
+    mockGetProfileContributions.mockResolvedValue({
+      contributions: [
+        {
+          id: 'no-contributor',
+          title: 'Contribution with no author',
+          status: 'assigned',
+          project_name: 'Test Project',
+        },
+      ],
+    })
+
+    renderContributionsTab()
+
+    await screen.findByText('Contribution with no author')
+
+    // Search for "Unknown contributor" — the search filter includes
+    // item.contributor, so this verifies the fallback is correct
+    await userEvent.type(screen.getByPlaceholderText('Search'), 'Unknown contributor')
+
+    expect(screen.getByText('Contribution with no author')).toBeInTheDocument()
+  })
 })

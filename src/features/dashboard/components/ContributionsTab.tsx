@@ -60,6 +60,7 @@ const contributionColumns: Array<{
 const rewardOptions: RewardFilter[] = ['Rewarded', 'Unrewarded']
 const fallbackTitle = 'Untitled contribution'
 const fallbackProject = 'Unknown project'
+const fallbackContributor = 'Unknown contributor'
 const fallbackTag = 'contribution'
 const fallbackTime = 'Recently'
 
@@ -177,7 +178,7 @@ function normalizeContribution(contribution: ProfileContribution): ContributionC
     ),
     contributor: normalizeText(
       contribution.contributor_login || contribution.author_login,
-      fallbackProject
+      fallbackContributor
     ),
     tag,
     tagType: getTagType(tag),
