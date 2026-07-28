@@ -539,7 +539,7 @@ function Footer() {
   return (
     <footer className="relative py-16 px-6 border-t border-white/20">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-1">
             <div className="flex items-center space-x-2 mb-4">
@@ -561,7 +561,7 @@ function Footer() {
             </p>
           </div>
 
-          {/* Links */}
+          {/* Product Links */}
           <div>
             <h4
               className={`font-semibold mb-4 transition-colors ${
@@ -586,86 +586,6 @@ function Footer() {
                 }`}
               >
                 How it Works
-              </a>
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Pricing
-              </a>
-            </div>
-          </div>
-
-          <div>
-            <h4
-              className={`font-semibold mb-4 transition-colors ${
-                theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-              }`}
-            >
-              Company
-            </h4>
-            <div className="space-y-2">
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                About
-              </a>
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Blog
-              </a>
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Careers
-              </a>
-            </div>
-          </div>
-
-          <div>
-            <h4
-              className={`font-semibold mb-4 transition-colors ${
-                theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-              }`}
-            >
-              Support
-            </h4>
-            <div className="space-y-2">
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Documentation
-              </a>
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Help Center
-              </a>
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Contact
               </a>
             </div>
           </div>

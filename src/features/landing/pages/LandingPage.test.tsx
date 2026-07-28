@@ -61,6 +61,22 @@ function renderWithRouter(ui: React.ReactNode) {
 // Tests
 // ---------------------------------------------------------------------------
 
+describe("Footer", () => {
+  it("has no bare href=\"#\" anchors", () => {
+    renderWithRouter(<LandingPage />);
+    const footer = document.querySelector("footer");
+    expect(footer).not.toBeNull();
+    const deadLinks = footer!.querySelectorAll('a[href="#"]');
+    expect(deadLinks.length).toBe(0);
+  });
+
+  it("renders Product links with correct section anchors", () => {
+    renderWithRouter(<LandingPage />);
+    expect(screen.getByText("Features")).toHaveAttribute("href", "#features");
+    expect(screen.getByText("How it Works")).toHaveAttribute("href", "#how-it-works");
+  });
+});
+
 describe("LandingPage", () => {
   it("renders without crashing", () => {
     const { container } = renderWithRouter(<LandingPage />);
