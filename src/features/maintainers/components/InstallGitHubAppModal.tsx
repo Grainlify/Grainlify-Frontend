@@ -15,6 +15,7 @@ import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { API_BASE_URL } from '../../../shared/config/api'
 import { getAuthToken } from '../../../shared/api/client'
 import { logger } from '../../../shared/utils/logger'
+import { useTranslation } from '../../../shared/i18n'
 
 /**
  * Props for the InstallGitHubAppModal component.
@@ -36,6 +37,7 @@ type InstallStatus = 'idle' | 'installing' | 'confirming' | 'cancelled' | 'error
  * backend confirmation validation, and dismissal preferences.
  */
 export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGitHubAppModalProps) {
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const darkTheme = theme === 'dark'
   const [status, setStatus] = useState<InstallStatus>('idle')
@@ -298,10 +300,9 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
             >
               <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-[13px] font-semibold">Installation Cancelled</h4>
+                <h4 className="text-[13px] font-semibold">{t('maintainers.installGithubApp.cancelled.heading')}</h4>
                 <p className="text-[12px] mt-0.5">
-                  You cancelled the GitHub App installation. No changes were made to your account.
-                  You can retry whenever you're ready.
+                  {t('maintainers.installGithubApp.cancelled.body')}
                 </p>
               </div>
             </div>
@@ -318,9 +319,9 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
             >
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-[13px] font-semibold">Installation Failed</h4>
+                <h4 className="text-[13px] font-semibold">{t('maintainers.installGithubApp.error.heading')}</h4>
                 <p className="text-[12px] mt-0.5">
-                  {errorMessage || 'Failed to complete GitHub App installation. Please try again.'}
+                  {errorMessage || t('maintainers.installGithubApp.error.body')}
                 </p>
               </div>
             </div>
