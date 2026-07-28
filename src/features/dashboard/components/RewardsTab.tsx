@@ -14,6 +14,7 @@ import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useLocalStorage } from '../../../shared/hooks/useLocalStorage'
 import { Popover, PopoverContent, PopoverTrigger } from '../../../shared/components/ui/popover'
+import { useIntlFormatters, type UseIntlFormatters } from '../../../shared/i18n'
 
 type RewardRow = {
   id: string
@@ -48,7 +49,11 @@ const normalizeText = (value?: string | null) => {
  * invalid currency codes fall back to `USD` so `Intl.NumberFormat` cannot throw
  * and the UI never concatenates an `"undefined"` currency string.
  */
-function formatRewardAmount(amount?: number | string | null, currency?: string | null) {
+function formatRewardAmount(
+  amount: number | string | null | undefined,
+  currency: string | null | undefined,
+  formatCurrency: UseIntlFormatters['formatCurrency']
+) {
   const parsedAmount = typeof amount === 'number' ? amount : Number.parseFloat(String(amount ?? ''))
 
   if (!Number.isFinite(parsedAmount)) return fallbackText
@@ -56,42 +61,47 @@ function formatRewardAmount(amount?: number | string | null, currency?: string |
   const normalizedCurrency = currency?.trim().toUpperCase() || 'USD'
 
   try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return formatCurrency(parsedAmount, {
       currency: normalizedCurrency,
       maximumFractionDigits: Number.isInteger(parsedAmount) ? 0 : 2,
-    }).format(parsedAmount)
+    })
   } catch {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return formatCurrency(parsedAmount, {
       currency: 'USD',
       maximumFractionDigits: Number.isInteger(parsedAmount) ? 0 : 2,
-    }).format(parsedAmount)
+    })
   }
 }
 
-const formatRewardDate = (reward: ProfileReward) => {
+const formatRewardDate = (
+  reward: ProfileReward,
+  formatDate: UseIntlFormatters['formatDate']
+) => {
   const dateValue = reward.date || reward.awarded_at || reward.created_at
   if (!dateValue) return fallbackText
 
   const date = new Date(dateValue)
   if (Number.isNaN(date.getTime())) return normalizeText(dateValue)
 
-  return new Intl.DateTimeFormat('en-US', {
+  return formatDate(date, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(date)
+  })
 }
 
-const normalizeReward = (reward: ProfileReward): RewardRow => ({
+const normalizeReward = (
+  reward: ProfileReward,
+  formatCurrency: UseIntlFormatters['formatCurrency'],
+  formatDate: UseIntlFormatters['formatDate']
+): RewardRow => ({
   id: String(reward.id),
-  date: formatRewardDate(reward),
+  date: formatRewardDate(reward, formatDate),
   project: normalizeText(reward.project_name || reward.project),
   logo: normalizeText(reward.project_logo).slice(0, 2),
   from: normalizeText(reward.contributor_login || reward.from),
   contribution: normalizeText(reward.contribution_title || reward.contribution),
-  amount: formatRewardAmount(reward.amount, reward.currency),
+  amount: formatRewardAmount(reward.amount, reward.currency, formatCurrency),
   status: normalizeText(reward.status),
 })
 
@@ -178,6 +188,7 @@ function RewardsSkeleton() {
 
 export function RewardsTab() {
   const { theme } = useTheme()
+  const { formatCurrency, formatDate } = useIntlFormatters()
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false)
   const [selectedColumns, setSelectedColumns] = useLocalStorage<string[]>(
     'rewards_selected_columns',
@@ -199,7 +210,7 @@ export function RewardsTab() {
       .then((response) => {
         setState({
           status: 'ok',
-          rewards: (response.rewards || []).map(normalizeReward),
+          rewards: (response.rewards || []).map((r) => normalizeReward(r, formatCurrency, formatDate)),
         })
       })
       .catch(() => {

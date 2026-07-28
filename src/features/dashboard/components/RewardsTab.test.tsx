@@ -18,6 +18,15 @@ vi.mock('../../../shared/contexts/ThemeContext', () => ({
   }),
 }))
 
+vi.mock('../../../shared/i18n', () => ({
+  useIntlFormatters: () => ({
+    formatCurrency: (value: number, options: { currency: string; maximumFractionDigits?: number }) =>
+      new Intl.NumberFormat('en-US', { style: 'currency', ...options }).format(value),
+    formatDate: (date: Date, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en-US', options).format(date),
+  }),
+}))
+
 import { RewardsTab } from './RewardsTab'
 
 // Radix UI components (Popover) require pointer-capture shims under jsdom.
