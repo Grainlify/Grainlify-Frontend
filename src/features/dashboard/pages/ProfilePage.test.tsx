@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
+import { I18nProvider } from '../../../shared/i18n/I18nProvider'
 
 // ---------------------------------------------------------------------------
 // Mock API client — declared BEFORE vi.mock() factory so they are in scope
@@ -109,9 +110,11 @@ function makeContributedProjects() {
 
 function renderPage(props: Partial<React.ComponentProps<typeof ProfilePage>> = {}) {
   return render(
-    <ThemeProvider>
-      <ProfilePage {...props} />
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider>
+        <ProfilePage {...props} />
+      </ThemeProvider>
+    </I18nProvider>
   )
 }
 

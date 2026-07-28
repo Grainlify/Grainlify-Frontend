@@ -4,6 +4,7 @@ import { Search, Award, GitPullRequest, FolderGit2, Trophy, Github, Code, Globe,
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { useAuth } from '../../../shared/contexts/AuthContext';
+import { useIntlFormatters } from '../../../shared/i18n/useIntlFormatters';
 import { getUserProfile, getProjectsContributed, getProjectsLed, getProfileCalendar, getProfileActivity, getPublicProfile } from '../../../shared/api/client';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 import { LanguageIcon } from '../../../shared/components/LanguageIcon';
@@ -103,6 +104,7 @@ interface ProfilePageProps {
 export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProjectClick, onIssueClick }: ProfilePageProps) {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { formatDate } = useIntlFormatters();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [viewingUser, setViewingUser] = useState<{ login: string; avatar_url?: string } | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -401,7 +403,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
       title: activity.title,
       project: activity.project_name,
       project_id: activity.project_id,
-      date: new Date(activity.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+      date: formatDate(activity.date, { day: 'numeric', month: 'short' }),
       url: activity.url,
     });
   });
