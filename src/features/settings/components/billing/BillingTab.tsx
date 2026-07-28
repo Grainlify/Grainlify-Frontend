@@ -239,7 +239,20 @@ export function BillingTab() {
     }
   }
 
-  const updateProfileWithKYCData = (extracted: any) => {
+  interface KycExtractedData {
+    first_name?: string
+    last_name?: string
+    full_name?: string
+    address?: string
+    city?: string
+    postal_code?: string
+    postalCode?: string
+    country?: string
+    document_number?: string
+    tax_id?: string
+  }
+
+  const updateProfileWithKYCData = (extracted: KycExtractedData) => {
     if (!selectedProfile) return
 
     // Preserve the original profile name
