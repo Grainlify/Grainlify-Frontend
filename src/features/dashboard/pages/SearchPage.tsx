@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, ArrowRight, X, FileText, FolderGit2, User, ChevronLeft } from 'lucide-react'
+import { Search, ArrowRight, X, FileText, FolderGit2, User, ChevronLeft, type LucideIcon } from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useDebouncedValue } from '../../../shared/hooks/useDebouncedValue'
 
@@ -31,7 +31,7 @@ interface SearchResult {
   type: 'issue' | 'project' | 'contributor'
   title: string
   subtitle?: string
-  icon: any
+  icon: LucideIcon
 }
 
 /**
