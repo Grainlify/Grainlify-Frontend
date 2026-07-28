@@ -183,9 +183,7 @@ describe('DashboardLayout icon-only controls accessibility', () => {
 
       // Icons should be marked aria-hidden since the link text provides the accessible name
       const links = screen.getAllByRole('link')
-      const navLinks = links.filter((link) => 
-        link.getAttribute('href')?.startsWith('/dashboard/')
-      )
+      const navLinks = links.filter((link) => link.getAttribute('href')?.startsWith('/dashboard/'))
 
       // At least one nav link should exist with an icon marked aria-hidden
       expect(navLinks.length).toBeGreaterThan(0)
@@ -201,7 +199,9 @@ describe('DashboardLayout icon-only controls accessibility', () => {
   describe('Search link', () => {
     it('has accessible name for screen readers', () => {
       renderLayout()
-      const searchLink = screen.getByRole('link', { name: 'Search projects, issues, and contributors' })
+      const searchLink = screen.getByRole('link', {
+        name: 'Search projects, issues, and contributors',
+      })
       expect(searchLink).toBeInTheDocument()
       expect(searchLink).toHaveAttribute('href', '/dashboard/search')
     })
@@ -256,8 +256,8 @@ describe('DashboardLayout icon-only controls accessibility', () => {
 
       // Every link should have an accessible name
       links.forEach((link) => {
-        const accessibleName = 
-          link.getAttribute('aria-label') || 
+        const accessibleName =
+          link.getAttribute('aria-label') ||
           link.textContent?.trim() ||
           link.querySelector('img')?.getAttribute('alt')
         expect(accessibleName).toBeTruthy()
@@ -279,8 +279,8 @@ describe('DashboardLayout icon-only controls accessibility', () => {
 
       // Every link should have an accessible name
       links.forEach((link) => {
-        const accessibleName = 
-          link.getAttribute('aria-label') || 
+        const accessibleName =
+          link.getAttribute('aria-label') ||
           link.textContent?.trim() ||
           link.querySelector('img')?.getAttribute('alt')
         expect(accessibleName).toBeTruthy()
@@ -355,10 +355,15 @@ describe('DashboardLayout icon-only controls accessibility', () => {
 
       await user.keyboard('{Enter}')
 
-      // The mobile menu close button should now be focused (our sensible focus management)
-      const closeBtn = screen.getByRole('button', { name: 'Close navigation menu' })
-      expect(closeBtn).toBeInTheDocument()
-      expect(document.activeElement).toBe(closeBtn)
+      // The mobile menu close button should now be focused (our sensible focus
+      // management). Both the drawer's own close button and the (now-hidden)
+      // header toggle share the "Close navigation menu" label — their
+      // visibility split is CSS-only (Tailwind `hidden`/`block`), which jsdom
+      // doesn't compute without a loaded stylesheet, so `getByRole` would see
+      // both. Reading `document.activeElement` sidesteps that ambiguity and
+      // is exactly what this assertion cares about.
+      const closeBtn = document.activeElement as HTMLElement
+      expect(closeBtn).toHaveAttribute('aria-label', 'Close navigation menu')
 
       // Press Space or Enter to close it
       await user.keyboard(' ')

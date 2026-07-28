@@ -1,5 +1,23 @@
-import { ArrowRight, Github } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
+import { siGithub } from 'simple-icons'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
+
+// lucide-react no longer ships a GitHub brand icon (removed upstream); this
+// local component fills that gap using the already-installed simple-icons
+// data, matching lucide's className-driven sizing convention.
+function GithubIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      role="img"
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d={siGithub.path} />
+    </svg>
+  )
+}
 
 export function BlogCTA() {
   const { theme } = useTheme()
@@ -32,7 +50,7 @@ export function BlogCTA() {
           }`}
         >
           Submit Your Project
-          <Github className="w-5 h-5" />
+          <GithubIcon className="w-5 h-5" />
         </button>
       </div>
     </div>

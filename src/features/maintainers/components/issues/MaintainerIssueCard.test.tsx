@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { IssueCard } from './IssueCard'
+import { MaintainerIssueCard } from './MaintainerIssueCard'
 import { Issue } from '../../types'
 
 vi.mock('../../../../shared/contexts/ThemeContext', () => ({
@@ -21,15 +21,15 @@ function makeIssue(overrides: Partial<Issue> = {}): Issue {
   }
 }
 
-describe('IssueCard avatar fallback', () => {
+describe('MaintainerIssueCard avatar fallback', () => {
   it('shows the avatar image by default', () => {
-    render(<IssueCard issue={makeIssue()} index={0} onClick={() => {}} />)
+    render(<MaintainerIssueCard issue={makeIssue()} index={0} onClick={() => {}} />)
     const img = screen.getByAltText('octocat') as HTMLImageElement
     expect(img.src).toContain('https://github.com/octocat.png?size=24')
   })
 
   it('falls back to initials when the image fails to load', () => {
-    render(<IssueCard issue={makeIssue()} index={0} onClick={() => {}} />)
+    render(<MaintainerIssueCard issue={makeIssue()} index={0} onClick={() => {}} />)
     const img = screen.getByAltText('octocat')
     fireEvent.error(img)
 
@@ -38,7 +38,9 @@ describe('IssueCard avatar fallback', () => {
   })
 
   it('does not leave a stray DOM node outside React control after a failure', () => {
-    const { container } = render(<IssueCard issue={makeIssue()} index={0} onClick={() => {}} />)
+    const { container } = render(
+      <MaintainerIssueCard issue={makeIssue()} index={0} onClick={() => {}} />
+    )
     fireEvent.error(screen.getByAltText('octocat'))
 
     // The fallback div is the only element rendered in place of the <img> -
@@ -49,12 +51,14 @@ describe('IssueCard avatar fallback', () => {
 
   it('retries loading a new avatar instead of showing stale initials when issue.user changes', () => {
     const { rerender } = render(
-      <IssueCard issue={makeIssue({ user: 'octocat' })} index={0} onClick={() => {}} />
+      <MaintainerIssueCard issue={makeIssue({ user: 'octocat' })} index={0} onClick={() => {}} />
     )
     fireEvent.error(screen.getByAltText('octocat'))
     expect(screen.getByText('OC')).toBeInTheDocument()
 
-    rerender(<IssueCard issue={makeIssue({ user: 'newuser' })} index={0} onClick={() => {}} />)
+    rerender(
+      <MaintainerIssueCard issue={makeIssue({ user: 'newuser' })} index={0} onClick={() => {}} />
+    )
 
     // The failure state resets on a new user - the real <img> is attempted again,
     // not stuck showing the old user's initials.

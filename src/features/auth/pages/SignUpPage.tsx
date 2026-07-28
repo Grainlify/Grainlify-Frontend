@@ -2,7 +2,8 @@ import { logger } from '../../../shared/utils/logger'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
-import { ArrowLeft, Github } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import { GithubIcon } from '../../../shared/components/GithubIcon'
 import { getGitHubLoginUrl } from '../../../shared/api/client'
 import { useTranslation } from '../../../shared/i18n'
 
@@ -105,7 +106,7 @@ export function SignUpPage() {
                 </>
               ) : (
                 <>
-                  <Github className="w-6 h-6" />
+                  <GithubIcon className="w-6 h-6" />
                   <span>{t('auth.signup.githubButton')}</span>
                 </>
               )}

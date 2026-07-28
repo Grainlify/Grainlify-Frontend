@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { useDebouncedValue } from '../../../../shared/hooks/useDebouncedValue'
 import { Issue } from '../../types'
-import { IssueCard } from './IssueCard'
+import { MaintainerIssueCard } from './MaintainerIssueCard'
 import { IssueFilterDropdown } from './IssueFilterDropdown'
 
 interface IssueListSidebarProps {
@@ -149,7 +149,11 @@ export function IssueListSidebar({
       </div>
 
       {/* Scrollable Issues List */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6" aria-busy={isSearching} aria-label="Issues list">
+      <div
+        className="flex-1 overflow-y-auto px-6 pb-6"
+        aria-busy={isSearching}
+        aria-label="Issues list"
+      >
         <div className="space-y-3">
           {showNoIssuesFound && (
             <div
@@ -172,7 +176,7 @@ export function IssueListSidebar({
           {!showNoIssuesFound &&
             !showNoMatches &&
             issues.map((issue, idx) => (
-              <IssueCard
+              <MaintainerIssueCard
                 key={issue.id}
                 issue={issue}
                 index={idx}

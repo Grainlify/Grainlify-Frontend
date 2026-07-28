@@ -1,5 +1,22 @@
-import { Github } from 'lucide-react'
+import { siGithub } from 'simple-icons'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
+
+// lucide-react no longer ships a GitHub brand icon (removed upstream); this
+// local component fills that gap using the already-installed simple-icons
+// data, matching lucide's className-driven sizing convention.
+function GithubIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      role="img"
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d={siGithub.path} />
+    </svg>
+  )
+}
 
 export function BlogHowItWorks() {
   const { theme } = useTheme()
@@ -27,7 +44,7 @@ export function BlogHowItWorks() {
           theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
         }`}
       >
-        <Github className="w-7 h-7 text-[#c9983a]" />
+        <GithubIcon className="w-7 h-7 text-[#c9983a]" />
         How It Works
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -311,17 +311,17 @@ describe('ContributionsTab', () => {
     await userEvent.click(screen.getByRole('button', { name: /projects/i }))
     expect(screen.queryByPlaceholderText('Search projects')).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: /rewarded 2/i }))
+    await userEvent.click(screen.getByRole('button', { name: /rewarded\s*2/i }))
     expect(screen.queryByText('Rewarded, Unrewarded')).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: /rewarded 2/i }))
+    await userEvent.click(screen.getByRole('button', { name: /rewarded\s*2/i }))
     await userEvent.click(screen.getByRole('button', { name: 'Rewarded' }))
     await userEvent.click(screen.getByRole('button', { name: 'Unrewarded' }))
     expect(screen.getByText('No reward filters selected')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Rewarded' }))
     expect(screen.queryByText('No reward filters selected')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /rewarded 1/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /rewarded\s*1/i })).toBeInTheDocument()
   })
 
   it('renders repository-supplied titles as escaped text', async () => {

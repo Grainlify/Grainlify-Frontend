@@ -12,8 +12,8 @@ vi.mock('../../../../shared/contexts/ThemeContext', async (importOriginal) => {
   }
 })
 
-vi.mock('./IssueCard', () => ({
-  IssueCard: ({ issue }: any) => <div data-testid="issue-card">{issue.title}</div>,
+vi.mock('./MaintainerIssueCard', () => ({
+  MaintainerIssueCard: ({ issue }: any) => <div data-testid="issue-card">{issue.title}</div>,
 }))
 
 vi.mock('./IssueFilterDropdown', () => ({
