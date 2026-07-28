@@ -1,8 +1,15 @@
 import { SkeletonLoader } from './SkeletonLoader';
+import { useTheme } from '../contexts/ThemeContext';
 
 export function ActivityItemSkeleton() {
+  const { theme } = useTheme();
+
   return (
-    <div className="backdrop-blur-[25px] rounded-[14px] border p-4 bg-white/[0.08] border-white/10">
+    <div className={`backdrop-blur-[25px] rounded-[14px] border p-4 ${
+      theme === 'dark'
+        ? 'bg-white/[0.08] border-white/10'
+        : 'bg-white/[0.15] border-white/25'
+    }`}>
       <div className="flex items-start justify-between gap-4">
         {/* Left: Icon + Badge + Title */}
         <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -31,18 +38,3 @@ export function ActivityItemSkeleton() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
