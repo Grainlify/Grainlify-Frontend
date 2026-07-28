@@ -7,12 +7,9 @@ import { ThemeProvider } from '../../../../shared/contexts/ThemeContext'
 import { vi } from 'vitest'
 import { toast } from 'sonner'
 
-// Mock localStorage for ThemeProvider in test environment
-const localStorageMock = {
-  getItem: vi.fn(() => null),
-  setItem: vi.fn(),
-}
-Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+// localStorage is already mocked globally in src/test/setup.ts (with the
+// clear()/removeItem()/key() methods the afterEach hook there relies on) —
+// no need to re-stub it here.
 vi.mock('sonner', () => ({
   toast: { error: vi.fn() },
 }))
@@ -51,7 +48,7 @@ describe('NotificationRow optimistic mark-as-read', () => {
   })
 
   test('rolls back UI and shows error on API failure', async () => {
-    const onMarkAsRead = vi.fn<[], Promise<void>>(
+    const onMarkAsRead = vi.fn<() => Promise<void>>(
       () => new Promise((_, reject) => setTimeout(() => reject(new Error('API error')), 10))
     )
     render(
@@ -73,7 +70,7 @@ describe('NotificationRow optimistic mark-as-read', () => {
 
   test('prevents duplicate API calls on rapid double-click', async () => {
     // Use a pending promise to keep the button disabled during the async update
-    const onMarkAsRead = vi.fn<[], Promise<void>>(() => new Promise(() => {})) // pending
+    const onMarkAsRead = vi.fn<() => Promise<void>>(() => new Promise(() => {})) // pending
     render(
       <ThemeWrapper>
         <NotificationRow {...baseProps} onMarkAsRead={onMarkAsRead} />
