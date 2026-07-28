@@ -4,11 +4,39 @@ import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useMemo, useCallback, memo } from 'react'
 
 /**
+ * Represents a project data structure used in the dashboard projects table.
+ */
+interface Project {
+  /** Unique identifier for the project. */
+  id: number
+  /** Display name of the project. */
+  name: string
+  /** Emoji or icon string representing the project logo. */
+  logo: string
+  /** Name or handle of the project lead. */
+  lead: string
+  /** Number of contributors. */
+  contributors: number
+  /** Available issues indicator (e.g. "3 GFI"). */
+  availableIssues: string
+  /** Number of contributions by the current user. */
+  myContributions: number
+  /** Rewards earned by the current user (e.g. "3,600 USD"). */
+  myRewards: string
+  /** Programming languages used in the project. */
+  languages: string[]
+  /** Repository identifier (e.g. "owner/repo"). */
+  repository: string
+  /** Billing profile name associated with the project. */
+  billingProfile: string
+}
+
+/**
  * Props for the ProjectRow component.
  */
 interface ProjectRowProps {
   /** The project data to display. */
-  project: any
+  project: Project
   /** The index of the row, used for alternating background colors. */
   idx: number
   /** The current theme ("dark" or "light"). */
@@ -176,7 +204,7 @@ const ProjectRow = memo(({ project, idx, theme, getLanguageIcon }: ProjectRowPro
  */
 interface ProjectMobileCardProps {
   /** The project data to display. */
-  project: any
+  project: Project
   /** The current theme ("dark" or "light"). */
   theme: string
   /** Helper function to get the icon and color for a given language. */
