@@ -19,7 +19,7 @@ const preventUnhandledErrorLog = (event: ErrorEvent) => {
 }
 
 /** Throws during render so tests exercise React's error boundary path. */
-function ThrowingChild({ message = 'Boundary boom' }: { message?: string }) {
+function ThrowingChild({ message = 'Boundary boom' }: { message?: string }): never {
   throw new Error(message)
 }
 

@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import {
-  AlertCircle,
-  Check,
-  Filter,
-  Github,
-  Hourglass,
-  LayoutGrid,
-  RefreshCw,
-  Search,
-} from 'lucide-react'
+import { AlertCircle, Check, Filter, Hourglass, LayoutGrid, RefreshCw, Search } from 'lucide-react'
 import { getProfileRewards, type ProfileReward } from '../../../shared/api/client'
+import { GithubIcon } from '../../../shared/components/GithubIcon'
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useLocalStorage } from '../../../shared/hooks/useLocalStorage'
@@ -27,9 +19,7 @@ type RewardRow = {
 }
 
 type RewardsState =
-  | { status: 'loading' }
-  | { status: 'error' }
-  | { status: 'ok'; rewards: RewardRow[] }
+  { status: 'loading' } | { status: 'error' } | { status: 'ok'; rewards: RewardRow[] }
 
 const columns = ['Date', 'ID', 'Project', 'From', 'Contributions', 'Amount', 'Status']
 
@@ -113,7 +103,7 @@ function EmptyState({ theme }: { theme: string }) {
         theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
       }`}
     >
-      <Github className="w-14 h-14 mx-auto mb-4 opacity-50" />
+      <GithubIcon className="w-14 h-14 mx-auto mb-4 opacity-50" />
       <p className="text-[16px] font-semibold">No rewards yet</p>
       <p className="text-[13px] mt-2">Rewards from accepted contributions will appear here.</p>
     </div>
@@ -480,7 +470,7 @@ function MobileRewardCard({ reward, theme }: { reward: RewardRow; theme: string 
         </div>
 
         <div className="flex items-center space-x-2">
-          <Github
+          <GithubIcon
             className={`w-4 h-4 flex-shrink-0 ${
               theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
             }`}
