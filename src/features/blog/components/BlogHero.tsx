@@ -22,10 +22,10 @@ export function BlogHero() {
               <div>
                 <h1 className={`text-[38px] font-bold transition-colors ${
                   theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                }`}>OnlyGrain Blog</h1>
+                }`}>Grainlify Blog</h1>
                 <p className={`text-[15px] transition-colors ${
                   theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                }`}>Insights, updates, and stories from the OnlyGrain ecosystem</p>
+                }`}>Insights, updates, and stories from the Grainlify ecosystem</p>
               </div>
             </div>
           </div>

@@ -3,17 +3,17 @@ import { BlogPost } from '../types';
 export const featuredPost: BlogPost = {
   id: 0,
   slug: "bridging-the-gap-onlygrain-open-source",
-  title: "Bridging the Gap: How OnlyGrain is Revolutionizing Open Source Contribution",
-  excerpt: "Discover how OnlyGrain connects talented developers with groundbreaking Web3 projects across all blockchain ecosystems, creating a seamless bridge between innovation and execution.",
+  title: "Bridging the Gap: How Grainlify is Revolutionizing Open Source Contribution",
+  excerpt: "Discover how Grainlify connects talented developers with groundbreaking Web3 projects across all blockchain ecosystems, creating a seamless bridge between innovation and execution.",
   content:
-    "OnlyGrain connects talented open-source developers with innovative Web3 " +
+    "Grainlify connects talented open-source developers with innovative Web3 " +
     "projects across every major blockchain ecosystem. By matching contributors " +
     "to work that fits their skills and rewarding quality contributions " +
     "transparently, we make meaningful collaboration accessible to everyone — " +
     "from seasoned protocol engineers to first-time Web3 contributors.",
   date: "December 27, 2024",
   readTime: "8 min read",
-  author: "OnlyGrain Team",
+  author: "Grainlify Team",
   image: "🌐",
   isFeatured: true,
 };
@@ -33,7 +33,7 @@ export const recentPosts: BlogPost[] = [
     id: 2,
     slug: "cross-chain-collaboration",
     title: "Cross-Chain Collaboration: Breaking Down Barriers",
-    excerpt: "How OnlyGrain enables developers to contribute to projects across multiple blockchain ecosystems seamlessly.",
+    excerpt: "How Grainlify enables developers to contribute to projects across multiple blockchain ecosystems seamlessly.",
     date: "December 15, 2024",
     readTime: "7 min read",
     category: "Technology",

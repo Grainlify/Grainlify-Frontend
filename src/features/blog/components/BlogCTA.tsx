@@ -12,7 +12,7 @@ export function BlogCTA() {
       <p className={`text-[16px] mb-6 max-w-2xl mx-auto transition-colors ${
         theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#6b5d4d]'
       }`}>
-        Whether you're a developer looking for your next challenge or a project seeking talented contributors, OnlyGrain is your gateway to the future of open-source collaboration.
+        Whether you're a developer looking for your next challenge or a project seeking talented contributors, Grainlify is your gateway to the future of open-source collaboration.
       </p>
       <div className="flex items-center justify-center gap-4">
         <button className="px-8 py-4 bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white rounded-[16px] font-bold text-[16px] shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] transition-all flex items-center gap-2 border border-white/10">
