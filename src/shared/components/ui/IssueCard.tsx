@@ -3,6 +3,15 @@ import { Users, Circle } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { LanguageIcon } from '../LanguageIcon'
 
+/**
+ * General-purpose, prop-driven IssueCard used across DiscoverPage and
+ * IssuesTab.  There is a separate, intentionally independent
+ * {@link import('../../../features/maintainers/components/issues/MaintainerIssueCard').MaintainerIssueCard}
+ * that serves the maintainer issues sidebar with a different prop shape and
+ * rendering logic — the split is intentional to avoid a fragile unified
+ * interface.
+ */
+
 export interface IssueCardProps {
   id: string
   number?: string

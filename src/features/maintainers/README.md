@@ -16,7 +16,7 @@ The Maintainers dashboard has been refactored into a clean, modular, feature-bas
 │   ├── issues/             # Tab 2: Issues components
 │   │   ├── ApplicationCard.tsx
 │   │   ├── EmptyIssueState.tsx
-│   │   ├── IssueCard.tsx
+│   │   ├── MaintainerIssueCard.tsx
 │   │   ├── IssueFilterDropdown.tsx
 │   │   ├── IssueListSidebar.tsx
 │   │   └── IssuesTab.tsx
@@ -42,7 +42,7 @@ The Maintainers dashboard has been refactored into a clean, modular, feature-bas
 - **DashboardTab** - Main dashboard container with all stats and activity
 
 ### ✅ Tab 2: Issues
-- **IssueCard** - Individual issue cards with tags, stats, and metadata
+- **MaintainerIssueCard** - Individual issue cards with tags, stats, and metadata
 - **IssueFilterDropdown** - Filter dropdown (All, Waiting for review, In progress, Stale)
 - **IssueListSidebar** - Left sidebar with filters, search, and scrollable issue list
 - **EmptyIssueState** - Beautiful empty state when no issue is selected

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { useDebouncedValue } from '../../../../shared/hooks/useDebouncedValue'
 import { Issue } from '../../types'
-import { IssueCard } from './IssueCard'
+import { MaintainerIssueCard } from './MaintainerIssueCard'
 import { IssueFilterDropdown } from './IssueFilterDropdown'
 
 interface IssueListSidebarProps {
@@ -172,7 +172,7 @@ export function IssueListSidebar({
           {!showNoIssuesFound &&
             !showNoMatches &&
             issues.map((issue, idx) => (
-              <IssueCard
+              <MaintainerIssueCard
                 key={issue.id}
                 issue={issue}
                 index={idx}

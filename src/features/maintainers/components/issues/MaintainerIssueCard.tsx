@@ -2,13 +2,20 @@ import { Circle, FileText, User, Rocket, Users, User as UserIcon } from 'lucide-
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { Issue } from '../../types';
 
-interface IssueCardProps {
+interface MaintainerIssueCardProps {
   issue: Issue;
   index: number;
   onClick: () => void;
 }
 
-export function IssueCard({ issue, index, onClick }: IssueCardProps) {
+/**
+ * Maintainer-specific IssueCard — intentionally kept separate from the
+ * shared {@link import('../../../../shared/components/ui/IssueCard').IssueCard}
+ * because the two components have fundamentally different prop shapes and
+ * rendering logic. See the shared variant for the general-purpose, prop-driven
+ * version used in DiscoverPage and IssuesTab.
+ */
+export function MaintainerIssueCard({ issue, index, onClick }: MaintainerIssueCardProps) {
   const { theme } = useTheme();
   const getIcon = () => {
     const iconColor = theme === 'dark' ? '#b8a898' : '#7a6b5a';
