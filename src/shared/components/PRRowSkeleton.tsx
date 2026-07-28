@@ -1,8 +1,15 @@
 import { SkeletonLoader } from './SkeletonLoader';
+import { useTheme } from '../contexts/ThemeContext';
 
 export function PRRowSkeleton() {
+  const { theme } = useTheme();
+
   return (
-    <tr role="row" className="grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border bg-white/[0.08] border-white/15">
+    <tr role="row" className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border ${
+      theme === 'dark'
+        ? 'bg-white/[0.08] border-white/15'
+        : 'bg-white/[0.15] border-white/25'
+    }`}>
       {/* Pull Request Info */}
       <td role="cell">
         <div className="flex items-start gap-3 mb-2">
