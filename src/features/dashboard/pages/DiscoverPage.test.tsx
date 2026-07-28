@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
 import { renderWithTheme } from '../../../test/renderWithTheme'
 import { DiscoverPage, getDaysLeft } from './DiscoverPage'
@@ -783,5 +783,69 @@ describe('DiscoverPage Infinite Scroll and Load More', () => {
     // After all content is loaded, there should be no spinning loader
     const loader = screen.queryByTestId(/loader|spinner|loading/i)
     expect(loader).not.toBeInTheDocument()
+  })
+})
+
+describe('DiscoverPage - favorite button', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('toggles favorite state when the heart button is clicked', async () => {
+    const mockProjects = [
+      {
+        id: 'proj-1',
+        github_full_name: 'owner/repo-1',
+        stars_count: 100,
+        forks_count: 50,
+        open_issues_count: 5,
+        description: 'Repo 1 description',
+        tags: ['React', 'TypeScript'],
+        ecosystem_name: 'Stellar',
+      },
+    ]
+
+    const mockIssues = {
+      issues: [
+        {
+          github_issue_id: 101,
+          number: 1,
+          state: 'open',
+          title: 'Issue 1',
+          description: 'Issue 1 desc',
+          author_login: 'alice',
+          labels: [{ name: 'good first issue' }],
+          url: 'https://github.com/owner/repo-1/issues/1',
+          updated_at: '2026-06-26T12:00:00Z',
+          last_seen_at: '2026-06-26T12:00:00Z',
+          deadline: '2026-06-30T18:00:00Z',
+        },
+      ],
+    }
+
+    mockGetRecommendedProjects.mockResolvedValue({ projects: mockProjects })
+    mockGetPublicProjectIssues.mockResolvedValue(mockIssues)
+
+    renderWithTheme(<DiscoverPage />)
+
+    // Wait for projects to load
+    await waitFor(() => {
+      expect(screen.getByText('repo-1')).toBeInTheDocument()
+    })
+
+    // Find the favorite button — initially "Add to favorites"
+    const favButton = screen.getByRole('button', { name: /add to favorites/i })
+    expect(favButton).toBeInTheDocument()
+    expect(favButton).toHaveAttribute('aria-pressed', 'false')
+
+    // Click to favorite
+    fireEvent.click(favButton)
+    expect(favButton).toHaveAttribute('aria-label', 'Remove from favorites')
+    expect(favButton).toHaveAttribute('aria-pressed', 'true')
+
+    // Click again to unfavorite
+    fireEvent.click(favButton)
+    expect(favButton).toHaveAttribute('aria-label', 'Add to favorites')
+    expect(favButton).toHaveAttribute('aria-pressed', 'false')
   })
 })

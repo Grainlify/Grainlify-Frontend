@@ -204,6 +204,7 @@ export function DiscoverPage({ onGoToBilling, onGoToOpenSourceWeek }: DiscoverPa
     projectId?: string
   } | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [favoritedProjects, setFavoritedProjects] = useState<Set<string>>(new Set())
 
   // Use optimistic data hook for projects with 30-second cache
   const {
@@ -527,11 +528,26 @@ export function DiscoverPage({ onGoToBilling, onGoToOpenSourceWeek }: DiscoverPa
                     </div>
                   )}
                   <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setFavoritedProjects((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(project.id)) {
+                          next.delete(project.id)
+                        } else {
+                          next.add(project.id)
+                        }
+                        return next
+                      })
+                    }}
                     className="text-[#c9983a] hover:text-[#a67c2e] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c9983a] rounded-lg"
-                    aria-label="Add to favorites"
-                    aria-pressed="false"
+                    aria-label={favoritedProjects.has(project.id) ? 'Remove from favorites' : 'Add to favorites'}
+                    aria-pressed={favoritedProjects.has(project.id)}
                   >
-                    <Heart className="w-5 h-5" aria-hidden="true" />
+                    <Heart
+                      className={`w-5 h-5 ${favoritedProjects.has(project.id) ? 'fill-[#c9983a]' : ''}`}
+                      aria-hidden="true"
+                    />
                   </button>
                 </div>
 
