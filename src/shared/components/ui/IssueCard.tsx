@@ -3,6 +3,13 @@ import { Users, Circle } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { LanguageIcon } from '../LanguageIcon'
 
+// This is the general, prop-driven IssueCard used across most of the app.
+// src/features/maintainers/components/issues/MaintainerIssueCard.tsx is a
+// separate, unrelated component for the maintainers issue-list sidebar
+// specifically (single `issue: Issue` prop, its own rendering logic) — it
+// was previously also named `IssueCard`, an identically-named collision with
+// no shared code; renamed to disambiguate. See that file for the reciprocal
+// note. (Issue #659)
 export interface IssueCardProps {
   id: string
   number?: string
