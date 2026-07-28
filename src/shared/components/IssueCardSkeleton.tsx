@@ -1,8 +1,15 @@
-import { SkeletonLoader } from './SkeletonLoader';
+import { SkeletonLoader } from './SkeletonLoader'
+import { useTheme } from '../contexts/ThemeContext'
 
 export function IssueCardSkeleton() {
+  const { theme } = useTheme()
+
   return (
-    <div className="backdrop-blur-[25px] rounded-[16px] border p-4 bg-white/[0.08] border-white/10">
+    <div
+      className={`backdrop-blur-[25px] rounded-[16px] border p-4 ${
+        theme === 'dark' ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'
+      }`}
+    >
       {/* Issue Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -26,7 +33,11 @@ export function IssueCardSkeleton() {
       </div>
 
       {/* Author and Time Skeleton */}
-      <div className="flex items-center gap-2 pt-3 border-t border-white/10">
+      <div
+        className={`flex items-center gap-2 pt-3 border-t ${
+          theme === 'dark' ? 'border-white/10' : 'border-white/20'
+        }`}
+      >
         {/* Avatar Skeleton */}
         <SkeletonLoader variant="circle" width="24px" height="24px" />
         {/* Name Skeleton */}
@@ -35,20 +46,5 @@ export function IssueCardSkeleton() {
         <SkeletonLoader variant="text" width="60px" height="12px" className="ml-auto" />
       </div>
     </div>
-  );
+  )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
