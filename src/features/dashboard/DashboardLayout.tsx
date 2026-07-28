@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom'
+import { ErrorBoundary } from '../../shared/components/ErrorBoundary'
 import {
   Search,
   Compass,
@@ -533,7 +534,9 @@ export function DashboardLayout() {
 
           {/* Page Content - Outlet for nested routes */}
           <div className="pt-[68px]">
-            <Outlet />
+            <ErrorBoundary key={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </div>
         </div>
       </main>

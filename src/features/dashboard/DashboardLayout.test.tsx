@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { I18nProvider } from '../../shared/i18n'
 
 // ─── mock dependencies ──────────────────────────────────────────────────────
@@ -366,5 +366,98 @@ describe('DashboardLayout icon-only controls accessibility', () => {
       // Focus should be returned to the open button (sensible focus restoration)
       expect(document.activeElement).toBe(openBtn)
     })
+  })
+})
+
+describe('DashboardLayout route-level error boundary', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+
+  function ThrowingChild() {
+    throw new Error('Dashboard route boom')
+  }
+
+  function SafeChild() {
+    return <p>Safe route content</p>
+  }
+
+  beforeAll(() => {
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    window.addEventListener('error', (e: Event) => e.preventDefault())
+  })
+
+  afterAll(() => {
+    consoleErrorSpy.mockRestore()
+  })
+
+  beforeEach(() => {
+    sessionStorage.clear()
+    vi.clearAllMocks()
+  })
+
+  it('shows the error boundary fallback when a child route throws, while sidebar remains intact', () => {
+    render(
+      <MemoryRouter initialEntries={['/dashboard/browse']}>
+        <I18nProvider>
+          <Routes>
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route path="browse" element={<ThrowingChild />} />
+            </Route>
+          </Routes>
+        </I18nProvider>
+      </MemoryRouter>
+    )
+
+    // The error fallback is shown
+    expect(screen.getByRole('alert', { name: 'Something went wrong' })).toBeInTheDocument()
+
+    // The sidebar navigation items remain intact
+    expect(screen.getByRole('link', { name: 'Discover' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Browse' })).toBeInTheDocument()
+  })
+
+  it('recovers when navigating to a different route after a crash', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard/browse']}>
+        <I18nProvider>
+          <Routes>
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route path="browse" element={<ThrowingChild />} />
+              <Route path="discover" element={<SafeChild />} />
+            </Route>
+          </Routes>
+        </I18nProvider>
+      </MemoryRouter>
+    )
+
+    // The error fallback is shown
+    expect(screen.getByRole('alert', { name: 'Something went wrong' })).toBeInTheDocument()
+
+    // Navigate to a different route via sidebar link
+    await user.click(screen.getByRole('link', { name: 'Discover' }))
+
+    // The safe route content is now rendered
+    expect(screen.getByText('Safe route content')).toBeInTheDocument()
+  })
+
+  it('does not interfere with non-erroring child routes', () => {
+    render(
+      <MemoryRouter initialEntries={['/dashboard/discover']}>
+        <I18nProvider>
+          <Routes>
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route path="discover" element={<SafeChild />} />
+            </Route>
+          </Routes>
+        </I18nProvider>
+      </MemoryRouter>
+    )
+
+    // The safe route content renders normally
+    expect(screen.getByText('Safe route content')).toBeInTheDocument()
+
+    // Sidebar navigation is still present
+    expect(screen.getByRole('link', { name: 'Discover' })).toBeInTheDocument()
   })
 })
