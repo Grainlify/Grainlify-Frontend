@@ -3,13 +3,17 @@ import { Circle, FileText, User, Rocket, Users, User as UserIcon } from 'lucide-
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { Issue } from '../../types'
 
-interface IssueCardProps {
+// Renamed from `IssueCard` to disambiguate from the unrelated, more general
+// `IssueCard` in src/shared/components/ui/IssueCard.tsx — the two shared no
+// code and had diverging prop shapes/behavior under an identical name. See
+// that file's own cross-reference comment. (Issue #659)
+interface MaintainerIssueCardProps {
   issue: Issue
   index: number
   onClick: () => void
 }
 
-export function IssueCard({ issue, index, onClick }: IssueCardProps) {
+export function MaintainerIssueCard({ issue, index, onClick }: MaintainerIssueCardProps) {
   const { theme } = useTheme()
   const [imageFailed, setImageFailed] = useState(false)
 
