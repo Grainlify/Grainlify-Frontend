@@ -252,4 +252,22 @@ describe('DataPage', () => {
       expect(apiClient.getProjectActivity).toHaveBeenCalledWith('Weekly interval')
     })
   })
+
+  // ------------- Tooltip year ------------------------------------------------
+
+  describe('chart tooltip', () => {
+    it('does not hardcode a literal year string', async () => {
+      renderPage()
+      await waitFor(() => expect(apiClient.getProjectActivity).toHaveBeenCalled())
+
+      // The tooltip renders the CustomTooltip component. The mock Tooltip
+      // passes its content prop through, so <p> elements inside the tooltip
+      // should not contain the old hardcoded "2025" literal.
+      const tooltips = screen.getAllByTestId('tooltip')
+      expect(tooltips.length).toBeGreaterThanOrEqual(1)
+      for (const tooltip of tooltips) {
+        expect(tooltip.textContent).not.toContain('2025')
+      }
+    })
+  })
 })
