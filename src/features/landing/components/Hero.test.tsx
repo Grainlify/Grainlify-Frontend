@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -28,8 +27,10 @@ function renderHero() {
 describe('Hero component layout shift prevention', () => {
   it('renders skeleton placeholders while loading', () => {
     vi.mocked(useLandingStats).mockReturnValue({
+      stats: null,
       display: { activeProjects: '—', contributors: '—', grantsDistributed: '—' },
       isLoading: true,
+      error: null,
     })
     renderHero()
     // Image placeholder should be present
@@ -41,8 +42,10 @@ describe('Hero component layout shift prevention', () => {
 
   it('shows actual stats after loading', () => {
     vi.mocked(useLandingStats).mockReturnValue({
+      stats: null,
       display: { activeProjects: '10', contributors: '200', grantsDistributed: '5000' },
       isLoading: false,
+      error: null,
     })
     renderHero()
     expect(screen.queryByTestId('stat-skeleton')).not.toBeInTheDocument()

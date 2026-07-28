@@ -50,7 +50,7 @@ describe('NotificationRow optimistic mark-as-read', () => {
   })
 
   test('rolls back UI and shows error on API failure', async () => {
-    const onMarkAsRead = vi.fn<[], Promise<void>>(
+    const onMarkAsRead = vi.fn<() => Promise<void>>(
       () => new Promise((_, reject) => setTimeout(() => reject(new Error('API error')), 10))
     )
     render(
@@ -72,7 +72,7 @@ describe('NotificationRow optimistic mark-as-read', () => {
 
   test('prevents duplicate API calls on rapid double-click', async () => {
     // Use a pending promise to keep the button disabled during the async update
-    const onMarkAsRead = vi.fn<[], Promise<void>>(() => new Promise(() => {})) // pending
+    const onMarkAsRead = vi.fn<() => Promise<void>>(() => new Promise(() => {})) // pending
     render(
       <ThemeWrapper>
         <NotificationRow {...baseProps} onMarkAsRead={onMarkAsRead} />

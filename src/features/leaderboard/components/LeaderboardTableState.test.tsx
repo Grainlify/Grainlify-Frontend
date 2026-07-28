@@ -105,7 +105,7 @@ describe('Empty state', () => {
   })
 
   it('renders the empty hint only when provided', () => {
-    const { rerender } = renderWithTheme(<LeaderboardTableState emptyTitle="Title only" />)
+    renderWithTheme(<LeaderboardTableState emptyTitle="Title only" />)
 
     expect(screen.getByRole('status')).toHaveTextContent('Title only')
     // No <p> with an empty-hint string should be present.
