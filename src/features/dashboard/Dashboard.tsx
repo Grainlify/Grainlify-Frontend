@@ -633,7 +633,6 @@ export function Dashboard() {
             {/* Role Switcher */}
             <RoleSwitcher
               currentRole={activeRole}
-              isSmallDevice={!!isSmallDevice}
               showMobileNav={!!showMobileNav}
               closeMobileNav={closeMobileNav}
               onRoleChange={handleRoleChange}
