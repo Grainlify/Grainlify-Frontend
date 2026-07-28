@@ -18,6 +18,13 @@ vi.mock('../../../shared/contexts/ThemeContext', () => ({
   }),
 }))
 
+vi.mock('../../../shared/i18n', () => ({
+  useIntlFormatters: () => ({
+    formatDate: (date: Date, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en-US', options).format(date),
+  }),
+}))
+
 import { ContributionsTab } from './ContributionsTab'
 
 function renderContributionsTab() {
