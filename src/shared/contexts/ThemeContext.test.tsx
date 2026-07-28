@@ -90,6 +90,18 @@ describe('ThemeProvider + useTheme', () => {
     await waitFor(() => expect(localStorage.getItem('theme')).toBe('light'))
   })
 
+  it('falls back to the default theme when localStorage has an invalid value', () => {
+    localStorage.setItem('theme', 'invalid-value')
+    const { result } = renderHook(() => useTheme(), { wrapper })
+    expect(result.current.theme).toBe('light')
+  })
+
+  it('falls back to the default theme when localStorage has malformed JSON', () => {
+    localStorage.setItem('theme', '{{{broken')
+    const { result } = renderHook(() => useTheme(), { wrapper })
+    expect(result.current.theme).toBe('light')
+  })
+
   it('throws when useTheme is rendered without ThemeProvider', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const preventExpectedError = (event: ErrorEvent) => {
