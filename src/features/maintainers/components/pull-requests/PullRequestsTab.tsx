@@ -89,7 +89,7 @@ function getEmptyStateKind({
  * @param props - The component props.
  * @returns The Pull Requests tab component.
  */
-export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
+export function PullRequestsTab({ selectedProjects, onRefresh }: PullRequestsTabProps) {
   const { theme } = useTheme()
   const { userRole } = useAuth()
   const isAuthorized = userRole === 'maintainer' || userRole === 'admin'
@@ -175,6 +175,7 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
     const handleRepositoriesRefreshed = () => {
       // Refresh PRs when repositories are added or updated.
       loadPRs()
+      onRefresh?.()
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)

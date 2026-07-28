@@ -129,3 +129,22 @@ describe('PullRequestsTab accessibility', () => {
     expect(headers[3]).toHaveAttribute('scope', 'col')
   })
 })
+
+describe('PullRequestsTab onRefresh', () => {
+  beforeEach(() => {
+    mockGetProjectPRs.mockReset()
+  })
+
+  it('calls onRefresh when the repositories-refreshed event is dispatched', () => {
+    const onRefresh = vi.fn()
+    mockGetProjectPRs.mockResolvedValue({ prs: [] })
+
+    renderWithTheme(<PullRequestsTab selectedProjects={PROJECTS} onRefresh={onRefresh} />)
+
+    expect(onRefresh).not.toHaveBeenCalled()
+
+    window.dispatchEvent(new Event('repositories-refreshed'))
+
+    expect(onRefresh).toHaveBeenCalledTimes(1)
+  })
+})
