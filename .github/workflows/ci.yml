@@ -26,7 +26,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          # jsdom 30 (via its undici dependency) requires
+          # `worker_threads.markAsUncloneable`, added in Node 21 — Node 20
+          # doesn't have it, and jsdom's CacheStorage module crashes on
+          # import, which vitest surfaces as "Failed to start forks worker"
+          # for every test file. 22 is the current LTS.
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies
