@@ -30,7 +30,7 @@ export function BlogHowItWorks() {
   ]
 
   const maintainerSteps = [
-    'Submit your project to OnlyGrain',
+    'Submit your project to Grainlify',
     'Set up bounties and contribution guidelines',
     'Get matched with skilled developers',
     'Review contributions and approve rewards',
