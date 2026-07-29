@@ -1,8 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
-import { I18nProvider } from '../../../shared/i18n'
 import { Hero } from './Hero'
 
 // Mock the useLandingStats hook
@@ -10,18 +8,18 @@ vi.mock('../../../shared/hooks/useLandingStats', () => ({
   useLandingStats: vi.fn(),
 }))
 
+// Hero only reads `theme` from context; stub it directly rather than mounting
+// the real ThemeProvider (avoids pulling in its localStorage bootstrapping).
+vi.mock('../../../shared/contexts/ThemeContext', () => ({
+  useTheme: () => ({ theme: 'light' }),
+}))
+
 import { useLandingStats } from '../../../shared/hooks/useLandingStats'
 
-// Hero renders a react-router <Link> and reads the theme context, so both
-// providers are needed for it to mount without throwing.
 function renderHero() {
   return render(
     <MemoryRouter>
-      <I18nProvider>
-        <ThemeProvider>
-          <Hero />
-        </ThemeProvider>
-      </I18nProvider>
+      <Hero />
     </MemoryRouter>
   )
 }

@@ -7,9 +7,11 @@ import { ThemeProvider } from '../../../../shared/contexts/ThemeContext'
 import { vi } from 'vitest'
 import { toast } from 'sonner'
 
-// localStorage is already mocked globally in src/test/setup.ts (with the
-// clear()/removeItem()/key() methods the afterEach hook there relies on) —
-// no need to re-stub it here.
+// Note: localStorage (used by ThemeProvider) is already mocked globally in
+// src/test/setup.ts. A prior local override here replaced it with a
+// partial stub (no `clear`) via a non-configurable `Object.defineProperty`,
+// which permanently broke the shared afterEach cleanup for the rest of this
+// file's test run.
 vi.mock('sonner', () => ({
   toast: { error: vi.fn() },
 }))

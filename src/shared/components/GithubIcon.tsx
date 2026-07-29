@@ -1,10 +1,13 @@
-import { memo } from 'react'
 import { siGithub } from 'simple-icons'
 
-// lucide-react no longer ships a GitHub brand icon (removed upstream); this
-// shared component fills that gap using the already-installed simple-icons
-// data, matching lucide's className-driven sizing convention.
-export const GithubIcon = memo(function GithubIcon({ className }: { className?: string }) {
+interface GithubIconProps {
+  className?: string
+}
+
+// lucide-react no longer ships a GitHub brand icon (removed upstream in
+// 1.23.0); this shared component fills that gap using the already-installed
+// simple-icons data, matching lucide's className-driven sizing convention.
+export function GithubIcon({ className }: GithubIconProps) {
   return (
     <svg
       role="img"
@@ -16,4 +19,4 @@ export const GithubIcon = memo(function GithubIcon({ className }: { className?: 
       <path d={siGithub.path} />
     </svg>
   )
-})
+}

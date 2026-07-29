@@ -27,7 +27,6 @@ import {
   RefreshCw,
   LucideIcon,
 } from 'lucide-react'
-import { GithubIcon } from '../../../shared/components/GithubIcon'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useAuth } from '../../../shared/contexts/AuthContext'
@@ -41,6 +40,7 @@ import {
 } from '../../../shared/api/client'
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { LanguageIcon } from '../../../shared/components/LanguageIcon'
+import { GithubIcon } from '../../../shared/components/GithubIcon'
 
 /**
  * Inline error panel with a retry affordance, rendered when a profile section's

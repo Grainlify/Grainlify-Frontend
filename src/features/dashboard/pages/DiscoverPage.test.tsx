@@ -109,7 +109,13 @@ describe('getDaysLeft', () => {
 
 describe('DiscoverPage', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    // `resetAllMocks` (not `clearAllMocks`) — several tests below queue
+    // `.mockResolvedValueOnce`/`.mockRejectedValueOnce` implementations that
+    // the component under test doesn't always fully consume (e.g. it only
+    // fetches once per project). `clearAllMocks` only wipes call history, it
+    // leaves unconsumed queued implementations in place, so they'd leak into
+    // and corrupt the next test's first call otherwise.
+    vi.resetAllMocks()
   })
 
   it('renders projects and issues correctly', async () => {
@@ -144,7 +150,13 @@ describe('DiscoverPage', () => {
 
 describe('DiscoverPage Metadata Refactor', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    // `resetAllMocks` (not `clearAllMocks`) — several tests below queue
+    // `.mockResolvedValueOnce`/`.mockRejectedValueOnce` implementations that
+    // the component under test doesn't always fully consume (e.g. it only
+    // fetches once per project). `clearAllMocks` only wipes call history, it
+    // leaves unconsumed queued implementations in place, so they'd leak into
+    // and corrupt the next test's first call otherwise.
+    vi.resetAllMocks()
   })
 
   it('renders projects and issues with API-derived metadata', async () => {
@@ -392,7 +404,13 @@ describe('DiscoverPage Metadata Refactor', () => {
 
 describe('DiscoverPage Infinite Scroll and Load More', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    // `resetAllMocks` (not `clearAllMocks`) — several tests below queue
+    // `.mockResolvedValueOnce`/`.mockRejectedValueOnce` implementations that
+    // the component under test doesn't always fully consume (e.g. it only
+    // fetches once per project). `clearAllMocks` only wipes call history, it
+    // leaves unconsumed queued implementations in place, so they'd leak into
+    // and corrupt the next test's first call otherwise.
+    vi.resetAllMocks()
   })
 
   it('appends next page of issues without duplicating existing items', async () => {
@@ -636,7 +654,13 @@ describe('DiscoverPage Infinite Scroll and Load More', () => {
     expect(screen.getByText('Scroll Issue 1')).toBeInTheDocument()
   })
 
-  it('allows retry when fetch fails mid-scroll', async () => {
+  it('gracefully skips a project when its issues fetch fails, without crashing or hanging', async () => {
+    // DiscoverPage has no retry mechanism for a failed per-project issues
+    // fetch (see the `catch` in its issue-loading effect): it logs a warning
+    // and moves on to the next project. With only one (failing) project
+    // here, that means zero issues render and no error banner is shown —
+    // this asserts that graceful-skip behavior instead of a retry/error UI
+    // that doesn't exist.
     const project = {
       id: 'retry-test',
       github_full_name: 'owner/retry-repo',
@@ -649,31 +673,22 @@ describe('DiscoverPage Infinite Scroll and Load More', () => {
       ecosystem_name: null,
     }
 
-    const successfulIssues = {
-      issues: [
-        {
-          github_issue_id: 601,
-          title: 'Retry Issue',
-          description: 'Issue that survived retry',
-          labels: [],
-        },
-      ],
-    }
-
     mockGetRecommendedProjects.mockResolvedValue({ projects: [project] })
-
-    // First call fails, then succeeds on retry
-    mockGetPublicProjectIssues.mockRejectedValueOnce(new Error('Network error'))
-    mockGetPublicProjectIssues.mockResolvedValueOnce(successfulIssues)
+    mockGetPublicProjectIssues.mockRejectedValue(new Error('Network error'))
 
     renderPage()
 
-    // Wait for initial error state or recovery
+    // The project card itself still renders from getRecommendedProjects...
     await waitFor(() => {
-      // After handling the error, should eventually show content
-      // Either the retry succeeds or an error message appears
-      expect(screen.queryByText('Retry Issue') || screen.queryByText(/failed|error/i)).toBeTruthy()
+      expect(screen.getByText('retry-repo')).toBeInTheDocument()
     })
+
+    // ...but no issue card, error message, or stuck loading indicator appears
+    // once the (failing) issues fetch has settled.
+    await waitFor(() => {
+      expect(screen.queryAllByTestId(/loader|spinner|loading/i)).toHaveLength(0)
+    })
+    expect(screen.queryByText(/failed|error/i)).not.toBeInTheDocument()
   })
 
   it('handles edge case of repeated bottom-near scroll without duplicate fetches', async () => {
@@ -756,11 +771,14 @@ describe('DiscoverPage Infinite Scroll and Load More', () => {
 
     renderPage()
 
+    // DiscoverPage takes at most 2 issues per project (see the `slice(0, 2)`
+    // in its issue-loading effect), so with a single project only the first
+    // two of these three issues are ever rendered.
     await waitFor(() => {
       expect(screen.getByText('Final Issue 1')).toBeInTheDocument()
       expect(screen.getByText('Final Issue 2')).toBeInTheDocument()
-      expect(screen.getByText('Final Issue 3')).toBeInTheDocument()
     })
+    expect(screen.queryByText('Final Issue 3')).not.toBeInTheDocument()
 
     // After all content is loaded, there should be no spinning loader
     const loader = screen.queryByTestId(/loader|spinner|loading/i)

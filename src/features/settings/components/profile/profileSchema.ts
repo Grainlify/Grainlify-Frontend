@@ -8,26 +8,37 @@ import { z } from 'zod'
  * All fields are optional but subject to specific validation rules (e.g. website URL format).
  */
 
-/** Error message shown when a social handle field fails validation. */
+/** Shared error message shown when a social handle field fails format validation. */
 export const SOCIAL_HANDLE_ERROR_MESSAGE =
-  'Enter a bare handle (letters, numbers, underscores, periods, optional leading @) — not a full URL or a value with spaces.'
+  'Enter a bare handle (letters, numbers, "." or "_"), with an optional leading @ — not a URL or slash-separated path.'
 
-const HANDLE_PATTERN = /^@?[A-Za-z0-9_.+#]+$/
+/** A bare handle: optional leading "@", then letters, digits, "_", or "." — no slashes, whitespace, or embedded "@". */
+const HANDLE_PATTERN = /^@?[A-Za-z0-9_.]+$/
 
 /**
- * True for a bare social handle (optionally prefixed with `@`): letters,
- * numbers, underscores, periods, `+` (international WhatsApp numbers), and
- * `#` (legacy Discord discriminators like `name#1234`) only. `undefined`/
- * `null`/`''` are treated as valid since the field is optional. Rejects
- * slashes and whitespace, which also rejects full URLs (they necessarily
- * contain `:` and `/`).
+ * Validates a social handle value. `undefined`, `null`, and `''` are treated
+ * as valid since every social field is optional; otherwise the value must be
+ * a bare handle (optionally prefixed with "@") — no slashes, whitespace, or
+ * full URLs.
  */
 export function isValidHandle(value: string | null | undefined): boolean {
-  if (value == null || value === '') return true
+  if (value === undefined || value === null || value === '') return true
   return HANDLE_PATTERN.test(value)
 }
 
-/** Optional http(s) URL, or an empty string/undefined. */
+/**
+ * Reusable schema for a single social-platform handle field. Shared by every
+ * social field on {@link profileSchema} so all platforms get the same
+ * length cap and handle-format validation.
+ */
+export const socialHandleSchema = z
+  .string()
+  .max(100, { message: 'Handle must be 100 characters or less' })
+  .optional()
+  .or(z.literal(''))
+  .refine((val) => isValidHandle(val), { message: SOCIAL_HANDLE_ERROR_MESSAGE })
+
+/** Reusable schema for the website field: a valid absolute http(s) URL, or empty. */
 export const websiteSchema = z
   .string()
   .trim()
@@ -45,14 +56,6 @@ export const websiteSchema = z
   )
   .optional()
   .or(z.literal(''))
-
-/** Optional social handle: max 100 characters, must satisfy {@link isValidHandle}. */
-export const socialHandleSchema = z
-  .string()
-  .max(100, { message: 'Handle must be 100 characters or less' })
-  .optional()
-  .or(z.literal(''))
-  .refine((val) => isValidHandle(val), { message: SOCIAL_HANDLE_ERROR_MESSAGE })
 
 export const profileSchema = z.object({
   firstName: z

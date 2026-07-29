@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
+import { I18nProvider } from '../../../shared/i18n'
 import { IssueDetailPage } from './IssueDetailPage'
 
 const mockGetMyProjects = vi.fn()
@@ -40,9 +41,11 @@ describe('IssueDetailPage — XSS sanitization & GFM rendering', () => {
 
   const renderPage = (issueId: string, projectId: string) => {
     return render(
-      <ThemeProvider>
-        <IssueDetailPage issueId={issueId} projectId={projectId} onClose={vi.fn()} />
-      </ThemeProvider>
+      <I18nProvider>
+        <ThemeProvider>
+          <IssueDetailPage issueId={issueId} projectId={projectId} onClose={vi.fn()} />
+        </ThemeProvider>
+      </I18nProvider>
     )
   }
 
@@ -69,7 +72,11 @@ describe('IssueDetailPage — XSS sanitization & GFM rendering', () => {
 
     renderPage('12345', 'proj-1')
 
-    await waitFor(() => expect(screen.getByText('Test Issue Sanitization')).toBeInTheDocument())
+    // The title renders twice by design: once in the issue-list card and
+    // once in the detail panel header for the selected issue.
+    await waitFor(() =>
+      expect(screen.getAllByText('Test Issue Sanitization').length).toBeGreaterThan(0)
+    )
 
     const discussionsTab = await screen.findByRole('button', { name: /discussions/i })
     await userEvent.click(discussionsTab)
@@ -89,9 +96,13 @@ describe('IssueDetailPage — XSS sanitization & GFM rendering', () => {
     const maliciousPayload = 'Safe image <img src="x" onerror="alert(1)">'
     await loadIssueWithBody(maliciousPayload)
 
-    const img = document.querySelector('img[src="x"]')
-    expect(img).toBeInTheDocument()
-    expect(img?.getAttribute('onerror')).toBeNull()
+    expect(screen.getByText(/Safe image/)).toBeInTheDocument()
+    // react-markdown doesn't parse raw inline HTML without rehype-raw, so the
+    // whole malicious tag is dropped rather than rendered with onerror
+    // stripped — no element in the tree should carry an onerror handler, and
+    // the malicious img (identified by its src) must not have been rendered.
+    expect(document.querySelector('[onerror]')).toBeNull()
+    expect(document.querySelector('img[src="x"]')).toBeNull()
   })
 
   it('neutralizes javascript: URLs in markdown links', async () => {

@@ -403,7 +403,7 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
           </p>
           {!isLoading && ecosystems.length > 0 && (
             <div className="mt-2 text-[11px] md:text-xs opacity-70">
-              {t('ecosystems.filteredCount').replace('{count}', String(ecosystems.length))}
+              {t('ecosystems.filteredCount', { count: ecosystems.length })}
             </div>
           )}
         </div>
