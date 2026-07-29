@@ -410,7 +410,6 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {filteredEcosystems.map((ecosystem) => {
-            logger.debug('Rendering ecosystem:', ecosystem)
             return (
               <div
                 key={ecosystem.id}
