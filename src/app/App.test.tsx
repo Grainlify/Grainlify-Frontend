@@ -32,6 +32,11 @@ vi.mock('../features/auth', () => ({
   AuthCallbackPage: () => <div>Auth callback page</div>,
 }))
 
+vi.mock('../shared/components/legal/LegalPages', () => ({
+  TermsPage: () => <div>Terms of Service page</div>,
+  PrivacyPage: () => <div>Privacy Policy page</div>,
+}))
+
 vi.mock('../features/dashboard/DashboardLayout', async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
   const { Outlet } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
@@ -142,5 +147,17 @@ describe('App route code splitting', () => {
     expect(screen.getByRole('status', { name: /checking authentication/i })).toBeInTheDocument()
     expect(screen.queryByRole('status', { name: /loading route/i })).not.toBeInTheDocument()
     expect(screen.queryByText('Dashboard shell')).not.toBeInTheDocument()
+  })
+
+  it('renders the Terms of Service page at /terms', async () => {
+    window.history.pushState({}, '', '/terms')
+    render(<App />)
+    expect(await screen.findByText('Terms of Service page')).toBeInTheDocument()
+  })
+
+  it('renders the Privacy Policy page at /privacy', async () => {
+    window.history.pushState({}, '', '/privacy')
+    render(<App />)
+    expect(await screen.findByText('Privacy Policy page')).toBeInTheDocument()
   })
 })

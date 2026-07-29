@@ -5,6 +5,7 @@ import { ThemeProvider } from '../shared/contexts/ThemeContext'
 import { LandingPage } from '../features/landing'
 import { SignInPage, SignUpPage, AuthCallbackPage } from '../features/auth'
 import { NotFoundPage } from '../shared/components/NotFoundPage'
+import { TermsPage, PrivacyPage } from '../shared/components'
 import { RoleGuard } from '../shared/components/RoleGuard'
 import { AuthGuard } from '../shared/components/AuthGuard'
 import Toast from '../shared/components/Toast'
@@ -176,6 +177,8 @@ export function AppRoutes() {
       <Route path="/signin" element={<SignInPage />} />
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route
         path="/dashboard"
         element={

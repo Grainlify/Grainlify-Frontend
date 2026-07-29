@@ -172,11 +172,11 @@ export function SignUpPage() {
                 }`}
               >
                 {t('auth.signup.termsPrefix')}{' '}
-                <a href="#" className="text-[#c9983a] hover:text-[#d4af37] underline font-medium">
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#c9983a] hover:text-[#d4af37] underline font-medium">
                   {t('auth.signup.termsOfService')}
                 </a>{' '}
                 {t('auth.signup.termsConnector')}{' '}
-                <a href="#" className="text-[#c9983a] hover:text-[#d4af37] underline font-medium">
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#c9983a] hover:text-[#d4af37] underline font-medium">
                   {t('auth.signup.privacyPolicy')}
                 </a>
               </p>

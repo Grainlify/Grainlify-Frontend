@@ -8,3 +8,4 @@ export type { RoleGuardProps, AllowedRole } from './RoleGuard';
 export { AuthGuard, AuthLoadingFallback } from './AuthGuard';
 export type { AuthGuardProps } from './AuthGuard';
 export { ScrollToTop } from './ScrollToTop';
+export { TermsPage, PrivacyPage } from './legal/LegalPages';

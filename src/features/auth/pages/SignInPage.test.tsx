@@ -166,9 +166,13 @@ describe('Auth pages localized strings', () => {
     expect(screen.getByText('Localized activity access')).toBeInTheDocument()
     expect(screen.getByText('Localized private repositories disclaimer')).toBeInTheDocument()
     expect(screen.getByText(/Localized terms prefix/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Localized terms link' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Localized terms link' })).toHaveAttribute('href', '/terms')
+    expect(screen.getByRole('link', { name: 'Localized terms link' })).toHaveAttribute('target', '_blank')
+    expect(screen.getByRole('link', { name: 'Localized terms link' })).toHaveAttribute('rel', 'noopener noreferrer')
     expect(screen.getByText(/localized connector/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Localized privacy link' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Localized privacy link' })).toHaveAttribute('href', '/privacy')
+    expect(screen.getByRole('link', { name: 'Localized privacy link' })).toHaveAttribute('target', '_blank')
+    expect(screen.getByRole('link', { name: 'Localized privacy link' })).toHaveAttribute('rel', 'noopener noreferrer')
     expect(screen.getByText('Localized sign-up account prompt')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Localized sign-up signin link' })).toHaveAttribute(
       'href',
