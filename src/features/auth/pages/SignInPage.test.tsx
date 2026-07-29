@@ -306,4 +306,43 @@ describe('AuthCallbackPage returnTo lifecycle', () => {
 
     await waitFor(() => expect(sessionStorage.getItem(AUTH_RETURN_TO_KEY)).toBeNull())
   })
+
+  it('strips the token query parameter from the URL immediately after reading it', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback?token=some-jwt')
+
+    await waitFor(() => {
+      expect(window.location.search).toBe('')
+    })
+  })
+
+  it('strips the error query parameter from the URL immediately after reading it', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback?error=access_denied')
+
+    await waitFor(() => {
+      expect(window.location.search).toBe('')
+    })
+  })
+
+  it('replaces history entry when logging in fails', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockRejectedValue(new Error('bad token')),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback?token=bad-jwt')
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/signin'), {
+      timeout: 5000,
+    })
+  })
 })
