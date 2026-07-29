@@ -9,11 +9,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import { UserAvatar } from './UserAvatar';
+} from './ui/dropdown-menu'
+import { UserAvatar } from './UserAvatar'
 
 interface UserProfileDropdownProps {
-  onPageChange?: (page: string) => void
+  onPageChange: (page: string) => void
   showMobileNav: boolean
 }
 
@@ -24,19 +24,11 @@ export function UserProfileDropdown({ onPageChange, showMobileNav }: UserProfile
   const darkTheme = theme === 'dark'
 
   const handleProfileClick = () => {
-    if (onPageChange) {
-      onPageChange('profile')
-    } else {
-      navigate('/dashboard?page=profile')
-    }
+    onPageChange('profile')
   }
 
   const handleSettingsClick = () => {
-    if (onPageChange) {
-      onPageChange('settings')
-    } else {
-      navigate('/dashboard?page=settings')
-    }
+    onPageChange('settings')
   }
 
   const handleSignIn = () => {
@@ -77,11 +69,13 @@ export function UserProfileDropdown({ onPageChange, showMobileNav }: UserProfile
           ${showMobileNav ? ' flex ' : ' hidden lg:flex '}
           `}
         >
-          <div className={`absolute inset-0 pointer-events-none rounded-full ${
-            darkTheme
-              ? 'shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.5),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.11)]'
-              : 'shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.15),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.35)]'
-          }`} />
+          <div
+            className={`absolute inset-0 pointer-events-none rounded-full ${
+              darkTheme
+                ? 'shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.5),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.11)]'
+                : 'shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.15),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.35)]'
+            }`}
+          />
           <UserAvatar
             src={user.github?.avatar_url}
             name={user.github?.name}
@@ -183,5 +177,5 @@ export function UserProfileDropdown({ onPageChange, showMobileNav }: UserProfile
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }
