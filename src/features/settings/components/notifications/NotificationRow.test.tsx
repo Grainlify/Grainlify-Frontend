@@ -1,6 +1,6 @@
 // @vitest-pool=single
 // src/features/settings/components/notifications/NotificationRow.test.tsx
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { NotificationRow } from './NotificationRow'
 import { ThemeProvider } from '../../../../shared/contexts/ThemeContext'
@@ -50,8 +50,12 @@ describe('NotificationRow optimistic mark-as-read', () => {
   })
 
   test('rolls back UI and shows error on API failure', async () => {
+    let rejectRequest!: (reason?: unknown) => void
     const onMarkAsRead = vi.fn<() => Promise<void>>(
-      () => new Promise((_, reject) => setTimeout(() => reject(new Error('API error')), 10))
+      () =>
+        new Promise((_, reject) => {
+          rejectRequest = reject
+        })
     )
     render(
       <ThemeWrapper>
@@ -63,6 +67,11 @@ describe('NotificationRow optimistic mark-as-read', () => {
     await userEvent.click(button)
     const row = screen.getByTestId('notification-row')
     expect(row).toHaveClass('opacity-50')
+
+    await act(async () => {
+      rejectRequest(new Error('API error'))
+    })
+
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Failed to mark notification as read.')
     })
