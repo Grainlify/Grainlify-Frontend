@@ -119,7 +119,7 @@ export function PullRequestsTab({ selectedProjects }: PullRequestsTabProps) {
 
       // Fetch PRs from all selected projects in parallel
       let successCount = 0
-      let lastError: any = null
+      let lastError: unknown | null = null
 
       const prPromises = selectedProjects.map(async (project: Project) => {
         try {

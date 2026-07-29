@@ -46,7 +46,11 @@ describe('useLocalStorage', () => {
   })
 
   it('does not throw and uses the default when localStorage.getItem throws', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    // Spy on the live `localStorage` instance, not `Storage.prototype` — in
+    // jsdom, `localStorage` doesn't inherit `getItem`/`setItem` from
+    // `Storage.prototype` (it has its own instance properties), so a
+    // prototype spy silently never intercepts the real calls.
+    vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
       throw new Error('localStorage is unavailable')
     })
 
@@ -100,7 +104,8 @@ describe('useLocalStorage', () => {
 
   it('does not throw and still updates state when localStorage.setItem throws', () => {
     const { result } = renderHook(() => useLocalStorage(STORAGE_KEY, DEFAULT_VALUE, validateString))
-    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    // See the getItem test above for why this spies on the instance directly.
+    const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new Error('localStorage quota exceeded')
     })
 

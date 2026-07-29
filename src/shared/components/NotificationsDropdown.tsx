@@ -1,6 +1,7 @@
 import { Bell } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useState, useEffect } from 'react'
+import { formatCountBadge } from '../utils/formatCountBadge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,9 +43,6 @@ export function NotificationsDropdown({
   }
 
   // Format count for display (99+ for counts over 99)
-  const formatCount = (count: number): string => {
-    return count > 99 ? '99+' : count.toString()
-  }
 
   return (
     <DropdownMenu onOpenChange={handleOpenChange}>
@@ -85,7 +83,7 @@ export function NotificationsDropdown({
               }`}
             >
               <span className="text-[10px] font-bold leading-none tabular-nums">
-                {formatCount(notificationCount)}
+                {formatCountBadge(notificationCount)}
               </span>
             </div>
           )}

@@ -2,7 +2,8 @@ import { logger } from '../../../../shared/utils/logger'
 import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Github, User, Upload, Link as LinkIcon, Loader2 } from 'lucide-react'
+import { User, Upload, Link as LinkIcon, Loader2 } from 'lucide-react'
+import { GithubIcon } from '../../../../shared/components/GithubIcon'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import {
   getCurrentUser,
@@ -357,7 +358,7 @@ export function ProfileTab() {
                   : 'bg-white/[0.2] border-white/30 text-[#2d2820]'
               }`}
             >
-              <Github className="w-4 h-4" />
+              <GithubIcon className="w-4 h-4" />
               {isResyncing ? 'Syncing...' : 'Resync'}
             </button>
             <button

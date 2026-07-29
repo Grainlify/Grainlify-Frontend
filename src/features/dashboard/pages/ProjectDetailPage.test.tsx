@@ -15,7 +15,9 @@ vi.mock('../../../shared/api/client', () => ({
 }))
 
 vi.mock('react-markdown', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div data-testid="markdown">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="markdown">{children}</div>
+  ),
 }))
 
 const mockProjectData = {
@@ -72,7 +74,10 @@ const mockPRsData = {
   ],
 }
 
-function renderComponent(props: React.ComponentProps<typeof ProjectDetailPage> = {}, route = '/dashboard/projects/proj-123') {
+function renderComponent(
+  props: React.ComponentProps<typeof ProjectDetailPage> = {},
+  route = '/dashboard/projects/proj-123'
+) {
   return render(
     <ThemeProvider>
       <MemoryRouter initialEntries={[route]}>
@@ -92,16 +97,13 @@ describe('ProjectDetailPage', () => {
     mockGetPublicProjectIssues.mockReset()
     mockGetPublicProjectPRs.mockReset()
 
-    mockGetPublicProject.mockImplementation((id) => {
-      console.log('mockGetPublicProject called with:', id)
+    mockGetPublicProject.mockImplementation(() => {
       return Promise.resolve(mockProjectData)
     })
-    mockGetPublicProjectIssues.mockImplementation((id) => {
-      console.log('mockGetPublicProjectIssues called with:', id)
+    mockGetPublicProjectIssues.mockImplementation(() => {
       return Promise.resolve(mockIssuesData)
     })
-    mockGetPublicProjectPRs.mockImplementation((id) => {
-      console.log('mockGetPublicProjectPRs called with:', id)
+    mockGetPublicProjectPRs.mockImplementation(() => {
       return Promise.resolve(mockPRsData)
     })
   })
@@ -121,7 +123,9 @@ describe('ProjectDetailPage', () => {
 
       // Resolve promise to clean up
       resolveProject!(mockProjectData)
-      await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'test-repo' })).toBeInTheDocument())
+      await waitFor(() =>
+        expect(screen.getByRole('heading', { level: 1, name: 'test-repo' })).toBeInTheDocument()
+      )
     })
   })
 
@@ -136,7 +140,11 @@ describe('ProjectDetailPage', () => {
       await waitFor(() => {
         expect(screen.getByText('Project not found')).toBeInTheDocument()
       })
-      expect(screen.getByText("We couldn't find what you're looking for. It may have been moved or removed.")).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          "We couldn't find what you're looking for. It may have been moved or removed."
+        )
+      ).toBeInTheDocument()
       expect(screen.getByRole('link', { name: /Back to Browse/i })).toBeInTheDocument()
     })
 
@@ -222,7 +230,9 @@ describe('ProjectDetailPage', () => {
       expect(screen.getByText('Infrastructure')).toBeInTheDocument()
       expect(screen.getByText('Ethereum')).toBeInTheDocument()
       expect(screen.getByText('testorg')).toBeInTheDocument()
-      expect(screen.getByRole('heading', { level: 3, name: 'Fix issue in parser' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { level: 3, name: 'Fix issue in parser' })
+      ).toBeInTheDocument()
       expect(screen.getByText('Add support for feature X')).toBeInTheDocument()
     })
 
@@ -245,7 +255,9 @@ describe('ProjectDetailPage', () => {
       renderComponent({ projectId: 'proj-123', onIssueClick })
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { level: 3, name: 'Fix issue in parser' })).toBeInTheDocument()
+        expect(
+          screen.getByRole('heading', { level: 3, name: 'Fix issue in parser' })
+        ).toBeInTheDocument()
       })
 
       fireEvent.click(screen.getByRole('heading', { level: 3, name: 'Fix issue in parser' }))
@@ -267,7 +279,8 @@ describe('ProjectDetailPage', () => {
       })
 
       const buttons = screen.getAllByRole('button')
-      const copyButton = buttons.find((btn) => btn.querySelector('svg.lucide-copy') !== null) || buttons[1]
+      const copyButton =
+        buttons.find((btn) => btn.querySelector('svg.lucide-copy') !== null) || buttons[1]
       fireEvent.click(copyButton)
 
       expect(writeTextMock).toHaveBeenCalled()

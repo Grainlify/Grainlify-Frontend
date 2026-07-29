@@ -4,6 +4,7 @@ import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { ProjectData, FilterType } from '../types'
 import { getAvatarGradient } from '../data/leaderboardData'
 import { LeaderboardTableState } from './LeaderboardTableState'
+import { isLogoUrl } from '../utils'
 
 interface ProjectsTableProps {
   data: ProjectData[]
@@ -22,10 +23,6 @@ const getTrendIcon = (trend: 'up' | 'down' | 'same') => {
   if (trend === 'up') return <TrendingUp className="w-4 h-4 text-green-600" />
   if (trend === 'down') return <TrendingDown className="w-4 h-4 text-red-600" />
   return <Minus className="w-4 h-4 text-[#7a6b5a]" />
-}
-
-function isLogoUrl(logo: string): boolean {
-  return typeof logo === 'string' && (logo.startsWith('http://') || logo.startsWith('https://'))
 }
 
 /**

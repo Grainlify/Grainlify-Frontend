@@ -1,13 +1,23 @@
-import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
 
 export function ContributorsTableSkeleton() {
-  const { theme: _theme } = useTheme();
+  const { theme } = useTheme()
 
   return (
-    <div className={`backdrop-blur-[40px] bg-white/[0.12] rounded-[24px] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden`}>
+    <div
+      className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden ${
+        theme === 'dark' ? 'bg-white/[0.10] border-white/[0.16]' : 'bg-white/[0.12] border-white/20'
+      }`}
+    >
       {/* Table Header */}
-      <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-white/10 backdrop-blur-[30px] bg-white/[0.08]">
+      <div
+        className={`grid grid-cols-12 gap-4 px-8 py-4 border-b backdrop-blur-[30px] ${
+          theme === 'dark'
+            ? 'bg-white/[0.06] border-white/[0.08]'
+            : 'bg-white/[0.08] border-white/10'
+        }`}
+      >
         <div className="col-span-1">
           <SkeletonLoader className="h-4 w-12" />
         </div>
@@ -57,6 +67,5 @@ export function ContributorsTableSkeleton() {
         ))}
       </div>
     </div>
-  );
+  )
 }
-

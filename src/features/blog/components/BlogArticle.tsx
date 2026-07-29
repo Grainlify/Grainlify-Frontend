@@ -20,13 +20,13 @@ export function BlogArticle({ content }: BlogArticleProps) {
       number: 1,
       title: 'Connect Developers with Projects',
       description:
-        "We provide an intelligent matching system that connects developers with projects that align with their skills, interests, and experience level. Whether you're a seasoned blockchain architect or just starting your Web3 journey, there's a place for you on OnlyGrain.",
+        "We provide an intelligent matching system that connects developers with projects that align with their skills, interests, and experience level. Whether you're a seasoned blockchain architect or just starting your Web3 journey, there's a place for you on Grainlify.",
     },
     {
       number: 2,
       title: 'Multi-Chain Support',
       description:
-        'From Ethereum to Solana, Polkadot to Cosmos, and everything in between—OnlyGrain supports projects across all major blockchain ecosystems. We believe in a multi-chain future and our platform reflects that vision.',
+        'From Ethereum to Solana, Polkadot to Cosmos, and everything in between—Grainlify supports projects across all major blockchain ecosystems. We believe in a multi-chain future and our platform reflects that vision.',
     },
     {
       number: 3,
@@ -44,7 +44,7 @@ export function BlogArticle({ content }: BlogArticleProps) {
       number: 5,
       title: 'Community-Driven Development',
       description:
-        'At OnlyGrain, we believe in the power of community. Our platform facilitates collaboration, knowledge sharing, and networking among developers, project maintainers, and ecosystem stakeholders.',
+        'At Grainlify, we believe in the power of community. Our platform facilitates collaboration, knowledge sharing, and networking among developers, project maintainers, and ecosystem stakeholders.',
     },
   ]
 
@@ -58,7 +58,7 @@ export function BlogArticle({ content }: BlogArticleProps) {
               theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
             }`}
           >
-            Welcome to OnlyGrain: The Future of Open Source Collaboration
+            Welcome to Grainlify: The Future of Open Source Collaboration
           </h2>
           <div
             className={`flex items-center justify-center gap-4 text-[14px] transition-colors ${
@@ -91,14 +91,14 @@ export function BlogArticle({ content }: BlogArticleProps) {
                   }`}
                 >
                   <Sparkles className="w-7 h-7 text-[#c9983a]" />
-                  What is OnlyGrain?
+                  What is Grainlify?
                 </h3>
                 <p
                   className={`text-[16px] leading-relaxed mb-4 transition-colors ${
                     theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#6b5d4d]'
                   }`}
                 >
-                  OnlyGrain is a revolutionary platform that bridges the gap between talented
+                  Grainlify is a revolutionary platform that bridges the gap between talented
                   open-source developers and innovative Web3 projects across all blockchain
                   ecosystems. We're not just another development platform—we're building the future
                   of decentralized collaboration.
@@ -110,7 +110,7 @@ export function BlogArticle({ content }: BlogArticleProps) {
                 >
                   In the rapidly evolving world of blockchain and Web3, finding the right talent for
                   your project or discovering meaningful contribution opportunities can be
-                  challenging. OnlyGrain solves this by creating a unified ecosystem where
+                  challenging. Grainlify solves this by creating a unified ecosystem where
                   developers and projects connect, collaborate, and thrive together.
                 </p>
               </div>
@@ -155,7 +155,7 @@ export function BlogArticle({ content }: BlogArticleProps) {
               {/* How It Works */}
               <BlogHowItWorks />
 
-              {/* Why Choose OnlyGrain */}
+              {/* Why Choose Grainlify */}
               <div className="mb-8">
                 <h3
                   className={`text-[28px] font-bold mb-4 flex items-center gap-3 transition-colors ${
@@ -163,7 +163,7 @@ export function BlogArticle({ content }: BlogArticleProps) {
                   }`}
                 >
                   <Coins className="w-7 h-7 text-[#c9983a]" />
-                  Why Choose OnlyGrain?
+                  Why Choose Grainlify?
                 </h3>
                 <BlogWhyChoose />
               </div>

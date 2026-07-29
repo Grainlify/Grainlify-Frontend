@@ -2,8 +2,9 @@ import { Search, Filter, Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { useDebouncedValue } from '../../../../shared/hooks/useDebouncedValue'
+import { formatCountBadge } from '../../../../shared/utils/formatCountBadge'
 import { Issue } from '../../types'
-import { IssueCard } from './IssueCard'
+import { MaintainerIssueCard } from './MaintainerIssueCard'
 import { IssueFilterDropdown } from './IssueFilterDropdown'
 
 interface IssueListSidebarProps {
@@ -17,18 +18,6 @@ interface IssueListSidebarProps {
   appliedFilterCount: number
   onFilterClick: () => void
   onIssueSelect: (issue: Issue) => void
-}
-
-/**
- * Formats the filter-count badge value to avoid layout overflow.
- *
- * - 0..99 => exact count
- * - >= 100 => "99+"
- */
-function formatCountBadge(count: number): string {
-  const safe = Number.isFinite(count) ? Math.max(0, count) : 0
-  if (safe >= 100) return '99+'
-  return String(Math.trunc(safe))
 }
 
 /**
@@ -149,7 +138,11 @@ export function IssueListSidebar({
       </div>
 
       {/* Scrollable Issues List */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6" aria-busy={isSearching} aria-label="Issues list">
+      <div
+        className="flex-1 overflow-y-auto px-6 pb-6"
+        aria-busy={isSearching}
+        aria-label="Issues list"
+      >
         <div className="space-y-3">
           {showNoIssuesFound && (
             <div
@@ -172,7 +165,7 @@ export function IssueListSidebar({
           {!showNoIssuesFound &&
             !showNoMatches &&
             issues.map((issue, idx) => (
-              <IssueCard
+              <MaintainerIssueCard
                 key={issue.id}
                 issue={issue}
                 index={idx}
