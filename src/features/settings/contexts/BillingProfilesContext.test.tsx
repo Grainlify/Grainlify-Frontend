@@ -87,6 +87,73 @@ describe('BillingProfilesContext', () => {
     expect(result.current.profiles).toEqual([company])
   })
 
+  it('does not persist taxId, paymentMethods, or invoices to localStorage', () => {
+    const sensitiveProfile: BillingProfile = {
+      id: 3,
+      name: 'Sensitive Corp',
+      type: 'organization',
+      status: 'verified',
+      taxId: '123-45-6789',
+      paymentMethods: [
+        {
+          id: 1,
+          ecosystem: 'stellar',
+          cryptoType: 'usdc',
+          walletAddress: 'GABC',
+          isDefault: true,
+          createdAt: '2026-01-01',
+        },
+      ],
+      invoices: [
+        {
+          id: 'inv-1',
+          invoiceNumber: 'INV-001',
+          date: '2026-01-01',
+          amount: 100,
+          currency: 'USD',
+          status: 'paid',
+          description: 'Test',
+          billingPeriod: 'Jan 2026',
+        },
+      ],
+    }
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
+
+    act(() => expect(result.current.addProfile(sensitiveProfile)).toBe(true))
+
+    const stored = localStorage.getItem('billing_profiles')!
+    expect(stored).not.toContain('123-45-6789')
+    expect(stored).not.toContain('paymentMethods')
+    expect(stored).not.toContain('invoices')
+  })
+
+  it('keeps sensitive fields in in-memory state for the current session', () => {
+    const sensitiveProfile: BillingProfile = {
+      id: 4,
+      name: 'In-Memory Corp',
+      type: 'organization',
+      status: 'verified',
+      taxId: '987-65-4321',
+      paymentMethods: [
+        {
+          id: 2,
+          ecosystem: 'stellar',
+          cryptoType: 'xlm',
+          walletAddress: 'GDEF',
+          isDefault: false,
+          createdAt: '2026-02-01',
+        },
+      ],
+    }
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
+
+    act(() => expect(result.current.addProfile(sensitiveProfile)).toBe(true))
+
+    // In-memory state retains the full profile
+    expect(result.current.profiles[0].taxId).toBe('987-65-4321')
+    expect(result.current.profiles[0].paymentMethods).toHaveLength(1)
+  })
+
   it('rolls back a create that cannot be persisted without logging sensitive data', () => {
     const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined)
     const { result } = renderHook(() => useBillingProfiles(), { wrapper })

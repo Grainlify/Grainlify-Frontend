@@ -3,10 +3,20 @@ import { logger } from '../../../shared/utils/logger'
 import { BillingProfile } from '../types'
 
 /**
- * Subset of BillingProfile that is safe to persist in localStorage.
- * taxId, paymentMethods, and invoices are intentionally excluded to avoid
- * storing sensitive financial data in plaintext client-side storage.
+ * Returns a copy of the given profile with sensitive fields removed so they are
+ * never written to localStorage in plaintext.
+ *
+ * Fields stripped: `taxId`, `paymentMethods`, `invoices`.
+ * The original in-memory object is not mutated; the full profile remains
+ * available to the current session through React state.
  */
+export function toPersistableProfile(
+  profile: BillingProfile
+): Omit<BillingProfile, 'taxId' | 'paymentMethods' | 'invoices'> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { taxId: _taxId, paymentMethods: _paymentMethods, invoices: _invoices, ...safe } = profile
+  return safe
+}
 
 /**
  * Public API exposed by BillingProfilesContext.
@@ -42,7 +52,7 @@ function loadProfilesFromStorage(): BillingProfile[] {
 
 function saveProfilesToStorage(profiles: BillingProfile[]): boolean {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles.map(toPersistableProfile)))
     return true
   } catch {
     logStorageFailure('save')
