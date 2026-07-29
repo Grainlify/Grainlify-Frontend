@@ -88,7 +88,7 @@ describe('isValidProject', () => {
   describe('rejects falsy or incomplete projects', () => {
     /**
      * Each case targets one short-circuit in the guard
-     * `!project || !project.id || !project.github_full_name`.
+     * `!project || project.id == null || !project.github_full_name`.
      */
     const invalidCases: ReadonlyArray<{ name: string; project: unknown }> = [
       { name: 'null', project: null },
@@ -96,7 +96,6 @@ describe('isValidProject', () => {
       { name: 'false', project: false },
       { name: 'missing id', project: { github_full_name: 'owner/repo' } },
       { name: 'empty-string id', project: makeProject({ id: '' }) },
-      { name: 'zero id', project: makeProject({ id: 0 }) },
       {
         name: 'missing github_full_name',
         project: { id: 'proj-1' },
@@ -145,6 +144,10 @@ describe('isValidProject', () => {
       {
         name: 'a numeric id',
         project: makeProject({ id: 42 }),
+      },
+      {
+        name: 'an id of 0 (falsy but valid)',
+        project: makeProject({ id: 0 }),
       },
       {
         name: 'a github_full_name without a slash',

@@ -46,7 +46,7 @@ export function filterProjects<T extends FilterableProject>(
 }
 
 export function isValidProject(project: any): boolean {
-  if (!project || !project.id || !project.github_full_name) {
+  if (!project || project.id == null || project.id === '' || !project.github_full_name) {
     return false
   }
 
