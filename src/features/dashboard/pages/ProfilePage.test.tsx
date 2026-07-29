@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
+import { IntlProvider } from 'react-intl'
 
 // ---------------------------------------------------------------------------
 // Mock API client — declared BEFORE vi.mock() factory so they are in scope
@@ -110,7 +111,9 @@ function makeContributedProjects() {
 function renderPage(props: Partial<React.ComponentProps<typeof ProfilePage>> = {}) {
   return render(
     <ThemeProvider>
-      <ProfilePage {...props} />
+      <IntlProvider locale="en" messages={{}}>
+        <ProfilePage {...props} />
+      </IntlProvider>
     </ThemeProvider>
   )
 }

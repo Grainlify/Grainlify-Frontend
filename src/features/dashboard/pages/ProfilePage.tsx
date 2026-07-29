@@ -41,6 +41,7 @@ import {
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { LanguageIcon } from '../../../shared/components/LanguageIcon'
 import { GithubIcon } from '../../../shared/components/GithubIcon'
+import { useIntlFormatters } from '../../../shared/i18n/useIntlFormatters'
 
 /**
  * Inline error panel with a retry affordance, rendered when a profile section's
@@ -145,6 +146,7 @@ export function ProfilePage({
 }: ProfilePageProps) {
   const { theme } = useTheme()
   const { user } = useAuth()
+  const { formatDate } = useIntlFormatters()
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [viewingUser, setViewingUser] = useState<{ login: string; avatar_url?: string } | null>(
     null
@@ -485,7 +487,7 @@ export function ProfilePage({
       title: activity.title,
       project: activity.project_name,
       project_id: activity.project_id,
-      date: new Date(activity.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+      date: formatDate(activity.date, { day: 'numeric', month: 'short' }),
       url: activity.url,
     })
   })
