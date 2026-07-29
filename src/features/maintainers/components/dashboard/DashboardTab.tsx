@@ -6,7 +6,12 @@ import { StatsCard } from './StatsCard'
 import { ActivityItem } from './ActivityItem'
 import { ApplicationsChart } from './ApplicationsChart'
 import { StatCard, Activity, ChartDataPoint } from '../../types'
-import { getProjectIssues, getProjectPRs } from '../../../../shared/api/client'
+import {
+  getProjectIssues,
+  getProjectPRs,
+  type MaintainerIssue,
+  type MaintainerPR,
+} from '../../../../shared/api/client'
 import { ActivityItemSkeleton } from '../../../../shared/components/ActivityItemSkeleton'
 
 interface Project {
@@ -14,6 +19,12 @@ interface Project {
   github_full_name: string
   status: string
 }
+
+/** A maintainer issue enriched with the owning project's id/name for display and navigation. */
+type ProjectIssue = MaintainerIssue & { projectId: string; projectName: string }
+
+/** A maintainer PR enriched with the owning project's name for display. */
+type ProjectPR = MaintainerPR & { projectName: string }
 
 /**
  * Props for the {@link DashboardTab} component.
@@ -61,8 +72,8 @@ export function DashboardTab({
   onNavigateToPR,
 }: DashboardTabProps) {
   const { theme } = useTheme()
-  const [issues, setIssues] = useState<any[]>([])
-  const [prs, setPrs] = useState<any[]>([])
+  const [issues, setIssues] = useState<ProjectIssue[]>([])
+  const [prs, setPrs] = useState<ProjectPR[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAllActivities, setShowAllActivities] = useState(false)
@@ -116,8 +127,9 @@ export function DashboardTab({
           selectedProjects.map(async (project) => {
             try {
               const response = await getProjectIssues(project.id)
-              return (response.issues || []).map((issue: any) => ({
+              return (response.issues || []).map((issue): ProjectIssue => ({
                 ...issue,
+                projectId: project.id,
                 projectName: project.github_full_name,
               }))
             } catch (err) {
@@ -131,7 +143,7 @@ export function DashboardTab({
           selectedProjects.map(async (project) => {
             try {
               const response = await getProjectPRs(project.id)
-              return (response.prs || []).map((pr: any) => ({
+              return (response.prs || []).map((pr): ProjectPR => ({
                 ...pr,
                 projectName: project.github_full_name,
               }))
