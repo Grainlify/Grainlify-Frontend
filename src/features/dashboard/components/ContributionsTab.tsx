@@ -15,6 +15,7 @@ import {
 import { getProfileContributions, type ProfileContribution } from '../../../shared/api/client'
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { useIntlFormatters, type UseIntlFormatters } from '../../../shared/i18n'
 
 type ContributionStatus = 'applied' | 'assigned' | 'pending' | 'complete'
 type RewardFilter = 'Rewarded' | 'Unrewarded'
@@ -134,7 +135,10 @@ const getRewardFilter = (contribution: ProfileContribution): RewardFilter => {
   return 'Unrewarded'
 }
 
-const formatContributionTime = (contribution: ProfileContribution) => {
+const formatContributionTime = (
+  contribution: ProfileContribution,
+  formatDate: UseIntlFormatters['formatDate']
+) => {
   const value =
     contribution.updated_at ||
     contribution.submitted_at ||
@@ -145,11 +149,11 @@ const formatContributionTime = (contribution: ProfileContribution) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return normalizeText(value, fallbackTime)
 
-  return new Intl.DateTimeFormat('en-US', {
+  return formatDate(date, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(date)
+  })
 }
 
 /**
@@ -160,7 +164,10 @@ const formatContributionTime = (contribution: ProfileContribution) => {
  * supplied strings such as issue titles are escaped by default rather than
  * interpreted as HTML.
  */
-function normalizeContribution(contribution: ProfileContribution): ContributionCardData {
+function normalizeContribution(
+  contribution: ProfileContribution,
+  formatDate: UseIntlFormatters['formatDate']
+): ContributionCardData {
   const tag = normalizeText(getFirstLabel(contribution), fallbackTag)
 
   return {
@@ -168,7 +175,7 @@ function normalizeContribution(contribution: ProfileContribution): ContributionC
     title: normalizeText(contribution.title, fallbackTitle),
     status: normalizeStatus(contribution.status),
     badge: getBadge(contribution),
-    time: formatContributionTime(contribution),
+    time: formatContributionTime(contribution, formatDate),
     project: normalizeText(
       contribution.project_name ||
         contribution.project ||
@@ -430,6 +437,7 @@ function ContributionColumn({
 
 export function ContributionsTab() {
   const { theme } = useTheme()
+  const { formatDate } = useIntlFormatters()
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState('')
   const [projectSearchQuery, setProjectSearchQuery] = useState('')
@@ -445,7 +453,9 @@ export function ContributionsTab() {
       .then((response) => {
         setState({
           status: 'ok',
-          contributions: (response.contributions || []).map(normalizeContribution),
+          contributions: (response.contributions || []).map((c) =>
+            normalizeContribution(c, formatDate)
+          ),
         })
       })
       .catch(() => setState({ status: 'error' }))
