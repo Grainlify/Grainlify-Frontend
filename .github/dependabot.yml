@@ -42,14 +42,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      # ── MUI + Emotion (themed components) ──
-      mui:
-        patterns:
-          - "@mui/*"
-          - "@emotion/*"
-        update-types:
-          - "minor"
-          - "patch"
       # ── Testing toolchain ──
       testing:
         patterns:
