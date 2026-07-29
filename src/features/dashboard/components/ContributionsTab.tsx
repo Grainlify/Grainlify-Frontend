@@ -62,6 +62,7 @@ const fallbackTitle = 'Untitled contribution'
 const fallbackProject = 'Unknown project'
 const fallbackTag = 'contribution'
 const fallbackTime = 'Recently'
+const fallbackContributor = 'Unknown contributor'
 
 const normalizeText = (value: unknown, fallback: string) => {
   if (typeof value !== 'string' && typeof value !== 'number') return fallback
@@ -177,7 +178,7 @@ function normalizeContribution(contribution: ProfileContribution): ContributionC
     ),
     contributor: normalizeText(
       contribution.contributor_login || contribution.author_login,
-      fallbackProject
+      fallbackContributor
     ),
     tag,
     tagType: getTagType(tag),
