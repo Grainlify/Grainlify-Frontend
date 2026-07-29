@@ -56,6 +56,7 @@ function safeStatValue(v: number): number {
 export function DashboardTab({
   selectedProjects,
   isLoadingProjects = false,
+  onRefresh,
   onNavigateToIssue,
   onNavigateToPR,
 }: DashboardTabProps) {
@@ -198,6 +199,7 @@ export function DashboardTab({
       if (selectedProjects.length > 0) {
         loadData()
       }
+      onRefresh?.()
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)

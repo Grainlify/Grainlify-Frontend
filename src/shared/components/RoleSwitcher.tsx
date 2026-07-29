@@ -17,8 +17,6 @@ interface RoleSwitcherProps {
   onRoleChange: (role: RoleSwitcherRole) => void
   /** Flag showing whether mobile navigation view is open. */
   showMobileNav: boolean
-  /** Flag indicating if the device is a small screen/mobile device. */
-  isSmallDevice: boolean
   /** Callback to close the mobile navigation view. */
   closeMobileNav: () => void
   /** Optional subset of roles to display. Defaults to all roles if omitted. */
