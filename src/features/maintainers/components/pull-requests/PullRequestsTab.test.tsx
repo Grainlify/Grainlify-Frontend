@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -18,7 +18,10 @@ vi.mock('../../../../shared/contexts/AuthContext', () => ({
 }))
 
 const mockGetProjectPRs = vi.mocked(getMaintainerPRs)
-const sourcePath = fileURLToPath(new URL('./PullRequestsTab.tsx', import.meta.url))
+const sourcePath = resolve(
+  process.cwd(),
+  'src/features/maintainers/components/pull-requests/PullRequestsTab.tsx'
+)
 
 const PROJECTS = [
   {
