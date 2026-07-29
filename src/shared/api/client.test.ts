@@ -11,6 +11,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   apiRequest,
+  ApiError,
   getAuthToken,
   setAuthToken,
   removeAuthToken,
@@ -23,6 +24,7 @@ import {
   RETRY_BASE_DELAY_MS,
 } from './client'
 import { API_BASE_URL } from '../config/api'
+import { getUserFriendlyError } from '../utils/errorHandler'
 
 // Mock fetch globally
 const mockFetch = vi.fn()
@@ -341,6 +343,111 @@ describe('apiRequest - Core Request Helper', () => {
       })
 
       await expect(apiRequest('/test')).rejects.toThrow('Bad request error')
+    })
+
+    it('should localize a known backend code using the stored locale and preserve metadata', async () => {
+      localStorageMock.setItem('locale', 'es')
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({
+          code: 'NOT_FOUND',
+          message: 'database record missing',
+        }),
+      })
+
+      const error = await apiRequest('/projects/missing').catch((cause) => cause)
+
+      expect(error).toBeInstanceOf(ApiError)
+
+      const apiError = error as ApiError
+      expect(apiError.status).toBe(404)
+      expect(apiError.code).toBe('NOT_FOUND')
+      expect(apiError.serverMessage).toBe('database record missing')
+      expect(apiError.message).toBe('El recurso solicitado no se pudo encontrar.')
+
+      // Proves the localized taxonomy message survives the application's real
+      // user-facing error classifier.
+      expect(getUserFriendlyError(apiError)).toBe('El recurso solicitado no se pudo encontrar.')
+    })
+
+    it('should use the localized generic fallback for an unknown structured code', async () => {
+      localStorageMock.setItem('locale', 'es')
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({
+          code: 'DATABASE_CONNECTION_SECRET',
+          message: 'postgres password=do-not-expose',
+        }),
+      })
+
+      const error = await apiRequest('/test').catch((cause) => cause)
+      expect(error).toBeInstanceOf(ApiError)
+
+      const apiError = error as ApiError
+      expect(apiError.code).toBe('DATABASE_CONNECTION_SECRET')
+      expect(apiError.serverMessage).toBe('postgres password=do-not-expose')
+      expect(apiError.message).toBe('Ocurrió un error inesperado. Por favor, inténtelo de nuevo.')
+      expect(getUserFriendlyError(apiError)).toBe(
+        'Ocurrió un error inesperado. Por favor, inténtelo de nuevo.'
+      )
+      expect(getUserFriendlyError(apiError)).not.toContain('postgres')
+      expect(getUserFriendlyError(apiError)).not.toContain('password')
+    })
+
+    it('should preserve 401 cleanup and redirect signaling for a coded localized error', async () => {
+      localStorageMock.setItem('locale', 'es')
+      setAuthToken('expired-token')
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({
+          code: 'UNAUTHORIZED',
+          message: 'token signature invalid',
+        }),
+      })
+
+      const error = await apiRequest('/test', {
+        requiresAuth: true,
+      }).catch((cause) => cause)
+
+      expect(error).toBeInstanceOf(ApiError)
+      expect((error as ApiError).message).toBe(
+        'Su sesión ha expirado. Por favor, inicie sesión de nuevo.'
+      )
+      expect(getAuthToken()).toBeNull()
+      expect(mockDispatchEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'patchwork-auth-401',
+        })
+      )
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+    })
+
+    it('should accept a nested structured backend error payload', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          error: {
+            code: 'BAD_REQUEST',
+            message: 'internal validation details',
+          },
+        }),
+      })
+
+      const error = await apiRequest('/test').catch((cause) => cause)
+
+      expect(error).toBeInstanceOf(ApiError)
+      expect((error as ApiError).code).toBe('BAD_REQUEST')
+      expect((error as ApiError).serverMessage).toBe('internal validation details')
+      expect((error as ApiError).message).toBe(
+        'Invalid request parameters. Please check your input and try again.'
+      )
     })
 
     it('should throw RateLimitError for 429 with numeric Retry-After header', async () => {
@@ -812,9 +919,17 @@ describe('apiRequest — retryable status codes (502, 503)', () => {
     mockFetch.mockImplementation(() => {
       callCount++
       if (callCount < MAX_RETRY_ATTEMPTS) {
-        return Promise.resolve({ ok: false, status: 502, json: async () => ({ message: 'Bad Gateway' }) })
+        return Promise.resolve({
+          ok: false,
+          status: 502,
+          json: async () => ({ message: 'Bad Gateway' }),
+        })
       }
-      return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true, service: 'api' }) })
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, service: 'api' }),
+      })
     })
 
     const promise = apiRequest<{ ok: boolean; service: string }>('/health')
@@ -830,9 +945,17 @@ describe('apiRequest — retryable status codes (502, 503)', () => {
     mockFetch.mockImplementation(() => {
       callCount++
       if (callCount === 1) {
-        return Promise.resolve({ ok: false, status: 503, json: async () => ({ message: 'Service Unavailable' }) })
+        return Promise.resolve({
+          ok: false,
+          status: 503,
+          json: async () => ({ message: 'Service Unavailable' }),
+        })
       }
-      return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true, service: 'api' }) })
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, service: 'api' }),
+      })
     })
 
     const promise = apiRequest<{ ok: boolean; service: string }>('/health')
@@ -990,7 +1113,11 @@ describe('apiRequest — network error retry', () => {
       if (callCount === 1) {
         return Promise.reject(new TypeError('Failed to fetch'))
       }
-      return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true, service: 'api' }) })
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, service: 'api' }),
+      })
     })
 
     const promise = apiRequest<{ ok: boolean; service: string }>('/health')

@@ -1,12 +1,22 @@
+import { ApiError } from '../api/client'
+
 /**
  * Converts technical error messages to user-friendly messages
  */
 export function getUserFriendlyError(error: unknown): string {
   if (!error) {
-    return 'Something went wrong. Please try again.';
+    return 'Something went wrong. Please try again.'
   }
 
-  const errorMessage = error instanceof Error ? error.message : String(error);
+  // Coded ApiError messages have already passed through the localized,
+  // allow-listed backend taxonomy. Uncoded errors must continue through the
+  // defensive substring/generic classifier below so raw server details are
+  // never echoed to users.
+  if (error instanceof ApiError && error.code) {
+    return error.message
+  }
+
+  const errorMessage = error instanceof Error ? error.message : String(error)
 
   /** Network errors: connectivity failures should not expose transport details. */
   if (
@@ -15,7 +25,7 @@ export function getUserFriendlyError(error: unknown): string {
     errorMessage.includes('Failed to fetch') ||
     errorMessage.includes('Unable to connect')
   ) {
-    return 'Unable to connect to the server. Please check your internet connection and try again.';
+    return 'Unable to connect to the server. Please check your internet connection and try again.'
   }
 
   /** Authentication errors: expired or invalid sessions should prompt re-authentication. */
@@ -24,7 +34,7 @@ export function getUserFriendlyError(error: unknown): string {
     errorMessage.includes('Unauthorized') ||
     errorMessage.includes('401')
   ) {
-    return 'Your session has expired. Please sign in again.';
+    return 'Your session has expired. Please sign in again.'
   }
 
   /** Server errors: backend failures should be reported without leaking internals. */
@@ -33,7 +43,7 @@ export function getUserFriendlyError(error: unknown): string {
     errorMessage.includes('Internal Server Error') ||
     errorMessage.includes('server error')
   ) {
-    return 'Our servers are experiencing issues. Please try again in a few moments.';
+    return 'Our servers are experiencing issues. Please try again in a few moments.'
   }
 
   /** Not-found errors: missing resources should get a stable user-facing message. */
@@ -42,7 +52,7 @@ export function getUserFriendlyError(error: unknown): string {
     errorMessage.includes('Not Found') ||
     errorMessage.includes('not found')
   ) {
-    return 'The requested resource could not be found.';
+    return 'The requested resource could not be found.'
   }
 
   /** Timeout errors: slow requests should guide users to retry. */
@@ -51,7 +61,7 @@ export function getUserFriendlyError(error: unknown): string {
     errorMessage.includes('Timeout') ||
     errorMessage.includes('timed out')
   ) {
-    return 'The request took too long. Please try again.';
+    return 'The request took too long. Please try again.'
   }
 
   /** Invalid response errors: malformed API responses should remain generic. */
@@ -59,19 +69,15 @@ export function getUserFriendlyError(error: unknown): string {
     errorMessage.includes('Invalid response') ||
     errorMessage.includes('Invalid response format')
   ) {
-    return 'We received an unexpected response from the server. Please try again.';
+    return 'We received an unexpected response from the server. Please try again.'
   }
 
   /** Generic API errors: failed requests should avoid raw request details. */
-  if (
-    errorMessage.includes('API request failed') ||
-    errorMessage.includes('request failed')
-  ) {
-    return 'Unable to complete your request. Please try again.';
+  if (errorMessage.includes('API request failed') || errorMessage.includes('request failed')) {
+    return 'Unable to complete your request. Please try again.'
   }
 
   // For any other errors, return a generic message
   // This prevents exposing technical details to users
-  return 'Something went wrong. Please try again later.';
+  return 'Something went wrong. Please try again later.'
 }
-

@@ -3,6 +3,8 @@
  */
 
 import { API_BASE_URL } from '../config/api'
+import { getErrorCodeMessage } from '../i18n/errors'
+import { readStoredLocale } from '../i18n/LocaleProvider'
 import { BillingProfile, NotificationSettings } from '../../features/settings/types'
 import { BlogPost } from '../../features/blog/types'
 
@@ -97,6 +99,88 @@ export function parseRetryAfter(headerValue: string | null): number {
   }
 
   return DEFAULT_RETRY_AFTER_SECONDS
+}
+
+/**
+ * Structured error thrown for non-successful backend responses.
+ *
+ * `message` is safe for user-facing presentation whenever `code` is present:
+ * it is resolved through the localized backend error-code taxonomy. The raw
+ * server message is retained separately for diagnostics and must not be
+ * rendered directly.
+ */
+export class ApiError extends Error {
+  readonly status: number
+  readonly code: string | undefined
+  readonly serverMessage: string | undefined
+
+  constructor(message: string, status: number, code?: string, serverMessage?: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+    this.serverMessage = serverMessage
+  }
+}
+
+interface ParsedApiError {
+  code?: string
+  serverMessage?: string
+}
+
+type UnknownRecord = Record<string, unknown>
+
+function asRecord(value: unknown): UnknownRecord | undefined {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as UnknownRecord)
+    : undefined
+}
+
+function asNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+/**
+ * Reads the structured portion of an API error response.
+ *
+ * Both the documented top-level `{ code, message }` form and a nested
+ * `{ error: { code, message } }` form are accepted. Malformed/non-JSON bodies
+ * safely resolve to an empty result.
+ */
+async function readApiErrorDetails(response: Response): Promise<ParsedApiError> {
+  try {
+    const payload = asRecord(await response.json())
+    if (!payload) return {}
+
+    const nestedError = asRecord(payload.error)
+
+    const code = asNonEmptyString(payload.code) ?? asNonEmptyString(nestedError?.code)
+
+    const serverMessage =
+      asNonEmptyString(payload.message) ??
+      asNonEmptyString(payload.error) ??
+      asNonEmptyString(nestedError?.message)
+
+    return { code, serverMessage }
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Builds an API error without exposing raw server text when a structured code
+ * is available. Unknown codes resolve through the taxonomy's localized generic
+ * fallback.
+ */
+function createApiError(status: number, details: ParsedApiError, legacyMessage: string): ApiError {
+  const message = details.code
+    ? getErrorCodeMessage(details.code, readStoredLocale())
+    : legacyMessage
+
+  return new ApiError(message, status, details.code, details.serverMessage)
 }
 
 /**
@@ -255,55 +339,54 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
     // Handle errors
     if (!response.ok) {
       if (response.status === 401) {
-        // Token expired or invalid - clear it and signal the app layer to redirect.
-        // Not retryable.
+        // Preserve the existing authentication side effects while allowing a
+        // structured UNAUTHORIZED code to select the active locale.
+        const details = await readApiErrorDetails(response)
         removeAuthToken()
         emit401Event()
-        throw new Error('Authentication failed. Please sign in again.')
+        throw createApiError(
+          response.status,
+          details,
+          'Authentication failed. Please sign in again.'
+        )
       }
 
       if (response.status === 403) {
-        // Permission errors are not retryable.
-        let errorMsg: string
-        try {
-          const errorData = await response.json()
-          errorMsg = errorData.message || errorData.error || 'Access forbidden'
-        } catch {
-          errorMsg = 'Access forbidden'
-        }
-        throw new Error(
-          `Permission denied: ${errorMsg}. You may need admin privileges to perform this action.`
+        // Permission errors are not retryable. Uncoded legacy responses retain
+        // their existing detailed message; coded responses use the taxonomy.
+        const details = await readApiErrorDetails(response)
+        const errorMessage = details.serverMessage ?? 'Access forbidden'
+
+        throw createApiError(
+          response.status,
+          details,
+          `Permission denied: ${errorMessage}. You may need admin privileges to perform this action.`
         )
       }
 
       if (response.status === 429) {
-        // Rate limited — surface immediately as RateLimitError; callers handle back-off.
+        // Keep the existing typed rate-limit/back-off contract unchanged.
         const retryAfterSeconds = parseRetryAfter(response.headers.get('Retry-After'))
         throw new RateLimitError(retryAfterSeconds)
       }
 
-      // 502 / 503 are retryable transient server errors.
+      // 502 / 503 remain retryable. The final exhausted error retains its code
+      // and localized message without changing retry timing or attempt count.
       if (RETRYABLE_STATUSES.has(response.status)) {
-        let errMsg: string
-        try {
-          const errorData = await response.json()
-          errMsg = errorData.message || errorData.error || 'API request failed'
-        } catch {
-          errMsg = `API request failed with status ${response.status}`
-        }
-        lastError = new Error(errMsg)
+        const details = await readApiErrorDetails(response)
+        const legacyMessage =
+          details.serverMessage ?? `API request failed with status ${response.status}`
+
+        lastError = createApiError(response.status, details, legacyMessage)
         continue
       }
 
-      // Any other non-2xx status — non-retryable, fail immediately.
-      let apiErrorMsg: string
-      try {
-        const errorData = await response.json()
-        apiErrorMsg = errorData.message || errorData.error || 'API request failed'
-      } catch {
-        throw new Error(`API request failed with status ${response.status}`)
-      }
-      throw new Error(apiErrorMsg)
+      // Any other non-2xx status is non-retryable.
+      const details = await readApiErrorDetails(response)
+      const legacyMessage =
+        details.serverMessage ?? `API request failed with status ${response.status}`
+
+      throw createApiError(response.status, details, legacyMessage)
     }
 
     // Parse JSON response
@@ -1419,12 +1502,21 @@ export async function downloadInvoice(invoiceId: string): Promise<Blob> {
   }
 
   if (!response.ok) {
+    const details = await readApiErrorDetails(response)
+
     if (response.status === 401) {
       removeAuthToken()
       emit401Event()
-      throw new Error('Authentication failed. Please sign in again.')
+      throw createApiError(response.status, details, 'Authentication failed. Please sign in again.')
     }
-    throw new Error(`Failed to download invoice (${response.status}).`)
+
+    // Keep the legacy binary-download fallback for uncoded responses while
+    // honoring any structured backend code that is present.
+    throw createApiError(
+      response.status,
+      details,
+      `Failed to download invoice (${response.status}).`
+    )
   }
 
   return response.blob()
