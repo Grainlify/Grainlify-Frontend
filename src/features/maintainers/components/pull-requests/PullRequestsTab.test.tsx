@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -16,6 +18,7 @@ vi.mock('../../../../shared/contexts/AuthContext', () => ({
 }))
 
 const mockGetProjectPRs = vi.mocked(getMaintainerPRs)
+const sourcePath = fileURLToPath(new URL('./PullRequestsTab.tsx', import.meta.url))
 
 const PROJECTS = [
   {
@@ -127,5 +130,14 @@ describe('PullRequestsTab accessibility', () => {
 
     expect(headers[3]).toHaveTextContent('Indicators')
     expect(headers[3]).toHaveAttribute('scope', 'col')
+  })
+})
+
+describe('PullRequestsTab fetch error typing', () => {
+  it('keeps the aggregated PR fetch error typed as unknown instead of any', () => {
+    const source = readFileSync(sourcePath, 'utf8')
+
+    expect(source).toContain('let lastError: unknown | null = null')
+    expect(source).not.toContain('let lastError: any')
   })
 })
