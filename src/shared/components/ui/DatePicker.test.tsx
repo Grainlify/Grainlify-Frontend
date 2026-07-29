@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DatePicker, parseUtcDate, formatUtcDate } from './DatePicker'
 import { renderWithTheme } from '../../../test/renderWithTheme'
@@ -122,13 +122,7 @@ describe('DatePicker Component', () => {
     expect(screen.getByText('*')).toBeInTheDocument()
   })
 
-  // Pre-existing bug, unrelated to CI setup: `./calendar.tsx` still uses
-  // react-day-picker v8's `classNames`/`components` API (e.g. `day_selected`,
-  // `IconLeft`/`IconRight`), but the installed dependency is v10.0.1, which
-  // replaced that API. The popover opens, but day-cell selection no longer
-  // wires up the same way, so these two interaction tests can't pass without
-  // rewriting the Calendar wrapper for the new API. Skipped pending that fix.
-  it.skip('should open calendar on click and call onChange when a day is selected', async () => {
+  it('should open calendar on click and call onChange when a day is selected', async () => {
     // Disable pointerEventsCheck since Radix uses custom pointer trapping
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     const handleChange = vi.fn()
@@ -144,20 +138,22 @@ describe('DatePicker Component', () => {
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toBeInTheDocument()
 
-    // Find the day button representing the 22nd day of the month by its gridcell role
+    // Find the grid cell representing the 22nd day of the month, then the
+    // interactive day button nested inside it (react-day-picker v10 puts the
+    // `gridcell` role on the cell and renders a separate `button` inside it)
     const dayCells = screen.getAllByRole('gridcell')
-    const dayButton = dayCells.find((btn) => btn.textContent === '22')
-    expect(dayButton).toBeDefined()
+    const dayCell = dayCells.find((cell) => cell.textContent === '22')
+    expect(dayCell).toBeDefined()
+    const dayButton = within(dayCell!).getByRole('button')
 
     // Select the new day
-    await user.click(dayButton!)
+    await user.click(dayButton)
 
     // onChange should be called with the selected date in yyyy-MM-dd format
     expect(handleChange).toHaveBeenCalledWith('2026-06-22')
   })
 
-  // Same pre-existing react-day-picker v8-vs-v10 API mismatch as above.
-  it.skip('should handle focus management when date is selected', async () => {
+  it('should handle focus management when date is selected', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     const handleChange = vi.fn()
     renderWithTheme(<DatePicker value="2026-06-21" onChange={handleChange} />)
@@ -172,11 +168,12 @@ describe('DatePicker Component', () => {
     await screen.findByRole('dialog')
 
     const dayCells = screen.getAllByRole('gridcell')
-    const dayButton = dayCells.find((btn) => btn.textContent === '22')
-    expect(dayButton).toBeDefined()
+    const dayCell = dayCells.find((cell) => cell.textContent === '22')
+    expect(dayCell).toBeDefined()
+    const dayButton = within(dayCell!).getByRole('button')
 
     // Click a day
-    await user.click(dayButton!)
+    await user.click(dayButton)
 
     // Focus should return to the button
     await waitFor(() => {
