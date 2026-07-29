@@ -150,7 +150,12 @@ export function DatePicker({
             triggerRef.current?.focus()
           }}
         >
-          <Calendar mode="single" selected={calendarSelected} onSelect={handleSelect} />
+          <Calendar
+            mode="single"
+            selected={calendarSelected}
+            onSelect={handleSelect}
+            defaultMonth={calendarSelected}
+          />
         </PopoverContent>
       </Popover>
       {isError && <p className="text-[12px] mt-1.5 text-red-500">{error}</p>}
