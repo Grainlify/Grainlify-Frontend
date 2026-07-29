@@ -37,6 +37,8 @@ import {
   getProfileCalendar,
   getProfileActivity,
   getPublicProfile,
+  type ProfileProjectSummary,
+  type ProfileActivityItem,
 } from '../../../shared/api/client'
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { LanguageIcon } from '../../../shared/components/LanguageIcon'
@@ -128,6 +130,24 @@ interface Project {
   rewards_amount?: number
 }
 
+/**
+ * A single contribution-activity entry as grouped and displayed in the
+ * monthly timeline. Derived from {@link ProfileActivityItem}; `'review'` is
+ * accepted for a review-item rendering path the UI already implements, even
+ * though `getProfileActivity` does not currently return that type.
+ */
+type MonthlyActivityItem = {
+  id: string
+  type: 'pull_request' | 'issue' | 'review'
+  number: number
+  badgeColor: string
+  title: string
+  project: string
+  project_id: string
+  date: string
+  url: string
+}
+
 interface ProfilePageProps {
   viewingUserId?: string | null
   viewingUserLogin?: string | null
@@ -153,20 +173,7 @@ export function ProfilePage({
   const [contributionCalendar, setContributionCalendar] = useState<
     Array<{ date: string; count: number; level: number }>
   >([])
-  const [contributionActivity, setContributionActivity] = useState<
-    Array<{
-      type: 'pull_request' | 'issue'
-      id: string
-      number: number
-      title: string
-      url: string
-      state?: string
-      date: string
-      month_year: string
-      project_name: string
-      project_id: string
-    }>
-  >([])
+  const [contributionActivity, setContributionActivity] = useState<ProfileActivityItem[]>([])
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isLoadingProjects, setIsLoadingProjects] = useState(true)
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(true)
@@ -270,7 +277,7 @@ export function ProfilePage({
         requestedLogin || undefined
       )
       if (!isSameView(requestedUserId, requestedLogin)) return
-      const contributedProjects = data.map((p: any) => ({
+      const contributedProjects = data.map((p: ProfileProjectSummary) => ({
         id: p.id,
         github_full_name: p.github_full_name,
         status: p.status,
@@ -309,7 +316,7 @@ export function ProfilePage({
         const data = await getProjectsLed(requestedUserId || undefined, requestedLogin || undefined)
         if (!isSameView(requestedUserId, requestedLogin)) return
         setProjectsLed(
-          data.map((p: any) => ({
+          data.map((p: ProfileProjectSummary) => ({
             id: p.id,
             github_full_name: p.github_full_name,
             status: p.status,
@@ -379,7 +386,7 @@ export function ProfilePage({
       if (!isSameView(requestedUserId, requestedLogin)) return
       setContributionActivity(data.activities || [])
       const monthsSet = new Set<string>()
-      data.activities?.forEach((activity: any) => {
+      data.activities?.forEach((activity: ProfileActivityItem) => {
         if (activity.month_year) monthsSet.add(activity.month_year)
       })
       const monthsObj: { [key: string]: boolean } = {}
@@ -466,7 +473,7 @@ export function ProfilePage({
     }) || []
 
   // Group contribution activity by month, filtering to only show open issues
-  const contributionsByMonth: { [key: string]: any[] } = {}
+  const contributionsByMonth: { [key: string]: MonthlyActivityItem[] } = {}
   contributionActivity.forEach((activity) => {
     // Only include issues if they are open, or include all PRs
     if (activity.type === 'issue' && activity.state !== 'open') {
@@ -1995,7 +2002,7 @@ export function ProfilePage({
                       let iconBgColor = 'bg-[#c9983a]/50'
                       let labelPrefix = ''
 
-                      if (item.type === 'pr') {
+                      if (item.type === 'pull_request') {
                         IconComponent = GitPullRequest
                         iconBgColor = 'bg-[#d4af37]/50'
                         labelPrefix = ''
