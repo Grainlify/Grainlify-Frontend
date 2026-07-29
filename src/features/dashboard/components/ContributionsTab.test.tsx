@@ -324,6 +324,34 @@ describe('ContributionsTab', () => {
     expect(screen.getByRole('button', { name: /rewarded\s*1/i })).toBeInTheDocument()
   })
 
+  it('uses a contributor-specific fallback (not "Unknown project") when contributor_login and author_login are missing', async () => {
+    mockGetProfileContributions.mockResolvedValue({
+      contributions: [
+        {
+          id: 'no-contributor',
+          title: 'Contribution with no author',
+          status: 'applied',
+          project_name: 'Test Project',
+          contributor_login: null,
+          author_login: null,
+        },
+      ],
+    })
+
+    renderContributionsTab()
+
+    await screen.findByText('Contribution with no author')
+
+    await userEvent.type(screen.getByPlaceholderText('Search'), 'Unknown contributor')
+
+    expect(screen.getByText('Contribution with no author')).toBeInTheDocument()
+
+    await userEvent.clear(screen.getByPlaceholderText('Search'))
+    await userEvent.type(screen.getByPlaceholderText('Search'), 'Unknown project')
+
+    expect(screen.queryByText('Contribution with no author')).not.toBeInTheDocument()
+  })
+
   it('renders repository-supplied titles as escaped text', async () => {
     mockGetProfileContributions.mockResolvedValue({
       contributions: [
