@@ -42,6 +42,29 @@ import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { LanguageIcon } from '../../../shared/components/LanguageIcon'
 import { GithubIcon } from '../../../shared/components/GithubIcon'
 
+/** API response shape for a single project item (contributed or led). */
+interface ProjectApiItem {
+  id: string
+  github_full_name: string
+  status: string
+  ecosystem_name?: string
+  language?: string
+  owner_avatar_url?: string
+}
+
+/** A single activity item rendered inside a monthly group. */
+interface MonthlyContributionItem {
+  id: string
+  type: 'pull_request' | 'issue'
+  number: number
+  badgeColor: string
+  title: string
+  project: string
+  project_id: string
+  date: string
+  url: string
+}
+
 /**
  * Inline error panel with a retry affordance, rendered when a profile section's
  * API call (activity or contributed projects) fails.
@@ -270,7 +293,7 @@ export function ProfilePage({
         requestedLogin || undefined
       )
       if (!isSameView(requestedUserId, requestedLogin)) return
-      const contributedProjects = data.map((p: any) => ({
+      const contributedProjects = data.map((p: ProjectApiItem) => ({
         id: p.id,
         github_full_name: p.github_full_name,
         status: p.status,
@@ -309,7 +332,7 @@ export function ProfilePage({
         const data = await getProjectsLed(requestedUserId || undefined, requestedLogin || undefined)
         if (!isSameView(requestedUserId, requestedLogin)) return
         setProjectsLed(
-          data.map((p: any) => ({
+          data.map((p: ProjectApiItem) => ({
             id: p.id,
             github_full_name: p.github_full_name,
             status: p.status,
@@ -379,7 +402,7 @@ export function ProfilePage({
       if (!isSameView(requestedUserId, requestedLogin)) return
       setContributionActivity(data.activities || [])
       const monthsSet = new Set<string>()
-      data.activities?.forEach((activity: any) => {
+      data.activities?.forEach((activity) => {
         if (activity.month_year) monthsSet.add(activity.month_year)
       })
       const monthsObj: { [key: string]: boolean } = {}
@@ -466,7 +489,7 @@ export function ProfilePage({
     }) || []
 
   // Group contribution activity by month, filtering to only show open issues
-  const contributionsByMonth: { [key: string]: any[] } = {}
+  const contributionsByMonth: { [key: string]: MonthlyContributionItem[] } = {}
   contributionActivity.forEach((activity) => {
     // Only include issues if they are open, or include all PRs
     if (activity.type === 'issue' && activity.state !== 'open') {
@@ -1995,14 +2018,10 @@ export function ProfilePage({
                       let iconBgColor = 'bg-[#c9983a]/50'
                       let labelPrefix = ''
 
-                      if (item.type === 'pr') {
+                      if (item.type === 'pull_request') {
                         IconComponent = GitPullRequest
                         iconBgColor = 'bg-[#d4af37]/50'
                         labelPrefix = ''
-                      } else if (item.type === 'review') {
-                        IconComponent = null // No icon for reviews
-                        iconBgColor = ''
-                        labelPrefix = 'Review: '
                       } else if (item.type === 'issue') {
                         IconComponent = Circle
                         iconBgColor = 'bg-[#c9983a]/50'
@@ -2027,7 +2046,7 @@ export function ProfilePage({
                             }`}
                           >
                             {/* Icon + Number Badge (only for issues and PRs) */}
-                            {item.type !== 'review' && IconComponent && (
+                            {IconComponent && (
                               <div className="relative z-10 flex items-center gap-2.5 flex-shrink-0">
                                 {/* Icon Circle */}
                                 <div
@@ -2051,18 +2070,7 @@ export function ProfilePage({
                               </div>
                             )}
 
-                            {/* Review label without icon */}
-                            {item.type === 'review' && (
-                              <div className="relative z-10 flex-shrink-0 w-[120px]">
-                                <span
-                                  className={`text-[15px] font-semibold transition-colors ${
-                                    theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                                  }`}
-                                >
-                                  Review:
-                                </span>
-                              </div>
-                            )}
+                            {/* Review label — removed (dead code, never returned by API) */}
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">
