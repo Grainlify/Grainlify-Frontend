@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { AlertCircle, Check, Filter, Hourglass, LayoutGrid, RefreshCw, Search } from 'lucide-react'
+import { AlertCircle, Check, Hourglass, LayoutGrid, RefreshCw, Search } from 'lucide-react'
 import { getProfileRewards, type ProfileReward } from '../../../shared/api/client'
 import { GithubIcon } from '../../../shared/components/GithubIcon'
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
@@ -245,10 +245,6 @@ export function RewardsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 sm:gap-3">
-        <button className="h-12 flex-shrink-0 w-10 sm:w-12 flex items-center justify-center rounded-[12px] backdrop-blur-[30px] bg-white/[0.15] border border-white/25 text-[#7a6b5a] hover:bg-white/[0.2] hover:border-[#c9983a]/40 transition-all">
-          <Filter className="w-5 h-5" />
-        </button>
-
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a6b5a] z-10" />
           <input
