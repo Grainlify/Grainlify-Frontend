@@ -247,7 +247,9 @@ describe('RewardsTab', () => {
       expect(screen.getByText('Rewards columns')).toBeInTheDocument()
 
       await userEvent.click(screen.getByRole('button', { name: /^status$/i }))
-      expect(JSON.parse(localStorage.getItem('rewards_selected_columns') ?? '[]')).not.toContain('Status')
+      expect(JSON.parse(localStorage.getItem('rewards_selected_columns') ?? '[]')).not.toContain(
+        'Status'
+      )
 
       await userEvent.click(screen.getByRole('button', { name: /reset columns/i }))
       expect(screen.queryByText('Rewards columns')).not.toBeInTheDocument()

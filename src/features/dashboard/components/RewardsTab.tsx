@@ -233,8 +233,15 @@ export function RewardsTab() {
     if (!query) return rewards
 
     return rewards.filter((reward) =>
-      [reward.id, reward.date, reward.project, reward.from, reward.contribution, reward.amount, reward.status]
-        .some((value) => value.toLowerCase().includes(query))
+      [
+        reward.id,
+        reward.date,
+        reward.project,
+        reward.from,
+        reward.contribution,
+        reward.amount,
+        reward.status,
+      ].some((value) => value.toLowerCase().includes(query))
     )
   }, [rewards, searchQuery])
   const visibleColumnOptions = useMemo(
