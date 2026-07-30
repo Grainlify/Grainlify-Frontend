@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Search,
   ArrowRight,
@@ -106,69 +106,82 @@ export function SearchPage({
     ],
   }
 
+  // Computes results for `rawQuery` against the current filter. Shared by
+  // the debounced live-search effect below and the "Submit search" button,
+  // which re-runs the search immediately against the un-debounced query
+  // instead of waiting out the debounce delay.
+  const runSearch = useCallback(
+    (rawQuery: string) => {
+      if (!rawQuery.trim()) {
+        setSearchResults([])
+        return
+      }
+
+      // Trim leading/trailing whitespace so padded queries match cleanly.
+      const query = rawQuery.trim().toLowerCase()
+      const results: SearchResult[] = []
+
+      // Search issues
+      if (filter === 'all' || filter === 'issue') {
+        allData.issues.forEach((issue) => {
+          if (
+            issue.title.toLowerCase().includes(query) ||
+            issue.project.toLowerCase().includes(query)
+          ) {
+            results.push({
+              id: issue.id,
+              type: 'issue',
+              title: issue.title,
+              subtitle: issue.project,
+              icon: FileText,
+            })
+          }
+        })
+      }
+
+      // Search projects
+      if (filter === 'all' || filter === 'project') {
+        allData.projects.forEach((project) => {
+          if (
+            project.name.toLowerCase().includes(query) ||
+            project.description.toLowerCase().includes(query)
+          ) {
+            results.push({
+              id: project.id,
+              type: 'project',
+              title: project.name,
+              subtitle: project.description,
+              icon: FolderGit2,
+            })
+          }
+        })
+      }
+
+      // Search contributors
+      if (filter === 'all' || filter === 'contributor') {
+        allData.contributors.forEach((contributor) => {
+          if (contributor.name.toLowerCase().includes(query)) {
+            results.push({
+              id: contributor.id,
+              type: 'contributor',
+              title: contributor.name,
+              subtitle: `${contributor.contributions} contributions`,
+              icon: User,
+            })
+          }
+        })
+      }
+
+      setSearchResults(results)
+    },
+    [filter]
+  )
+
   useEffect(() => {
-    if (!debouncedQuery.trim()) {
-      setSearchResults([])
-      return
-    }
+    runSearch(debouncedQuery)
+  }, [debouncedQuery, runSearch])
 
-    // Trim leading/trailing whitespace so padded queries match cleanly.
-    const query = debouncedQuery.trim().toLowerCase()
-    const results: SearchResult[] = []
-
-    // Search issues
-    if (filter === 'all' || filter === 'issue') {
-      allData.issues.forEach((issue) => {
-        if (
-          issue.title.toLowerCase().includes(query) ||
-          issue.project.toLowerCase().includes(query)
-        ) {
-          results.push({
-            id: issue.id,
-            type: 'issue',
-            title: issue.title,
-            subtitle: issue.project,
-            icon: FileText,
-          })
-        }
-      })
-    }
-
-    // Search projects
-    if (filter === 'all' || filter === 'project') {
-      allData.projects.forEach((project) => {
-        if (
-          project.name.toLowerCase().includes(query) ||
-          project.description.toLowerCase().includes(query)
-        ) {
-          results.push({
-            id: project.id,
-            type: 'project',
-            title: project.name,
-            subtitle: project.description,
-            icon: FolderGit2,
-          })
-        }
-      })
-    }
-
-    // Search contributors
-    if (filter === 'all' || filter === 'contributor') {
-      allData.contributors.forEach((contributor) => {
-        if (contributor.name.toLowerCase().includes(query)) {
-          results.push({
-            id: contributor.id,
-            type: 'contributor',
-            title: contributor.name,
-            subtitle: `${contributor.contributions} contributions`,
-            icon: User,
-          })
-        }
-      })
-    }
-
-    setSearchResults(results)
-  }, [debouncedQuery, filter])
+  const handleSubmitSearch = () => runSearch(searchQuery)
 
   const handleResultClick = (result: SearchResult) => {
     if (result.type === 'issue') {
@@ -276,6 +289,7 @@ export function SearchPage({
             )}
             <button
               type="button"
+              onClick={handleSubmitSearch}
               aria-label="Submit search"
               className={`w-10 h-10 rounded-full flex items-center justify-center ml-3 flex-shrink-0 transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a] focus-visible:ring-offset-2 ${
                 darkTheme

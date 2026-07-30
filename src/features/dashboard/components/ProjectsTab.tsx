@@ -1,14 +1,29 @@
 import { ChevronDown } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { GithubIcon } from '../../../shared/components/GithubIcon'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useMemo, useCallback, memo } from 'react'
+
+interface Project {
+  id: string | number
+  logo: string
+  name: string
+  lead?: string
+  billingProfile?: string
+  contributors: number
+  availableIssues: string
+  myContributions: number
+  myRewards: string
+  languages: string[]
+  repository?: string
+}
 
 /**
  * Props for the ProjectRow component.
  */
 interface ProjectRowProps {
   /** The project data to display. */
-  project: any
+  project: Project
   /** The index of the row, used for alternating background colors. */
   idx: number
   /** The current theme ("dark" or "light"). */
@@ -20,89 +35,278 @@ interface ProjectRowProps {
 /**
  * Renders a single row in the desktop projects table.
  */
-const ProjectRow = memo(({ project, idx, theme, getLanguageIcon }: ProjectRowProps) => (
-  <tr
-    className={`border-b border-white/10 hover:bg-white/[0.05] transition-colors ${
-      idx % 2 === 0 ? 'bg-white/[0.02]' : ''
-    }`}
-  >
-    <td className="px-6 py-4 whitespace-nowrap">
-      <div className="flex items-center space-x-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg">
-          {project.logo}
-        </div>
-        <span
-          className={`text-[14px] font-semibold transition-colors ${
-            theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-          }`}
-        >
-          {project.name}
-        </span>
-      </div>
-    </td>
-    <td className="px-6 py-4 whitespace-nowrap">
-      <div className="flex items-center space-x-2">
-        <GithubIcon
-          className={`w-4 h-4 transition-colors ${
-            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}
-        />
-        <span
-          className={`text-[13px] transition-colors ${
-            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}
-        >
-          {project.lead}
-        </span>
-      </div>
-    </td>
-    <td className="px-6 py-4 whitespace-nowrap">
-      <span
-        className={`inline-flex items-center px-3 py-1.5 rounded-full text-[13px] font-semibold transition-colors ${
-          theme === 'dark'
-            ? 'bg-[#c9983a]/20 text-[#f5c563]'
-            : 'bg-[#c9983a]/25 border border-[#c9983a]/30 text-[#2d2820]'
-        }`}
-      >
-        {project.contributors}
-      </span>
-    </td>
-    <td className="px-6 py-4 whitespace-nowrap">
-      <div className="flex items-center space-x-1">
-        <span
-          className={`text-[13px] transition-colors ${
-            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}
-        >
-          {project.availableIssues}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 transition-colors ${
-            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}
-        />
-      </div>
-    </td>
-    <td className="px-6 py-4 whitespace-nowrap">
-      <span
-        className={`inline-flex items-center px-3 py-1.5 rounded-full text-[13px] font-semibold transition-colors ${
-          theme === 'dark'
-            ? 'bg-[#c9983a]/20 text-[#f5c563]'
-            : 'bg-[#c9983a]/25 border border-[#c9983a]/30 text-[#2d2820]'
-        }`}
-      >
-        {project.myContributions}
-      </span>
-    </td>
-    <td
-      className={`px-6 py-4 text-[14px] font-semibold whitespace-nowrap transition-colors ${
-        theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+const ProjectRow = memo(({ project, idx, theme, getLanguageIcon }: ProjectRowProps) => {
+  const navigate = useNavigate()
+  return (
+    <tr
+      className={`border-b border-white/10 hover:bg-white/[0.05] transition-colors ${
+        idx % 2 === 0 ? 'bg-white/[0.02]' : ''
       }`}
     >
-      {project.myRewards}
-    </td>
-    <td className="px-6 py-4 whitespace-nowrap">
-      <div className="flex items-center gap-2">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg">
+            {project.logo}
+          </div>
+          <span
+            className={`text-[14px] font-semibold transition-colors ${
+              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}
+          >
+            {project.name}
+          </span>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center space-x-2">
+          <GithubIcon
+            className={`w-4 h-4 transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          />
+          <span
+            className={`text-[13px] transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          >
+            {project.lead}
+          </span>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span
+          className={`inline-flex items-center px-3 py-1.5 rounded-full text-[13px] font-semibold transition-colors ${
+            theme === 'dark'
+              ? 'bg-[#c9983a]/20 text-[#f5c563]'
+              : 'bg-[#c9983a]/25 border border-[#c9983a]/30 text-[#2d2820]'
+          }`}
+        >
+          {project.contributors}
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center space-x-1">
+          <span
+            className={`text-[13px] transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          >
+            {project.availableIssues}
+          </span>
+          <ChevronDown
+            className={`w-4 h-4 transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          />
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span
+          className={`inline-flex items-center px-3 py-1.5 rounded-full text-[13px] font-semibold transition-colors ${
+            theme === 'dark'
+              ? 'bg-[#c9983a]/20 text-[#f5c563]'
+              : 'bg-[#c9983a]/25 border border-[#c9983a]/30 text-[#2d2820]'
+          }`}
+        >
+          {project.myContributions}
+        </span>
+      </td>
+      <td
+        className={`px-6 py-4 text-[14px] font-semibold whitespace-nowrap transition-colors ${
+          theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+        }`}
+      >
+        {project.myRewards}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center gap-2">
+          {project.languages.map((lang: string) => {
+            const iconInfo = getLanguageIcon(lang)
+            return (
+              <span
+                key={`${project.id}-${lang}`}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-[#c9983a]/20 border border-[#c9983a]/30 text-[#f5c563]'
+                    : 'bg-[#c9983a]/15 border border-[#c9983a]/25 text-[#8b6f3a]'
+                }`}
+              >
+                <span
+                  className={`w-4 h-4 ${iconInfo.color} rounded-sm flex items-center justify-center text-[8px] font-bold text-white`}
+                >
+                  {iconInfo.icon}
+                </span>
+                <span>{lang}</span>
+              </span>
+            )
+          })}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center space-x-2">
+          <GithubIcon
+            className={`w-4 h-4 transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          />
+          <span
+            className={`text-[12px] transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          >
+            {project.repository}
+          </span>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center space-x-1">
+          <span
+            className={`text-[12px] transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          >
+            {project.billingProfile}
+          </span>
+          <ChevronDown
+            className={`w-4 h-4 transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          />
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <button
+          onClick={() => navigate(`/dashboard/projects/${project.id}`)}
+          className={`px-4 py-2 rounded-[8px] backdrop-blur-[20px] border text-[12px] font-medium transition-all ${
+            theme === 'dark'
+              ? 'bg-white/[0.08] border-white/15 text-[#f5f5f5] hover:bg-white/[0.12] hover:border-[#c9983a]/40'
+              : 'bg-white/[0.15] border-white/25 text-[#2d2820] hover:bg-white/[0.2] hover:border-[#c9983a]/40'
+          }`}
+        >
+          See project
+        </button>
+      </td>
+    </tr>
+  )
+})
+
+/**
+ * Props for the ProjectMobileCard component.
+ */
+interface ProjectMobileCardProps {
+  /** The project data to display. */
+  project: Project
+  /** The current theme ("dark" or "light"). */
+  theme: string
+  /** Helper function to get the icon and color for a given language. */
+  getLanguageIcon: (lang: string) => { icon: string; color: string }
+}
+
+/**
+ * Renders a project as a card for mobile views.
+ */
+const ProjectMobileCard = memo(({ project, theme, getLanguageIcon }: ProjectMobileCardProps) => {
+  const navigate = useNavigate()
+  return (
+    <div
+      className={`backdrop-blur-[30px] bg-white/[0.12] rounded-[16px] border border-white/20 p-4 transition-colors hover:bg-white/[0.15] ${
+        theme === 'dark' ? 'hover:border-white/30' : 'hover:border-white/25'
+      }`}
+    >
+      {/* Header: Project name with logo */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg flex-shrink-0">
+            {project.logo}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4
+              className={`text-[14px] font-semibold truncate ${
+                theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+              }`}
+            >
+              {project.name}
+            </h4>
+            <p
+              className={`text-[12px] truncate ${
+                theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              {project.billingProfile}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        {/* Contributors */}
+        <div className="backdrop-blur-[20px] bg-white/[0.05] rounded-[10px] p-2.5">
+          <span
+            className={`text-[11px] block ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+          >
+            Contributors
+          </span>
+          <span
+            className={`text-[13px] font-semibold mt-0.5 ${
+              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}
+          >
+            {project.contributors}
+          </span>
+        </div>
+
+        {/* Available Issues */}
+        <div className="backdrop-blur-[20px] bg-white/[0.05] rounded-[10px] p-2.5">
+          <span
+            className={`text-[11px] block ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+          >
+            Available
+          </span>
+          <span
+            className={`text-[13px] font-semibold mt-0.5 ${
+              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}
+          >
+            {project.availableIssues}
+          </span>
+        </div>
+
+        {/* My Contributions */}
+        <div className="backdrop-blur-[20px] bg-white/[0.05] rounded-[10px] p-2.5">
+          <span
+            className={`text-[11px] block ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+          >
+            My contributions
+          </span>
+          <span
+            className={`text-[13px] font-semibold mt-0.5 ${
+              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}
+          >
+            {project.myContributions}
+          </span>
+        </div>
+
+        {/* My Rewards */}
+        <div className="backdrop-blur-[20px] bg-white/[0.05] rounded-[10px] p-2.5">
+          <span
+            className={`text-[11px] block ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+          >
+            My rewards
+          </span>
+          <span
+            className={`text-[13px] font-semibold mt-0.5 ${
+              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}
+          >
+            {project.myRewards}
+          </span>
+        </div>
+      </div>
+
+      {/* Languages */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
         {project.languages.map((lang: string) => {
           const iconInfo = getLanguageIcon(lang)
           return (
@@ -124,202 +328,21 @@ const ProjectRow = memo(({ project, idx, theme, getLanguageIcon }: ProjectRowPro
           )
         })}
       </div>
-    </td>
-    <td className="px-6 py-4 whitespace-nowrap">
-      <div className="flex items-center space-x-2">
-        <GithubIcon
-          className={`w-4 h-4 transition-colors ${
-            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}
-        />
-        <span
-          className={`text-[12px] transition-colors ${
-            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}
-        >
-          {project.repository}
-        </span>
-      </div>
-    </td>
-    <td className="px-6 py-4 whitespace-nowrap">
-      <div className="flex items-center space-x-1">
-        <span
-          className={`text-[12px] transition-colors ${
-            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}
-        >
-          {project.billingProfile}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 transition-colors ${
-            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}
-        />
-      </div>
-    </td>
-    <td className="px-6 py-4 whitespace-nowrap">
+
+      {/* See Project Button */}
       <button
-        className={`px-4 py-2 rounded-[8px] backdrop-blur-[20px] border text-[12px] font-medium transition-all ${
+        onClick={() => navigate(`/dashboard/projects/${project.id}`)}
+        className={`w-full px-4 py-2.5 rounded-[8px] backdrop-blur-[20px] border text-[13px] font-medium transition-all ${
           theme === 'dark'
-            ? 'bg-white/[0.08] border-white/15 text-[#f5f5f5] hover:bg-white/[0.12] hover:border-[#c9983a]/40'
-            : 'bg-white/[0.15] border-white/25 text-[#2d2820] hover:bg-white/[0.2] hover:border-[#c9983a]/40'
+            ? 'bg-[#c9983a]/80 border-[#c9983a] text-[#2d2820] hover:bg-[#c9983a] hover:border-[#c9983a]'
+            : 'bg-[#c9983a]/90 border-[#c9983a] text-white hover:bg-[#c9983a] hover:border-[#c9983a]'
         }`}
       >
         See project
       </button>
-    </td>
-  </tr>
-))
-
-/**
- * Props for the ProjectMobileCard component.
- */
-interface ProjectMobileCardProps {
-  /** The project data to display. */
-  project: any
-  /** The current theme ("dark" or "light"). */
-  theme: string
-  /** Helper function to get the icon and color for a given language. */
-  getLanguageIcon: (lang: string) => { icon: string; color: string }
-}
-
-/**
- * Renders a project as a card for mobile views.
- */
-const ProjectMobileCard = memo(({ project, theme, getLanguageIcon }: ProjectMobileCardProps) => (
-  <div
-    className={`backdrop-blur-[30px] bg-white/[0.12] rounded-[16px] border border-white/20 p-4 transition-colors hover:bg-white/[0.15] ${
-      theme === 'dark' ? 'hover:border-white/30' : 'hover:border-white/25'
-    }`}
-  >
-    {/* Header: Project name with logo */}
-    <div className="flex items-start justify-between gap-3 mb-3">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg flex-shrink-0">
-          {project.logo}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h4
-            className={`text-[14px] font-semibold truncate ${
-              theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-            }`}
-          >
-            {project.name}
-          </h4>
-          <p
-            className={`text-[12px] truncate ${
-              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-            }`}
-          >
-            {project.billingProfile}
-          </p>
-        </div>
-      </div>
     </div>
-
-    {/* Stats Grid */}
-    <div className="grid grid-cols-2 gap-3 mb-3">
-      {/* Contributors */}
-      <div className="backdrop-blur-[20px] bg-white/[0.05] rounded-[10px] p-2.5">
-        <span
-          className={`text-[11px] block ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
-        >
-          Contributors
-        </span>
-        <span
-          className={`text-[13px] font-semibold mt-0.5 ${
-            theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-          }`}
-        >
-          {project.contributors}
-        </span>
-      </div>
-
-      {/* Available Issues */}
-      <div className="backdrop-blur-[20px] bg-white/[0.05] rounded-[10px] p-2.5">
-        <span
-          className={`text-[11px] block ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
-        >
-          Available
-        </span>
-        <span
-          className={`text-[13px] font-semibold mt-0.5 ${
-            theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-          }`}
-        >
-          {project.availableIssues}
-        </span>
-      </div>
-
-      {/* My Contributions */}
-      <div className="backdrop-blur-[20px] bg-white/[0.05] rounded-[10px] p-2.5">
-        <span
-          className={`text-[11px] block ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
-        >
-          My contributions
-        </span>
-        <span
-          className={`text-[13px] font-semibold mt-0.5 ${
-            theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-          }`}
-        >
-          {project.myContributions}
-        </span>
-      </div>
-
-      {/* My Rewards */}
-      <div className="backdrop-blur-[20px] bg-white/[0.05] rounded-[10px] p-2.5">
-        <span
-          className={`text-[11px] block ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
-        >
-          My rewards
-        </span>
-        <span
-          className={`text-[13px] font-semibold mt-0.5 ${
-            theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-          }`}
-        >
-          {project.myRewards}
-        </span>
-      </div>
-    </div>
-
-    {/* Languages */}
-    <div className="flex items-center gap-2 mb-3 flex-wrap">
-      {project.languages.map((lang: string) => {
-        const iconInfo = getLanguageIcon(lang)
-        return (
-          <span
-            key={`${project.id}-${lang}`}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium transition-colors ${
-              theme === 'dark'
-                ? 'bg-[#c9983a]/20 border border-[#c9983a]/30 text-[#f5c563]'
-                : 'bg-[#c9983a]/15 border border-[#c9983a]/25 text-[#8b6f3a]'
-            }`}
-          >
-            <span
-              className={`w-4 h-4 ${iconInfo.color} rounded-sm flex items-center justify-center text-[8px] font-bold text-white`}
-            >
-              {iconInfo.icon}
-            </span>
-            <span>{lang}</span>
-          </span>
-        )
-      })}
-    </div>
-
-    {/* See Project Button */}
-    <button
-      className={`w-full px-4 py-2.5 rounded-[8px] backdrop-blur-[20px] border text-[13px] font-medium transition-all ${
-        theme === 'dark'
-          ? 'bg-[#c9983a]/80 border-[#c9983a] text-[#2d2820] hover:bg-[#c9983a] hover:border-[#c9983a]'
-          : 'bg-[#c9983a]/90 border-[#c9983a] text-white hover:bg-[#c9983a] hover:border-[#c9983a]'
-      }`}
-    >
-      See project
-    </button>
-  </div>
-))
+  )
+})
 
 /**
  * ProjectsTab component displays a list of projects in either a table view (desktop)

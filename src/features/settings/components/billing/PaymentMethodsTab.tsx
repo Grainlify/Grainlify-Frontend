@@ -39,6 +39,13 @@ export function validateWalletAddress(address: string): string | null {
   return null
 }
 
+// Monotonically increasing, seeded from the current timestamp so ids stay
+// roughly chronological. A plain `Date.now()` per add can collide when two
+// payment methods are added within the same millisecond (e.g. rapid
+// double-submit); incrementing guarantees every id generated in this
+// session is unique regardless of timing.
+let nextPaymentMethodId = Date.now()
+
 interface PaymentMethodsTabProps {
   paymentMethods: PaymentMethod[]
   onAddPaymentMethod: (method: PaymentMethod) => void
@@ -60,6 +67,7 @@ export function PaymentMethodsTab({
   const [walletAddress, setWalletAddress] = useState('')
   const [walletAddressError, setWalletAddressError] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [copyErrorId, setCopyErrorId] = useState<number | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
 
   const getAvailableCryptos = (): CryptoType[] => ['usdc', 'usdt', 'xlm']
@@ -77,7 +85,7 @@ export function PaymentMethodsTab({
     setWalletAddressError(null)
 
     const newMethod: PaymentMethod = {
-      id: Date.now(),
+      id: nextPaymentMethodId++,
       ecosystem: selectedEcosystem,
       cryptoType: selectedCrypto,
       walletAddress: trimmed,
@@ -93,9 +101,18 @@ export function PaymentMethodsTab({
   }
 
   const handleCopyAddress = (id: number, address: string) => {
-    navigator.clipboard.writeText(address)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
+    navigator.clipboard
+      .writeText(address)
+      .then(() => {
+        setCopyErrorId(null)
+        setCopiedId(id)
+        setTimeout(() => setCopiedId(null), 2000)
+      })
+      .catch(() => {
+        setCopiedId(null)
+        setCopyErrorId(id)
+        setTimeout(() => setCopyErrorId(null), 2000)
+      })
   }
 
   const getEcosystemColor = (_ecosystem: EcosystemType) => '#14B6E7' // Stellar brand color
@@ -189,6 +206,10 @@ export function PaymentMethodsTab({
                       </code>
                       <button
                         onClick={() => handleCopyAddress(method.id, method.walletAddress)}
+                        aria-label={
+                          copiedId === method.id ? 'Address copied' : 'Copy wallet address'
+                        }
+                        aria-live="polite"
                         className={`p-1.5 rounded-[8px] transition-all ${
                           theme === 'dark' ? 'hover:bg-white/[0.15]' : 'hover:bg-white/[0.2]'
                         }`}
@@ -204,6 +225,11 @@ export function PaymentMethodsTab({
                         )}
                       </button>
                     </div>
+                    {copyErrorId === method.id && (
+                      <p role="alert" className="text-[12px] text-[#e05252] mb-2">
+                        Couldn't copy address. Please copy it manually.
+                      </p>
+                    )}
 
                     <p
                       className={`text-[12px] transition-colors ${

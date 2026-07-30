@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PaymentMethodsTab, validateWalletAddress } from './PaymentMethodsTab'
 import { renderWithTheme } from '../../../../test/renderWithTheme'
@@ -151,6 +151,27 @@ describe('PaymentMethodsTab - wallet address validation', () => {
     expect(onAddPaymentMethod).toHaveBeenCalledWith(
       expect.objectContaining({ walletAddress: VALID_G })
     )
+  })
+
+  it('assigns distinct ids to two payment methods added within the same millisecond', async () => {
+    const fixedNow = 1_700_000_000_000
+    vi.spyOn(Date, 'now').mockReturnValue(fixedNow)
+
+    const { onAddPaymentMethod } = setup()
+    await openModal()
+    await typeAddress(VALID_G)
+    await submit()
+
+    await openModal()
+    await typeAddress(VALID_C)
+    await submit()
+
+    expect(onAddPaymentMethod).toHaveBeenCalledTimes(2)
+    const firstId = onAddPaymentMethod.mock.calls[0][0].id
+    const secondId = onAddPaymentMethod.mock.calls[1][0].id
+    expect(firstId).not.toBe(secondId)
+
+    vi.restoreAllMocks()
   })
 
   it('trims whitespace before validation and uses trimmed address', async () => {
@@ -378,5 +399,61 @@ describe('PaymentMethodsTab - delete confirmation', () => {
 
     expect(onRemovePaymentMethod).toHaveBeenCalledTimes(1)
     expect(onRemovePaymentMethod).toHaveBeenCalledWith(2)
+  })
+})
+
+describe('PaymentMethodsTab - copy address', () => {
+  const sampleMethods: PaymentMethod[] = [
+    {
+      id: 1,
+      ecosystem: 'stellar',
+      cryptoType: 'usdc',
+      walletAddress: VALID_G,
+      isDefault: false,
+      createdAt: '2024-01-15T10:00:00Z',
+    },
+  ]
+
+  const originalClipboard = navigator.clipboard
+
+  afterEach(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: originalClipboard,
+      configurable: true,
+    })
+  })
+
+  function stubClipboard(writeText: ReturnType<typeof vi.fn>) {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+  }
+
+  it('has an accessible name before copying', () => {
+    setup(sampleMethods)
+    expect(screen.getByRole('button', { name: 'Copy wallet address' })).toBeInTheDocument()
+  })
+
+  it('updates the accessible name and copies the address on click', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    stubClipboard(writeText)
+    setup(sampleMethods)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy wallet address' }))
+
+    expect(writeText).toHaveBeenCalledWith(VALID_G)
+    expect(await screen.findByRole('button', { name: 'Address copied' })).toBeInTheDocument()
+  })
+
+  it('shows an alert instead of silently failing when the clipboard write rejects', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('permission denied'))
+    stubClipboard(writeText)
+    setup(sampleMethods)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy wallet address' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't copy address/i)
+    expect(screen.getByRole('button', { name: 'Copy wallet address' })).toBeInTheDocument()
   })
 })
