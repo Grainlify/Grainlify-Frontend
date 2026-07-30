@@ -9,6 +9,7 @@ import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
+import { I18nProvider } from '../../../shared/i18n'
 import { AdminPage } from './AdminPage'
 
 // ---------------------------------------------------------------------------
@@ -48,11 +49,13 @@ vi.mock('../../../shared/components/ui/DatePicker', () => ({
   DatePicker: () => null,
 }))
 
-function renderAdminPage() {
+function renderAdminPage(locale: 'en' | 'es' = 'en') {
   return render(
-    <ThemeProvider>
-      <AdminPage />
-    </ThemeProvider>
+    <I18nProvider locale={locale}>
+      <ThemeProvider>
+        <AdminPage />
+      </ThemeProvider>
+    </I18nProvider>
   )
 }
 
@@ -147,6 +150,18 @@ describe('AdminPage pagination', () => {
       expect(await screen.findByText(`Event ${i}`)).toBeInTheDocument()
     }
     expect(screen.queryByRole('button', { name: /load more events/i })).not.toBeInTheDocument()
+  })
+
+  it('formats Open Source Week event dates with the active locale', async () => {
+    mockGetAdminEcosystems.mockResolvedValue({ ecosystems: [] })
+    mockGetAdminOpenSourceWeekEvents.mockResolvedValue({ events: [makeOswEvent(0)] })
+
+    renderAdminPage('es')
+
+    const expectedRange = `${new Intl.DateTimeFormat('es').format(
+      new Date('2026-01-01T00:00:00Z')
+    )} → ${new Intl.DateTimeFormat('es').format(new Date('2026-01-08T00:00:00Z'))}`
+    expect(await screen.findByText(expectedRange)).toBeInTheDocument()
   })
 
   it('resets the visible ecosystems page back to the first page on refetch', async () => {
