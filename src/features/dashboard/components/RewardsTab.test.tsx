@@ -99,6 +99,15 @@ describe('RewardsTab', () => {
     expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument()
   })
 
+  it('does not render the inactive filter control', async () => {
+    mockGetProfileRewards.mockResolvedValue({ rewards: [] })
+
+    renderRewardsTab()
+
+    await screen.findByText('No rewards yet')
+    expect(screen.queryByRole('button', { name: /filter rewards/i })).not.toBeInTheDocument()
+  })
+
   it('shows an error state and retries successfully', async () => {
     mockGetProfileRewards.mockRejectedValueOnce(new Error('network'))
 
