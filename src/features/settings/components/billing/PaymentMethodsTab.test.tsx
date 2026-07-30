@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PaymentMethodsTab, validateWalletAddress } from './PaymentMethodsTab'
 import { renderWithTheme } from '../../../../test/renderWithTheme'
+import { ThemeProvider } from '../../../../shared/contexts/ThemeContext'
+import { I18nProvider } from '../../../../shared/i18n'
 import type { PaymentMethod } from '../../types'
 
 function createValidAddress(prefix: 'G' | 'M' | 'C'): string {
@@ -269,6 +271,25 @@ describe('PaymentMethodsTab - delete confirmation', () => {
       createdAt: '2024-01-15T10:00:00Z',
     },
   ]
+
+  it('formats the added date with the active locale', () => {
+    const createdAt = '2024-01-15T10:00:00Z'
+    render(
+      <I18nProvider locale="es">
+        <ThemeProvider>
+          <PaymentMethodsTab
+            paymentMethods={[{ ...sampleMethods[0], createdAt }]}
+            onAddPaymentMethod={vi.fn()}
+            onRemovePaymentMethod={vi.fn()}
+            onSetDefault={vi.fn()}
+          />
+        </ThemeProvider>
+      </I18nProvider>
+    )
+
+    const expectedDate = new Intl.DateTimeFormat('es').format(new Date(createdAt))
+    expect(screen.getByText(`Added ${expectedDate}`)).toBeInTheDocument()
+  })
 
   it('does not call onRemovePaymentMethod when delete button is clicked', async () => {
     const { onRemovePaymentMethod } = setup(sampleMethods)
