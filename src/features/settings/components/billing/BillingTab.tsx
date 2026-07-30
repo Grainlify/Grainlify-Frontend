@@ -270,7 +270,11 @@ export function BillingTab() {
 
       // Open the KYC URL in a new window
       if (response.url) {
-        const kycWindow = window.open(response.url, '_blank', 'width=800,height=600')
+        const kycWindow = window.open(
+          response.url,
+          '_blank',
+          'width=800,height=600,noopener,noreferrer'
+        )
         setErrorMessage('')
 
         // Window opened successfully - update state to reflect this
