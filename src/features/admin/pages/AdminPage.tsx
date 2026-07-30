@@ -41,6 +41,7 @@ import { useIntlFormatters } from '../../../shared/i18n'
 // keeps the DOM bounded, which is what issue #744 is actually about.
 const ECOSYSTEMS_PAGE_SIZE = 9
 const OSW_EVENTS_PAGE_SIZE = 9
+type OswStatus = 'upcoming' | 'running' | 'completed' | 'draft'
 
 interface EcosystemLink {
   label: string
@@ -154,7 +155,16 @@ export function AdminPage() {
   const [oswDeleteConfirm, setOswDeleteConfirm] = useState<{ id: string; title: string } | null>(
     null
   )
-  const [oswForm, setOswForm] = useState({
+  const [oswForm, setOswForm] = useState<{
+    title: string
+    description: string
+    location: string
+    status: OswStatus
+    startDate: string
+    startTime: string
+    endDate: string
+    endTime: string
+  }>({
     title: '',
     description: '',
     location: '',
@@ -377,7 +387,7 @@ export function AdminPage() {
         title: oswForm.title,
         description: oswForm.description || undefined,
         location: oswForm.location || undefined,
-        status: oswForm.status as any,
+        status: oswForm.status,
         start_at,
         end_at,
       })
