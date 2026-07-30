@@ -112,6 +112,31 @@ describe('AddRepositoryModal', () => {
     })
   })
 
+  it('deduplicates case-variant tags before calling createProject', async () => {
+    mockCreateProject.mockResolvedValue({ id: '1' })
+    const user = userEvent.setup()
+    renderWithTheme(<AddRepositoryModal {...defaultProps} />)
+    await waitFor(() => {
+      expect(screen.getByText('Ethereum')).toBeInTheDocument()
+    })
+
+    await user.type(screen.getByPlaceholderText(/owner\/repo/i), 'facebook/react')
+    await user.selectOptions(screen.getByRole('combobox'), 'Ethereum')
+    await user.type(
+      screen.getByPlaceholderText(/comma-separated/i),
+      'React, react, API, api, react'
+    )
+    await user.click(screen.getByRole('button', { name: /add repository/i }))
+
+    await waitFor(() => {
+      expect(mockCreateProject).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tags: ['React', 'API'],
+        })
+      )
+    })
+  })
+
   it('disables submit button while submitting', async () => {
     mockCreateProject.mockImplementation(() => new Promise(() => {})) // never resolves
     const user = userEvent.setup()

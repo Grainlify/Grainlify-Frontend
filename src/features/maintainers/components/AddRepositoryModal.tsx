@@ -78,6 +78,9 @@ export function AddRepositoryModal({ isOpen, onClose, onSuccess }: AddRepository
         .split(',')
         .map((tag) => tag.trim())
         .filter((tag) => tag.length > 0)
+        .filter(
+          (tag, index, arr) => arr.findIndex((t) => t.toLowerCase() === tag.toLowerCase()) === index
+        )
 
       await createProject({
         github_full_name: data.githubFullName.trim(),
