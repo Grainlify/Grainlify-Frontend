@@ -237,7 +237,14 @@ export function OpenSourceWeekPage({ onEventClick }: OpenSourceWeekPageProps) {
                     </span>
                   </div>
                 </div>
-                <button className="w-full sm:w-auto px-6 py-3 bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white rounded-[14px] font-semibold text-[13px] sm:text-[14px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_24px_rgba(162,121,44,0.4)] transition-all border border-white/10">
+                <button
+                  type="button"
+                  onClick={(clickEvent) => {
+                    clickEvent.stopPropagation()
+                    onEventClick(event.id, event.title)
+                  }}
+                  className="w-full sm:w-auto px-6 py-3 bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white rounded-[14px] font-semibold text-[13px] sm:text-[14px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_24px_rgba(162,121,44,0.4)] transition-all border border-white/10"
+                >
                   Join Event
                 </button>
               </div>
