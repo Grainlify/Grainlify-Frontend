@@ -52,6 +52,14 @@ describe('GlassDropdown accessibility', () => {
     expect(screen.getAllByRole('option')).toHaveLength(OPTIONS.length);
   });
 
+  it('uses a contextual accessible name for the options list', async () => {
+    const user = userEvent.setup();
+    renderWithTheme(<GlassHarness />);
+    await user.click(screen.getByRole('button'));
+
+    expect(screen.getByRole('listbox')).toHaveAttribute('aria-label', 'Select option');
+  });
+
   it('marks the selected option with aria-selected', async () => {
     const user = userEvent.setup();
     renderWithTheme(<GlassHarness initialValue="Merged" />);

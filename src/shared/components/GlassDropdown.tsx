@@ -9,6 +9,8 @@ interface GlassDropdownProps<T extends string> {
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
+  /** Accessible name describing the filter represented by the menu. */
+  ariaLabel?: string;
 }
 
 /**
@@ -33,6 +35,7 @@ export function GlassDropdown<T extends string>({
   isOpen,
   onToggle,
   onClose,
+  ariaLabel = 'Select option',
 }: GlassDropdownProps<T>) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -147,7 +150,7 @@ export function GlassDropdown<T extends string>({
           <div
             id={menuId}
             role="listbox"
-            aria-label="Options"
+            aria-label={ariaLabel}
             onKeyDown={handleMenuKeyDown}
             className={`absolute top-full right-0 mt-2 w-48 rounded-[16px] border z-50 overflow-hidden ${
               isDark ? 'bg-[#3a3228] border-white/30' : 'bg-[#d4c5b0] border-white/40'
