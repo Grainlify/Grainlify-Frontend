@@ -325,10 +325,13 @@ export function RewardsTab() {
 
           <div className="px-5 py-4 border-t border-white/20 flex items-center justify-between">
             <button
-              onClick={() => setIsColumnsModalOpen(false)}
+              onClick={() => {
+                setSelectedColumns(columns)
+                setIsColumnsModalOpen(false)
+              }}
               className="text-[13px] text-[#7a6b5a] hover:text-[#2d2820] transition-all font-medium"
             >
-              Pending request
+              Reset columns
             </button>
             <button
               onClick={() => setIsColumnsModalOpen(false)}
