@@ -19,11 +19,16 @@ interface ProjectsTableProps {
   onRetry?: () => void
 }
 
-const getTrendIcon = (trend: 'up' | 'down' | 'same') => {
-  if (trend === 'up') return <TrendingUp className="w-4 h-4 text-green-600" />
-  if (trend === 'down') return <TrendingDown className="w-4 h-4 text-red-600" />
-  return <Minus className="w-4 h-4 text-[#7a6b5a]" />
-}
+// ---------------------------------------------------------------------------
+// Stable icon map - avoids creating new JSX nodes on every getTrendIcon call.
+// ---------------------------------------------------------------------------
+const TREND_ICONS = {
+  up: <TrendingUp className="w-4 h-4 text-green-600" />,
+  down: <TrendingDown className="w-4 h-4 text-red-600" />,
+  same: <Minus className="w-4 h-4 text-[#7a6b5a]" />,
+} as const
+
+const getTrendIcon = (trend: 'up' | 'down' | 'same') => TREND_ICONS[trend]
 
 /**
  * Build the in-app route to a project's detail page.
@@ -110,7 +115,7 @@ export function ProjectsTable({
             const detailPath = projectDetailPath(project.id)
             return (
               <div
-                key={project.rank}
+                key={project.id ?? project.name}
                 className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group"
                 style={{
                   animation: isLoaded

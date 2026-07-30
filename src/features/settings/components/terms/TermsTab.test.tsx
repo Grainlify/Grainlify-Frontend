@@ -11,9 +11,13 @@ vi.mock('../../../../shared/api/client', () => ({
   acceptTerms: vi.fn(),
 }))
 
-const renderWithTheme = (ui: React.ReactElement, messages: Record<string, string> = en) => {
+const renderWithTheme = (
+  ui: React.ReactElement,
+  messages: Record<string, string> = en,
+  locale: 'en' | 'es' = 'en'
+) => {
   return render(
-    <I18nProvider messages={messages}>
+    <I18nProvider locale={locale} messages={messages}>
       <ThemeProvider>{ui}</ThemeProvider>
     </I18nProvider>
   )
@@ -114,6 +118,22 @@ describe('TermsTab', () => {
     // Check version and date message
     const message = await screen.findByText(/✓ Accepted version 1\.0\.0 on/)
     expect(message).toBeInTheDocument()
+  })
+
+  it('formats the accepted date with the active locale', async () => {
+    const acceptedDate = '2023-10-01T12:00:00Z'
+    vi.mocked(getTermsStatus).mockResolvedValue({
+      accepted: true,
+      version: CURRENT_TERMS_VERSION,
+      accepted_at: acceptedDate,
+    })
+
+    renderWithTheme(<TermsTab />, en, 'es')
+
+    const expectedDate = new Intl.DateTimeFormat('es').format(new Date(acceptedDate))
+    expect(
+      await screen.findByText(`✓ Accepted version ${CURRENT_TERMS_VERSION} on ${expectedDate}`)
+    ).toBeInTheDocument()
   })
 
   it('handles successful terms acceptance', async () => {

@@ -5,7 +5,7 @@
 import { API_BASE_URL } from '../config/api'
 import { getErrorCodeMessage } from '../i18n/errors'
 import { readStoredLocale } from '../i18n/LocaleProvider'
-import { BillingProfile, NotificationSettings } from '../../features/settings/types'
+import { BillingProfile, Invoice, NotificationSettings } from '../../features/settings/types'
 import { BlogPost } from '../../features/blog/types'
 
 // Token management
@@ -1200,6 +1200,10 @@ export const getKYCStatus = () =>
 
 export const getBillingProfiles = () =>
   apiRequest<BillingProfile[]>('/billing/profiles', { requiresAuth: true })
+
+/** Fetches the invoices belonging to a single billing profile. */
+export const getInvoices = (profileId: number) =>
+  apiRequest<Invoice[]>(`/billing/profiles/${profileId}/invoices`, { requiresAuth: true })
 
 /** A single project-to-billing-profile assignment. */
 export type PayoutMappingEntry = {

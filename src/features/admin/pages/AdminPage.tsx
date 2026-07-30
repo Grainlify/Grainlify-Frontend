@@ -32,6 +32,7 @@ import {
   deleteOpenSourceWeekEvent,
 } from '../../../shared/api/client'
 import { clampLimit, hasMoreByTotal } from '../../../shared/utils/pagination'
+import { useIntlFormatters } from '../../../shared/i18n'
 
 // The admin ecosystems/events endpoints don't accept limit/offset params (see
 // shared/api/client.ts), so the full list is still fetched in one request.
@@ -40,6 +41,7 @@ import { clampLimit, hasMoreByTotal } from '../../../shared/utils/pagination'
 // keeps the DOM bounded, which is what issue #744 is actually about.
 const ECOSYSTEMS_PAGE_SIZE = 9
 const OSW_EVENTS_PAGE_SIZE = 9
+type OswStatus = 'upcoming' | 'running' | 'completed' | 'draft'
 
 interface EcosystemLink {
   label: string
@@ -70,6 +72,7 @@ interface Ecosystem {
 
 export function AdminPage() {
   const { theme } = useTheme()
+  const { formatDate } = useIntlFormatters()
   const [showAddModal, setShowAddModal] = useState(false)
   const [ecosystems, setEcosystems] = useState<Ecosystem[]>([])
   const [ecosystemsVisibleCount, setEcosystemsVisibleCount] = useState(() =>
@@ -152,7 +155,16 @@ export function AdminPage() {
   const [oswDeleteConfirm, setOswDeleteConfirm] = useState<{ id: string; title: string } | null>(
     null
   )
-  const [oswForm, setOswForm] = useState({
+  const [oswForm, setOswForm] = useState<{
+    title: string
+    description: string
+    location: string
+    status: OswStatus
+    startDate: string
+    startTime: string
+    endDate: string
+    endTime: string
+  }>({
     title: '',
     description: '',
     location: '',
@@ -375,7 +387,7 @@ export function AdminPage() {
         title: oswForm.title,
         description: oswForm.description || undefined,
         location: oswForm.location || undefined,
-        status: oswForm.status as any,
+        status: oswForm.status,
         start_at,
         end_at,
       })
@@ -904,6 +916,7 @@ export function AdminPage() {
                               : 'hover:bg-amber-500/30 text-amber-600'
                           }`}
                           title="Edit ecosystem"
+                          aria-label="Edit ecosystem"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
@@ -918,6 +931,7 @@ export function AdminPage() {
                                 : 'hover:bg-red-500/30 text-red-600'
                           }`}
                           title="Delete ecosystem"
+                          aria-label="Delete ecosystem"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1148,8 +1162,7 @@ export function AdminPage() {
                         theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                       }`}
                     >
-                      {new Date(ev.start_at).toLocaleDateString()} →{' '}
-                      {new Date(ev.end_at).toLocaleDateString()}
+                      {formatDate(ev.start_at)} → {formatDate(ev.end_at)}
                     </p>
                   </div>
                   <button
@@ -1160,6 +1173,7 @@ export function AdminPage() {
                         : 'hover:bg-red-500/30 text-red-600'
                     }`}
                     title="Delete event"
+                    aria-label="Delete event"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

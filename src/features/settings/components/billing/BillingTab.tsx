@@ -8,9 +8,9 @@ import {
   BillingProfileStatus,
   ProfileDetailTabType,
   PaymentMethod,
+  Invoice,
 } from '../../types'
-import { getBillingProfiles } from '../../../../shared/api/client'
-import { sampleInvoices } from '../../data/invoicesData'
+import { getBillingProfiles, getInvoices } from '../../../../shared/api/client'
 import { BillingProfileCard } from './BillingProfileCard'
 import { PaymentMethodsTab } from './PaymentMethodsTab'
 import { InvoicesTab } from './InvoicesTab'
@@ -161,6 +161,9 @@ export function BillingTab() {
   const [kycWindowOpened, setKycWindowOpened] = useState(false)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [invoicesLoading, setInvoicesLoading] = useState(false)
+  const [invoicesError, setInvoicesError] = useState<string | null>(null)
 
   const handleCreateProfile = () => {
     if (!profileName.trim()) return
@@ -230,6 +233,33 @@ export function BillingTab() {
     }
   }, [selectedProfile])
 
+  // Fetch this profile's invoices when the Invoices sub-tab becomes active.
+  // Always hits the real endpoint regardless of useMock, matching the KYC
+  // calls above (which are also not gated by mock mode) -- useMock only
+  // controls whether the *profiles list* comes from local seed data.
+  useEffect(() => {
+    if (!selectedProfile || detailTab !== 'invoices') return
+
+    let cancelled = false
+    setInvoicesLoading(true)
+    setInvoicesError(null)
+    getInvoices(selectedProfile.id)
+      .then((data) => {
+        if (!cancelled) setInvoices(data)
+      })
+      .catch((err) => {
+        logger.error('Failed to fetch invoices:', err)
+        if (!cancelled) setInvoicesError('Failed to load invoices. Please try again.')
+      })
+      .finally(() => {
+        if (!cancelled) setInvoicesLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedProfile, detailTab])
+
   const checkKYCStatus = async () => {
     setIsCheckingKYC(true)
     try {
@@ -282,7 +312,11 @@ export function BillingTab() {
 
       // Open the KYC URL in a new window
       if (response.url) {
-        const kycWindow = window.open(response.url, '_blank', 'width=800,height=600')
+        const kycWindow = window.open(
+          response.url,
+          '_blank',
+          'width=800,height=600,noopener,noreferrer'
+        )
         setErrorMessage('')
 
         // Window opened successfully - update state to reflect this
@@ -913,7 +947,9 @@ export function BillingTab() {
         )}
 
         {/* Invoices Tab */}
-        {detailTab === 'invoices' && <InvoicesTab invoices={sampleInvoices} />}
+        {detailTab === 'invoices' && (
+          <InvoicesTab invoices={invoices} isLoading={invoicesLoading} error={invoicesError} />
+        )}
       </div>
     )
   }

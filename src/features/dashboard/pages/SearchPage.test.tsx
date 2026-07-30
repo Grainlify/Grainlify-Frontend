@@ -96,6 +96,25 @@ describe('SearchPage Accessibility and Functionality', () => {
     expect(projectResults.length).toBeGreaterThan(0)
   })
 
+  it('should run the search immediately when "Submit search" is clicked, without waiting for the debounce', () => {
+    renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    fireEvent.change(searchInput, { target: { value: 'React' } })
+
+    // Before the debounce timer fires, results aren't shown yet.
+    expect(screen.queryByText(/Search Results/)).not.toBeInTheDocument()
+
+    // Clicking submit runs the search against the current query right away.
+    const submitButton = screen.getByRole('button', { name: 'Submit search' })
+    fireEvent.click(submitButton)
+
+    const heading = screen.getByRole('heading', { name: /Search Results/i })
+    expect(heading).toHaveTextContent('Search Results (3)')
+  })
+
   it("should show 'No results found' state for an unmatched query after debouncing", () => {
     renderSearchPage()
 

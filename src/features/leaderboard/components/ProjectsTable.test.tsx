@@ -60,6 +60,16 @@ function renderTable(data: ProjectData[] = projects) {
 }
 
 describe('ProjectsTable — View Project navigation', () => {
+  it('keeps projects with tied ranks as distinct rows', () => {
+    renderTable([
+      projects[0],
+      { ...projects[1], id: 'proj-3', name: 'Another Protocol', rank: projects[0].rank },
+    ])
+
+    expect(screen.getByText('DeFi Protocol')).toBeInTheDocument()
+    expect(screen.getByText('Another Protocol')).toBeInTheDocument()
+  })
+
   it('renders a View Project link per project pointing at its detail route', () => {
     renderTable()
 
@@ -130,6 +140,63 @@ describe('ProjectsTable — View Project navigation', () => {
     } finally {
       localStorage.clear()
     }
+  })
+})
+
+describe('ProjectsTable — trend icons', () => {
+  /** The trend cell is the second column of a row; icons live inside it. */
+  const trendIcons = (container: HTMLElement) =>
+    Array.from(
+      container.querySelectorAll<SVGElement>('svg[class*="lucide-trending"], svg.lucide-minus')
+    )
+
+  it.each([
+    ['up' as const, 'lucide-trending-up', 'text-green-600'],
+    ['down' as const, 'lucide-trending-down', 'text-red-600'],
+    ['same' as const, 'lucide-minus', 'text-[#7a6b5a]'],
+  ])('renders the %s trend with its icon and colour', (trend, iconClass, colourClass) => {
+    const { container } = renderTable([{ ...projects[0], trend }])
+
+    const icons = trendIcons(container)
+    expect(icons).toHaveLength(1)
+    expect(icons[0]).toHaveClass(iconClass, 'w-4', 'h-4', colourClass)
+  })
+
+  it('renders one icon per row even when rows share the same trend', () => {
+    const { container } = renderTable([
+      { ...projects[0], trend: 'up' },
+      { ...projects[1], trend: 'up' },
+    ])
+
+    // The icons come from a shared, module-level lookup; reusing the same
+    // element across rows must still produce one distinct node per row.
+    const icons = trendIcons(container)
+    expect(icons).toHaveLength(2)
+    expect(icons[0]).not.toBe(icons[1])
+    icons.forEach((icon) => expect(icon).toHaveClass('lucide-trending-up', 'text-green-600'))
+  })
+
+  it('keeps trend icons stable across re-renders with unchanged data', () => {
+    const { container, rerender } = renderTable()
+    const before = trendIcons(container)
+
+    rerender(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/dashboard/leaderboard']}>
+          <Routes>
+            <Route
+              path="/dashboard/leaderboard"
+              element={<ProjectsTable data={projects} activeFilter="overall" isLoaded />}
+            />
+            <Route path="/dashboard/projects/:projectId" element={<ProjectProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>
+    )
+
+    const after = trendIcons(container)
+    expect(after).toHaveLength(before.length)
+    after.forEach((icon, i) => expect(icon).toBe(before[i]))
   })
 })
 

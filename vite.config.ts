@@ -60,27 +60,4 @@ export default defineConfig({
       },
     },
   },
-  test: {
-    // jsdom gives component tests a DOM; node-only tests still work under it.
-    // Tests can still opt into a different environment per-file via a
-    // `// @vitest-environment <env>` docblock.
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test-setup.ts', './src/test/setup.ts'],
-    css: false,
-    include: ['src/**/*.test.{ts,tsx}', 'src/**/*.spec.{ts,tsx}'],
-    exclude: ['e2e/**', 'node_modules/**', 'dist/**', '**/node_modules/**'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'text-summary', 'html'],
-      include: [
-        'src/shared/api/client.ts',
-        'src/shared/contexts/AuthContext.tsx',
-        'src/shared/hooks/useOptimisticData.ts',
-        'src/shared/utils/errorHandler.ts',
-        'src/shared/utils/projectFilter.ts',
-        'src/features/settings/contexts/BillingProfilesContext.tsx',
-      ],
-    },
-  },
 })
