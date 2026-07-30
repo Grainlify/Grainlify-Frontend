@@ -32,6 +32,7 @@ import {
   deleteOpenSourceWeekEvent,
 } from '../../../shared/api/client'
 import { clampLimit, hasMoreByTotal } from '../../../shared/utils/pagination'
+import { useIntlFormatters } from '../../../shared/i18n'
 
 // The admin ecosystems/events endpoints don't accept limit/offset params (see
 // shared/api/client.ts), so the full list is still fetched in one request.
@@ -70,6 +71,7 @@ interface Ecosystem {
 
 export function AdminPage() {
   const { theme } = useTheme()
+  const { formatDate } = useIntlFormatters()
   const [showAddModal, setShowAddModal] = useState(false)
   const [ecosystems, setEcosystems] = useState<Ecosystem[]>([])
   const [ecosystemsVisibleCount, setEcosystemsVisibleCount] = useState(() =>
@@ -1148,8 +1150,7 @@ export function AdminPage() {
                         theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                       }`}
                     >
-                      {new Date(ev.start_at).toLocaleDateString()} →{' '}
-                      {new Date(ev.end_at).toLocaleDateString()}
+                      {formatDate(ev.start_at)} → {formatDate(ev.end_at)}
                     </p>
                   </div>
                   <button
