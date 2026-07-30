@@ -60,6 +60,16 @@ function renderTable(data: ProjectData[] = projects) {
 }
 
 describe('ProjectsTable — View Project navigation', () => {
+  it('keeps projects with tied ranks as distinct rows', () => {
+    renderTable([
+      projects[0],
+      { ...projects[1], id: 'proj-3', name: 'Another Protocol', rank: projects[0].rank },
+    ])
+
+    expect(screen.getByText('DeFi Protocol')).toBeInTheDocument()
+    expect(screen.getByText('Another Protocol')).toBeInTheDocument()
+  })
+
   it('renders a View Project link per project pointing at its detail route', () => {
     renderTable()
 
