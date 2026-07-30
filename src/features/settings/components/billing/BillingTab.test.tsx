@@ -139,5 +139,30 @@ describe('BillingTab', () => {
       )
       expect(textNodes).toHaveLength(0)
     })
+
+    it('opens the KYC verification window with noopener,noreferrer', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window)
+      mockGetKYCStatus.mockResolvedValue({ status: 'not_started' })
+      const originalStatus = mockProfiles[0].status
+      mockProfiles[0].status = 'missing-verification'
+
+      try {
+        await navigateToDetailView()
+
+        const verifyBtn = await screen.findByRole('button', { name: 'Verify KYC' })
+        await act(async () => {
+          fireEvent.click(verifyBtn)
+        })
+
+        expect(openSpy).toHaveBeenCalledWith(
+          'https://example.com',
+          '_blank',
+          'width=800,height=600,noopener,noreferrer'
+        )
+      } finally {
+        mockProfiles[0].status = originalStatus
+        openSpy.mockRestore()
+      }
+    })
   })
 })
