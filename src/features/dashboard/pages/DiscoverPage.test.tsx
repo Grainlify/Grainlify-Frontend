@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
 import { renderWithTheme } from '../../../test/renderWithTheme'
 import { DiscoverPage, getDaysLeft } from './DiscoverPage'
@@ -145,6 +145,36 @@ describe('DiscoverPage', () => {
     // The current date in the page execution defaults to current Date,
     // so we just assert that the days left or no badge shows based on mock data.
     // Issue 2 has null deadline so its daysLeft badge is hidden.
+  })
+
+  it('toggles the favorite button state on click without opening the project', async () => {
+    mockGetRecommendedProjects.mockResolvedValue({ projects: mockProjects })
+    mockGetPublicProjectIssues.mockResolvedValue(mockIssues)
+
+    renderWithTheme(<DiscoverPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Recommended Projects (1)')).toBeInTheDocument()
+    })
+
+    const favoriteButton = screen.getByRole('button', { name: 'Add to favorites' })
+    expect(favoriteButton).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.click(favoriteButton)
+
+    const pressedButton = screen.getByRole('button', { name: 'Remove from favorites' })
+    expect(pressedButton).toHaveAttribute('aria-pressed', 'true')
+
+    // The button sits inside the card's own onClick-to-select handler;
+    // clicking it must not also navigate into the project detail view.
+    expect(screen.queryByText('Repo 1 description')).toBeInTheDocument()
+    expect(screen.getByText('Recommended Projects (1)')).toBeInTheDocument()
+
+    fireEvent.click(pressedButton)
+    expect(screen.getByRole('button', { name: 'Add to favorites' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
   })
 })
 

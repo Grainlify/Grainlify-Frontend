@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PullRequestsTab } from './PullRequestsTab'
 import { renderWithTheme } from '../../../../test/renderWithTheme'
 import { getMaintainerPRs } from '../../../../shared/api/client'
+import sourcePath from './PullRequestsTab.tsx?raw'
 
 vi.mock('../../../../shared/api/client', () => ({
   getMaintainerPRs: vi.fn(),
@@ -18,10 +17,6 @@ vi.mock('../../../../shared/contexts/AuthContext', () => ({
 }))
 
 const mockGetProjectPRs = vi.mocked(getMaintainerPRs)
-const sourcePath = resolve(
-  process.cwd(),
-  'src/features/maintainers/components/pull-requests/PullRequestsTab.tsx'
-)
 
 const PROJECTS = [
   {
@@ -138,7 +133,7 @@ describe('PullRequestsTab accessibility', () => {
 
 describe('PullRequestsTab fetch error typing', () => {
   it('keeps the aggregated PR fetch error typed as unknown instead of any', () => {
-    const source = readFileSync(sourcePath, 'utf8')
+    const source = sourcePath
 
     expect(source).toContain('let lastError: unknown | null = null')
     expect(source).not.toContain('let lastError: any')

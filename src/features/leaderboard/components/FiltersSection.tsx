@@ -28,6 +28,8 @@ interface FilterOption {
   value: FilterType
 }
 
+type Ecosystem = Awaited<ReturnType<typeof getEcosystems>>['ecosystems'][number]
+
 export function FiltersSection({
   activeFilter,
   onFilterChange,
@@ -50,7 +52,7 @@ export function FiltersSection({
     data: cachedEcosystems,
     isLoading: loading,
     fetchData: fetchEcosystemsData,
-  } = useOptimisticData<{ ecosystems: any[] }>(
+  } = useOptimisticData<{ ecosystems: Ecosystem[] }>(
     { ecosystems: [] },
     { cacheDuration: 30000, cacheKey }
   )
@@ -145,10 +147,10 @@ export function FiltersSection({
   useEffect(() => {
     if (cachedEcosystems && cachedEcosystems.ecosystems) {
       const activeEcosystems = cachedEcosystems.ecosystems
-        .filter((e: any) => e.status === 'active')
-        .map((e: any) => ({
-          label: e.name,
-          value: e.slug,
+        .filter((ecosystem) => ecosystem.status === 'active')
+        .map((ecosystem) => ({
+          label: ecosystem.name,
+          value: ecosystem.slug,
         }))
 
       setEcosystemOptions([{ label: 'All Ecosystems', value: 'all' }, ...activeEcosystems])

@@ -359,7 +359,7 @@ This project uses [Dependabot](https://docs.github.com/en/code-security/dependab
 
 **Grouping Strategy:**
 
-- Related packages (Radix UI, MUI/Emotion, testing tools, linting, React core, build tooling) are grouped into single PRs
+- Related packages (Radix UI, testing tools, linting, React core, build tooling) are grouped into single PRs
 - All patch-level updates across unrelated packages are batched together
 - Major version bumps always arrive as individual PRs for careful review
 

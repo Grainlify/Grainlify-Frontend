@@ -24,8 +24,6 @@ The Settings page has been refactored into a clean, modular, feature-based archi
 │   └── terms/                # Tab 5: Terms components
 │       └── TermsTab.tsx
 ├── data/
-│   ├── billingProfilesData.ts
-│   └── payoutProjectsData.ts
 ├── pages/
 │   └── SettingsPage.tsx       # Main page with tab navigation
 └── types/
@@ -157,4 +155,3 @@ Inputs with validation constraints are explicitly configured for assistive techn
 - `aria-invalid` triggers automatically on fields with validation errors.
 - `aria-describedby` links the input element with its corresponding inline error message (marked with `role="alert"`), ensuring descriptive speech feedback for screen readers.
 - Submit action is disabled during background API request submission or when any form fields violate constraints.
-

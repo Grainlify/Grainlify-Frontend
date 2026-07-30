@@ -77,6 +77,11 @@ describe('InstallGitHubAppModal', () => {
     expect(screen.getByText('Install Grainlify GitHub App')).toBeInTheDocument()
   })
 
+  it('has an accessible name on the close button', () => {
+    renderModal()
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument()
+  })
+
   it('validates the "don\'t show again" flag on mount and calls onClose', () => {
     localStorage.setItem('github_app_modal_dismissed', 'true')
     renderModal()

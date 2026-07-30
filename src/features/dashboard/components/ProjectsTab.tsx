@@ -9,7 +9,7 @@ import { useMemo, useCallback, memo } from 'react'
  */
 interface ProjectRowProps {
   /** The project data to display. */
-  project: any
+  project: Project
   /** The index of the row, used for alternating background colors. */
   idx: number
   /** The current theme ("dark" or "light"). */
@@ -181,7 +181,7 @@ const ProjectRow = memo(({ project, idx, theme, getLanguageIcon }: ProjectRowPro
  */
 interface ProjectMobileCardProps {
   /** The project data to display. */
-  project: any
+  project: Project
   /** The current theme ("dark" or "light"). */
   theme: string
   /** Helper function to get the icon and color for a given language. */
