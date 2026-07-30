@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
-import { ShieldOff } from 'lucide-react';
-import { useAuth, type UserRole } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+import type { ReactNode } from 'react'
+import { ShieldOff } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth, type UserRole } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 
 /** Roles that can be passed to the `allow` prop. */
-export type AllowedRole = Exclude<UserRole, null>;
+export type AllowedRole = Exclude<UserRole, null>
 
 export interface RoleGuardProps {
   /**
@@ -12,14 +13,14 @@ export interface RoleGuardProps {
    * @example allow={['admin']}
    * @example allow={['admin', 'maintainer']}
    */
-  allow: AllowedRole[];
+  allow: AllowedRole[]
   /** Content rendered when the user has an allowed role. */
-  children: ReactNode;
+  children: ReactNode
   /**
    * Optional custom fallback rendered when access is denied.
    * When omitted the built-in themed "Unauthorized" state is shown.
    */
-  fallback?: ReactNode;
+  fallback?: ReactNode
 }
 
 /**
@@ -34,18 +35,33 @@ export interface RoleGuardProps {
  * client-side checks for security.
  */
 export function RoleGuard({ allow, children, fallback }: RoleGuardProps) {
-  const { userRole } = useAuth();
+  const { userRole } = useAuth()
 
   if (userRole !== null && allow.includes(userRole as AllowedRole)) {
-    return <>{children}</>;
+    return <>{children}</>
   }
 
-  return fallback !== undefined ? <>{fallback}</> : <UnauthorizedState />;
+  return fallback !== undefined ? <>{fallback}</> : <UnauthorizedState />
 }
 
 function UnauthorizedState() {
-  const { theme } = useTheme();
-  const dark = theme === 'dark';
+  const { theme } = useTheme()
+  const navigate = useNavigate()
+  const dark = theme === 'dark'
+
+  // `window.history.state.idx` is stamped by react-router's browser history
+  // on every entry it pushes. A value > 0 means there is an in-app entry to
+  // return to; otherwise (deep link, new tab, first navigation) falling back
+  // to `history.back()` would leave the app entirely or no-op, stranding the
+  // user on this screen with no way back in.
+  const handleGoBack = () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx
+    if (typeof idx === 'number' && idx > 0) {
+      navigate(-1)
+    } else {
+      navigate('/', { replace: true })
+    }
+  }
 
   return (
     <div
@@ -62,9 +78,7 @@ function UnauthorizedState() {
       {/* Card */}
       <div
         className={`relative z-10 w-full max-w-md backdrop-blur-[40px] border rounded-[28px] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-colors ${
-          dark
-            ? 'bg-white/[0.08] border-white/15'
-            : 'bg-white/[0.15] border-white/25'
+          dark ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
         }`}
       >
         {/* Icon */}
@@ -83,18 +97,15 @@ function UnauthorizedState() {
           >
             Access Restricted
           </h2>
-          <p
-            className={`text-sm transition-colors ${
-              dark ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
-            }`}
-          >
-            You don't have permission to view this page. Contact an administrator if you believe this is a mistake.
+          <p className={`text-sm transition-colors ${dark ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'}`}>
+            You don't have permission to view this page. Contact an administrator if you believe
+            this is a mistake.
           </p>
         </div>
 
         {/* Action */}
         <button
-          onClick={() => window.history.back()}
+          onClick={handleGoBack}
           className={`w-full py-3 rounded-[12px] font-medium transition-all flex items-center justify-center ${
             dark
               ? 'bg-white/[0.08] hover:bg-white/[0.12] text-[#f5efe5] border border-white/15'
@@ -105,5 +116,5 @@ function UnauthorizedState() {
         </button>
       </div>
     </div>
-  );
+  )
 }
