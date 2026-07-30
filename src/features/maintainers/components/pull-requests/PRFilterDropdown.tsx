@@ -1,17 +1,23 @@
-import { PRFilterType } from '../../types';
-import { GlassDropdown } from '../../../../shared/components';
+import { PRFilterType } from '../../types'
+import { GlassDropdown } from '../../../../shared/components'
 
 interface PRFilterDropdownProps {
-  value: PRFilterType;
-  onChange: (value: PRFilterType) => void;
-  isOpen: boolean;
-  onToggle: () => void;
-  onClose: () => void;
+  value: PRFilterType
+  onChange: (value: PRFilterType) => void
+  isOpen: boolean
+  onToggle: () => void
+  onClose: () => void
 }
 
-const filterOptions: PRFilterType[] = ['All states', 'Open', 'Merged', 'Closed', 'Draft'];
+const filterOptions: PRFilterType[] = ['All states', 'Open', 'Merged', 'Closed', 'Draft']
 
-export function PRFilterDropdown({ value, onChange, isOpen, onToggle, onClose }: PRFilterDropdownProps) {
+export function PRFilterDropdown({
+  value,
+  onChange,
+  isOpen,
+  onToggle,
+  onClose,
+}: PRFilterDropdownProps) {
   return (
     <GlassDropdown
       value={value}
@@ -22,5 +28,5 @@ export function PRFilterDropdown({ value, onChange, isOpen, onToggle, onClose }:
       onClose={onClose}
       ariaLabel="Pull request status"
     />
-  );
+  )
 }
