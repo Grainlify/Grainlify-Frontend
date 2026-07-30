@@ -851,7 +851,7 @@ export function ProjectDetailPage({
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => githubUrl && window.open(githubUrl, '_blank')}
+                onClick={() => githubUrl && window.open(githubUrl, '_blank', 'noopener,noreferrer')}
                 className={`p-3 rounded-[12px] backdrop-blur-[20px] border border-white/25 hover:bg-white/[0.2] transition-all ${
                   theme === 'dark'
                     ? 'bg-white/[0.08] text-[#f5f5f5]'
