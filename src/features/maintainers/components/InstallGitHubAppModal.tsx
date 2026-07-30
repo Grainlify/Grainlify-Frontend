@@ -15,6 +15,7 @@ import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { API_BASE_URL } from '../../../shared/config/api'
 import { getAuthToken } from '../../../shared/api/client'
 import { logger } from '../../../shared/utils/logger'
+import { useTranslation } from '../../../shared/i18n'
 
 /**
  * Props for the InstallGitHubAppModal component.
@@ -37,6 +38,7 @@ type InstallStatus = 'idle' | 'installing' | 'confirming' | 'cancelled' | 'error
  */
 export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGitHubAppModalProps) {
   const { theme } = useTheme()
+  const { t } = useTranslation()
   const darkTheme = theme === 'dark'
   const [status, setStatus] = useState<InstallStatus>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -255,13 +257,14 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
           <button
             onClick={onClose}
             disabled={isInstalling}
+            aria-label="Close"
             className={`p-2 rounded-[10px] transition-all ${
               darkTheme
                 ? 'hover:bg-white/10 text-[#b8a898] hover:text-[#e8dfd0]'
                 : 'hover:bg-white/20 text-[#7a6b5a] hover:text-[#2d2820]'
             } ${isInstalling ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -298,10 +301,11 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
             >
               <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-[13px] font-semibold">Installation Cancelled</h4>
+                <h4 className="text-[13px] font-semibold">
+                  {t('maintainers.installGithubApp.cancelledTitle')}
+                </h4>
                 <p className="text-[12px] mt-0.5">
-                  You cancelled the GitHub App installation. No changes were made to your account.
-                  You can retry whenever you're ready.
+                  {t('maintainers.installGithubApp.cancelledBody')}
                 </p>
               </div>
             </div>
@@ -318,9 +322,11 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
             >
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-[13px] font-semibold">Installation Failed</h4>
+                <h4 className="text-[13px] font-semibold">
+                  {t('maintainers.installGithubApp.errorTitle')}
+                </h4>
                 <p className="text-[12px] mt-0.5">
-                  {errorMessage || 'Failed to complete GitHub App installation. Please try again.'}
+                  {errorMessage || t('maintainers.installGithubApp.errorFallbackBody')}
                 </p>
               </div>
             </div>

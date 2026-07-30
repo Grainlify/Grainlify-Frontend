@@ -212,4 +212,23 @@ describe('ProfileTab', () => {
     resolveAvatar()
     await waitFor(() => expect(toast.success).toHaveBeenCalled())
   })
+
+  it('opens the GitHub settings page with noopener,noreferrer', async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    mockGetCurrentUser.mockResolvedValue(mockUser)
+    renderWithTheme(<ProfileTab />)
+
+    await waitFor(() => expect(screen.getByDisplayValue('John')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: /^edit$/i }))
+
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://github.com/settings/profile',
+      '_blank',
+      'noopener,noreferrer'
+    )
+
+    openSpy.mockRestore()
+  })
 })

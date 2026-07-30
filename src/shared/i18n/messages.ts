@@ -168,6 +168,14 @@ export const en = {
   'maintainers.issues.empty.count':
     '{count, plural, one {# issue available} other {# issues available}}',
 
+  // ── Install GitHub App modal — src/features/maintainers/components/InstallGitHubAppModal.tsx ──
+  'maintainers.installGithubApp.cancelledTitle': 'Installation Cancelled',
+  'maintainers.installGithubApp.cancelledBody':
+    "You cancelled the GitHub App installation. No changes were made to your account. You can retry whenever you're ready.",
+  'maintainers.installGithubApp.errorTitle': 'Installation Failed',
+  'maintainers.installGithubApp.errorFallbackBody':
+    'Failed to complete GitHub App installation. Please try again.',
+
   // ── Ecosystems page — src/features/dashboard/pages/EcosystemsPage.tsx ──
   'ecosystems.title': 'Explore Ecosystems',
   'ecosystems.subtitle':

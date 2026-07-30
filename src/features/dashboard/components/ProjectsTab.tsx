@@ -3,12 +3,26 @@ import { GithubIcon } from '../../../shared/components/GithubIcon'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useMemo, useCallback, memo } from 'react'
 
+interface Project {
+  id: string | number
+  logo: string
+  name: string
+  lead?: string
+  billingProfile?: string
+  contributors: number
+  availableIssues: string
+  myContributions: number
+  myRewards: string
+  languages: string[]
+  repository?: string
+}
+
 /**
  * Props for the ProjectRow component.
  */
 interface ProjectRowProps {
   /** The project data to display. */
-  project: any
+  project: Project
   /** The index of the row, used for alternating background colors. */
   idx: number
   /** The current theme ("dark" or "light"). */
@@ -176,7 +190,7 @@ const ProjectRow = memo(({ project, idx, theme, getLanguageIcon }: ProjectRowPro
  */
 interface ProjectMobileCardProps {
   /** The project data to display. */
-  project: any
+  project: Project
   /** The current theme ("dark" or "light"). */
   theme: string
   /** Helper function to get the icon and color for a given language. */

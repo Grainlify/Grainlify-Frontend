@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react'
+import { StrictMode, type ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AuthCallbackPage } from './AuthCallbackPage'
 import { SignInPage } from './SignInPage'
 import { SignUpPage } from './SignUpPage'
@@ -40,9 +40,10 @@ const AUTH_TRANSLATED_MESSAGES: Record<string, string> = {
   'auth.signup.signinLink': 'Localized sign-up signin link',
 }
 
-const { mockGetGitHubLoginUrl, mockUseAuth } = vi.hoisted(() => ({
+const { mockGetGitHubLoginUrl, mockUseAuth, mockUseTheme } = vi.hoisted(() => ({
   mockGetGitHubLoginUrl: vi.fn(),
   mockUseAuth: vi.fn(),
+  mockUseTheme: vi.fn(() => ({ theme: 'light' })),
 }))
 
 vi.mock('../../../shared/api/client', () => ({
@@ -54,7 +55,7 @@ vi.mock('../../../shared/contexts/AuthContext', () => ({
 }))
 
 vi.mock('../../../shared/contexts/ThemeContext', () => ({
-  useTheme: () => ({ theme: 'light' }),
+  useTheme: mockUseTheme,
 }))
 
 vi.mock('../../../shared/utils/logger', () => ({
@@ -69,6 +70,19 @@ vi.mock('../../../shared/utils/logger', () => ({
 function LocationProbe() {
   const location = useLocation()
   return <div data-testid="location">{location.pathname + location.search}</div>
+}
+
+function HistoryProbe() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  return (
+    <div>
+      <div data-testid="location">{location.pathname + location.search}</div>
+      <button type="button" onClick={() => navigate(-1)}>
+        go back
+      </button>
+    </div>
+  )
 }
 
 function I18nTestProvider({
@@ -110,6 +124,18 @@ function renderCallback(path: string) {
       <Routes>
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="*" element={<LocationProbe />} />
+      </Routes>
+    </MemoryRouter>
+  )
+}
+
+function renderCallbackWithHistory(entries: string[], initialIndex: number) {
+  window.history.pushState({}, '', entries[initialIndex])
+  return render(
+    <MemoryRouter initialEntries={entries} initialIndex={initialIndex}>
+      <Routes>
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="*" element={<HistoryProbe />} />
       </Routes>
     </MemoryRouter>
   )
@@ -305,5 +331,227 @@ describe('AuthCallbackPage returnTo lifecycle', () => {
     renderCallback('/auth/callback?token=bad-jwt')
 
     await waitFor(() => expect(sessionStorage.getItem(AUTH_RETURN_TO_KEY)).toBeNull())
+  })
+})
+
+describe('AuthCallbackPage OAuth token history exposure', () => {
+  // Flush the microtasks queued by handleCallback (login promise + state updates)
+  // without waitFor, which is unsafe while fake timers are installed.
+  async function flushCallback() {
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+  }
+
+  beforeEach(() => {
+    sessionStorage.clear()
+    mockUseTheme.mockReturnValue({ theme: 'light' })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    sessionStorage.clear()
+    window.history.replaceState({}, '', '/')
+  })
+
+  it('strips the token from the visible URL before the login call resolves', async () => {
+    let releaseLogin: () => void = () => undefined
+    const login = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseLogin = resolve
+        })
+    )
+    mockUseAuth.mockReturnValue({ login, isAuthenticated: false })
+
+    renderCallback('/auth/callback?token=super-secret-jwt&github=octocat')
+
+    // login() is still pending here, so the URL was cleaned up on the synchronous path.
+    await waitFor(() => expect(login).toHaveBeenCalledWith('super-secret-jwt'))
+    expect(window.location.pathname).toBe('/auth/callback')
+    expect(window.location.search).toBe('')
+    expect(window.location.href).not.toContain('super-secret-jwt')
+
+    await act(async () => {
+      releaseLogin()
+    })
+  })
+
+  it('strips the query string when OAuth returns an error param', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback?error=access_denied')
+
+    expect(await screen.findByText('Login was cancelled. Please try again.')).toBeInTheDocument()
+    expect(window.location.search).toBe('')
+  })
+
+  it('strips the query string for a non access_denied error param', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback?error=server_error')
+
+    expect(await screen.findByText('server_error')).toBeInTheDocument()
+    expect(window.location.search).toBe('')
+  })
+
+  it('falls back to dashboard for a protocol-relative stored returnTo', async () => {
+    sessionStorage.setItem(AUTH_RETURN_TO_KEY, '//evil.com/dashboard')
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: true,
+    })
+
+    renderCallback('/auth/callback?token=jwt')
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/dashboard'))
+    expect(sessionStorage.getItem(AUTH_RETURN_TO_KEY)).toBeNull()
+    expect(window.location.search).toBe('')
+  })
+
+  it('reports a generic failure when login rejects with a non-Error value', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockRejectedValue('boom'),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback?token=weird-jwt')
+
+    expect(await screen.findByText('Authentication failed')).toBeInTheDocument()
+    expect(window.location.search).toBe('')
+  })
+
+  it('renders the processing, error, and success states in dark theme', async () => {
+    mockUseTheme.mockReturnValue({ theme: 'dark' })
+
+    const pendingLogin = vi.fn(() => new Promise<void>(() => undefined))
+    mockUseAuth.mockReturnValue({ login: pendingLogin, isAuthenticated: false })
+    const processing = renderCallback('/auth/callback?token=dark-jwt')
+    expect(await screen.findByText('Completing Authentication')).toBeInTheDocument()
+    processing.unmount()
+
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockRejectedValue(new Error('dark failure')),
+      isAuthenticated: false,
+    })
+    const failed = renderCallback('/auth/callback?token=dark-jwt')
+    expect(await screen.findByText('Authentication Failed')).toBeInTheDocument()
+    failed.unmount()
+
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: false,
+    })
+    renderCallback('/auth/callback?token=dark-jwt')
+    expect(await screen.findByText('Authentication Successful')).toBeInTheDocument()
+  })
+
+  it('processes the callback once under StrictMode double invocation', async () => {
+    const login = vi.fn().mockResolvedValue(undefined)
+    mockUseAuth.mockReturnValue({ login, isAuthenticated: false })
+
+    window.history.pushState({}, '', '/auth/callback?token=strict-jwt')
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={['/auth/callback?token=strict-jwt']}>
+          <Routes>
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            <Route path="*" element={<LocationProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </StrictMode>
+    )
+
+    await waitFor(() => expect(login).toHaveBeenCalledTimes(1))
+    expect(window.location.search).toBe('')
+  })
+
+  it('strips the query string when no token is present', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback?github=octocat')
+
+    expect(await screen.findByText('No authentication token received')).toBeInTheDocument()
+    expect(window.location.search).toBe('')
+  })
+
+  it('leaves no token-bearing URL reachable through history after a failed login', async () => {
+    vi.useFakeTimers()
+    const login = vi.fn().mockRejectedValue(new Error('bad token'))
+    mockUseAuth.mockReturnValue({ login, isAuthenticated: false })
+
+    renderCallbackWithHistory(['/signin', '/auth/callback?token=leaked-jwt'], 1)
+
+    await flushCallback()
+    expect(screen.getByText('bad token')).toBeInTheDocument()
+    expect(window.location.href).not.toContain('leaked-jwt')
+
+    // Fire the delayed redirect; it replaces the callback entry instead of pushing.
+    await act(async () => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(screen.getByTestId('location')).toHaveTextContent('/signin')
+
+    // Going back must not land on the token-bearing callback URL.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /go back/i }))
+    })
+    expect(screen.getByTestId('location')).toHaveTextContent('/signin')
+    expect(screen.getByTestId('location')).not.toHaveTextContent('token')
+    expect(window.location.href).not.toContain('leaked-jwt')
+  })
+
+  it('replaces the callback entry when OAuth returns an error param', async () => {
+    vi.useFakeTimers()
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: false,
+    })
+
+    renderCallbackWithHistory(['/signin', '/auth/callback?error=access_denied'], 1)
+
+    await flushCallback()
+    await act(async () => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(screen.getByTestId('location')).toHaveTextContent('/signin')
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /go back/i }))
+    })
+    expect(screen.getByTestId('location')).toHaveTextContent('/signin')
+  })
+
+  it('replaces the callback entry when no token is present', async () => {
+    vi.useFakeTimers()
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: false,
+    })
+
+    renderCallbackWithHistory(['/signin', '/auth/callback'], 1)
+
+    await flushCallback()
+    await act(async () => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(screen.getByTestId('location')).toHaveTextContent('/signin')
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /go back/i }))
+    })
+    expect(screen.getByTestId('location')).toHaveTextContent('/signin')
   })
 })

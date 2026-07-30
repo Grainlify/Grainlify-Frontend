@@ -172,7 +172,7 @@ export function ProfileTab() {
 
   const handleEditGitHub = () => {
     // Open GitHub settings page in a new tab
-    window.open('https://github.com/settings/profile', '_blank')
+    window.open('https://github.com/settings/profile', '_blank', 'noopener,noreferrer')
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

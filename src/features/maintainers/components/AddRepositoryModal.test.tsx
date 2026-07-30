@@ -223,4 +223,14 @@ describe('AddRepositoryModal', () => {
       ).toBeInTheDocument()
     })
   })
+
+  it('has an accessible name on the close button', async () => {
+    renderWithTheme(<AddRepositoryModal {...defaultProps} />)
+    await waitFor(() => {
+      expect(screen.getByText('Ethereum')).toBeInTheDocument()
+    })
+
+    const closeButton = screen.getByRole('button', { name: 'Close' })
+    expect(closeButton).toBeInTheDocument()
+  })
 })

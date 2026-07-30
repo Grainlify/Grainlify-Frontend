@@ -5,7 +5,7 @@
 import { API_BASE_URL } from '../config/api'
 import { getErrorCodeMessage } from '../i18n/errors'
 import { readStoredLocale } from '../i18n/LocaleProvider'
-import { BillingProfile, NotificationSettings } from '../../features/settings/types'
+import { BillingProfile, Invoice, NotificationSettings } from '../../features/settings/types'
 import { BlogPost } from '../../features/blog/types'
 
 // Token management
@@ -545,6 +545,21 @@ export const getProfileCalendar = (userId?: string, login?: string) => {
   }>(`/profile/calendar${query}`, { requiresAuth: true })
 }
 
+export type ProfileActivityItem = {
+  type: 'pull_request' | 'issue'
+  id: string
+  number: number
+  title: string
+  url: string
+  state?: string
+  date: string
+  month_year: string
+  project_name: string
+  project_id: string
+  merged?: boolean
+  draft?: boolean
+}
+
 export const getProfileActivity = (limit = 50, offset = 0, userId?: string, login?: string) => {
   const params = new URLSearchParams()
   params.append('limit', limit.toString())
@@ -552,20 +567,7 @@ export const getProfileActivity = (limit = 50, offset = 0, userId?: string, logi
   if (userId) params.append('user_id', userId)
   if (login) params.append('login', login)
   return apiRequest<{
-    activities: Array<{
-      type: 'pull_request' | 'issue'
-      id: string
-      number: number
-      title: string
-      url: string
-      state?: string
-      date: string
-      month_year: string
-      project_name: string
-      project_id: string
-      merged?: boolean
-      draft?: boolean
-    }>
+    activities: ProfileActivityItem[]
     total: number
     limit: number
     offset: number
@@ -639,21 +641,21 @@ export const getProfileContributions = () =>
     requiresAuth: true,
   })
 
+export type ProfileProjectSummary = {
+  id: string
+  github_full_name: string
+  status: string
+  ecosystem_name?: string
+  language?: string
+  owner_avatar_url?: string
+}
+
 export const getProjectsContributed = (userId?: string, login?: string) => {
   const params = new URLSearchParams()
   if (userId) params.append('user_id', userId)
   if (login) params.append('login', login)
   const query = params.toString() ? `?${params.toString()}` : ''
-  return apiRequest<
-    Array<{
-      id: string
-      github_full_name: string
-      status: string
-      ecosystem_name?: string
-      language?: string
-      owner_avatar_url?: string
-    }>
-  >(`/profile/projects${query}`, { requiresAuth: true })
+  return apiRequest<ProfileProjectSummary[]>(`/profile/projects${query}`, { requiresAuth: true })
 }
 
 export const getProjectsLed = (userId?: string, login?: string) => {
@@ -661,16 +663,9 @@ export const getProjectsLed = (userId?: string, login?: string) => {
   if (userId) params.append('user_id', userId)
   if (login) params.append('login', login)
   const query = params.toString() ? `?${params.toString()}` : ''
-  return apiRequest<
-    Array<{
-      id: string
-      github_full_name: string
-      status: string
-      ecosystem_name?: string
-      language?: string
-      owner_avatar_url?: string
-    }>
-  >(`/profile/projects-led${query}`, { requiresAuth: true })
+  return apiRequest<ProfileProjectSummary[]>(`/profile/projects-led${query}`, {
+    requiresAuth: true,
+  })
 }
 
 export const getPublicProfile = (userId?: string, login?: string) => {
@@ -1205,6 +1200,10 @@ export const getKYCStatus = () =>
 
 export const getBillingProfiles = () =>
   apiRequest<BillingProfile[]>('/billing/profiles', { requiresAuth: true })
+
+/** Fetches the invoices belonging to a single billing profile. */
+export const getInvoices = (profileId: number) =>
+  apiRequest<Invoice[]>(`/billing/profiles/${profileId}/invoices`, { requiresAuth: true })
 
 /** A single project-to-billing-profile assignment. */
 export type PayoutMappingEntry = {

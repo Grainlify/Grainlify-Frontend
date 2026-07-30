@@ -1,2 +1,6 @@
 # pnpm workspace configuration
 # This project is a single-package workspace (no sub-packages).
+
+allowBuilds:
+  esbuild: set this to true or false
+  sharp: set this to true or false

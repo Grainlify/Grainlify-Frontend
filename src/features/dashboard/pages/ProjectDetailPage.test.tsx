@@ -285,5 +285,30 @@ describe('ProjectDetailPage', () => {
 
       expect(writeTextMock).toHaveBeenCalled()
     })
+
+    it('opens the GitHub repo link with noopener,noreferrer', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+
+      renderComponent({ projectId: 'proj-123' })
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { level: 1, name: 'test-repo' })).toBeInTheDocument()
+      })
+
+      const buttons = screen.getAllByRole('button')
+      const githubButton = buttons.find(
+        (btn) => btn.querySelector('svg.lucide-external-link') !== null
+      )
+      expect(githubButton).toBeDefined()
+      fireEvent.click(githubButton!)
+
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://github.com/testorg/test-repo',
+        '_blank',
+        'noopener,noreferrer'
+      )
+
+      openSpy.mockRestore()
+    })
   })
 })
