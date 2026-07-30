@@ -247,4 +247,74 @@ describe('BillingTab', () => {
       expect(await screen.findByTestId('invoices-error')).toBeInTheDocument()
     })
   })
+
+  describe('Invoices tab', () => {
+    async function openInvoicesTab() {
+      await navigateToDetailView()
+      await act(async () => {
+        fireEvent.click(screen.getByText('Invoices'))
+      })
+    }
+
+    it('fetches invoices for the selected profile when the tab is opened', async () => {
+      await openInvoicesTab()
+
+      await waitFor(() => {
+        expect(mockGetInvoices).toHaveBeenCalledWith(1)
+      })
+    })
+
+    it('renders a genuine empty state when the backend returns no invoices', async () => {
+      await openInvoicesTab()
+
+      await waitFor(() => expect(mockGetInvoices).toHaveBeenCalled())
+      expect(await screen.findByText('No invoices yet')).toBeInTheDocument()
+    })
+
+    it('renders real invoice rows returned by the backend', async () => {
+      mockGetInvoices.mockResolvedValue([
+        {
+          id: 'inv-1',
+          invoiceNumber: 'INV-2024-001',
+          date: '2024-01-01',
+          amount: 100,
+          currency: 'USD',
+          status: 'paid',
+          description: 'Monthly fee',
+          billingPeriod: 'Jan 2024',
+        },
+      ])
+
+      await openInvoicesTab()
+
+      expect(await screen.findByText('INV-2024-001')).toBeInTheDocument()
+    })
+
+    it('shows the loading state while invoices are being fetched', async () => {
+      let resolveInvoices: (value: unknown[]) => void = () => {}
+      mockGetInvoices.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveInvoices = resolve
+          })
+      )
+
+      await openInvoicesTab()
+
+      expect(screen.getByTestId('invoices-loading')).toBeInTheDocument()
+
+      resolveInvoices([])
+      await waitFor(() => {
+        expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument()
+      })
+    })
+
+    it('shows an error state when fetching invoices fails', async () => {
+      mockGetInvoices.mockRejectedValue(new Error('network error'))
+
+      await openInvoicesTab()
+
+      expect(await screen.findByTestId('invoices-error')).toBeInTheDocument()
+    })
+  })
 })
