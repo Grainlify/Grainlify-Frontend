@@ -1,13 +1,13 @@
-import { useState, useEffect, useId, useRef } from 'react';
-import { Search, ArrowRight, X } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
-import { useFocusTrap } from '../utils/focusTrap';
+import { useState, useEffect, useId, useRef } from 'react'
+import { Search, ArrowRight, X } from 'lucide-react'
+import { useTheme } from '../contexts/ThemeContext'
+import { useFocusTrap } from '../utils/focusTrap'
 
 interface SearchModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean
+  onClose: () => void
   /** Called when the user submits a valid (non-empty, non-whitespace) query. */
-  onSearch?: (query: string) => Promise<void> | void;
+  onSearch?: (query: string) => Promise<void> | void
 }
 
 /**
@@ -40,49 +40,49 @@ interface SearchModalProps {
  *   settles.
  */
 export function SearchModal({ isOpen, onClose, onSearch }: SearchModalProps) {
-  const { theme } = useTheme();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isPending, setIsPending] = useState(false);
-  const darkTheme = theme === 'dark';
-  const headingId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const { theme } = useTheme()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isPending, setIsPending] = useState(false)
+  const darkTheme = theme === 'dark'
+  const headingId = useId()
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, {
     onEscape: onClose,
     initialFocusRef: inputRef,
-  });
+  })
 
   const searchSuggestions = [
-    "Terminal-based markdown editors worth checking out",
-    "Unity projects for procedural terrain generation",
-    "Find the best GraphQL clients for TypeScript",
-    "AI-powered tools for reviewing pull requests",
-  ];
+    'Terminal-based markdown editors worth checking out',
+    'Unity projects for procedural terrain generation',
+    'Find the best GraphQL clients for TypeScript',
+    'AI-powered tools for reviewing pull requests',
+  ]
 
   const handleSubmit = async () => {
-    const trimmed = searchQuery.trim();
-    if (!trimmed || isPending) return;
-    setIsPending(true);
+    const trimmed = searchQuery.trim()
+    if (!trimmed || isPending) return
+    setIsPending(true)
     try {
-      await onSearch?.(trimmed);
+      await onSearch?.(trimmed)
     } catch {
       // Swallow — onSearch errors should not crash the UI.
     } finally {
-      setIsPending(false);
+      setIsPending(false)
     }
-  };
+  }
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden'
     }
 
     return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen])
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <div
@@ -93,22 +93,18 @@ export function SearchModal({ isOpen, onClose, onSearch }: SearchModalProps) {
       className="fixed inset-0 z-[200] flex items-start justify-center pt-[10vh]"
     >
       {/* Backdrop */}
-      <div 
+      <div
         className={`absolute inset-0 transition-colors ${
-          darkTheme 
-            ? 'bg-black/70' 
-            : 'bg-black/40'
+          darkTheme ? 'bg-black/70' : 'bg-black/40'
         }`}
         onClick={onClose}
         style={{ backdropFilter: 'blur(12px)' }}
       />
 
       {/* Modal Content */}
-      <div 
+      <div
         className={`relative w-full max-w-[900px] mx-4 rounded-[32px] border shadow-2xl transition-colors ${
-          darkTheme
-            ? 'bg-[#1a1512]/95 border-white/10'
-            : 'bg-white/95 border-white/30'
+          darkTheme ? 'bg-[#1a1512]/95 border-white/10' : 'bg-white/95 border-white/30'
         }`}
         style={{ backdropFilter: 'blur(90px)' }}
       >
@@ -128,33 +124,43 @@ export function SearchModal({ isOpen, onClose, onSearch }: SearchModalProps) {
 
         <div className="p-12">
           {/* Main Heading */}
-          <h1 id={headingId} className={`text-[42px] font-bold text-center mb-4 leading-tight transition-colors ${
-            darkTheme ? 'text-[#f5efe5]' : 'text-[#2d2820]'
-          }`}>
-            Search Open Source Projects and<br />Build Your Confidence
+          <h1
+            id={headingId}
+            className={`text-[42px] font-bold text-center mb-4 leading-tight transition-colors ${
+              darkTheme ? 'text-[#f5efe5]' : 'text-[#2d2820]'
+            }`}
+          >
+            Search Open Source Projects and
+            <br />
+            Build Your Confidence
           </h1>
 
           {/* Subtitle */}
-          <p className={`text-center text-[15px] mb-8 transition-colors ${
-            darkTheme ? 'text-[#b8a898]/80' : 'text-[#6b5d4d]/80'
-          }`}>
-            Build your open source portfolio to optimize your chances of getting funded.<br />
+          <p
+            className={`text-center text-[15px] mb-8 transition-colors ${
+              darkTheme ? 'text-[#b8a898]/80' : 'text-[#6b5d4d]/80'
+            }`}
+          >
+            Build your open source portfolio to optimize your chances of getting funded.
+            <br />
             Explore projects that help you stand out.
           </p>
 
           {/* Search Input */}
-          <div 
+          <div
             className={`relative h-[64px] rounded-[32px] mb-12 transition-colors ${
-              darkTheme 
-                ? 'bg-[#2d2820]/60 border border-white/10' 
+              darkTheme
+                ? 'bg-[#2d2820]/60 border border-white/10'
                 : 'bg-white/60 border border-black/10'
             }`}
             style={{ backdropFilter: 'blur(40px)' }}
           >
             <div className="absolute inset-0 flex items-center px-6">
-              <Search className={`w-5 h-5 mr-4 flex-shrink-0 transition-colors ${
-                darkTheme ? 'text-white/50' : 'text-black/50'
-              }`} />
+              <Search
+                className={`w-5 h-5 mr-4 flex-shrink-0 transition-colors ${
+                  darkTheme ? 'text-white/50' : 'text-black/50'
+                }`}
+              />
               <input
                 ref={inputRef}
                 type="text"
@@ -162,7 +168,7 @@ export function SearchModal({ isOpen, onClose, onSearch }: SearchModalProps) {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    handleSubmit();
+                    handleSubmit()
                   }
                 }}
                 placeholder="Search projects, topics, or keywords..."
@@ -184,9 +190,7 @@ export function SearchModal({ isOpen, onClose, onSearch }: SearchModalProps) {
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:scale-105'
                 } ${
-                  darkTheme
-                    ? 'bg-[#c9983a] hover:bg-[#d4a645]'
-                    : 'bg-[#c9983a] hover:bg-[#e8c571]'
+                  darkTheme ? 'bg-[#c9983a] hover:bg-[#d4a645]' : 'bg-[#c9983a] hover:bg-[#e8c571]'
                 }`}
               >
                 {isPending ? (
@@ -200,14 +204,18 @@ export function SearchModal({ isOpen, onClose, onSearch }: SearchModalProps) {
 
           {/* Search Suggestions */}
           <div>
-            <h2 className={`font-semibold mb-2 transition-colors ${
-              darkTheme ? 'text-[#f5efe5]' : 'text-[#2d2820]'
-            }`}>
+            <h2
+              className={`font-semibold mb-2 transition-colors ${
+                darkTheme ? 'text-[#f5efe5]' : 'text-[#2d2820]'
+              }`}
+            >
               Search suggestions
             </h2>
-            <p className={`text-[13px] mb-4 transition-colors ${
-              darkTheme ? 'text-[#b8a898]/70' : 'text-[#6b5d4d]/70'
-            }`}>
+            <p
+              className={`text-[13px] mb-4 transition-colors ${
+                darkTheme ? 'text-[#b8a898]/70' : 'text-[#6b5d4d]/70'
+              }`}
+            >
               Discover interesting projects across different technologies
             </p>
 
@@ -225,35 +233,56 @@ export function SearchModal({ isOpen, onClose, onSearch }: SearchModalProps) {
                   }`}
                   style={{ backdropFilter: 'blur(20px)' }}
                 >
-                  <span className={`text-left text-[14px] transition-colors ${
-                    darkTheme ? 'text-[#d4c5b0]' : 'text-[#6b5d4d]'
-                  }`}>
+                  <span
+                    className={`text-left text-[14px] transition-colors ${
+                      darkTheme ? 'text-[#d4c5b0]' : 'text-[#6b5d4d]'
+                    }`}
+                  >
                     {suggestion}
                   </span>
-                  <ArrowRight className={`w-4 h-4 ml-3 flex-shrink-0 transition-all group-hover:translate-x-1 ${
-                    darkTheme ? 'text-[#c9983a]' : 'text-[#a2792c]'
-                  }`} />
+                  <ArrowRight
+                    className={`w-4 h-4 ml-3 flex-shrink-0 transition-all group-hover:translate-x-1 ${
+                      darkTheme ? 'text-[#c9983a]' : 'text-[#a2792c]'
+                    }`}
+                  />
                 </button>
               ))}
             </div>
           </div>
 
           {/* Keyboard Shortcuts Hint */}
-          <div className={`mt-6 pt-4 border-t text-center text-[12px] transition-colors ${
-            darkTheme 
-              ? 'border-white/5 text-[#b8a898]/60' 
-              : 'border-black/5 text-[#6b5d4d]/60'
-          }`}>
-            <kbd className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
-              darkTheme ? 'bg-white/5' : 'bg-black/5'
-            }`}>Esc</kbd> to close · <kbd className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
-              darkTheme ? 'bg-white/5' : 'bg-black/5'
-            }`}>Tab</kbd> to navigate · <kbd className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
-              darkTheme ? 'bg-white/5' : 'bg-black/5'
-            }`}>Enter</kbd> to search
+          <div
+            className={`mt-6 pt-4 border-t text-center text-[12px] transition-colors ${
+              darkTheme ? 'border-white/5 text-[#b8a898]/60' : 'border-black/5 text-[#6b5d4d]/60'
+            }`}
+          >
+            <kbd
+              className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+                darkTheme ? 'bg-white/5' : 'bg-black/5'
+              }`}
+            >
+              Esc
+            </kbd>{' '}
+            to close ·{' '}
+            <kbd
+              className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+                darkTheme ? 'bg-white/5' : 'bg-black/5'
+              }`}
+            >
+              Tab
+            </kbd>{' '}
+            to navigate ·{' '}
+            <kbd
+              className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+                darkTheme ? 'bg-white/5' : 'bg-black/5'
+              }`}
+            >
+              Enter
+            </kbd>{' '}
+            to search
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

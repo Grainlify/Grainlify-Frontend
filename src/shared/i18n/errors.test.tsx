@@ -118,9 +118,7 @@ describe('useErrorCodeMessage hook', () => {
     expect(result.current.getErrorMessage('UNKNOWN_CODE')).toBe(
       'An unexpected error occurred. Please try again.'
     )
-    expect(result.current.getErrorMessage()).toBe(
-      'An unexpected error occurred. Please try again.'
-    )
+    expect(result.current.getErrorMessage()).toBe('An unexpected error occurred. Please try again.')
   })
 })
 
