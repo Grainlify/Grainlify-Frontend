@@ -96,6 +96,25 @@ describe('SearchPage Accessibility and Functionality', () => {
     expect(projectResults.length).toBeGreaterThan(0)
   })
 
+  it('should run the search immediately when "Submit search" is clicked, without waiting for the debounce', () => {
+    renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    fireEvent.change(searchInput, { target: { value: 'React' } })
+
+    // Before the debounce timer fires, results aren't shown yet.
+    expect(screen.queryByText(/Search Results/)).not.toBeInTheDocument()
+
+    // Clicking submit runs the search against the current query right away.
+    const submitButton = screen.getByRole('button', { name: 'Submit search' })
+    fireEvent.click(submitButton)
+
+    const heading = screen.getByRole('heading', { name: /Search Results/i })
+    expect(heading).toHaveTextContent('Search Results (3)')
+  })
+
   it("should show 'No results found' state for an unmatched query after debouncing", () => {
     renderSearchPage()
 
@@ -244,5 +263,121 @@ describe('SearchPage Accessibility and Functionality', () => {
 
     fireEvent.click(backBtn)
     expect(mockOnBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('should enforce a maxLength on the search input', () => {
+    renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    expect(searchInput).toHaveAttribute('maxlength', '100')
+    expect(searchInput).toHaveAttribute('aria-describedby', 'search-input-counter')
+  })
+
+  it('should not show the character counter for short queries', () => {
+    const { container } = renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    fireEvent.change(searchInput, { target: { value: 'React' } })
+
+    expect(container.querySelector('#search-input-counter')).not.toBeInTheDocument()
+  })
+
+  it('should show an accessible counter when approaching the limit', () => {
+    const { container } = renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    fireEvent.change(searchInput, { target: { value: 'a'.repeat(85) } })
+
+    const counter = container.querySelector('#search-input-counter')
+    expect(counter).toBeInTheDocument()
+    expect(counter).toHaveAttribute('aria-live', 'polite')
+    expect(counter).toHaveTextContent('85/100')
+    expect(counter).not.toHaveTextContent('Character limit reached')
+  })
+
+  it('should announce when the character limit is reached', () => {
+    const { container } = renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    fireEvent.change(searchInput, { target: { value: 'a'.repeat(100) } })
+
+    const counter = container.querySelector('#search-input-counter')
+    expect(counter).toBeInTheDocument()
+    expect(counter).toHaveTextContent('Character limit reached')
+    expect(counter).toHaveTextContent('100/100')
+  })
+
+  it('should trim leading/trailing whitespace before searching', () => {
+    renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    // Padded query should still match the same results as the trimmed term.
+    fireEvent.change(searchInput, { target: { value: '   React   ' } })
+
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+
+    const heading = screen.getByRole('heading', { name: /Search Results/i })
+    expect(heading).toHaveTextContent('Search Results (3)')
+    expect(screen.getByText('Add dark mode support')).toBeInTheDocument()
+  })
+
+  it('should treat a whitespace-only query as empty (no results list)', () => {
+    renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+    fireEvent.change(searchInput, { target: { value: '     ' } })
+
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+
+    expect(screen.queryByRole('heading', { name: /Search Results/i })).not.toBeInTheDocument()
+  })
+
+  it('should use the latest filter when changed mid-debounce (stale closure regression)', () => {
+    renderSearchPage()
+
+    const searchInput = screen.getByRole('textbox', {
+      name: 'Search issues, projects, and contributors',
+    })
+
+    // Type a query that matches multiple items (e.g. "React" matches issue "Add dark mode support" and project "React Dashboard")
+    fireEvent.change(searchInput, { target: { value: 'React' } })
+
+    // Advance halfway through the 300ms debounce
+    act(() => {
+      vi.advanceTimersByTime(150)
+    })
+
+    // Mid-debounce, change the filter to 'issue'
+    const issueFilterBtn = screen.getByRole('button', { name: 'Issue' })
+    fireEvent.click(issueFilterBtn)
+
+    // Complete the remaining debounce
+    act(() => {
+      vi.advanceTimersByTime(150)
+    })
+
+    // Search results should show up now. Because we updated the filter to 'issue',
+    // the project "React Dashboard" should NOT be in the document.
+    const heading = screen.getByRole('heading', { name: /Search Results/i })
+    expect(heading).toHaveTextContent('Search Results')
+
+    expect(screen.getByText('Add dark mode support')).toBeInTheDocument()
+    expect(screen.queryAllByText('Modern dashboard with React and TypeScript').length).toBe(0)
   })
 })

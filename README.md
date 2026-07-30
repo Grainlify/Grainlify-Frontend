@@ -359,7 +359,7 @@ This project uses [Dependabot](https://docs.github.com/en/code-security/dependab
 
 **Grouping Strategy:**
 
-- Related packages (Radix UI, MUI/Emotion, testing tools, linting, React core, build tooling) are grouped into single PRs
+- Related packages (Radix UI, testing tools, linting, React core, build tooling) are grouped into single PRs
 - All patch-level updates across unrelated packages are batched together
 - Major version bumps always arrive as individual PRs for careful review
 
@@ -448,6 +448,21 @@ npm run test:bundle-size
 - [Contributing Guide](./CONTRIBUTING.md) - Development setup, feature-sliced layout, styling guidelines, testing, and PR checklists.
 - [API Integration Guide](./API_INTEGRATION.md) - Backend API integration details
 - [Attributions](./ATTRIBUTIONS.md) - Third-party assets and licenses
+
+## Keyboard Shortcuts
+
+### Search Modal
+
+The search modal (`SearchModal.tsx`) supports the following keyboard shortcuts for efficient navigation:
+
+| Shortcut | Action |
+|----------|--------|
+| <kbd>Escape</kbd> | Close the modal and return focus to the trigger element |
+| <kbd>Enter</kbd> | Submit the search query (when input is focused and query is non-empty) |
+| <kbd>Tab</kbd> | Navigate forward through focusable elements (input → submit button → close button → suggestion pills) |
+| <kbd>Shift</kbd> + <kbd>Tab</kbd> | Navigate backward through focusable elements |
+
+The modal implements a focus trap that prevents keyboard focus from leaving the dialog while it is open. Focus is automatically restored to the triggering element when the modal closes.
 
 ## Support
 

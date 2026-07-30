@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { InstallGitHubAppModal } from './InstallGitHubAppModal'
+import { I18nProvider } from '../../../shared/i18n'
 import { toast } from 'sonner'
 import { logger } from '../../../shared/utils/logger'
 
@@ -36,6 +37,18 @@ describe('InstallGitHubAppModal', () => {
   const mockOnSuccess = vi.fn()
   const originalLocation = window.location
 
+  function renderModal(props: Partial<{ isOpen: boolean }> = {}) {
+    return render(
+      <I18nProvider>
+        <InstallGitHubAppModal
+          isOpen={props.isOpen ?? true}
+          onClose={mockOnClose}
+          onSuccess={mockOnSuccess}
+        />
+      </I18nProvider>
+    )
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
@@ -55,23 +68,28 @@ describe('InstallGitHubAppModal', () => {
   })
 
   it('does not render when isOpen is false', () => {
-    render(<InstallGitHubAppModal isOpen={false} onClose={mockOnClose} onSuccess={mockOnSuccess} />)
+    renderModal({ isOpen: false })
     expect(screen.queryByText('Install Grainlify GitHub App')).not.toBeInTheDocument()
   })
 
   it('renders correctly when isOpen is true', () => {
-    render(<InstallGitHubAppModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />)
+    renderModal()
     expect(screen.getByText('Install Grainlify GitHub App')).toBeInTheDocument()
+  })
+
+  it('has an accessible name on the close button', () => {
+    renderModal()
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument()
   })
 
   it('validates the "don\'t show again" flag on mount and calls onClose', () => {
     localStorage.setItem('github_app_modal_dismissed', 'true')
-    render(<InstallGitHubAppModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />)
+    renderModal()
     expect(mockOnClose).toHaveBeenCalledTimes(1)
   })
 
   it('renders the privacy and permissions link', () => {
-    render(<InstallGitHubAppModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />)
+    renderModal()
     const link = screen.getByRole('link', {
       name: /Learn more about GitHub App permissions and privacy/i,
     })
@@ -87,7 +105,7 @@ describe('InstallGitHubAppModal', () => {
       json: async () => ({ install_url: 'https://github.com/apps/test/install' }),
     })
 
-    render(<InstallGitHubAppModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />)
+    renderModal()
 
     const installButton = screen.getByRole('button', { name: /install github app/i })
     fireEvent.click(installButton)
@@ -104,7 +122,7 @@ describe('InstallGitHubAppModal', () => {
       json: async () => ({ message: 'Installation failed' }),
     })
 
-    render(<InstallGitHubAppModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />)
+    renderModal()
 
     const installButton = screen.getByRole('button', { name: /install github app/i })
     fireEvent.click(installButton)
@@ -125,7 +143,7 @@ describe('InstallGitHubAppModal', () => {
       json: async () => ({ install_url: 'https://github.com/apps/test/install' }),
     })
 
-    render(<InstallGitHubAppModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />)
+    renderModal()
 
     const checkbox = screen.getByRole('checkbox')
     await userEvent.click(checkbox)
@@ -147,9 +165,7 @@ describe('InstallGitHubAppModal', () => {
       })
     )
 
-    const { unmount } = render(
-      <InstallGitHubAppModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
-    )
+    const { unmount } = renderModal()
 
     await userEvent.click(screen.getByRole('button', { name: /install github app/i }))
 
@@ -181,9 +197,7 @@ describe('InstallGitHubAppModal', () => {
       })
     )
 
-    const { rerender } = render(
-      <InstallGitHubAppModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
-    )
+    const { rerender } = renderModal()
 
     await userEvent.click(screen.getByRole('button', { name: /install github app/i }))
 
@@ -191,7 +205,9 @@ describe('InstallGitHubAppModal', () => {
     const signal = fetchOptions.signal as AbortSignal
 
     rerender(
-      <InstallGitHubAppModal isOpen={false} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <I18nProvider>
+        <InstallGitHubAppModal isOpen={false} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      </I18nProvider>
     )
 
     expect(signal.aborted).toBe(true)
@@ -205,6 +221,176 @@ describe('InstallGitHubAppModal', () => {
       expect(mockOnSuccess).not.toHaveBeenCalled()
       expect(window.location.href).toBe('')
       expect(toast.error).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('cancellation, confirmation failure, and retry flows', () => {
+    it('displays a clear, non-error cancelled state when user cancels on GitHub', async () => {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...originalLocation, search: '?setup_action=cancel' } as Location,
+      })
+
+      renderModal()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('github-app-cancelled-state')).toBeInTheDocument()
+        expect(screen.getByText('Installation Cancelled')).toBeInTheDocument()
+      })
+
+      expect(mockOnSuccess).not.toHaveBeenCalled()
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
+    })
+
+    it('resolves the cancelled and error copy from the i18n message catalog, not hardcoded strings', async () => {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...originalLocation, search: '?setup_action=cancel' } as Location,
+      })
+
+      render(
+        <I18nProvider
+          messages={{
+            'maintainers.installGithubApp.cancelledTitle': 'Instalación cancelada',
+            'maintainers.installGithubApp.cancelledBody': 'Puedes reintentar cuando quieras.',
+          }}
+        >
+          <InstallGitHubAppModal isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+        </I18nProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Instalación cancelada')).toBeInTheDocument()
+        expect(screen.getByText('Puedes reintentar cuando quieras.')).toBeInTheDocument()
+      })
+
+      // The English strings this catalog override replaced must be gone —
+      // proves the heading/body are actually sourced from useTranslation,
+      // not hardcoded JSX with the override silently ignored.
+      expect(screen.queryByText('Installation Cancelled')).not.toBeInTheDocument()
+    })
+
+    it('surfaces an actionable error and prevents false success when backend confirmation fails', async () => {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...originalLocation, search: '?installation_id=12345' } as Location,
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ message: 'Confirmation backend error' }),
+      })
+
+      renderModal()
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/auth/github/app/install/confirm'),
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ installation_id: '12345' }),
+          })
+        )
+        expect(screen.getByTestId('github-app-error-state')).toBeInTheDocument()
+        expect(screen.getByText('Confirmation backend error')).toBeInTheDocument()
+        expect(toast.error).toHaveBeenCalledWith('Confirmation backend error')
+      })
+
+      expect(mockOnSuccess).not.toHaveBeenCalled()
+      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
+    })
+
+    it('calls onSuccess when backend confirmation succeeds', async () => {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...originalLocation, search: '?installation_id=12345' } as Location,
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'success' }),
+      })
+
+      renderModal()
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/auth/github/app/install/confirm'),
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ installation_id: '12345' }),
+          })
+        )
+        expect(mockOnSuccess).toHaveBeenCalledTimes(1)
+        expect(toast.error).not.toHaveBeenCalled()
+      })
+    })
+
+    it('allows retrying after cancellation without restarting modal flow', async () => {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...originalLocation, search: '?setup_action=cancel' } as Location,
+      })
+
+      renderModal()
+
+      const retryBtn = await screen.findByRole('button', { name: /retry/i })
+      expect(screen.getByTestId('github-app-cancelled-state')).toBeInTheDocument()
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ install_url: 'https://github.com/apps/test/install' }),
+      })
+
+      fireEvent.click(retryBtn)
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/auth/github/app/install/start'),
+          expect.anything()
+        )
+        expect(mockOnSuccess).toHaveBeenCalledTimes(1)
+        expect(window.location.href).toBe('https://github.com/apps/test/install')
+      })
+    })
+
+    it('allows retrying after confirmation failure without restarting modal flow', async () => {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...originalLocation, search: '?installation_id=99999' } as Location,
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ message: 'Server temp unavailable' }),
+      })
+
+      renderModal()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('github-app-error-state')).toBeInTheDocument()
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'success' }),
+      })
+
+      const retryBtn = screen.getByRole('button', { name: /retry/i })
+      fireEvent.click(retryBtn)
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2)
+        expect(mockFetch).toHaveBeenLastCalledWith(
+          expect.stringContaining('/auth/github/app/install/confirm'),
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ installation_id: '99999' }),
+          })
+        )
+        expect(mockOnSuccess).toHaveBeenCalledTimes(1)
+      })
     })
   })
 })

@@ -15,6 +15,7 @@ import {
 import { getProfileContributions, type ProfileContribution } from '../../../shared/api/client'
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { useIntlFormatters, type UseIntlFormatters } from '../../../shared/i18n'
 
 type ContributionStatus = 'applied' | 'assigned' | 'pending' | 'complete'
 type RewardFilter = 'Rewarded' | 'Unrewarded'
@@ -62,6 +63,7 @@ const fallbackTitle = 'Untitled contribution'
 const fallbackProject = 'Unknown project'
 const fallbackTag = 'contribution'
 const fallbackTime = 'Recently'
+const fallbackContributor = 'Unknown contributor'
 
 const normalizeText = (value: unknown, fallback: string) => {
   if (typeof value !== 'string' && typeof value !== 'number') return fallback
@@ -133,7 +135,10 @@ const getRewardFilter = (contribution: ProfileContribution): RewardFilter => {
   return 'Unrewarded'
 }
 
-const formatContributionTime = (contribution: ProfileContribution) => {
+const formatContributionTime = (
+  contribution: ProfileContribution,
+  formatDate: UseIntlFormatters['formatDate']
+) => {
   const value =
     contribution.updated_at ||
     contribution.submitted_at ||
@@ -144,11 +149,11 @@ const formatContributionTime = (contribution: ProfileContribution) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return normalizeText(value, fallbackTime)
 
-  return new Intl.DateTimeFormat('en-US', {
+  return formatDate(date, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(date)
+  })
 }
 
 /**
@@ -159,7 +164,10 @@ const formatContributionTime = (contribution: ProfileContribution) => {
  * supplied strings such as issue titles are escaped by default rather than
  * interpreted as HTML.
  */
-function normalizeContribution(contribution: ProfileContribution): ContributionCardData {
+function normalizeContribution(
+  contribution: ProfileContribution,
+  formatDate: UseIntlFormatters['formatDate']
+): ContributionCardData {
   const tag = normalizeText(getFirstLabel(contribution), fallbackTag)
 
   return {
@@ -167,7 +175,7 @@ function normalizeContribution(contribution: ProfileContribution): ContributionC
     title: normalizeText(contribution.title, fallbackTitle),
     status: normalizeStatus(contribution.status),
     badge: getBadge(contribution),
-    time: formatContributionTime(contribution),
+    time: formatContributionTime(contribution, formatDate),
     project: normalizeText(
       contribution.project_name ||
         contribution.project ||
@@ -177,7 +185,7 @@ function normalizeContribution(contribution: ProfileContribution): ContributionC
     ),
     contributor: normalizeText(
       contribution.contributor_login || contribution.author_login,
-      fallbackProject
+      fallbackContributor
     ),
     tag,
     tagType: getTagType(tag),
@@ -261,6 +269,25 @@ function ContributionError({ theme, onRetry }: { theme: string; onRetry: () => v
         <RefreshCw className="w-4 h-4" />
         Retry
       </button>
+    </div>
+  )
+}
+
+function ContributionEmptyBoard({ theme }: { theme: string }) {
+  return (
+    <div
+      data-testid="contribution-empty-board"
+      className={`text-center py-16 backdrop-blur-[30px] bg-white/[0.12] rounded-[20px] border border-white/20 ${
+        theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+      }`}
+    >
+      <div className="w-14 h-14 mx-auto mb-4 opacity-60 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5">
+        <Star className="w-7 h-7" />
+      </div>
+      <p className="text-[16px] font-semibold">No contributions yet</p>
+      <p className="text-[13px] mt-2 max-w-sm mx-auto opacity-80">
+        When you start contributing to projects, your progress and history will be tracked here.
+      </p>
     </div>
   )
 }
@@ -410,6 +437,7 @@ function ContributionColumn({
 
 export function ContributionsTab() {
   const { theme } = useTheme()
+  const { formatDate } = useIntlFormatters()
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState('')
   const [projectSearchQuery, setProjectSearchQuery] = useState('')
@@ -425,7 +453,9 @@ export function ContributionsTab() {
       .then((response) => {
         setState({
           status: 'ok',
-          contributions: (response.contributions || []).map(normalizeContribution),
+          contributions: (response.contributions || []).map((c) =>
+            normalizeContribution(c, formatDate)
+          ),
         })
       })
       .catch(() => setState({ status: 'error' }))
@@ -509,6 +539,8 @@ export function ContributionsTab() {
           <ContributionSkeleton />
         ) : state.status === 'error' ? (
           <ContributionError theme={theme} onRetry={fetchContributions} />
+        ) : state.contributions.length === 0 ? (
+          <ContributionEmptyBoard theme={theme} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
             {contributionColumns.map((column) => (

@@ -18,6 +18,13 @@ vi.mock('../../../shared/contexts/ThemeContext', () => ({
   }),
 }))
 
+vi.mock('../../../shared/i18n', () => ({
+  useIntlFormatters: () => ({
+    formatDate: (date: Date, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en-US', options).format(date),
+  }),
+}))
+
 import { ContributionsTab } from './ContributionsTab'
 
 function renderContributionsTab() {
@@ -87,12 +94,29 @@ describe('ContributionsTab', () => {
     expect(mockGetProfileContributions).toHaveBeenCalledTimes(1)
   })
 
-  it('shows loading skeletons while contribution items are loading', () => {
+  it('shows loading skeletons while contribution items are loading without flashing empty state', () => {
     mockGetProfileContributions.mockReturnValue(new Promise(() => {}))
 
     renderContributionsTab()
 
     expect(screen.getByLabelText('Loading contributions')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByTestId('contribution-empty-board')).not.toBeInTheDocument()
+    expect(screen.queryByText(/no contributions yet/i)).not.toBeInTheDocument()
+  })
+
+  it('shows a friendly empty state when a user has zero total contributions', async () => {
+    mockGetProfileContributions.mockResolvedValue({ contributions: [] })
+
+    renderContributionsTab()
+
+    const emptyBoard = await screen.findByTestId('contribution-empty-board')
+    expect(emptyBoard).toBeInTheDocument()
+    expect(screen.getByText('No contributions yet')).toBeInTheDocument()
+    expect(screen.getByText(/when you start contributing to projects/i)).toBeInTheDocument()
+
+    // Ensure 4 blank columns are not shown
+    expect(screen.queryByText('No applied contributions')).not.toBeInTheDocument()
+    expect(screen.queryByText('No complete contributions')).not.toBeInTheDocument()
   })
 
   it('shows an empty state for each column that has no matching contributions', async () => {
@@ -294,17 +318,45 @@ describe('ContributionsTab', () => {
     await userEvent.click(screen.getByRole('button', { name: /projects/i }))
     expect(screen.queryByPlaceholderText('Search projects')).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: /rewarded 2/i }))
+    await userEvent.click(screen.getByRole('button', { name: /rewarded\s*2/i }))
     expect(screen.queryByText('Rewarded, Unrewarded')).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: /rewarded 2/i }))
+    await userEvent.click(screen.getByRole('button', { name: /rewarded\s*2/i }))
     await userEvent.click(screen.getByRole('button', { name: 'Rewarded' }))
     await userEvent.click(screen.getByRole('button', { name: 'Unrewarded' }))
     expect(screen.getByText('No reward filters selected')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Rewarded' }))
     expect(screen.queryByText('No reward filters selected')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /rewarded 1/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /rewarded\s*1/i })).toBeInTheDocument()
+  })
+
+  it('uses a contributor-specific fallback (not "Unknown project") when contributor_login and author_login are missing', async () => {
+    mockGetProfileContributions.mockResolvedValue({
+      contributions: [
+        {
+          id: 'no-contributor',
+          title: 'Contribution with no author',
+          status: 'applied',
+          project_name: 'Test Project',
+          contributor_login: null,
+          author_login: null,
+        },
+      ],
+    })
+
+    renderContributionsTab()
+
+    await screen.findByText('Contribution with no author')
+
+    await userEvent.type(screen.getByPlaceholderText('Search'), 'Unknown contributor')
+
+    expect(screen.getByText('Contribution with no author')).toBeInTheDocument()
+
+    await userEvent.clear(screen.getByPlaceholderText('Search'))
+    await userEvent.type(screen.getByPlaceholderText('Search'), 'Unknown project')
+
+    expect(screen.queryByText('Contribution with no author')).not.toBeInTheDocument()
   })
 
   it('renders repository-supplied titles as escaped text', async () => {

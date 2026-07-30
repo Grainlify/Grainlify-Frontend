@@ -1,15 +1,16 @@
-import { useState, KeyboardEvent } from 'react';
-import { SettingsTabType } from '../types';
-import { ProfileTab } from '../components/profile/ProfileTab';
-import { NotificationsTab } from '../components/notifications/NotificationsTab';
-import { PayoutTab } from '../components/payout/PayoutTab';
-import { BillingTab } from '../components/billing/BillingTab';
-import { TermsTab } from '../components/terms/TermsTab';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { BillingProfilesProvider } from '../contexts/BillingProfilesContext';
+import { useState, KeyboardEvent } from 'react'
+import { SettingsTabType } from '../types'
+import { ProfileTab } from '../components/profile/ProfileTab'
+import { NotificationsTab } from '../components/notifications/NotificationsTab'
+import { PayoutTab } from '../components/payout/PayoutTab'
+import { BillingTab } from '../components/billing/BillingTab'
+import { TermsTab } from '../components/terms/TermsTab'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { useTranslation, LocaleSwitcher } from '../../../shared/i18n'
+import { BillingProfilesProvider } from '../contexts/BillingProfilesContext'
 
 interface SettingsPageProps {
-  initialTab?: SettingsTabType;
+  initialTab?: SettingsTabType
 }
 
 /**
@@ -26,42 +27,43 @@ interface SettingsPageProps {
  * - `role="tabpanel"` on the content container, associated with the active tab via `aria-labelledby`
  */
 export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab);
-  const { theme } = useTheme();
+  const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab)
+  const { theme } = useTheme()
+  const { t } = useTranslation()
 
   const tabs: { id: SettingsTabType; label: string }[] = [
-    { id: 'profile', label: 'Profile' },
-    { id: 'notifications', label: 'Notifications' },
-    { id: 'payout', label: 'Payout Preferences' },
-    { id: 'billing', label: 'Billing Profiles' },
-    { id: 'terms', label: 'Terms and Conditions' },
-  ];
+    { id: 'profile', label: t('settings.tabs.profile') },
+    { id: 'notifications', label: t('settings.tabs.notifications') },
+    { id: 'payout', label: t('settings.tabs.payout') },
+    { id: 'billing', label: t('settings.tabs.billing') },
+    { id: 'terms', label: t('settings.tabs.terms') },
+  ]
 
   const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    let nextIndex = index;
+    let nextIndex = index
 
     if (e.key === 'ArrowRight') {
-      nextIndex = (index + 1) % tabs.length;
+      nextIndex = (index + 1) % tabs.length
     } else if (e.key === 'ArrowLeft') {
-      nextIndex = (index - 1 + tabs.length) % tabs.length;
+      nextIndex = (index - 1 + tabs.length) % tabs.length
     } else if (e.key === 'Home') {
-      nextIndex = 0;
+      nextIndex = 0
     } else if (e.key === 'End') {
-      nextIndex = tabs.length - 1;
+      nextIndex = tabs.length - 1
     } else {
-      return;
+      return
     }
 
-    e.preventDefault();
-    const nextTabId = tabs[nextIndex].id;
-    setActiveTab(nextTabId);
-    
+    e.preventDefault()
+    const nextTabId = tabs[nextIndex].id
+    setActiveTab(nextTabId)
+
     // Focus the next tab slightly after React processes the state update
     requestAnimationFrame(() => {
-      const nextTab = document.getElementById(`tab-${nextTabId}`);
-      nextTab?.focus();
-    });
-  };
+      const nextTab = document.getElementById(`tab-${nextTabId}`)
+      nextTab?.focus()
+    })
+  }
 
   return (
     <BillingProfilesProvider>
@@ -74,11 +76,7 @@ export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
               : 'bg-white/[0.12] border-white/20'
           }`}
         >
-          <div 
-            role="tablist" 
-            aria-label="Settings" 
-            className="flex items-center gap-2 p-2"
-          >
+          <div role="tablist" aria-label="Settings" className="flex items-center gap-2 p-2">
             {tabs.map((tab, index) => (
               <button
                 key={tab.id}
@@ -103,10 +101,21 @@ export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
           </div>
         </div>
 
+        {/* Language preference */}
+        <div
+          className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-colors p-6 ${
+            theme === 'dark'
+              ? 'bg-[#2d2820]/[0.4] border-white/10'
+              : 'bg-white/[0.12] border-white/20'
+          }`}
+        >
+          <LocaleSwitcher className="max-w-xs" />
+        </div>
+
         {/* Tab Content */}
-        <div 
-          id={`panel-${activeTab}`} 
-          role="tabpanel" 
+        <div
+          id={`panel-${activeTab}`}
+          role="tabpanel"
           aria-labelledby={`tab-${activeTab}`}
           tabIndex={0}
         >
@@ -118,5 +127,5 @@ export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
         </div>
       </div>
     </BillingProfilesProvider>
-  );
+  )
 }

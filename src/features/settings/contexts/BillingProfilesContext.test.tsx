@@ -1,132 +1,247 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { BillingProfilesProvider, useBillingProfiles } from './BillingProfilesContext';
-import { logger } from '../../../shared/utils/logger';
-import { BillingProfile } from '../types';
+import { act, renderHook } from '@testing-library/react'
+import { ReactNode } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { logger } from '../../../shared/utils/logger'
+import { BillingProfile } from '../types'
+import { BillingProfilesProvider, useBillingProfiles } from './BillingProfilesContext'
 
-vi.mock('../../../shared/utils/logger', () => ({
-  logger: {
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
-const mockProfile: BillingProfile = {
+const individual: BillingProfile = {
   id: 1,
-  name: 'Test Profile',
+  name: 'Personal',
   type: 'individual',
   status: 'verified',
-};
+  isDefault: true,
+}
+
+const company: BillingProfile = {
+  id: 2,
+  name: 'Acme',
+  type: 'organization',
+  status: 'missing-verification',
+}
+
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <BillingProfilesProvider>{children}</BillingProfilesProvider>
+)
+
+function mockSaveFailure(secret = '4111111111111111') {
+  // Spy on the live `localStorage` instance, not `Storage.prototype` — in
+  // jsdom, `localStorage` doesn't inherit `setItem` from `Storage.prototype`
+  // (it has its own instance property), so a prototype spy silently never
+  // intercepts the real calls.
+  return vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+    throw new Error(`storage rejected ${secret}`)
+  })
+}
 
 describe('BillingProfilesContext', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
-  });
+    localStorage.clear()
+    vi.restoreAllMocks()
+  })
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  it('reads the stored profile list', () => {
+    localStorage.setItem('billing_profiles', JSON.stringify([individual]))
 
-  it('provides an empty profiles array by default when storage is empty', () => {
-    const { result } = renderHook(() => useBillingProfiles(), {
-      wrapper: BillingProfilesProvider,
-    });
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
 
-    expect(result.current.profiles).toEqual([]);
-  });
+    expect(result.current.profiles).toEqual([individual])
+  })
 
-  it('loads profiles from localStorage on mount', () => {
-    localStorage.setItem('billing_profiles', JSON.stringify([mockProfile]));
+  it('returns an empty list and logs only a safe summary when reading fails', () => {
+    const secret = '4111111111111111'
+    localStorage.setItem('billing_profiles', `{ "card": "${secret}"`)
+    const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined)
 
-    const { result } = renderHook(() => useBillingProfiles(), {
-      wrapper: BillingProfilesProvider,
-    });
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
 
-    expect(result.current.profiles).toEqual([mockProfile]);
-  });
+    expect(result.current.profiles).toEqual([])
+    expect(loggerSpy).toHaveBeenCalledWith('Billing profile load failed')
+    expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain(secret)
+  })
 
-  it('handles corrupted JSON in localStorage gracefully', () => {
-    localStorage.setItem('billing_profiles', 'invalid-json');
+  it('replaces and persists the profile list', () => {
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
 
-    const { result } = renderHook(() => useBillingProfiles(), {
-      wrapper: BillingProfilesProvider,
-    });
+    act(() => expect(result.current.setProfiles([individual, company])).toBe(true))
 
-    expect(result.current.profiles).toEqual([]);
-    expect(logger.error).toHaveBeenCalledWith(
-      'Failed to load billing profiles from storage:',
-      expect.any(Error)
-    );
-  });
+    expect(result.current.profiles).toEqual([individual, company])
+    expect(JSON.parse(localStorage.getItem('billing_profiles')!)).toEqual([individual, company])
+  })
 
-  it('adds a new profile and persists to storage', () => {
-    const { result } = renderHook(() => useBillingProfiles(), {
-      wrapper: BillingProfilesProvider,
-    });
+  it('keeps the prior list when replacing it cannot be persisted', () => {
+    localStorage.setItem('billing_profiles', JSON.stringify([individual]))
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
+    mockSaveFailure()
 
-    act(() => {
-      result.current.addProfile(mockProfile);
-    });
+    act(() => expect(result.current.setProfiles([company])).toBe(false))
 
-    expect(result.current.profiles).toEqual([mockProfile]);
-    expect(localStorage.getItem('billing_profiles')).toBe(JSON.stringify([mockProfile]));
-  });
+    expect(result.current.profiles).toEqual([individual])
+  })
 
-  it('updates an existing profile and persists to storage', () => {
-    localStorage.setItem('billing_profiles', JSON.stringify([mockProfile]));
+  it('creates and persists a profile', () => {
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
 
-    const { result } = renderHook(() => useBillingProfiles(), {
-      wrapper: BillingProfilesProvider,
-    });
+    act(() => expect(result.current.addProfile(company)).toBe(true))
 
-    const updates: Partial<BillingProfile> = { name: 'Updated Name' };
+    expect(result.current.profiles).toEqual([company])
+  })
 
-    act(() => {
-      result.current.updateProfile(mockProfile.id, updates);
-    });
+  it('does not persist taxId, paymentMethods, or invoices to localStorage', () => {
+    const sensitiveProfile: BillingProfile = {
+      id: 3,
+      name: 'Sensitive Corp',
+      type: 'organization',
+      status: 'verified',
+      taxId: '123-45-6789',
+      paymentMethods: [
+        {
+          id: 1,
+          ecosystem: 'stellar',
+          cryptoType: 'usdc',
+          walletAddress: 'GABC',
+          isDefault: true,
+          createdAt: '2026-01-01',
+        },
+      ],
+      invoices: [
+        {
+          id: 'inv-1',
+          invoiceNumber: 'INV-001',
+          date: '2026-01-01',
+          amount: 100,
+          currency: 'USD',
+          status: 'paid',
+          description: 'Test',
+          billingPeriod: 'Jan 2026',
+        },
+      ],
+    }
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
 
-    const expectedProfile = { ...mockProfile, ...updates };
-    expect(result.current.profiles).toEqual([expectedProfile]);
-    expect(localStorage.getItem('billing_profiles')).toBe(JSON.stringify([expectedProfile]));
-  });
+    act(() => expect(result.current.addProfile(sensitiveProfile)).toBe(true))
 
-  it('sets multiple profiles and persists to storage', () => {
-    const { result } = renderHook(() => useBillingProfiles(), {
-      wrapper: BillingProfilesProvider,
-    });
+    const stored = localStorage.getItem('billing_profiles')!
+    expect(stored).not.toContain('123-45-6789')
+    expect(stored).not.toContain('paymentMethods')
+    expect(stored).not.toContain('invoices')
+  })
 
-    const newProfiles = [mockProfile, { ...mockProfile, id: 2, name: 'Profile 2' }];
+  it('keeps sensitive fields in in-memory state for the current session', () => {
+    const sensitiveProfile: BillingProfile = {
+      id: 4,
+      name: 'In-Memory Corp',
+      type: 'organization',
+      status: 'verified',
+      taxId: '987-65-4321',
+      paymentMethods: [
+        {
+          id: 2,
+          ecosystem: 'stellar',
+          cryptoType: 'xlm',
+          walletAddress: 'GDEF',
+          isDefault: false,
+          createdAt: '2026-02-01',
+        },
+      ],
+    }
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
 
-    act(() => {
-      result.current.setProfiles(newProfiles);
-    });
+    act(() => expect(result.current.addProfile(sensitiveProfile)).toBe(true))
 
-    expect(result.current.profiles).toEqual(newProfiles);
-    expect(localStorage.getItem('billing_profiles')).toBe(JSON.stringify(newProfiles));
-  });
+    // In-memory state retains the full profile
+    expect(result.current.profiles[0].taxId).toBe('987-65-4321')
+    expect(result.current.profiles[0].paymentMethods).toHaveLength(1)
+  })
 
-  it('logs an error when localStorage.setItem fails (quota exceeded)', () => {
-    const { result } = renderHook(() => useBillingProfiles(), {
-      wrapper: BillingProfilesProvider,
-    });
+  it('rolls back a create that cannot be persisted without logging sensitive data', () => {
+    const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined)
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
+    const secret = '4111111111111111'
+    mockSaveFailure(secret)
 
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('QuotaExceededError');
-    });
+    act(() => expect(result.current.addProfile(company)).toBe(false))
 
-    act(() => {
-      result.current.addProfile(mockProfile);
-    });
+    expect(result.current.profiles).toEqual([])
+    expect(loggerSpy).toHaveBeenCalledWith('Billing profile save failed')
+    expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain(secret)
+  })
 
-    expect(logger.error).toHaveBeenCalledWith(
-      'Failed to save billing profiles to storage:',
-      expect.any(Error)
-    );
+  it('updates a profile while preserving its id', () => {
+    localStorage.setItem('billing_profiles', JSON.stringify([individual, company]))
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
 
-    // Cleanup spy
-    setItemSpy.mockRestore();
-  });
-});
+    act(() =>
+      expect(result.current.updateProfile(company.id, { id: 99, name: 'Renamed' })).toBe(true)
+    )
+
+    expect(result.current.profiles).toEqual([individual, { ...company, name: 'Renamed' }])
+  })
+
+  it('returns false when the profile to update does not exist', () => {
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
+
+    act(() => expect(result.current.updateProfile(404, { name: 'Missing' })).toBe(false))
+
+    expect(result.current.profiles).toEqual([])
+  })
+
+  it('rolls back an update that cannot be persisted', () => {
+    localStorage.setItem('billing_profiles', JSON.stringify([company]))
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
+    mockSaveFailure()
+
+    act(() => expect(result.current.updateProfile(company.id, { name: 'Renamed' })).toBe(false))
+
+    expect(result.current.profiles).toEqual([company])
+  })
+
+  it('deletes a non-default profile', () => {
+    localStorage.setItem('billing_profiles', JSON.stringify([individual, company]))
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
+
+    act(() => expect(result.current.deleteProfile(company.id)).toBe(true))
+
+    expect(result.current.profiles).toEqual([individual])
+  })
+
+  it('explicitly blocks deletion of the default profile', () => {
+    localStorage.setItem('billing_profiles', JSON.stringify([individual, company]))
+    const setItemSpy = vi.spyOn(localStorage, 'setItem')
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
+
+    act(() => expect(result.current.deleteProfile(individual.id)).toBe(false))
+
+    expect(result.current.profiles).toEqual([individual, company])
+    expect(setItemSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns false when the profile to delete does not exist', () => {
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
+
+    act(() => expect(result.current.deleteProfile(404)).toBe(false))
+
+    expect(result.current.profiles).toEqual([])
+  })
+
+  it('rolls back a delete that cannot be persisted', () => {
+    localStorage.setItem('billing_profiles', JSON.stringify([company]))
+    const { result } = renderHook(() => useBillingProfiles(), { wrapper })
+    mockSaveFailure()
+
+    act(() => expect(result.current.deleteProfile(company.id)).toBe(false))
+
+    expect(result.current.profiles).toEqual([company])
+  })
+
+  it('requires consumers to be wrapped in the provider', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const suppressExpectedError = (event: ErrorEvent) => event.preventDefault()
+    window.addEventListener('error', suppressExpectedError)
+
+    expect(() => renderHook(() => useBillingProfiles())).toThrow(
+      'useBillingProfiles must be used within a BillingProfilesProvider'
+    )
+    window.removeEventListener('error', suppressExpectedError)
+  })
+})

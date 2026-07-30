@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
+import { I18nProvider } from '../../../shared/i18n'
 
 /** Type a value into an input/textarea without per-keystroke delays. */
 function fill(element: HTMLElement, value: string) {
@@ -194,9 +195,11 @@ function makeEcosystems(count = 2) {
 /** Render EcosystemsPage inside ThemeProvider. */
 function renderPage() {
   return render(
-    <ThemeProvider>
-      <EcosystemsPage onEcosystemClick={onEcosystemClick} />
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider>
+        <EcosystemsPage onEcosystemClick={onEcosystemClick} />
+      </ThemeProvider>
+    </I18nProvider>
   )
 }
 
@@ -284,9 +287,11 @@ function AddEcosystemFormHarness() {
 
 function renderAddForm() {
   return render(
-    <ThemeProvider>
-      <AddEcosystemFormHarness />
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider>
+        <AddEcosystemFormHarness />
+      </ThemeProvider>
+    </I18nProvider>
   )
 }
 

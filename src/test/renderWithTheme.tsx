@@ -1,6 +1,7 @@
-import type { ReactElement } from 'react';
-import { render, type RenderOptions } from '@testing-library/react';
-import { ThemeProvider } from '../shared/contexts/ThemeContext';
+import type { ReactElement, ReactNode } from 'react'
+import { render, type RenderOptions } from '@testing-library/react'
+import { ThemeProvider } from '../shared/contexts/ThemeContext'
+import { I18nProvider } from '../shared/i18n'
 
 /**
  * Renders `ui` wrapped in the app's {@link ThemeProvider}.
@@ -11,8 +12,14 @@ import { ThemeProvider } from '../shared/contexts/ThemeContext';
  */
 export function renderWithTheme(
   ui: ReactElement,
-  { theme = 'light', ...options }: { theme?: 'light' | 'dark' } & RenderOptions = {},
+  { theme = 'light', ...options }: { theme?: 'light' | 'dark' } & RenderOptions = {}
 ) {
-  localStorage.setItem('theme', theme);
-  return render(ui, { wrapper: ThemeProvider, ...options });
+  localStorage.setItem('theme', theme)
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <I18nProvider>
+      <ThemeProvider>{children}</ThemeProvider>
+    </I18nProvider>
+  )
+
+  return render(ui, { wrapper: Wrapper, ...options })
 }

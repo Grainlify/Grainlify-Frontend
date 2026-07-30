@@ -1,15 +1,15 @@
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { OpenSourceWeekPage } from './pages/OpenSourceWeekPage';
-import { OpenSourceWeekDetailPage } from './pages/OpenSourceWeekDetailPage';
-import { EcosystemsPage } from './pages/EcosystemsPage';
-import { EcosystemDetailPage } from './pages/EcosystemDetailPage';
-import { MaintainersPage } from '../maintainers/pages/MaintainersPage';
-import { ProjectDetailPage } from './pages/ProjectDetailPage';
-import { IssueDetailPage } from './pages/IssueDetailPage';
-import { SearchPage } from './pages/SearchPage';
-import { BlogArticlePage } from '../blog/pages/BlogArticlePage';
-import { ResourceNotFound } from '../../shared/components/ResourceNotFound';
-import { isValidRouteParam } from '../../shared/utils/validation';
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { OpenSourceWeekPage } from './pages/OpenSourceWeekPage'
+import { OpenSourceWeekDetailPage } from './pages/OpenSourceWeekDetailPage'
+import { EcosystemsPage } from './pages/EcosystemsPage'
+import { EcosystemDetailPage } from './pages/EcosystemDetailPage'
+import { MaintainersPage } from '../maintainers/pages/MaintainersPage'
+import { ProjectDetailPage } from './pages/ProjectDetailPage'
+import { IssueDetailPage } from './pages/IssueDetailPage'
+import { SearchPage } from './pages/SearchPage'
+import { BlogArticlePage } from '../blog/pages/BlogArticlePage'
+import { ResourceNotFound } from '../../shared/components/ResourceNotFound'
+import { isValidRouteParam } from '../../shared/utils/validation'
 
 // Open Source Week Page Wrapper
 export function OpenSourceWeekPageRoute() {
@@ -37,7 +37,7 @@ export function OpenSourceWeekDetailPageRoute() {
         backTo="/dashboard/open-source-week"
         backLabel="Back to Open Source Week"
       />
-    );
+    )
   }
 
   const handleBack = () => {
@@ -67,14 +67,15 @@ export function EcosystemsPageRoute() {
 
 // Ecosystem Detail Page Wrapper
 export function EcosystemDetailPageRoute() {
-  const { ecosystemId } = useParams<{ ecosystemId: string }>();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const state = location.state as {
-    ecosystemName?: string;
-    description?: string | null;
-    logoUrl?: string | null;
-  } || {};
+  const { ecosystemId } = useParams<{ ecosystemId: string }>()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const state =
+    (location.state as {
+      ecosystemName?: string
+      description?: string | null
+      logoUrl?: string | null
+    }) || {}
 
   if (!isValidRouteParam(ecosystemId)) {
     return (
@@ -83,7 +84,7 @@ export function EcosystemDetailPageRoute() {
         backTo="/dashboard/ecosystems"
         backLabel="Back to Ecosystems"
       />
-    );
+    )
   }
 
   const handleBack = () => {
@@ -133,7 +134,7 @@ export function ProjectDetailPageRoute() {
         backTo="/dashboard/browse"
         backLabel="Back to Browse"
       />
-    );
+    )
   }
 
   const handleBack = () => {
@@ -187,7 +188,7 @@ export function IssueDetailPageRoute() {
         backTo="/dashboard/browse"
         backLabel="Back to Browse"
       />
-    );
+    )
   }
 
   const handleClose = () => {
@@ -202,7 +203,7 @@ export function IssueDetailPageRoute() {
  * Validates the `:slug` parameter before rendering the article page.
  */
 export function BlogArticlePageRoute() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug } = useParams<{ slug: string }>()
 
   if (!isValidRouteParam(slug)) {
     return (
@@ -211,10 +212,10 @@ export function BlogArticlePageRoute() {
         backTo="/dashboard/blog"
         backLabel="Back to Blog"
       />
-    );
+    )
   }
 
-  return <BlogArticlePage />;
+  return <BlogArticlePage />
 }
 
 // Search Page Wrapper

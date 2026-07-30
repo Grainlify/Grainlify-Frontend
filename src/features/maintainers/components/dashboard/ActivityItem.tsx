@@ -1,11 +1,11 @@
-import { GitPullRequest, Circle } from 'lucide-react';
-import { useTheme } from '../../../../shared/contexts/ThemeContext';
-import { Activity } from '../../types';
+import { GitPullRequest, Circle } from 'lucide-react'
+import { useTheme } from '../../../../shared/contexts/ThemeContext'
+import { Activity } from '../../types'
 
 interface ActivityItemProps {
-  activity: Activity;
-  index: number;
-  onClick?: () => void;
+  activity: Activity
+  index: number
+  onClick?: () => void
 }
 
 /**
@@ -20,37 +20,37 @@ interface ActivityItemProps {
  *   omit `onClick` to render a non-interactive row.
  */
 export function ActivityItem({ activity, index, onClick }: ActivityItemProps) {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
 
   /**
    * Activity rows are optionally interactive.
    * When an onClick handler is provided, the row behaves like a button
    * and supports Enter/Space activation for keyboard users.
    */
-  const isClickable = Boolean(onClick);
+  const isClickable = Boolean(onClick)
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!isClickable) return;
+    if (!isClickable) return
     if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onClick?.();
+      event.preventDefault()
+      onClick?.()
     }
-  };
+  }
 
   const getPRIconColor = () => {
-    if (activity.type !== 'pr') return '';
+    if (activity.type !== 'pr') return ''
 
     switch (activity.label) {
       case 'Merged':
-        return 'text-[#8b5cf6]';
+        return 'text-[#8b5cf6]'
       case 'Open':
-        return 'text-[#22c55e]';
+        return 'text-[#22c55e]'
       case 'Closed':
-        return theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
+        return theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
       default:
-        return theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
+        return theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
     }
-  };
+  }
 
   return (
     <div
@@ -58,10 +58,11 @@ export function ActivityItem({ activity, index, onClick }: ActivityItemProps) {
       tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? onClick : undefined}
       onKeyDown={handleKeyDown}
-      className={`backdrop-blur-[25px] rounded-[14px] border p-4 hover:border-[#c9983a]/30 transition-all duration-300 group/item ${isClickable ? 'cursor-pointer' : 'cursor-default'} ${theme === 'dark'
+      className={`backdrop-blur-[25px] rounded-[14px] border p-4 hover:border-[#c9983a]/30 transition-all duration-300 group/item ${isClickable ? 'cursor-pointer' : 'cursor-default'} ${
+        theme === 'dark'
           ? 'bg-white/[0.08] border-white/10 hover:bg-white/[0.12]'
           : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.22]'
-        }`}
+      }`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <div className="flex items-start justify-between gap-4">
@@ -77,22 +78,23 @@ export function ActivityItem({ activity, index, onClick }: ActivityItemProps) {
           )}
 
           {/* Number Badge */}
-          <div className={`px-2.5 py-1 rounded-[6px] flex-shrink-0 ${
-            activity.type === 'pr'
-              ? 'bg-[#d4af37]/50'
-              : 'bg-[#c9983a]/50'
-            }`}>
-            <span className="text-[13px] font-bold text-white">
-              #{activity.number}
-            </span>
+          <div
+            className={`px-2.5 py-1 rounded-[6px] flex-shrink-0 ${
+              activity.type === 'pr' ? 'bg-[#d4af37]/50' : 'bg-[#c9983a]/50'
+            }`}
+          >
+            <span className="text-[13px] font-bold text-white">#{activity.number}</span>
           </div>
 
           {/* Title and Time */}
           <div className="flex-1 min-w-0 pt-0.5">
-            <h3 className={`text-[14px] font-medium transition-colors mb-1.5 line-clamp-1 ${theme === 'dark'
-                ? 'text-[#e8dfd0] group-hover/item:text-[#f5ede0]'
-                : 'text-[#2d2820] group-hover/item:text-[#4a3f2f]'
-              }`}>
+            <h3
+              className={`text-[14px] font-medium transition-colors mb-1.5 line-clamp-1 ${
+                theme === 'dark'
+                  ? 'text-[#e8dfd0] group-hover/item:text-[#f5ede0]'
+                  : 'text-[#2d2820] group-hover/item:text-[#4a3f2f]'
+              }`}
+            >
               {activity.title}
             </h3>
 
@@ -102,21 +104,27 @@ export function ActivityItem({ activity, index, onClick }: ActivityItemProps) {
                   {activity.label}
                 </span>
               )}
-              <span className={`text-[12px] font-medium transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                }`}>
+              <span
+                className={`text-[12px] font-medium transition-colors ${
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                }`}
+              >
                 {activity.timeAgo}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Right: Review Button */}
+        {/* Right: Review Indicator (visual only — the whole row is the single interactive element) */}
         {isClickable && (
-          <button className="px-4 py-2 rounded-[10px] backdrop-blur-[25px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/20 border border-[#c9983a]/40 text-[13px] font-semibold text-[#c9983a] hover:from-[#c9983a]/35 hover:to-[#d4af37]/30 hover:scale-105 transition-all duration-200 whitespace-nowrap flex-shrink-0">
+          <span
+            aria-hidden="true"
+            className="px-4 py-2 rounded-[10px] backdrop-blur-[25px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/20 border border-[#c9983a]/40 text-[13px] font-semibold text-[#c9983a] group-hover/item:from-[#c9983a]/35 group-hover/item:to-[#d4af37]/30 transition-all duration-200 whitespace-nowrap flex-shrink-0"
+          >
             Review
-          </button>
+          </span>
         )}
       </div>
     </div>
-  );
+  )
 }

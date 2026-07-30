@@ -1,48 +1,88 @@
-import { logger } from '../../../shared/utils/logger';
-import { useState, useEffect } from 'react';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { Shield, Globe, Plus, Sparkles, Trash2, ExternalLink, Calendar, Pencil, X } from 'lucide-react';
-import { toast } from 'sonner';
-import { Modal, ModalFooter, ModalButton, ModalInput, ModalSelect } from '../../../shared/components/ui/Modal';
-import { DatePicker } from '../../../shared/components/ui/DatePicker';
-import { createEcosystem, getAdminEcosystems, getAdminEcosystem, deleteEcosystem, updateEcosystem, createOpenSourceWeekEvent, getAdminOpenSourceWeekEvents, deleteOpenSourceWeekEvent } from '../../../shared/api/client';
+import { logger } from '../../../shared/utils/logger'
+import { useState, useEffect } from 'react'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import {
+  Shield,
+  Globe,
+  Plus,
+  Sparkles,
+  Trash2,
+  ExternalLink,
+  Calendar,
+  Pencil,
+  X,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import {
+  Modal,
+  ModalFooter,
+  ModalButton,
+  ModalInput,
+  ModalSelect,
+} from '../../../shared/components/ui/Modal'
+import { DatePicker } from '../../../shared/components/ui/DatePicker'
+import {
+  createEcosystem,
+  getAdminEcosystems,
+  getAdminEcosystem,
+  deleteEcosystem,
+  updateEcosystem,
+  createOpenSourceWeekEvent,
+  getAdminOpenSourceWeekEvents,
+  deleteOpenSourceWeekEvent,
+} from '../../../shared/api/client'
+import { clampLimit, hasMoreByTotal } from '../../../shared/utils/pagination'
+import { useIntlFormatters } from '../../../shared/i18n'
+
+// The admin ecosystems/events endpoints don't accept limit/offset params (see
+// shared/api/client.ts), so the full list is still fetched in one request.
+// Pagination here is client-side: only a bounded slice is rendered at a time,
+// with "Load more" revealing more of the already-fetched list — this is what
+// keeps the DOM bounded, which is what issue #744 is actually about.
+const ECOSYSTEMS_PAGE_SIZE = 9
+const OSW_EVENTS_PAGE_SIZE = 9
+type OswStatus = 'upcoming' | 'running' | 'completed' | 'draft'
 
 interface EcosystemLink {
-  label: string;
-  url: string;
+  label: string
+  url: string
 }
 interface EcosystemKeyArea {
-  title: string;
-  description: string;
+  title: string
+  description: string
 }
 
 interface Ecosystem {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  logo_url: string | null;
-  website_url: string | null;
-  status: string;
-  project_count: number;
-  user_count: number;
-  created_at: string;
-  updated_at: string;
-  about?: string | null;
-  links?: EcosystemLink[] | null;
-  key_areas?: EcosystemKeyArea[] | null;
-  technologies?: string[] | null;
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  logo_url: string | null
+  website_url: string | null
+  status: string
+  project_count: number
+  user_count: number
+  created_at: string
+  updated_at: string
+  about?: string | null
+  links?: EcosystemLink[] | null
+  key_areas?: EcosystemKeyArea[] | null
+  technologies?: string[] | null
 }
 
 export function AdminPage() {
-  const { theme } = useTheme();
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [ecosystems, setEcosystems] = useState<Ecosystem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
-  const [editingEcosystem, setEditingEcosystem] = useState<Ecosystem | null>(null);
+  const { theme } = useTheme()
+  const { formatDate } = useIntlFormatters()
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [ecosystems, setEcosystems] = useState<Ecosystem[]>([])
+  const [ecosystemsVisibleCount, setEcosystemsVisibleCount] = useState(() =>
+    clampLimit(ECOSYSTEMS_PAGE_SIZE)
+  )
+  const [isLoading, setIsLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null)
+  const [editingEcosystem, setEditingEcosystem] = useState<Ecosystem | null>(null)
   const [editFormData, setEditFormData] = useState({
     name: '',
     description: '',
@@ -53,7 +93,7 @@ export function AdminPage() {
     links: [] as EcosystemLink[],
     key_areas: [] as EcosystemKeyArea[],
     technologies: [] as string[],
-  });
+  })
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -64,52 +104,67 @@ export function AdminPage() {
     links: [] as EcosystemLink[],
     key_areas: [] as EcosystemKeyArea[],
     technologies: [] as string[],
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const validateName = (name: string) => {
-    if (!name.trim()) return 'Ecosystem name is required';
-    if (name.length < 2) return 'Ecosystem name must be at least 2 characters';
-    if (name.length > 100) return 'Ecosystem name must be less than 100 characters';
-    if (!/^[a-zA-Z0-9\s-]+$/.test(name)) return 'Name can only contain letters, numbers, spaces, and hyphens';
-    return null;
-  };
+    if (!name.trim()) return 'Ecosystem name is required'
+    if (name.length < 2) return 'Ecosystem name must be at least 2 characters'
+    if (name.length > 100) return 'Ecosystem name must be less than 100 characters'
+    if (!/^[a-zA-Z0-9\s-]+$/.test(name))
+      return 'Name can only contain letters, numbers, spaces, and hyphens'
+    return null
+  }
 
   const validateDescription = (description: string) => {
-    if (!description.trim()) return null;
-    if (description.length < 10) return 'Description must be at least 10 characters';
-    if (description.length > 500) return 'Description must be less than 500 characters';
-    return null;
-  };
+    if (!description.trim()) return null
+    if (description.length < 10) return 'Description must be at least 10 characters'
+    if (description.length > 500) return 'Description must be less than 500 characters'
+    return null
+  }
 
   const validateWebsiteUrl = (url: string) => {
-    if (!url.trim()) return null;
+    if (!url.trim()) return null
     try {
-      new URL(url);
-      if (!url.startsWith('http')) return 'URL must start with http:// or https://';
-      return null;
+      new URL(url)
+      if (!url.startsWith('http')) return 'URL must start with http:// or https://'
+      return null
     } catch {
-      return 'Please enter a valid URL (e.g., https://example.com)';
+      return 'Please enter a valid URL (e.g., https://example.com)'
     }
-  };
+  }
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Open Source Week events
-  const [oswEvents, setOswEvents] = useState<Array<{
-    id: string;
-    title: string;
-    description: string | null;
-    location: string | null;
-    status: string;
-    start_at: string;
-    end_at: string;
-  }>>([]);
-  const [isOswLoading, setIsOswLoading] = useState(true);
-  const [showAddOswModal, setShowAddOswModal] = useState(false);
-  const [oswDeletingId, setOswDeletingId] = useState<string | null>(null);
-  const [oswDeleteConfirm, setOswDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
-  const [oswForm, setOswForm] = useState({
+  const [oswEvents, setOswEvents] = useState<
+    Array<{
+      id: string
+      title: string
+      description: string | null
+      location: string | null
+      status: string
+      start_at: string
+      end_at: string
+    }>
+  >([])
+  const [oswVisibleCount, setOswVisibleCount] = useState(() => clampLimit(OSW_EVENTS_PAGE_SIZE))
+  const [isOswLoading, setIsOswLoading] = useState(true)
+  const [showAddOswModal, setShowAddOswModal] = useState(false)
+  const [oswDeletingId, setOswDeletingId] = useState<string | null>(null)
+  const [oswDeleteConfirm, setOswDeleteConfirm] = useState<{ id: string; title: string } | null>(
+    null
+  )
+  const [oswForm, setOswForm] = useState<{
+    title: string
+    description: string
+    location: string
+    status: OswStatus
+    startDate: string
+    startTime: string
+    endDate: string
+    endTime: string
+  }>({
     title: '',
     description: '',
     location: '',
@@ -118,65 +173,65 @@ export function AdminPage() {
     startTime: '00:00',
     endDate: '',
     endTime: '00:00',
-  });
-  const [oswErrors, setOswErrors] = useState<Record<string, string>>({});
+  })
+  const [oswErrors, setOswErrors] = useState<Record<string, string>>({})
 
   const validateOswTitle = (title: string): string | null => {
-    if (!title.trim()) return 'Title is required';
-    if (title.length < 3) return 'Title must be at least 3 characters';
-    if (title.length > 100) return 'Title must be less than 100 characters';
-    return null;
-  };
+    if (!title.trim()) return 'Title is required'
+    if (title.length < 3) return 'Title must be at least 3 characters'
+    if (title.length > 100) return 'Title must be less than 100 characters'
+    return null
+  }
 
   const validateOswDescription = (description: string): string | null => {
     if (description && description.length > 1000) {
-      return 'Description must be less than 1000 characters';
+      return 'Description must be less than 1000 characters'
     }
-    return null;
-  };
+    return null
+  }
 
   const validateOswLocation = (location: string): string | null => {
     if (location && location.length > 200) {
-      return 'Location must be less than 200 characters';
+      return 'Location must be less than 200 characters'
     }
-    return null;
-  };
+    return null
+  }
 
   const validateOswStatus = (status: string): string | null => {
-    const validStatuses = ['upcoming', 'running', 'completed', 'draft'];
+    const validStatuses = ['upcoming', 'running', 'completed', 'draft']
     if (!validStatuses.includes(status)) {
-      return 'Invalid status selected';
+      return 'Invalid status selected'
     }
-    return null;
-  };
+    return null
+  }
 
   const validateOswStartDate = (date: string): string | null => {
-    if (!date.trim()) return 'Start date is required';
-    const dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) return 'Invalid date format';
-    return null;
-  };
+    if (!date.trim()) return 'Start date is required'
+    const dateObj = new Date(date)
+    if (isNaN(dateObj.getTime())) return 'Invalid date format'
+    return null
+  }
 
   const validateOswStartTime = (time: string): string | null => {
-    if (!time.trim()) return 'Start time is required';
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(time)) return 'Invalid time format (HH:MM)';
-    return null;
-  };
+    if (!time.trim()) return 'Start time is required'
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
+    if (!timeRegex.test(time)) return 'Invalid time format (HH:MM)'
+    return null
+  }
 
   const validateOswEndDate = (endDate: string, startDate: string): string | null => {
-    if (!endDate.trim()) return 'End date is required';
-    const endDateObj = new Date(endDate);
-    if (isNaN(endDateObj.getTime())) return 'Invalid date format';
+    if (!endDate.trim()) return 'End date is required'
+    const endDateObj = new Date(endDate)
+    if (isNaN(endDateObj.getTime())) return 'Invalid date format'
 
     if (startDate) {
-      const startDateObj = new Date(startDate);
+      const startDateObj = new Date(startDate)
       if (endDateObj < startDateObj) {
-        return 'End date must be after or equal to start date';
+        return 'End date must be after or equal to start date'
       }
     }
-    return null;
-  };
+    return null
+  }
 
   const validateOswEndTime = (
     endTime: string,
@@ -184,17 +239,17 @@ export function AdminPage() {
     endDate: string,
     startDate: string
   ): string | null => {
-    if (!endTime.trim()) return 'End time is required';
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(endTime)) return 'Invalid time format (HH:MM)';
+    if (!endTime.trim()) return 'End time is required'
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
+    if (!timeRegex.test(endTime)) return 'Invalid time format (HH:MM)'
 
     if (endDate && startDate && endDate === startDate) {
       if (endTime <= startTime) {
-        return 'End time must be after start time when dates are the same';
+        return 'End time must be after start time when dates are the same'
       }
     }
-    return null;
-  };
+    return null
+  }
 
   const validateOswDateRange = (
     startDate: string,
@@ -202,107 +257,109 @@ export function AdminPage() {
     endDate: string,
     endTime: string
   ): Record<string, string> => {
-    const errors: Record<string, string> = {};
+    const errors: Record<string, string> = {}
 
     if (startDate && startTime && endDate && endTime) {
-      const startDateTime = new Date(`${startDate}T${startTime}:00`);
-      const endDateTime = new Date(`${endDate}T${endTime}:00`);
+      const startDateTime = new Date(`${startDate}T${startTime}:00`)
+      const endDateTime = new Date(`${endDate}T${endTime}:00`)
 
       if (endDateTime <= startDateTime) {
-        errors.endDate = 'End date and time must be after start date and time';
-        errors.endTime = 'End date and time must be after start date and time';
+        errors.endDate = 'End date and time must be after start date and time'
+        errors.endTime = 'End date and time must be after start date and time'
       }
     }
 
-    return errors;
-  };
+    return errors
+  }
 
   const fetchOswEvents = async () => {
     try {
-      setIsOswLoading(true);
-      const res = await getAdminOpenSourceWeekEvents();
-      setOswEvents(res.events || []);
+      setIsOswLoading(true)
+      const res = await getAdminOpenSourceWeekEvents()
+      setOswEvents(res.events || [])
+      setOswVisibleCount(clampLimit(OSW_EVENTS_PAGE_SIZE))
     } catch (e) {
-      setOswEvents([]);
+      setOswEvents([])
     } finally {
-      setIsOswLoading(false);
+      setIsOswLoading(false)
     }
-  };
+  }
 
   const fetchEcosystems = async () => {
     try {
-      setIsLoading(true);
-      setErrorMessage(null);
-      const response = await getAdminEcosystems();
-      setEcosystems(response.ecosystems || []);
+      setIsLoading(true)
+      setErrorMessage(null)
+      const response = await getAdminEcosystems()
+      setEcosystems(response.ecosystems || [])
+      setEcosystemsVisibleCount(clampLimit(ECOSYSTEMS_PAGE_SIZE))
     } catch (error) {
-      logger.error('Failed to fetch ecosystems:', error);
-      setEcosystems([]);
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to load ecosystems.');
+      logger.error('Failed to fetch ecosystems:', error)
+      setEcosystems([])
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to load ecosystems.')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
-    fetchEcosystems();
-    fetchOswEvents();
+    fetchEcosystems()
+    fetchOswEvents()
 
     // Listen for ecosystem updates
     const handleEcosystemsUpdated = () => {
-      fetchEcosystems();
-    };
-    window.addEventListener('ecosystems-updated', handleEcosystemsUpdated);
+      fetchEcosystems()
+    }
+    window.addEventListener('ecosystems-updated', handleEcosystemsUpdated)
     return () => {
-      window.removeEventListener('ecosystems-updated', handleEcosystemsUpdated);
-    };
-  }, []);
+      window.removeEventListener('ecosystems-updated', handleEcosystemsUpdated)
+    }
+  }, [])
 
   const confirmDeleteOsw = (id: string, title: string) => {
-    setOswDeleteConfirm({ id, title });
-  };
+    setOswDeleteConfirm({ id, title })
+  }
 
   const handleDeleteOswConfirmed = async () => {
-    if (!oswDeleteConfirm) return;
-    setOswDeletingId(oswDeleteConfirm.id);
+    if (!oswDeleteConfirm) return
+    setOswDeletingId(oswDeleteConfirm.id)
     try {
-      await deleteOpenSourceWeekEvent(oswDeleteConfirm.id);
-      await fetchOswEvents();
-      setOswDeleteConfirm(null);
+      await deleteOpenSourceWeekEvent(oswDeleteConfirm.id)
+      await fetchOswEvents()
+      setOswDeleteConfirm(null)
     } catch (e) {
-      setErrorMessage(e instanceof Error ? e.message : 'Failed to delete event.');
+      setErrorMessage(e instanceof Error ? e.message : 'Failed to delete event.')
     } finally {
-      setOswDeletingId(null);
+      setOswDeletingId(null)
     }
-  };
+  }
 
   const handleCreateOsw = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     // Validate all fields
-    const titleError = validateOswTitle(oswForm.title);
-    const descError = validateOswDescription(oswForm.description);
-    const locError = validateOswLocation(oswForm.location);
-    const statusError = validateOswStatus(oswForm.status);
-    const startDateError = validateOswStartDate(oswForm.startDate);
-    const startTimeError = validateOswStartTime(oswForm.startTime);
-    const endDateError = validateOswEndDate(oswForm.endDate, oswForm.startDate);
+    const titleError = validateOswTitle(oswForm.title)
+    const descError = validateOswDescription(oswForm.description)
+    const locError = validateOswLocation(oswForm.location)
+    const statusError = validateOswStatus(oswForm.status)
+    const startDateError = validateOswStartDate(oswForm.startDate)
+    const startTimeError = validateOswStartTime(oswForm.startTime)
+    const endDateError = validateOswEndDate(oswForm.endDate, oswForm.startDate)
     const endTimeError = validateOswEndTime(
       oswForm.endTime,
       oswForm.startTime,
       oswForm.endDate,
       oswForm.startDate
-    );
+    )
 
-    const newErrors: Record<string, string> = {};
-    if (titleError) newErrors.title = titleError;
-    if (descError) newErrors.description = descError;
-    if (locError) newErrors.location = locError;
-    if (statusError) newErrors.status = statusError;
-    if (startDateError) newErrors.startDate = startDateError;
-    if (startTimeError) newErrors.startTime = startTimeError;
-    if (endDateError) newErrors.endDate = endDateError;
-    if (endTimeError) newErrors.endTime = endTimeError;
+    const newErrors: Record<string, string> = {}
+    if (titleError) newErrors.title = titleError
+    if (descError) newErrors.description = descError
+    if (locError) newErrors.location = locError
+    if (statusError) newErrors.status = statusError
+    if (startDateError) newErrors.startDate = startDateError
+    if (startTimeError) newErrors.startTime = startTimeError
+    if (endDateError) newErrors.endDate = endDateError
+    if (endTimeError) newErrors.endTime = endTimeError
 
     // Cross-field validation
     const dateRangeErrors = validateOswDateRange(
@@ -310,34 +367,34 @@ export function AdminPage() {
       oswForm.startTime,
       oswForm.endDate,
       oswForm.endTime
-    );
-    Object.assign(newErrors, dateRangeErrors);
+    )
+    Object.assign(newErrors, dateRangeErrors)
 
-    setOswErrors(newErrors);
+    setOswErrors(newErrors)
 
     if (Object.keys(newErrors).length > 0) {
-      return;
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
 
     try {
-      setErrorMessage(null);
-      const start_at = new Date(`${oswForm.startDate}T${oswForm.startTime}:00.000Z`).toISOString();
-      const end_at = new Date(`${oswForm.endDate}T${oswForm.endTime}:00.000Z`).toISOString();
+      setErrorMessage(null)
+      const start_at = new Date(`${oswForm.startDate}T${oswForm.startTime}:00.000Z`).toISOString()
+      const end_at = new Date(`${oswForm.endDate}T${oswForm.endTime}:00.000Z`).toISOString()
 
       await createOpenSourceWeekEvent({
         title: oswForm.title,
         description: oswForm.description || undefined,
         location: oswForm.location || undefined,
-        status: oswForm.status as any,
+        status: oswForm.status,
         start_at,
         end_at,
-      });
+      })
 
       // Success - close modal and reset form
-      setShowAddOswModal(false);
-      setOswErrors({});
+      setShowAddOswModal(false)
+      setOswErrors({})
       setOswForm({
         title: '',
         description: '',
@@ -347,67 +404,70 @@ export function AdminPage() {
         startTime: '00:00',
         endDate: '',
         endTime: '00:00',
-      });
+      })
 
       // Refresh events list
-      await fetchOswEvents();
+      await fetchOswEvents()
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to create event.');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to create event.')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const confirmDelete = (id: string, name: string) => {
-    setDeleteConfirm({ id, name });
-  };
+    setDeleteConfirm({ id, name })
+  }
 
   const handleDeleteConfirmed = async () => {
-    if (!deleteConfirm) return;
-    const { id } = deleteConfirm;
-    setDeletingId(id);
+    if (!deleteConfirm) return
+    const { id } = deleteConfirm
+    setDeletingId(id)
     try {
-      setErrorMessage(null);
-      await deleteEcosystem(id);
+      setErrorMessage(null)
+      await deleteEcosystem(id)
       // Refresh the list
-      await fetchEcosystems();
+      await fetchEcosystems()
       // Dispatch event to update other pages
-      window.dispatchEvent(new CustomEvent('ecosystems-updated'));
-      setDeleteConfirm(null);
-      toast.success('Ecosystem deleted successfully');
+      window.dispatchEvent(new CustomEvent('ecosystems-updated'))
+      setDeleteConfirm(null)
+      toast.success('Ecosystem deleted successfully')
     } catch (error) {
-      logger.error('Failed to delete ecosystem:', error);
-      const msg = error instanceof Error ? error.message : 'Failed to delete ecosystem. Make sure it has no associated projects.';
-      setErrorMessage(msg);
-      toast.error(msg);
+      logger.error('Failed to delete ecosystem:', error)
+      const msg =
+        error instanceof Error
+          ? error.message
+          : 'Failed to delete ecosystem. Make sure it has no associated projects.'
+      setErrorMessage(msg)
+      toast.error(msg)
     } finally {
-      setDeletingId(null);
+      setDeletingId(null)
     }
-  };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     // Validate all fields
-    const nameError = validateName(formData.name);
-    const descError = validateDescription(formData.description);
-    const urlError = validateWebsiteUrl(formData.websiteUrl);
+    const nameError = validateName(formData.name)
+    const descError = validateDescription(formData.description)
+    const urlError = validateWebsiteUrl(formData.websiteUrl)
 
-    const newErrors: Record<string, string> = {};
-    if (nameError) newErrors.name = nameError;
-    if (descError) newErrors.description = descError;
-    if (urlError) newErrors.websiteUrl = urlError;
+    const newErrors: Record<string, string> = {}
+    if (nameError) newErrors.name = nameError
+    if (descError) newErrors.description = descError
+    if (urlError) newErrors.websiteUrl = urlError
 
-    setErrors(newErrors);
+    setErrors(newErrors)
 
     if (Object.keys(newErrors).length > 0) {
-      return;
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
 
     try {
-      setErrorMessage(null);
+      setErrorMessage(null)
       await createEcosystem({
         name: formData.name,
         description: formData.description || undefined,
@@ -415,14 +475,20 @@ export function AdminPage() {
         logo_url: formData.logoUrl || undefined,
         status: formData.status as 'active' | 'inactive',
         about: formData.about || undefined,
-        links: formData.links.filter((l) => l.label.trim() || l.url.trim()).length ? formData.links : undefined,
-        key_areas: formData.key_areas.filter((k) => k.title.trim() || k.description.trim()).length ? formData.key_areas : undefined,
-        technologies: formData.technologies.filter((t) => t.trim()).length ? formData.technologies : undefined,
-      });
+        links: formData.links.filter((l) => l.label.trim() || l.url.trim()).length
+          ? formData.links
+          : undefined,
+        key_areas: formData.key_areas.filter((k) => k.title.trim() || k.description.trim()).length
+          ? formData.key_areas
+          : undefined,
+        technologies: formData.technologies.filter((t) => t.trim()).length
+          ? formData.technologies
+          : undefined,
+      })
 
       // Success - close modal and reset form
-      setShowAddModal(false);
-      setErrors({});
+      setShowAddModal(false)
+      setErrors({})
       setFormData({
         name: '',
         description: '',
@@ -433,33 +499,35 @@ export function AdminPage() {
         links: [],
         key_areas: [],
         technologies: [],
-      });
+      })
 
       // Refresh ecosystems list
-      await fetchEcosystems();
+      await fetchEcosystems()
       // Dispatch event to update other pages
-      window.dispatchEvent(new CustomEvent('ecosystems-updated'));
+      window.dispatchEvent(new CustomEvent('ecosystems-updated'))
     } catch (error) {
-      logger.error('Failed to create ecosystem:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to create ecosystem. Please try again.');
+      logger.error('Failed to create ecosystem:', error)
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Failed to create ecosystem. Please try again.'
+      )
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const openEditModal = async (ecosystem: Ecosystem) => {
-    setEditingEcosystem(ecosystem);
-    setErrors({});
+    setEditingEcosystem(ecosystem)
+    setErrors({})
     let data: {
-      name: string;
-      description: string | null;
-      logo_url: string | null;
-      website_url: string | null;
-      status: string;
-      about: string | null;
-      links: Ecosystem['links'];
-      key_areas: Ecosystem['key_areas'];
-      technologies: Ecosystem['technologies'];
+      name: string
+      description: string | null
+      logo_url: string | null
+      website_url: string | null
+      status: string
+      about: string | null
+      links: Ecosystem['links']
+      key_areas: Ecosystem['key_areas']
+      technologies: Ecosystem['technologies']
     } = {
       name: ecosystem.name ?? '',
       description: ecosystem.description ?? null,
@@ -470,9 +538,9 @@ export function AdminPage() {
       links: ecosystem.links ?? null,
       key_areas: ecosystem.key_areas ?? null,
       technologies: ecosystem.technologies ?? null,
-    };
+    }
     try {
-      const detail = await getAdminEcosystem(ecosystem.id);
+      const detail = await getAdminEcosystem(ecosystem.id)
       data = {
         name: detail.name ?? '',
         description: detail.description ?? null,
@@ -483,23 +551,31 @@ export function AdminPage() {
         links: detail.links ?? null,
         key_areas: detail.key_areas ?? null,
         technologies: detail.technologies ?? null,
-      };
+      }
     } catch (err) {
-      logger.error('Failed to load ecosystem for edit:', err);
-      toast.error('Failed to load ecosystem details');
-      setEditingEcosystem(null);
-      return;
+      logger.error('Failed to load ecosystem for edit:', err)
+      toast.error('Failed to load ecosystem details')
+      setEditingEcosystem(null)
+      return
     }
-    const rawLinks = data.links;
+    const rawLinks = data.links
     const linksArr = Array.isArray(rawLinks)
-      ? rawLinks.map((l: { label?: string; url?: string }) => ({ label: String(l?.label ?? ''), url: String(l?.url ?? '') }))
-      : [];
-    const rawKeyAreas = data.key_areas;
+      ? rawLinks.map((l: { label?: string; url?: string }) => ({
+          label: String(l?.label ?? ''),
+          url: String(l?.url ?? ''),
+        }))
+      : []
+    const rawKeyAreas = data.key_areas
     const keyAreasArr = Array.isArray(rawKeyAreas)
-      ? rawKeyAreas.map((k: { title?: string; description?: string }) => ({ title: String(k?.title ?? ''), description: String(k?.description ?? '') }))
-      : [];
-    const rawTech = data.technologies;
-    const technologiesArr = Array.isArray(rawTech) ? rawTech.map((t: unknown) => String(t ?? '')) : [];
+      ? rawKeyAreas.map((k: { title?: string; description?: string }) => ({
+          title: String(k?.title ?? ''),
+          description: String(k?.description ?? ''),
+        }))
+      : []
+    const rawTech = data.technologies
+    const technologiesArr = Array.isArray(rawTech)
+      ? rawTech.map((t: unknown) => String(t ?? ''))
+      : []
     setEditFormData({
       name: data.name,
       description: data.description ?? '',
@@ -510,36 +586,40 @@ export function AdminPage() {
       links: linksArr,
       key_areas: keyAreasArr,
       technologies: technologiesArr,
-    });
-  };
+    })
+  }
 
   const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingEcosystem) return;
+    e.preventDefault()
+    if (!editingEcosystem) return
 
     // Validate all fields
-    const nameError = validateName(editFormData.name);
-    const descError = validateDescription(editFormData.description);
-    const urlError = validateWebsiteUrl(editFormData.websiteUrl);
+    const nameError = validateName(editFormData.name)
+    const descError = validateDescription(editFormData.description)
+    const urlError = validateWebsiteUrl(editFormData.websiteUrl)
 
-    const newErrors: Record<string, string> = {};
-    if (nameError) newErrors.name = nameError;
-    if (descError) newErrors.description = descError;
-    if (urlError) newErrors.websiteUrl = urlError;
+    const newErrors: Record<string, string> = {}
+    if (nameError) newErrors.name = nameError
+    if (descError) newErrors.description = descError
+    if (urlError) newErrors.websiteUrl = urlError
 
-    setErrors(newErrors);
+    setErrors(newErrors)
 
     if (Object.keys(newErrors).length > 0) {
-      return;
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
 
     try {
-      setErrorMessage(null);
-      const linksToSave = (editFormData.links ?? []).filter((l) => (l?.label ?? '').trim() || (l?.url ?? '').trim());
-      const keyAreasToSave = (editFormData.key_areas ?? []).filter((k) => (k?.title ?? '').trim() || (k?.description ?? '').trim());
-      const technologiesToSave = (editFormData.technologies ?? []).filter((t) => String(t).trim());
+      setErrorMessage(null)
+      const linksToSave = (editFormData.links ?? []).filter(
+        (l) => (l?.label ?? '').trim() || (l?.url ?? '').trim()
+      )
+      const keyAreasToSave = (editFormData.key_areas ?? []).filter(
+        (k) => (k?.title ?? '').trim() || (k?.description ?? '').trim()
+      )
+      const technologiesToSave = (editFormData.technologies ?? []).filter((t) => String(t).trim())
 
       await updateEcosystem(editingEcosystem.id, {
         name: editFormData.name,
@@ -551,11 +631,11 @@ export function AdminPage() {
         links: linksToSave,
         key_areas: keyAreasToSave,
         technologies: technologiesToSave,
-      });
+      })
 
       // Success - close modal and reset form
-      setEditingEcosystem(null);
-      setErrors({});
+      setEditingEcosystem(null)
+      setErrors({})
       setEditFormData({
         name: '',
         description: '',
@@ -566,31 +646,51 @@ export function AdminPage() {
         links: [],
         key_areas: [],
         technologies: [],
-      });
+      })
 
-      toast.success('Ecosystem updated successfully');
+      toast.success('Ecosystem updated successfully')
 
       // Refresh ecosystems list
-      await fetchEcosystems();
+      await fetchEcosystems()
       // Dispatch event to update other pages
-      window.dispatchEvent(new CustomEvent('ecosystems-updated'));
+      window.dispatchEvent(new CustomEvent('ecosystems-updated'))
     } catch (error) {
-      logger.error('Failed to update ecosystem:', error);
-      const msg = error instanceof Error ? error.message : 'Failed to update ecosystem. Please try again.';
-      setErrorMessage(msg);
-      toast.error(msg);
+      logger.error('Failed to update ecosystem:', error)
+      const msg =
+        error instanceof Error ? error.message : 'Failed to update ecosystem. Please try again.'
+      setErrorMessage(msg)
+      toast.error(msg)
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
+
+  const visibleEcosystems = ecosystems.slice(0, ecosystemsVisibleCount)
+  const ecosystemsHasMore = hasMoreByTotal(ecosystemsVisibleCount, ecosystems.length)
+  const handleLoadMoreEcosystems = () => {
+    setEcosystemsVisibleCount((prev) =>
+      Math.min(prev + clampLimit(ECOSYSTEMS_PAGE_SIZE), ecosystems.length)
+    )
+  }
+
+  const visibleOswEvents = oswEvents.slice(0, oswVisibleCount)
+  const oswHasMore = hasMoreByTotal(oswVisibleCount, oswEvents.length)
+  const handleLoadMoreOswEvents = () => {
+    setOswVisibleCount((prev) =>
+      Math.min(prev + clampLimit(OSW_EVENTS_PAGE_SIZE), oswEvents.length)
+    )
+  }
 
   return (
     <div className="space-y-6">
       {/* Admin Header */}
-      <div className={`backdrop-blur-[40px] bg-gradient-to-br rounded-[28px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-10 transition-all overflow-hidden relative ${theme === 'dark'
-        ? 'from-white/[0.08] to-white/[0.04] border-white/10'
-        : 'from-white/[0.15] to-white/[0.08] border-white/20'
-        }`}>
+      <div
+        className={`backdrop-blur-[40px] bg-gradient-to-br rounded-[28px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-10 transition-all overflow-hidden relative ${
+          theme === 'dark'
+            ? 'from-white/[0.08] to-white/[0.04] border-white/10'
+            : 'from-white/[0.15] to-white/[0.08] border-white/20'
+        }`}
+      >
         {/* Decorative gradient */}
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-gradient-to-br from-[#c9983a]/20 to-transparent rounded-full blur-3xl"></div>
 
@@ -601,19 +701,30 @@ export function AdminPage() {
                 <div className="p-2 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] shadow-[0_6px_20px_rgba(162,121,44,0.35)] border border-white/10">
                   <Shield className="w-6 h-6 text-white" />
                 </div>
-                <h1 className={`text-[36px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                  }`}>Admin Panel</h1>
+                <h1
+                  className={`text-[36px] font-bold transition-colors ${
+                    theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                  }`}
+                >
+                  Admin Panel
+                </h1>
               </div>
-              <p className={`text-[16px] max-w-3xl transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                }`}>
+              <p
+                className={`text-[16px] max-w-3xl transition-colors ${
+                  theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                }`}
+              >
                 Manage ecosystems, review requests, and oversee platform operations.
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className={`px-4 py-2 rounded-[12px] backdrop-blur-[20px] border transition-colors ${theme === 'dark'
-                ? 'bg-white/[0.08] border-white/15 text-[#d4d4d4]'
-                : 'bg-white/[0.15] border-white/25 text-[#7a6b5a]'
-                }`}>
+              <div
+                className={`px-4 py-2 rounded-[12px] backdrop-blur-[20px] border transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-white/[0.08] border-white/15 text-[#d4d4d4]'
+                    : 'bg-white/[0.15] border-white/25 text-[#7a6b5a]'
+                }`}
+              >
                 <span className="text-[13px] font-medium">Admin Access</span>
               </div>
             </div>
@@ -622,16 +733,27 @@ export function AdminPage() {
       </div>
 
       {/* Ecosystem Management Section */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
-        ? 'bg-white/[0.08] border-white/10'
-        : 'bg-white/[0.15] border-white/20'
-        }`}>
+      <div
+        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${
+          theme === 'dark' ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
+        }`}
+      >
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className={`text-[24px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-              }`}>Ecosystem Management</h2>
-            <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-              }`}>Add, edit, or remove ecosystems from the platform</p>
+            <h2
+              className={`text-[24px] font-bold mb-2 transition-colors ${
+                theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+              }`}
+            >
+              Ecosystem Management
+            </h2>
+            <p
+              className={`text-[14px] transition-colors ${
+                theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              Add, edit, or remove ecosystems from the platform
+            </p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
@@ -645,10 +767,13 @@ export function AdminPage() {
 
         {/* Inline error (avoid ugly alerts) */}
         {errorMessage && (
-          <div className={`mb-4 rounded-[16px] border px-4 py-3 text-[13px] ${theme === 'dark'
-            ? 'bg-red-500/10 border-red-500/20 text-red-200'
-            : 'bg-red-500/10 border-red-500/20 text-red-700'
-            }`}>
+          <div
+            className={`mb-4 rounded-[16px] border px-4 py-3 text-[13px] ${
+              theme === 'dark'
+                ? 'bg-red-500/10 border-red-500/20 text-red-200'
+                : 'bg-red-500/10 border-red-500/20 text-red-700'
+            }`}
+          >
             {errorMessage}
           </div>
         )}
@@ -660,73 +785,87 @@ export function AdminPage() {
               {Array.from({ length: 6 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className={`backdrop-blur-[30px] rounded-[16px] border p-5 ${theme === 'dark'
-                    ? 'bg-white/[0.06] border-white/10'
-                    : 'bg-white/[0.12] border-white/20'
-                    }`}
+                  className={`backdrop-blur-[30px] rounded-[16px] border p-5 ${
+                    theme === 'dark'
+                      ? 'bg-white/[0.06] border-white/10'
+                      : 'bg-white/[0.12] border-white/20'
+                  }`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div
-                      className={`w-12 h-12 rounded-[12px] ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                        }`}
+                      className={`w-12 h-12 rounded-[12px] ${
+                        theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                      }`}
                     />
                     <div
-                      className={`w-8 h-8 rounded-[10px] ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                        }`}
+                      className={`w-8 h-8 rounded-[10px] ${
+                        theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                      }`}
                     />
                   </div>
                   <div
-                    className={`h-5 w-2/3 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                      }`}
+                    className={`h-5 w-2/3 rounded ${
+                      theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                    }`}
                   />
                   <div className="flex items-center gap-4 mt-3 mb-3">
                     <div className="flex-1">
                       <div
-                        className={`h-3 w-16 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                          }`}
+                        className={`h-3 w-16 rounded ${
+                          theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                        }`}
                       />
                       <div
-                        className={`h-6 w-10 rounded mt-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                          }`}
+                        className={`h-6 w-10 rounded mt-2 ${
+                          theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                        }`}
                       />
                     </div>
                     <div className="flex-1">
                       <div
-                        className={`h-3 w-24 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                          }`}
+                        className={`h-3 w-24 rounded ${
+                          theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                        }`}
                       />
                       <div
-                        className={`h-6 w-10 rounded mt-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                          }`}
+                        className={`h-6 w-10 rounded mt-2 ${
+                          theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                        }`}
                       />
                     </div>
                   </div>
                   <div
-                    className={`h-3 w-full rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                      }`}
+                    className={`h-3 w-full rounded ${
+                      theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                    }`}
                   />
                   <div
-                    className={`h-3 w-5/6 rounded mt-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                      }`}
+                    className={`h-3 w-5/6 rounded mt-2 ${
+                      theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                    }`}
                   />
                   <div className="mt-4 pt-3 border-t border-white/10">
                     <div
-                      className={`h-5 w-16 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
-                        }`}
+                      className={`h-5 w-16 rounded ${
+                        theme === 'dark' ? 'bg-white/10' : 'bg-black/10'
+                      }`}
                     />
                   </div>
                 </div>
               ))}
             </div>
           ) : ecosystems.length === 0 ? (
-            <div className={`text-center py-12 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-              }`}>
+            <div
+              className={`text-center py-12 transition-colors ${
+                theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+              }`}
+            >
               No ecosystems found. Add your first ecosystem above.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {ecosystems.map((ecosystem) => {
-                const firstLetter = ecosystem.name.charAt(0).toUpperCase();
+              {visibleEcosystems.map((ecosystem) => {
+                const firstLetter = ecosystem.name.charAt(0).toUpperCase()
                 const colors = [
                   'bg-gradient-to-br from-[#c9983a] to-[#a67c2e]',
                   'bg-gradient-to-br from-purple-500 to-purple-600',
@@ -734,21 +873,27 @@ export function AdminPage() {
                   'bg-gradient-to-br from-green-500 to-green-600',
                   'bg-gradient-to-br from-red-500 to-red-600',
                   'bg-gradient-to-br from-pink-500 to-pink-600',
-                ];
-                const colorIndex = ecosystem.name.charCodeAt(0) % colors.length;
-                const bgColor = colors[colorIndex];
+                ]
+                const colorIndex = ecosystem.name.charCodeAt(0) % colors.length
+                const bgColor = colors[colorIndex]
 
                 return (
                   <div
                     key={ecosystem.id}
-                    className={`backdrop-blur-[30px] rounded-[16px] border p-5 transition-all hover:scale-[1.02] ${theme === 'dark'
-                      ? 'bg-white/[0.06] border-white/10'
-                      : 'bg-white/[0.12] border-white/20'
-                      }`}
+                    className={`backdrop-blur-[30px] rounded-[16px] border p-5 transition-all hover:scale-[1.02] ${
+                      theme === 'dark'
+                        ? 'bg-white/[0.06] border-white/10'
+                        : 'bg-white/[0.12] border-white/20'
+                    }`}
                   >
                     <div className="flex items-start justify-between mb-3">
-                      <div className={`w-12 h-12 rounded-[12px] flex items-center justify-center text-white font-bold text-lg shadow-lg overflow-hidden flex-shrink-0 relative ${ecosystem.logo_url ? 'bg-white' : bgColor}`}>
-                        <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+                      <div
+                        className={`w-12 h-12 rounded-[12px] flex items-center justify-center text-white font-bold text-lg shadow-lg overflow-hidden flex-shrink-0 relative ${ecosystem.logo_url ? 'bg-white' : bgColor}`}
+                      >
+                        <span
+                          className="absolute inset-0 flex items-center justify-center"
+                          aria-hidden
+                        >
                           {firstLetter}
                         </span>
                         {ecosystem.logo_url ? (
@@ -757,7 +902,7 @@ export function AdminPage() {
                             alt={`${ecosystem.name} logo`}
                             className="w-full h-full object-cover relative z-10"
                             onError={(e) => {
-                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.style.display = 'none'
                             }}
                           />
                         ) : null}
@@ -765,51 +910,85 @@ export function AdminPage() {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => openEditModal(ecosystem)}
-                          className={`p-2 rounded-[10px] transition-all ${theme === 'dark'
-                            ? 'hover:bg-amber-500/20 text-amber-400'
-                            : 'hover:bg-amber-500/30 text-amber-600'
-                            }`}
+                          className={`p-2 rounded-[10px] transition-all ${
+                            theme === 'dark'
+                              ? 'hover:bg-amber-500/20 text-amber-400'
+                              : 'hover:bg-amber-500/30 text-amber-600'
+                          }`}
                           title="Edit ecosystem"
+                          aria-label="Edit ecosystem"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => confirmDelete(ecosystem.id, ecosystem.name)}
                           disabled={deletingId === ecosystem.id}
-                          className={`p-2 rounded-[10px] transition-all ${deletingId === ecosystem.id
-                            ? 'opacity-50 cursor-not-allowed'
-                            : theme === 'dark'
-                              ? 'hover:bg-red-500/20 text-red-400'
-                              : 'hover:bg-red-500/30 text-red-600'
-                            }`}
+                          className={`p-2 rounded-[10px] transition-all ${
+                            deletingId === ecosystem.id
+                              ? 'opacity-50 cursor-not-allowed'
+                              : theme === 'dark'
+                                ? 'hover:bg-red-500/20 text-red-400'
+                                : 'hover:bg-red-500/30 text-red-600'
+                          }`}
                           title="Delete ecosystem"
+                          aria-label="Delete ecosystem"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
 
-                    <h3 className={`text-[18px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                      }`}>{ecosystem.name}</h3>
+                    <h3
+                      className={`text-[18px] font-bold mb-2 transition-colors ${
+                        theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                      }`}
+                    >
+                      {ecosystem.name}
+                    </h3>
 
                     <div className="flex items-center gap-4 mb-3">
                       <div>
-                        <p className={`text-[11px] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                          }`}>Projects</p>
-                        <p className={`text-[20px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                          }`}>{ecosystem.project_count}</p>
+                        <p
+                          className={`text-[11px] transition-colors ${
+                            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                          }`}
+                        >
+                          Projects
+                        </p>
+                        <p
+                          className={`text-[20px] font-bold transition-colors ${
+                            theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                          }`}
+                        >
+                          {ecosystem.project_count}
+                        </p>
                       </div>
                       <div>
-                        <p className={`text-[11px] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                          }`}>Contributors</p>
-                        <p className={`text-[20px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                          }`}>{ecosystem.user_count}</p>
+                        <p
+                          className={`text-[11px] transition-colors ${
+                            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                          }`}
+                        >
+                          Contributors
+                        </p>
+                        <p
+                          className={`text-[20px] font-bold transition-colors ${
+                            theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                          }`}
+                        >
+                          {ecosystem.user_count}
+                        </p>
                       </div>
                     </div>
 
                     {ecosystem.description && (
-                      <p className={`text-[13px] mb-3 line-clamp-2 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                        }`}>{ecosystem.description}</p>
+                      <p
+                        className={`text-[13px] mb-3 line-clamp-2 transition-colors ${
+                          theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                        }`}
+                      >
+                        {ecosystem.description}
+                      </p>
                     )}
 
                     {ecosystem.website_url && (
@@ -817,8 +996,11 @@ export function AdminPage() {
                         href={ecosystem.website_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`flex items-center gap-2 text-[13px] transition-colors ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'
-                          }`}
+                        className={`flex items-center gap-2 text-[13px] transition-colors ${
+                          theme === 'dark'
+                            ? 'text-[#c9983a] hover:text-[#e8c77f]'
+                            : 'text-[#a67c2e] hover:text-[#c9983a]'
+                        }`}
                       >
                         <Globe className="w-4 h-4" />
                         <span>Visit Website</span>
@@ -827,54 +1009,92 @@ export function AdminPage() {
                     )}
 
                     <div className="mt-3 pt-3 border-t border-white/10">
-                      <span className={`text-[11px] px-2 py-1 rounded-[6px] ${ecosystem.status === 'active'
-                        ? theme === 'dark'
-                          ? 'bg-green-500/20 text-green-400'
-                          : 'bg-green-500/30 text-green-700'
-                        : theme === 'dark'
-                          ? 'bg-gray-500/20 text-gray-400'
-                          : 'bg-gray-500/30 text-gray-700'
-                        }`}>
+                      <span
+                        className={`text-[11px] px-2 py-1 rounded-[6px] ${
+                          ecosystem.status === 'active'
+                            ? theme === 'dark'
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'bg-green-500/30 text-green-700'
+                            : theme === 'dark'
+                              ? 'bg-gray-500/20 text-gray-400'
+                              : 'bg-gray-500/30 text-gray-700'
+                        }`}
+                      >
                         {ecosystem.status}
                       </span>
                     </div>
                   </div>
-                );
+                )
               })}
+            </div>
+          )}
+          {ecosystemsHasMore && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={handleLoadMoreEcosystems}
+                className={`px-6 py-2.5 rounded-[12px] text-[13px] font-semibold transition-all ${
+                  theme === 'dark'
+                    ? 'bg-white/[0.08] hover:bg-white/[0.14] text-[#f5f5f5] border border-white/10'
+                    : 'bg-white/[0.5] hover:bg-white/[0.7] text-[#2d2820] border border-white/30'
+                }`}
+              >
+                Load more ecosystems
+              </button>
             </div>
           )}
         </div>
 
         {/* Info Message */}
-        <div className={`backdrop-blur-[30px] rounded-[16px] border p-5 flex items-start gap-4 transition-colors mt-6 ${theme === 'dark'
-          ? 'bg-white/[0.06] border-white/10'
-          : 'bg-white/[0.12] border-white/20'
-          }`}>
+        <div
+          className={`backdrop-blur-[30px] rounded-[16px] border p-5 flex items-start gap-4 transition-colors mt-6 ${
+            theme === 'dark' ? 'bg-white/[0.06] border-white/10' : 'bg-white/[0.12] border-white/20'
+          }`}
+        >
           <div className="p-2 rounded-[10px] bg-gradient-to-br from-[#c9983a]/20 to-[#a67c2e]/10 border border-[#c9983a]/20">
             <Sparkles className="w-5 h-5 text-[#c9983a]" />
           </div>
           <div>
-            <p className={`text-[14px] font-medium mb-1 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-              }`}>Ecosystem Management Tips</p>
-            <p className={`text-[13px] leading-relaxed transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-              }`}>
-              Add ecosystems with accurate descriptions and valid website URLs. You can only delete ecosystems that have no associated projects.
+            <p
+              className={`text-[14px] font-medium mb-1 transition-colors ${
+                theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+              }`}
+            >
+              Ecosystem Management Tips
+            </p>
+            <p
+              className={`text-[13px] leading-relaxed transition-colors ${
+                theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              Add ecosystems with accurate descriptions and valid website URLs. You can only delete
+              ecosystems that have no associated projects.
             </p>
           </div>
         </div>
       </div>
 
       {/* Open Source Week Events Section */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
-        ? 'bg-white/[0.08] border-white/10'
-        : 'bg-white/[0.15] border-white/20'
-        }`}>
+      <div
+        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${
+          theme === 'dark' ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
+        }`}
+      >
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className={`text-[24px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-              }`}>Open-Source Week Events</h2>
-            <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-              }`}>Create and manage Open-Source Week events (no hardcoded data)</p>
+            <h2
+              className={`text-[24px] font-bold mb-2 transition-colors ${
+                theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+              }`}
+            >
+              Open-Source Week Events
+            </h2>
+            <p
+              className={`text-[14px] transition-colors ${
+                theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+              }`}
+            >
+              Create and manage Open-Source Week events (no hardcoded data)
+            </p>
           </div>
           <button
             onClick={() => setShowAddOswModal(true)}
@@ -891,56 +1111,107 @@ export function AdminPage() {
             {Array.from({ length: 3 }).map((_, idx) => (
               <div
                 key={idx}
-                className={`backdrop-blur-[30px] rounded-[16px] border p-5 ${theme === 'dark' ? 'bg-white/[0.06] border-white/10' : 'bg-white/[0.12] border-white/20'
-                  }`}
+                className={`backdrop-blur-[30px] rounded-[16px] border p-5 ${
+                  theme === 'dark'
+                    ? 'bg-white/[0.06] border-white/10'
+                    : 'bg-white/[0.12] border-white/20'
+                }`}
               >
-                <div className={`h-5 w-2/3 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
-                <div className={`h-3 w-full rounded mt-3 ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
-                <div className={`h-3 w-5/6 rounded mt-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
+                <div
+                  className={`h-5 w-2/3 rounded ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`}
+                />
+                <div
+                  className={`h-3 w-full rounded mt-3 ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`}
+                />
+                <div
+                  className={`h-3 w-5/6 rounded mt-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-black/10'}`}
+                />
               </div>
             ))}
           </div>
         ) : oswEvents.length === 0 ? (
-          <div className={`text-center py-10 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-            }`}>
+          <div
+            className={`text-center py-10 transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          >
             No Open-Source Week events yet. Create one (e.g. Feb 21–Feb 28) using "Add Event".
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {oswEvents.map((ev) => (
+            {visibleOswEvents.map((ev) => (
               <div
                 key={ev.id}
-                className={`backdrop-blur-[30px] rounded-[16px] border p-5 ${theme === 'dark' ? 'bg-white/[0.06] border-white/10' : 'bg-white/[0.12] border-white/20'
-                  }`}
+                className={`backdrop-blur-[30px] rounded-[16px] border p-5 ${
+                  theme === 'dark'
+                    ? 'bg-white/[0.06] border-white/10'
+                    : 'bg-white/[0.12] border-white/20'
+                }`}
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className={`text-[16px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                      }`}>{ev.title}</h3>
-                    <p className={`text-[12px] mt-1 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                      }`}>
-                      {new Date(ev.start_at).toLocaleDateString()} → {new Date(ev.end_at).toLocaleDateString()}
+                    <h3
+                      className={`text-[16px] font-bold transition-colors ${
+                        theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                      }`}
+                    >
+                      {ev.title}
+                    </h3>
+                    <p
+                      className={`text-[12px] mt-1 transition-colors ${
+                        theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                      }`}
+                    >
+                      {formatDate(ev.start_at)} → {formatDate(ev.end_at)}
                     </p>
                   </div>
                   <button
                     onClick={() => confirmDeleteOsw(ev.id, ev.title)}
-                    className={`p-2 rounded-[10px] transition-all ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/30 text-red-600'
-                      }`}
+                    className={`p-2 rounded-[10px] transition-all ${
+                      theme === 'dark'
+                        ? 'hover:bg-red-500/20 text-red-400'
+                        : 'hover:bg-red-500/30 text-red-600'
+                    }`}
                     title="Delete event"
+                    aria-label="Delete event"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
                 {ev.location && (
-                  <p className={`text-[12px] mt-2 transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                    }`}>Location: {ev.location}</p>
+                  <p
+                    className={`text-[12px] mt-2 transition-colors ${
+                      theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                    }`}
+                  >
+                    Location: {ev.location}
+                  </p>
                 )}
                 <div className="mt-3">
-                  <span className={`text-[11px] px-2 py-1 rounded-[6px] ${theme === 'dark' ? 'bg-white/10 text-[#d4d4d4]' : 'bg-black/10 text-[#7a6b5a]'
-                    }`}>{ev.status}</span>
+                  <span
+                    className={`text-[11px] px-2 py-1 rounded-[6px] ${
+                      theme === 'dark' ? 'bg-white/10 text-[#d4d4d4]' : 'bg-black/10 text-[#7a6b5a]'
+                    }`}
+                  >
+                    {ev.status}
+                  </span>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {oswHasMore && (
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={handleLoadMoreOswEvents}
+              className={`px-6 py-2.5 rounded-[12px] text-[13px] font-semibold transition-all ${
+                theme === 'dark'
+                  ? 'bg-white/[0.08] hover:bg-white/[0.14] text-[#f5f5f5] border border-white/10'
+                  : 'bg-white/[0.5] hover:bg-white/[0.7] text-[#2d2820] border border-white/30'
+              }`}
+            >
+              Load more events
+            </button>
           </div>
         )}
       </div>
@@ -952,8 +1223,13 @@ export function AdminPage() {
         title="Add New Ecosystem"
         width="lg"
       >
-        <p className={`text-[14px] mb-6 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}>Create a new ecosystem entry for the platform</p>
+        <p
+          className={`text-[14px] mb-6 transition-colors ${
+            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+          }`}
+        >
+          Create a new ecosystem entry for the platform
+        </p>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
@@ -961,12 +1237,12 @@ export function AdminPage() {
               label="Ecosystem Name"
               value={formData.name}
               onChange={(value) => {
-                setFormData({ ...formData, name: value });
-                if (errors.name) setErrors({ ...errors, name: '' });
+                setFormData({ ...formData, name: value })
+                if (errors.name) setErrors({ ...errors, name: '' })
               }}
               onBlur={() => {
-                const error = validateName(formData.name);
-                if (error) setErrors(prev => ({ ...prev, name: error }));
+                const error = validateName(formData.name)
+                if (error) setErrors((prev) => ({ ...prev, name: error }))
               }}
               placeholder="e.g., Web3 Ecosystem"
               error={errors.name}
@@ -976,12 +1252,12 @@ export function AdminPage() {
               label="Description"
               value={formData.description}
               onChange={(value) => {
-                setFormData({ ...formData, description: value });
-                if (errors.description) setErrors({ ...errors, description: '' });
+                setFormData({ ...formData, description: value })
+                if (errors.description) setErrors({ ...errors, description: '' })
               }}
               onBlur={() => {
-                const error = validateDescription(formData.description);
-                if (error) setErrors(prev => ({ ...prev, description: error }));
+                const error = validateDescription(formData.description)
+                if (error) setErrors((prev) => ({ ...prev, description: error }))
               }}
               placeholder="Describe the ecosystem..."
               rows={4}
@@ -1000,29 +1276,35 @@ export function AdminPage() {
                     accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
                     className="hidden"
                     onChange={(event) => {
-                      const file = event.target.files?.[0];
+                      const file = event.target.files?.[0]
                       if (!file) {
-                        setFormData(prev => ({ ...prev, logoUrl: '' }));
-                        return;
+                        setFormData((prev) => ({ ...prev, logoUrl: '' }))
+                        return
                       }
-                      const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+                      const validTypes = [
+                        'image/svg+xml',
+                        'image/png',
+                        'image/jpeg',
+                        'image/jpg',
+                        'image/gif',
+                      ]
                       if (!validTypes.includes(file.type)) {
-                        toast.error('Please select a valid image file (SVG, PNG, JPG, or GIF)');
-                        event.target.value = '';
-                        return;
+                        toast.error('Please select a valid image file (SVG, PNG, JPG, or GIF)')
+                        event.target.value = ''
+                        return
                       }
                       if (file.size > 5 * 1024 * 1024) {
-                        toast.error('File size must be less than 5MB');
-                        event.target.value = '';
-                        return;
+                        toast.error('File size must be less than 5MB')
+                        event.target.value = ''
+                        return
                       }
-                      const reader = new FileReader();
+                      const reader = new FileReader()
                       reader.onload = () => {
                         if (typeof reader.result === 'string') {
-                          setFormData(prev => ({ ...prev, logoUrl: reader.result as string }));
+                          setFormData((prev) => ({ ...prev, logoUrl: reader.result as string }))
                         }
-                      };
-                      reader.readAsDataURL(file);
+                      }
+                      reader.readAsDataURL(file)
                     }}
                   />
                 </label>
@@ -1033,7 +1315,7 @@ export function AdminPage() {
                       alt="Logo preview"
                       className="w-full h-full object-cover"
                       onError={() => {
-                        setFormData(prev => ({ ...prev, logoUrl: '' }));
+                        setFormData((prev) => ({ ...prev, logoUrl: '' }))
                       }}
                     />
                   </div>
@@ -1050,7 +1332,7 @@ export function AdminPage() {
               onChange={(value) => setFormData({ ...formData, status: value })}
               options={[
                 { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' }
+                { value: 'inactive', label: 'Inactive' },
               ]}
             />
 
@@ -1059,12 +1341,12 @@ export function AdminPage() {
               type="url"
               value={formData.websiteUrl}
               onChange={(value) => {
-                setFormData({ ...formData, websiteUrl: value });
-                if (errors.websiteUrl) setErrors({ ...errors, websiteUrl: '' });
+                setFormData({ ...formData, websiteUrl: value })
+                if (errors.websiteUrl) setErrors({ ...errors, websiteUrl: '' })
               }}
               onBlur={() => {
-                const error = validateWebsiteUrl(formData.websiteUrl);
-                if (error) setErrors(prev => ({ ...prev, websiteUrl: error }));
+                const error = validateWebsiteUrl(formData.websiteUrl)
+                if (error) setErrors((prev) => ({ ...prev, websiteUrl: error }))
               }}
               placeholder="https://example.com"
               error={errors.websiteUrl}
@@ -1079,45 +1361,170 @@ export function AdminPage() {
             />
 
             <div className="space-y-2">
-              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Links (detail page)</label>
+              <label
+                className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+              >
+                Links (detail page)
+              </label>
               {formData.links.map((link, idx) => (
                 <div key={idx} className="flex gap-2 items-start">
-                  <input type="text" placeholder="Label" value={link.label} onChange={(e) => { const next = [...formData.links]; next[idx] = { ...next[idx], label: e.target.value }; setFormData({ ...formData, links: next }); }} className={`flex-1 min-w-0 px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`} />
-                  <input type="url" placeholder="URL" value={link.url} onChange={(e) => { const next = [...formData.links]; next[idx] = { ...next[idx], url: e.target.value }; setFormData({ ...formData, links: next }); }} className={`flex-1 min-w-0 px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`} />
-                  <button type="button" onClick={() => setFormData({ ...formData, links: formData.links.filter((_, i) => i !== idx) })} className={`p-2 rounded-[10px] ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}><X className="w-4 h-4" /></button>
+                  <input
+                    type="text"
+                    placeholder="Label"
+                    value={link.label}
+                    onChange={(e) => {
+                      const next = [...formData.links]
+                      next[idx] = { ...next[idx], label: e.target.value }
+                      setFormData({ ...formData, links: next })
+                    }}
+                    className={`flex-1 min-w-0 px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`}
+                  />
+                  <input
+                    type="url"
+                    placeholder="URL"
+                    value={link.url}
+                    onChange={(e) => {
+                      const next = [...formData.links]
+                      next[idx] = { ...next[idx], url: e.target.value }
+                      setFormData({ ...formData, links: next })
+                    }}
+                    className={`flex-1 min-w-0 px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        links: formData.links.filter((_, i) => i !== idx),
+                      })
+                    }
+                    className={`p-2 rounded-[10px] ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
-              <button type="button" onClick={() => setFormData({ ...formData, links: [...formData.links, { label: '', url: '' }] })} className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}><Plus className="w-4 h-4" /> Add link</button>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({ ...formData, links: [...formData.links, { label: '', url: '' }] })
+                }
+                className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}
+              >
+                <Plus className="w-4 h-4" /> Add link
+              </button>
             </div>
 
             <div className="space-y-2">
-              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Key Areas (detail page)</label>
+              <label
+                className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+              >
+                Key Areas (detail page)
+              </label>
               {formData.key_areas.map((area, idx) => (
-                <div key={idx} className="space-y-1.5 p-3 rounded-[12px] border border-white/20 bg-white/[0.06]">
-                  <div className="flex justify-end"><button type="button" onClick={() => setFormData({ ...formData, key_areas: formData.key_areas.filter((_, i) => i !== idx) })} className={`p-1 rounded ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}><X className="w-4 h-4" /></button></div>
-                  <input type="text" placeholder="Title" value={area.title} onChange={(e) => { const next = [...formData.key_areas]; next[idx] = { ...next[idx], title: e.target.value }; setFormData({ ...formData, key_areas: next }); }} className={`w-full px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`} />
-                  <input type="text" placeholder="Description" value={area.description} onChange={(e) => { const next = [...formData.key_areas]; next[idx] = { ...next[idx], description: e.target.value }; setFormData({ ...formData, key_areas: next }); }} className={`w-full px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`} />
+                <div
+                  key={idx}
+                  className="space-y-1.5 p-3 rounded-[12px] border border-white/20 bg-white/[0.06]"
+                >
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          key_areas: formData.key_areas.filter((_, i) => i !== idx),
+                        })
+                      }
+                      className={`p-1 rounded ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Title"
+                    value={area.title}
+                    onChange={(e) => {
+                      const next = [...formData.key_areas]
+                      next[idx] = { ...next[idx], title: e.target.value }
+                      setFormData({ ...formData, key_areas: next })
+                    }}
+                    className={`w-full px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Description"
+                    value={area.description}
+                    onChange={(e) => {
+                      const next = [...formData.key_areas]
+                      next[idx] = { ...next[idx], description: e.target.value }
+                      setFormData({ ...formData, key_areas: next })
+                    }}
+                    className={`w-full px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`}
+                  />
                 </div>
               ))}
-              <button type="button" onClick={() => setFormData({ ...formData, key_areas: [...formData.key_areas, { title: '', description: '' }] })} className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}><Plus className="w-4 h-4" /> Add key area</button>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    key_areas: [...formData.key_areas, { title: '', description: '' }],
+                  })
+                }
+                className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}
+              >
+                <Plus className="w-4 h-4" /> Add key area
+              </button>
             </div>
 
             <div className="space-y-2">
-              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Technologies (detail page)</label>
+              <label
+                className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+              >
+                Technologies (detail page)
+              </label>
               {formData.technologies.map((tech, idx) => (
                 <div key={idx} className="flex gap-2">
-                  <input type="text" placeholder="e.g. TypeScript, Rust" value={tech} onChange={(e) => { const next = [...formData.technologies]; next[idx] = e.target.value; setFormData({ ...formData, technologies: next }); }} className={`flex-1 min-w-0 px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`} />
-                  <button type="button" onClick={() => setFormData({ ...formData, technologies: formData.technologies.filter((_, i) => i !== idx) })} className={`p-2 rounded-[10px] ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}><X className="w-4 h-4" /></button>
+                  <input
+                    type="text"
+                    placeholder="e.g. TypeScript, Rust"
+                    value={tech}
+                    onChange={(e) => {
+                      const next = [...formData.technologies]
+                      next[idx] = e.target.value
+                      setFormData({ ...formData, technologies: next })
+                    }}
+                    className={`flex-1 min-w-0 px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        technologies: formData.technologies.filter((_, i) => i !== idx),
+                      })
+                    }
+                    className={`p-2 rounded-[10px] ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
-              <button type="button" onClick={() => setFormData({ ...formData, technologies: [...formData.technologies, ''] })} className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}><Plus className="w-4 h-4" /> Add technology</button>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({ ...formData, technologies: [...formData.technologies, ''] })
+                }
+                className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}
+              >
+                <Plus className="w-4 h-4" /> Add technology
+              </button>
             </div>
           </div>
 
           <ModalFooter>
-            <ModalButton onClick={() => setShowAddModal(false)}>
-              Cancel
-            </ModalButton>
+            <ModalButton onClick={() => setShowAddModal(false)}>Cancel</ModalButton>
             <ModalButton type="submit" variant="primary" disabled={isSubmitting}>
               <Plus className="w-4 h-4" />
               {isSubmitting ? 'Adding...' : 'Add Ecosystem'}
@@ -1134,8 +1541,13 @@ export function AdminPage() {
         icon={<Pencil className="w-6 h-6 text-[#c9983a]" />}
         width="lg"
       >
-        <p className={`text-[14px] mb-6 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}>Update the ecosystem details below</p>
+        <p
+          className={`text-[14px] mb-6 transition-colors ${
+            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+          }`}
+        >
+          Update the ecosystem details below
+        </p>
 
         <form onSubmit={handleEditSubmit}>
           <div className="space-y-4">
@@ -1143,12 +1555,12 @@ export function AdminPage() {
               label="Ecosystem Name"
               value={editFormData.name}
               onChange={(value) => {
-                setEditFormData({ ...editFormData, name: value });
-                if (errors.name) setErrors({ ...errors, name: '' });
+                setEditFormData({ ...editFormData, name: value })
+                if (errors.name) setErrors({ ...errors, name: '' })
               }}
               onBlur={() => {
-                const error = validateName(editFormData.name);
-                if (error) setErrors(prev => ({ ...prev, name: error }));
+                const error = validateName(editFormData.name)
+                if (error) setErrors((prev) => ({ ...prev, name: error }))
               }}
               placeholder="e.g., Web3 Ecosystem"
               error={errors.name}
@@ -1158,12 +1570,12 @@ export function AdminPage() {
               label="Description"
               value={editFormData.description}
               onChange={(value) => {
-                setEditFormData({ ...editFormData, description: value });
-                if (errors.description) setErrors({ ...errors, description: '' });
+                setEditFormData({ ...editFormData, description: value })
+                if (errors.description) setErrors({ ...errors, description: '' })
               }}
               onBlur={() => {
-                const error = validateDescription(editFormData.description);
-                if (error) setErrors(prev => ({ ...prev, description: error }));
+                const error = validateDescription(editFormData.description)
+                if (error) setErrors((prev) => ({ ...prev, description: error }))
               }}
               placeholder="Describe the ecosystem..."
               rows={4}
@@ -1182,29 +1594,38 @@ export function AdminPage() {
                     accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
                     className="hidden"
                     onChange={(event) => {
-                      const file = event.target.files?.[0];
+                      const file = event.target.files?.[0]
                       if (!file) {
-                        setEditFormData(prev => ({ ...prev, logoUrl: editingEcosystem?.logo_url || '' }));
-                        return;
+                        setEditFormData((prev) => ({
+                          ...prev,
+                          logoUrl: editingEcosystem?.logo_url || '',
+                        }))
+                        return
                       }
-                      const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+                      const validTypes = [
+                        'image/svg+xml',
+                        'image/png',
+                        'image/jpeg',
+                        'image/jpg',
+                        'image/gif',
+                      ]
                       if (!validTypes.includes(file.type)) {
-                        toast.error('Please select a valid image file (SVG, PNG, JPG, or GIF)');
-                        event.target.value = '';
-                        return;
+                        toast.error('Please select a valid image file (SVG, PNG, JPG, or GIF)')
+                        event.target.value = ''
+                        return
                       }
                       if (file.size > 5 * 1024 * 1024) {
-                        toast.error('File size must be less than 5MB');
-                        event.target.value = '';
-                        return;
+                        toast.error('File size must be less than 5MB')
+                        event.target.value = ''
+                        return
                       }
-                      const reader = new FileReader();
+                      const reader = new FileReader()
                       reader.onload = () => {
                         if (typeof reader.result === 'string') {
-                          setEditFormData(prev => ({ ...prev, logoUrl: reader.result as string }));
+                          setEditFormData((prev) => ({ ...prev, logoUrl: reader.result as string }))
                         }
-                      };
-                      reader.readAsDataURL(file);
+                      }
+                      reader.readAsDataURL(file)
                     }}
                   />
                 </label>
@@ -1215,7 +1636,10 @@ export function AdminPage() {
                       alt="Logo preview"
                       className="w-full h-full object-cover"
                       onError={() => {
-                        setEditFormData(prev => ({ ...prev, logoUrl: editingEcosystem?.logo_url || '' }));
+                        setEditFormData((prev) => ({
+                          ...prev,
+                          logoUrl: editingEcosystem?.logo_url || '',
+                        }))
                       }}
                     />
                   </div>
@@ -1232,7 +1656,7 @@ export function AdminPage() {
               onChange={(value) => setEditFormData({ ...editFormData, status: value })}
               options={[
                 { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' }
+                { value: 'inactive', label: 'Inactive' },
               ]}
             />
 
@@ -1241,12 +1665,12 @@ export function AdminPage() {
               type="url"
               value={editFormData.websiteUrl}
               onChange={(value) => {
-                setEditFormData({ ...editFormData, websiteUrl: value });
-                if (errors.websiteUrl) setErrors({ ...errors, websiteUrl: '' });
+                setEditFormData({ ...editFormData, websiteUrl: value })
+                if (errors.websiteUrl) setErrors({ ...errors, websiteUrl: '' })
               }}
               onBlur={() => {
-                const error = validateWebsiteUrl(editFormData.websiteUrl);
-                if (error) setErrors(prev => ({ ...prev, websiteUrl: error }));
+                const error = validateWebsiteUrl(editFormData.websiteUrl)
+                if (error) setErrors((prev) => ({ ...prev, websiteUrl: error }))
               }}
               placeholder="https://example.com"
               error={errors.websiteUrl}
@@ -1261,7 +1685,11 @@ export function AdminPage() {
             />
 
             <div className="space-y-2">
-              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Links (detail page)</label>
+              <label
+                className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+              >
+                Links (detail page)
+              </label>
               {editFormData.links.map((link, idx) => (
                 <div key={idx} className="flex gap-2 items-start">
                   <input
@@ -1269,9 +1697,9 @@ export function AdminPage() {
                     placeholder="Label"
                     value={link.label}
                     onChange={(e) => {
-                      const next = [...editFormData.links];
-                      next[idx] = { ...next[idx], label: e.target.value };
-                      setEditFormData({ ...editFormData, links: next });
+                      const next = [...editFormData.links]
+                      next[idx] = { ...next[idx], label: e.target.value }
+                      setEditFormData({ ...editFormData, links: next })
                     }}
                     className={`flex-1 min-w-0 px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`}
                   />
@@ -1280,33 +1708,73 @@ export function AdminPage() {
                     placeholder="URL"
                     value={link.url}
                     onChange={(e) => {
-                      const next = [...editFormData.links];
-                      next[idx] = { ...next[idx], url: e.target.value };
-                      setEditFormData({ ...editFormData, links: next });
+                      const next = [...editFormData.links]
+                      next[idx] = { ...next[idx], url: e.target.value }
+                      setEditFormData({ ...editFormData, links: next })
                     }}
                     className={`flex-1 min-w-0 px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`}
                   />
-                  <button type="button" onClick={() => setEditFormData({ ...editFormData, links: editFormData.links.filter((_, i) => i !== idx) })} className={`p-2 rounded-[10px] ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}><X className="w-4 h-4" /></button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditFormData({
+                        ...editFormData,
+                        links: editFormData.links.filter((_, i) => i !== idx),
+                      })
+                    }
+                    className={`p-2 rounded-[10px] ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
-              <button type="button" onClick={() => setEditFormData({ ...editFormData, links: [...editFormData.links, { label: '', url: '' }] })} className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}><Plus className="w-4 h-4" /> Add link</button>
+              <button
+                type="button"
+                onClick={() =>
+                  setEditFormData({
+                    ...editFormData,
+                    links: [...editFormData.links, { label: '', url: '' }],
+                  })
+                }
+                className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}
+              >
+                <Plus className="w-4 h-4" /> Add link
+              </button>
             </div>
 
             <div className="space-y-2">
-              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Key Areas (detail page)</label>
+              <label
+                className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+              >
+                Key Areas (detail page)
+              </label>
               {editFormData.key_areas.map((area, idx) => (
-                <div key={idx} className="space-y-1.5 p-3 rounded-[12px] border border-white/20 bg-white/[0.06]">
+                <div
+                  key={idx}
+                  className="space-y-1.5 p-3 rounded-[12px] border border-white/20 bg-white/[0.06]"
+                >
                   <div className="flex justify-end">
-                    <button type="button" onClick={() => setEditFormData({ ...editFormData, key_areas: editFormData.key_areas.filter((_, i) => i !== idx) })} className={`p-1 rounded ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}><X className="w-4 h-4" /></button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditFormData({
+                          ...editFormData,
+                          key_areas: editFormData.key_areas.filter((_, i) => i !== idx),
+                        })
+                      }
+                      className={`p-1 rounded ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                   <input
                     type="text"
                     placeholder="Title"
                     value={area.title}
                     onChange={(e) => {
-                      const next = [...editFormData.key_areas];
-                      next[idx] = { ...next[idx], title: e.target.value };
-                      setEditFormData({ ...editFormData, key_areas: next });
+                      const next = [...editFormData.key_areas]
+                      next[idx] = { ...next[idx], title: e.target.value }
+                      setEditFormData({ ...editFormData, key_areas: next })
                     }}
                     className={`w-full px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`}
                   />
@@ -1315,19 +1783,34 @@ export function AdminPage() {
                     placeholder="Description"
                     value={area.description}
                     onChange={(e) => {
-                      const next = [...editFormData.key_areas];
-                      next[idx] = { ...next[idx], description: e.target.value };
-                      setEditFormData({ ...editFormData, key_areas: next });
+                      const next = [...editFormData.key_areas]
+                      next[idx] = { ...next[idx], description: e.target.value }
+                      setEditFormData({ ...editFormData, key_areas: next })
                     }}
                     className={`w-full px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`}
                   />
                 </div>
               ))}
-              <button type="button" onClick={() => setEditFormData({ ...editFormData, key_areas: [...editFormData.key_areas, { title: '', description: '' }] })} className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}><Plus className="w-4 h-4" /> Add key area</button>
+              <button
+                type="button"
+                onClick={() =>
+                  setEditFormData({
+                    ...editFormData,
+                    key_areas: [...editFormData.key_areas, { title: '', description: '' }],
+                  })
+                }
+                className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}
+              >
+                <Plus className="w-4 h-4" /> Add key area
+              </button>
             </div>
 
             <div className="space-y-2">
-              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Technologies (detail page)</label>
+              <label
+                className={`block text-sm font-medium ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+              >
+                Technologies (detail page)
+              </label>
               {editFormData.technologies.map((tech, idx) => (
                 <div key={idx} className="flex gap-2">
                   <input
@@ -1335,23 +1818,43 @@ export function AdminPage() {
                     placeholder="e.g. TypeScript, Rust"
                     value={tech}
                     onChange={(e) => {
-                      const next = [...editFormData.technologies];
-                      next[idx] = e.target.value;
-                      setEditFormData({ ...editFormData, technologies: next });
+                      const next = [...editFormData.technologies]
+                      next[idx] = e.target.value
+                      setEditFormData({ ...editFormData, technologies: next })
                     }}
                     className={`flex-1 min-w-0 px-3 py-2 rounded-[10px] border text-[13px] ${theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0]' : 'bg-white/40 border-white/30 text-[#2d2820]'}`}
                   />
-                  <button type="button" onClick={() => setEditFormData({ ...editFormData, technologies: editFormData.technologies.filter((_, i) => i !== idx) })} className={`p-2 rounded-[10px] ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}><X className="w-4 h-4" /></button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditFormData({
+                        ...editFormData,
+                        technologies: editFormData.technologies.filter((_, i) => i !== idx),
+                      })
+                    }
+                    className={`p-2 rounded-[10px] ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/10 text-red-600'}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
-              <button type="button" onClick={() => setEditFormData({ ...editFormData, technologies: [...editFormData.technologies, ''] })} className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}><Plus className="w-4 h-4" /> Add technology</button>
+              <button
+                type="button"
+                onClick={() =>
+                  setEditFormData({
+                    ...editFormData,
+                    technologies: [...editFormData.technologies, ''],
+                  })
+                }
+                className={`text-[13px] font-medium flex items-center gap-1.5 ${theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'}`}
+              >
+                <Plus className="w-4 h-4" /> Add technology
+              </button>
             </div>
           </div>
 
           <ModalFooter>
-            <ModalButton onClick={() => setEditingEcosystem(null)}>
-              Cancel
-            </ModalButton>
+            <ModalButton onClick={() => setEditingEcosystem(null)}>Cancel</ModalButton>
             <ModalButton type="submit" variant="primary" disabled={isSubmitting}>
               <Pencil className="w-4 h-4" />
               {isSubmitting ? 'Updating...' : 'Update Ecosystem'}
@@ -1364,15 +1867,20 @@ export function AdminPage() {
       <Modal
         isOpen={showAddOswModal}
         onClose={() => {
-          setShowAddOswModal(false);
-          setOswErrors({});
+          setShowAddOswModal(false)
+          setOswErrors({})
         }}
         title="Add Open-Source Week Event"
         icon={<Calendar className="w-6 h-6 text-[#c9983a]" />}
         width="lg"
       >
-        <p className={`text-[14px] mb-6 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}>Create a new Open-Source Week event</p>
+        <p
+          className={`text-[14px] mb-6 transition-colors ${
+            theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+          }`}
+        >
+          Create a new Open-Source Week event
+        </p>
 
         <form onSubmit={handleCreateOsw}>
           <div className="space-y-4">
@@ -1380,12 +1888,12 @@ export function AdminPage() {
               label="Title"
               value={oswForm.title}
               onChange={(value) => {
-                setOswForm({ ...oswForm, title: value });
-                if (oswErrors.title) setOswErrors({ ...oswErrors, title: '' });
+                setOswForm({ ...oswForm, title: value })
+                if (oswErrors.title) setOswErrors({ ...oswErrors, title: '' })
               }}
               onBlur={() => {
-                const error = validateOswTitle(oswForm.title);
-                if (error) setOswErrors(prev => ({ ...prev, title: error }));
+                const error = validateOswTitle(oswForm.title)
+                if (error) setOswErrors((prev) => ({ ...prev, title: error }))
               }}
               placeholder="Open-Source Week"
               required
@@ -1396,12 +1904,12 @@ export function AdminPage() {
               label="Description"
               value={oswForm.description}
               onChange={(value) => {
-                setOswForm({ ...oswForm, description: value });
-                if (oswErrors.description) setOswErrors({ ...oswErrors, description: '' });
+                setOswForm({ ...oswForm, description: value })
+                if (oswErrors.description) setOswErrors({ ...oswErrors, description: '' })
               }}
               onBlur={() => {
-                const error = validateOswDescription(oswForm.description);
-                if (error) setOswErrors(prev => ({ ...prev, description: error }));
+                const error = validateOswDescription(oswForm.description)
+                if (error) setOswErrors((prev) => ({ ...prev, description: error }))
               }}
               placeholder="Describe the event..."
               rows={3}
@@ -1412,12 +1920,12 @@ export function AdminPage() {
               label="Location"
               value={oswForm.location}
               onChange={(value) => {
-                setOswForm({ ...oswForm, location: value });
-                if (oswErrors.location) setOswErrors({ ...oswErrors, location: '' });
+                setOswForm({ ...oswForm, location: value })
+                if (oswErrors.location) setOswErrors({ ...oswErrors, location: '' })
               }}
               onBlur={() => {
-                const error = validateOswLocation(oswForm.location);
-                if (error) setOswErrors(prev => ({ ...prev, location: error }));
+                const error = validateOswLocation(oswForm.location)
+                if (error) setOswErrors((prev) => ({ ...prev, location: error }))
               }}
               placeholder="Worldwide"
               error={oswErrors.location}
@@ -1440,8 +1948,8 @@ export function AdminPage() {
                 label="Start date (UTC)"
                 value={oswForm.startDate}
                 onChange={(value) => {
-                  setOswForm({ ...oswForm, startDate: value });
-                  if (oswErrors.startDate) setOswErrors({ ...oswErrors, startDate: '' });
+                  setOswForm({ ...oswForm, startDate: value })
+                  if (oswErrors.startDate) setOswErrors({ ...oswErrors, startDate: '' })
                 }}
                 placeholder="Select start date"
                 required
@@ -1452,12 +1960,12 @@ export function AdminPage() {
                 type="time"
                 value={oswForm.startTime}
                 onChange={(value) => {
-                  setOswForm({ ...oswForm, startTime: value });
-                  if (oswErrors.startTime) setOswErrors({ ...oswErrors, startTime: '' });
+                  setOswForm({ ...oswForm, startTime: value })
+                  if (oswErrors.startTime) setOswErrors({ ...oswErrors, startTime: '' })
                 }}
                 onBlur={() => {
-                  const error = validateOswStartTime(oswForm.startTime);
-                  if (error) setOswErrors(prev => ({ ...prev, startTime: error }));
+                  const error = validateOswStartTime(oswForm.startTime)
+                  if (error) setOswErrors((prev) => ({ ...prev, startTime: error }))
                 }}
                 required
                 error={oswErrors.startTime}
@@ -1469,8 +1977,8 @@ export function AdminPage() {
                 label="End date (UTC)"
                 value={oswForm.endDate}
                 onChange={(value) => {
-                  setOswForm({ ...oswForm, endDate: value });
-                  if (oswErrors.endDate) setOswErrors({ ...oswErrors, endDate: '' });
+                  setOswForm({ ...oswForm, endDate: value })
+                  if (oswErrors.endDate) setOswErrors({ ...oswErrors, endDate: '' })
                 }}
                 placeholder="Select end date"
                 required
@@ -1481,8 +1989,8 @@ export function AdminPage() {
                 type="time"
                 value={oswForm.endTime}
                 onChange={(value) => {
-                  setOswForm({ ...oswForm, endTime: value });
-                  if (oswErrors.endTime) setOswErrors({ ...oswErrors, endTime: '' });
+                  setOswForm({ ...oswForm, endTime: value })
+                  if (oswErrors.endTime) setOswErrors({ ...oswErrors, endTime: '' })
                 }}
                 onBlur={() => {
                   const error = validateOswEndTime(
@@ -1490,8 +1998,8 @@ export function AdminPage() {
                     oswForm.startTime,
                     oswForm.endDate,
                     oswForm.startDate
-                  );
-                  if (error) setOswErrors(prev => ({ ...prev, endTime: error }));
+                  )
+                  if (error) setOswErrors((prev) => ({ ...prev, endTime: error }))
                 }}
                 required
                 error={oswErrors.endTime}
@@ -1500,10 +2008,12 @@ export function AdminPage() {
           </div>
 
           <ModalFooter>
-            <ModalButton onClick={() => {
-              setShowAddOswModal(false);
-              setOswErrors({});
-            }}>
+            <ModalButton
+              onClick={() => {
+                setShowAddOswModal(false)
+                setOswErrors({})
+              }}
+            >
               Cancel
             </ModalButton>
             <ModalButton type="submit" variant="primary" disabled={isSubmitting}>
@@ -1523,17 +2033,34 @@ export function AdminPage() {
         width="md"
       >
         <div className="space-y-4">
-          <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-            }`}>
-            Are you sure you want to delete <span className={theme === 'dark' ? 'text-[#f5f5f5] font-semibold' : 'text-[#2d2820] font-semibold'}>
+          <p
+            className={`text-[14px] transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          >
+            Are you sure you want to delete{' '}
+            <span
+              className={
+                theme === 'dark' ? 'text-[#f5f5f5] font-semibold' : 'text-[#2d2820] font-semibold'
+              }
+            >
               {oswDeleteConfirm?.title}
-            </span>? This action cannot be undone.
+            </span>
+            ? This action cannot be undone.
           </p>
           <ModalFooter>
-            <ModalButton variant="secondary" onClick={() => setOswDeleteConfirm(null)} disabled={!!oswDeletingId}>
+            <ModalButton
+              variant="secondary"
+              onClick={() => setOswDeleteConfirm(null)}
+              disabled={!!oswDeletingId}
+            >
               Cancel
             </ModalButton>
-            <ModalButton variant="primary" onClick={handleDeleteOswConfirmed} disabled={!!oswDeletingId}>
+            <ModalButton
+              variant="primary"
+              onClick={handleDeleteOswConfirmed}
+              disabled={!!oswDeletingId}
+            >
               {oswDeletingId ? 'Deleting...' : 'Delete'}
             </ModalButton>
           </ModalFooter>
@@ -1549,17 +2076,37 @@ export function AdminPage() {
         width="md"
       >
         <div className="space-y-4">
-          <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-            }`}>
-            Are you sure you want to delete <span className={theme === 'dark' ? 'text-[#f5f5f5] font-semibold' : 'text-[#2d2820] font-semibold'}>
+          <p
+            className={`text-[14px] transition-colors ${
+              theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}
+          >
+            Are you sure you want to delete{' '}
+            <span
+              className={
+                theme === 'dark' ? 'text-[#f5f5f5] font-semibold' : 'text-[#2d2820] font-semibold'
+              }
+            >
               {deleteConfirm?.name}
-            </span>? This action cannot be undone.
+            </span>
+            ? This action cannot be undone.
           </p>
-          <div className={`rounded-[16px] border px-4 py-3 text-[13px] ${theme === 'dark'
-            ? 'bg-white/[0.06] border-white/10 text-[#d4d4d4]'
-            : 'bg-white/[0.12] border-white/20 text-[#7a6b5a]'
-            }`}>
-            You can only delete ecosystems that have <span className={theme === 'dark' ? 'text-[#f5f5f5] font-medium' : 'text-[#2d2820] font-medium'}>no associated projects</span>.
+          <div
+            className={`rounded-[16px] border px-4 py-3 text-[13px] ${
+              theme === 'dark'
+                ? 'bg-white/[0.06] border-white/10 text-[#d4d4d4]'
+                : 'bg-white/[0.12] border-white/20 text-[#7a6b5a]'
+            }`}
+          >
+            You can only delete ecosystems that have{' '}
+            <span
+              className={
+                theme === 'dark' ? 'text-[#f5f5f5] font-medium' : 'text-[#2d2820] font-medium'
+              }
+            >
+              no associated projects
+            </span>
+            .
           </div>
           <ModalFooter>
             <ModalButton
@@ -1580,5 +2127,5 @@ export function AdminPage() {
         </div>
       </Modal>
     </div>
-  );
+  )
 }

@@ -10,7 +10,6 @@ describe('RoleSwitcher Accessibility and Features', () => {
     currentRole: 'contributor' as const,
     onRoleChange: vi.fn(),
     showMobileNav: false,
-    isSmallDevice: false,
     closeMobileNav: vi.fn(),
   }
 

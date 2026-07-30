@@ -1,4 +1,3 @@
-/// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -11,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
+    // Tailwind is not being actively used - do not remove them
     react(),
     tailwindcss(),
     // Conditionally enable rollup-plugin-visualizer when ANALYZE environment variable is set.
@@ -42,7 +41,7 @@ export default defineConfig({
         // Isolate react-intl (and its @formatjs / intl-messageformat deps) into a
         // dedicated vendor chunk. react-intl is a stable dependency, so splitting
         // it out keeps the app's main `index-*.js` chunk lean and improves
-        // long-term caching — the vendor chunk changes far less often than feature
+        // long-term caching - the vendor chunk changes far less often than feature
         // code. This also keeps the measured main chunk within the CI bundle
         // budget after adding i18n. See README "Bundle Size and Analysis".
         manualChunks(id) {
@@ -54,43 +53,11 @@ export default defineConfig({
             return 'i18n-vendor'
           }
 
-          if (
-            id.includes('recharts') ||
-            id.includes('react-simple-maps') ||
-            id.includes('d3')
-          ) {
+          if (id.includes('recharts') || id.includes('react-simple-maps') || id.includes('d3')) {
             return 'viz-vendor'
           }
         },
       },
-    },
-  },
-  test: {
-    // jsdom gives component tests a DOM; node-only tests still work under it.
-    // Tests can still opt into a different environment per-file via a
-    // `// @vitest-environment <env>` docblock.
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test-setup.ts', './src/test/setup.ts'],
-    css: false,
-    exclude: ['e2e/**', 'node_modules/**'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'text-summary', 'html'],
-      // Broaden inclusion to all shared and features source to reflect true surface.
-      // Exclude tests, generated code, and assets to keep the report focused on logic.
-      include: ['src/shared/**/*.{ts,tsx}', 'src/features/**/*.{ts,tsx}'],
-      exclude: [
-        'src/**/*.test.{ts,tsx}',
-        'src/**/*.spec.{ts,tsx}',
-        'src/test/**',
-        'src/test-setup.ts',
-        'src/**/*.d.ts',
-        'src/main.tsx',
-        'src/app/components/ui/**',
-        'src/imports/**',
-        '**/*.{css,scss,sass,less,svg,png,jpg,jpeg,gif,webp,ico}',
-      ],
     },
   },
 })

@@ -93,7 +93,7 @@ describe('ApplicationsChart Component', () => {
     render(<ApplicationsChart data={mockData} />)
     const table = screen.getByTestId('accessible-applications-table')
     expect(table).toBeInTheDocument()
-    expect(table).toHaveClass('visually-hidden')
+    expect(table).toHaveClass('sr-only')
     expect(table.textContent).toContain('Jan')
     expect(table.textContent).toContain('120')
     expect(table.textContent).toContain('80')
@@ -226,5 +226,63 @@ describe('ApplicationsChart Component', () => {
     expect(screen.getAllByText('Merged').length).toBeGreaterThanOrEqual(3)
     expect(screen.getAllByText('120').length).toBeGreaterThan(0)
     expect(screen.getAllByText('80').length).toBeGreaterThan(0)
+  })
+})
+
+describe('ApplicationsChart loading state', () => {
+  it('renders skeleton, real title, disabled toggle and busy region while loading', () => {
+    render(<ApplicationsChart data={[]} isLoading />)
+
+    expect(screen.getByTestId('chart-skeleton')).toBeInTheDocument()
+    expect(screen.getByText('Applications History')).toBeInTheDocument()
+
+    const toggle = screen.getByRole('button', { name: /view table/i })
+    expect(toggle).toBeDisabled()
+
+    const region = screen.getByRole('region')
+    expect(region).toHaveAttribute('aria-busy', 'true')
+
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryByText('No application history data available.')).not.toBeInTheDocument()
+  })
+
+  it('does not expose the role="img" data summary while loading', () => {
+    render(<ApplicationsChart data={[]} isLoading />)
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+
+  it('replaces the skeleton with the chart and summary once data resolves', () => {
+    const { rerender } = render(<ApplicationsChart data={[]} isLoading />)
+    expect(screen.getByTestId('chart-skeleton')).toBeInTheDocument()
+
+    rerender(<ApplicationsChart data={mockData} isLoading={false} />)
+
+    expect(screen.queryByTestId('chart-skeleton')).not.toBeInTheDocument()
+    const chart = screen.getByRole('img')
+    expect(chart.getAttribute('aria-label')).toContain(
+      'Applications history chart showing data for 6 months'
+    )
+    expect(screen.getByRole('region')).toHaveAttribute('aria-busy', 'false')
+  })
+
+  it('omits the shimmer animation when prefers-reduced-motion is set', () => {
+    const originalMatchMedia = window.matchMedia
+    try {
+      window.matchMedia = ((query: string) => ({
+        matches: query.includes('prefers-reduced-motion'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })) as unknown as typeof window.matchMedia
+
+      const { container } = render(<ApplicationsChart data={[]} isLoading />)
+      expect(container.querySelector('.animate-shimmer')).toBeNull()
+    } finally {
+      window.matchMedia = originalMatchMedia
+    }
   })
 })

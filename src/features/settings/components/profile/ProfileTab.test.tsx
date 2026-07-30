@@ -33,9 +33,9 @@ const mockUser = {
   avatar_url: null,
   telegram: '@johndoe',
   linkedin: 'johndoe',
-  whatsapp: '+1234567890',
+  whatsapp: '1234567890',
   twitter: '@johndoe',
-  discord: 'johndoe#1234',
+  discord: 'johndoe',
   github: {
     login: 'johndoe',
     avatar_url: 'https://avatars.githubusercontent.com/u/1',
@@ -173,5 +173,62 @@ describe('ProfileTab', () => {
 
     expect(await screen.findByText(/First name must be 50 characters or less/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled()
+  })
+
+  it('shows a dedicated avatar-upload pending state without affecting the form Save button', async () => {
+    const user = userEvent.setup()
+    mockGetCurrentUser.mockResolvedValue(mockUser)
+    // Keep the avatar upload in flight so we can observe the pending state.
+    let resolveAvatar: () => void = () => {}
+    mockUpdateAvatar.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveAvatar = resolve
+        })
+    )
+
+    const { container } = renderWithTheme(<ProfileTab />)
+    await waitFor(() => expect(screen.getByDisplayValue('John')).toBeInTheDocument())
+
+    // Upload a file; the FileReader produces a base64 data URL distinct from the
+    // GitHub avatar, which reveals the "Save Picture" button.
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    const file = new File(['avatar'], 'avatar.png', { type: 'image/png' })
+    await user.upload(fileInput, file)
+
+    const savePicture = await screen.findByRole('button', { name: /save picture/i })
+    await user.click(savePicture)
+
+    // The avatar control shows its own pending state...
+    const uploading = await screen.findByRole('button', { name: /uploading/i })
+    expect(uploading).toHaveAttribute('aria-busy', 'true')
+    expect(uploading).toBeDisabled()
+
+    // ...while the form Save button still reflects only form-save progress.
+    const formSave = screen.getByRole('button', { name: /^save$/i })
+    expect(formSave).toHaveTextContent(/^Save$/)
+    expect(formSave).not.toHaveAttribute('aria-busy', 'true')
+
+    resolveAvatar()
+    await waitFor(() => expect(toast.success).toHaveBeenCalled())
+  })
+
+  it('opens the GitHub settings page with noopener,noreferrer', async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    mockGetCurrentUser.mockResolvedValue(mockUser)
+    renderWithTheme(<ProfileTab />)
+
+    await waitFor(() => expect(screen.getByDisplayValue('John')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: /^edit$/i }))
+
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://github.com/settings/profile',
+      '_blank',
+      'noopener,noreferrer'
+    )
+
+    openSpy.mockRestore()
   })
 })

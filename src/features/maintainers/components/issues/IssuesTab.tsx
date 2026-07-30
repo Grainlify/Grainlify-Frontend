@@ -149,6 +149,9 @@ export function IssuesTab({
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const { userRole, user } = useAuth()
+  const createIssueHref = selectedProjects[0]?.github_full_name
+    ? `https://github.com/${selectedProjects[0].github_full_name}/issues/new`
+    : undefined
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [selectedIssueFromAPI, setSelectedIssueFromAPI] = useState<
@@ -1100,7 +1103,7 @@ Only applications submitted via the apply link above will be considered. Please 
         }`}
       >
         {!selectedIssue ? (
-          <EmptyIssueState issueCount={visibleIssues.length} />
+          <EmptyIssueState issueCount={visibleIssues.length} ctaHref={createIssueHref} />
         ) : (
           <div className="p-8">
             {/* Header */}

@@ -1,19 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import {
-  AlertCircle,
-  Check,
-  Filter,
-  Github,
-  Hourglass,
-  LayoutGrid,
-  RefreshCw,
-  Search,
-} from 'lucide-react'
+import { AlertCircle, Check, Filter, Hourglass, LayoutGrid, RefreshCw, Search } from 'lucide-react'
 import { getProfileRewards, type ProfileReward } from '../../../shared/api/client'
+import { GithubIcon } from '../../../shared/components/GithubIcon'
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useLocalStorage } from '../../../shared/hooks/useLocalStorage'
 import { Popover, PopoverContent, PopoverTrigger } from '../../../shared/components/ui/popover'
+import { useIntlFormatters, type UseIntlFormatters } from '../../../shared/i18n'
 
 type RewardRow = {
   id: string
@@ -27,9 +20,7 @@ type RewardRow = {
 }
 
 type RewardsState =
-  | { status: 'loading' }
-  | { status: 'error' }
-  | { status: 'ok'; rewards: RewardRow[] }
+  { status: 'loading' } | { status: 'error' } | { status: 'ok'; rewards: RewardRow[] }
 
 const columns = ['Date', 'ID', 'Project', 'From', 'Contributions', 'Amount', 'Status']
 
@@ -48,7 +39,11 @@ const normalizeText = (value?: string | null) => {
  * invalid currency codes fall back to `USD` so `Intl.NumberFormat` cannot throw
  * and the UI never concatenates an `"undefined"` currency string.
  */
-function formatRewardAmount(amount?: number | string | null, currency?: string | null) {
+function formatRewardAmount(
+  amount: number | string | null | undefined,
+  currency: string | null | undefined,
+  formatCurrency: UseIntlFormatters['formatCurrency']
+) {
   const parsedAmount = typeof amount === 'number' ? amount : Number.parseFloat(String(amount ?? ''))
 
   if (!Number.isFinite(parsedAmount)) return fallbackText
@@ -56,42 +51,44 @@ function formatRewardAmount(amount?: number | string | null, currency?: string |
   const normalizedCurrency = currency?.trim().toUpperCase() || 'USD'
 
   try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return formatCurrency(parsedAmount, {
       currency: normalizedCurrency,
       maximumFractionDigits: Number.isInteger(parsedAmount) ? 0 : 2,
-    }).format(parsedAmount)
+    })
   } catch {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return formatCurrency(parsedAmount, {
       currency: 'USD',
       maximumFractionDigits: Number.isInteger(parsedAmount) ? 0 : 2,
-    }).format(parsedAmount)
+    })
   }
 }
 
-const formatRewardDate = (reward: ProfileReward) => {
+const formatRewardDate = (reward: ProfileReward, formatDate: UseIntlFormatters['formatDate']) => {
   const dateValue = reward.date || reward.awarded_at || reward.created_at
   if (!dateValue) return fallbackText
 
   const date = new Date(dateValue)
   if (Number.isNaN(date.getTime())) return normalizeText(dateValue)
 
-  return new Intl.DateTimeFormat('en-US', {
+  return formatDate(date, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(date)
+  })
 }
 
-const normalizeReward = (reward: ProfileReward): RewardRow => ({
+const normalizeReward = (
+  reward: ProfileReward,
+  formatCurrency: UseIntlFormatters['formatCurrency'],
+  formatDate: UseIntlFormatters['formatDate']
+): RewardRow => ({
   id: String(reward.id),
-  date: formatRewardDate(reward),
+  date: formatRewardDate(reward, formatDate),
   project: normalizeText(reward.project_name || reward.project),
   logo: normalizeText(reward.project_logo).slice(0, 2),
   from: normalizeText(reward.contributor_login || reward.from),
   contribution: normalizeText(reward.contribution_title || reward.contribution),
-  amount: formatRewardAmount(reward.amount, reward.currency),
+  amount: formatRewardAmount(reward.amount, reward.currency, formatCurrency),
   status: normalizeText(reward.status),
 })
 
@@ -113,7 +110,7 @@ function EmptyState({ theme }: { theme: string }) {
         theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
       }`}
     >
-      <Github className="w-14 h-14 mx-auto mb-4 opacity-50" />
+      <GithubIcon className="w-14 h-14 mx-auto mb-4 opacity-50" />
       <p className="text-[16px] font-semibold">No rewards yet</p>
       <p className="text-[13px] mt-2">Rewards from accepted contributions will appear here.</p>
     </div>
@@ -178,6 +175,7 @@ function RewardsSkeleton() {
 
 export function RewardsTab() {
   const { theme } = useTheme()
+  const { formatCurrency, formatDate } = useIntlFormatters()
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false)
   const [selectedColumns, setSelectedColumns] = useLocalStorage<string[]>(
     'rewards_selected_columns',
@@ -199,7 +197,9 @@ export function RewardsTab() {
       .then((response) => {
         setState({
           status: 'ok',
-          rewards: (response.rewards || []).map(normalizeReward),
+          rewards: (response.rewards || []).map((r) =>
+            normalizeReward(r, formatCurrency, formatDate)
+          ),
         })
       })
       .catch(() => {
@@ -480,7 +480,7 @@ function MobileRewardCard({ reward, theme }: { reward: RewardRow; theme: string 
         </div>
 
         <div className="flex items-center space-x-2">
-          <Github
+          <GithubIcon
             className={`w-4 h-4 flex-shrink-0 ${
               theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
             }`}

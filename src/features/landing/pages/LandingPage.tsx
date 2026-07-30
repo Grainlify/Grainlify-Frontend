@@ -1,6 +1,6 @@
-import { Navbar } from "../components/Navbar";
-import { Hero } from "../components/Hero";
-import { ImageWithFallback } from "../components/ImageWithFallback";
+import { Navbar } from '../components/Navbar'
+import { Hero } from '../components/Hero'
+import { ImageWithFallback } from '../components/ImageWithFallback'
 import {
   Code,
   GitBranch,
@@ -12,113 +12,124 @@ import {
   CheckCircle,
   Star,
   Quote,
-} from "lucide-react";
-import { useTheme } from "../../../shared/contexts/ThemeContext";
-import { useLandingStats } from "../../../shared/hooks/useLandingStats";
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { logger } from "../../../shared/utils/logger";
+} from 'lucide-react'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
+import { useLandingStats } from '../../../shared/hooks/useLandingStats'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { logger } from '../../../shared/utils/logger'
+import { useTranslation } from '../../../shared/i18n'
 
+/**
+ * Public landing page component.
+ * Includes a top navbar, hero section, features, and other marketing content.
+ * Provides a skip-to-content link for keyboard accessibility.
+ */
 export function LandingPage() {
-  const { theme } = useTheme();
-  const navigate = useNavigate();
+  const { theme } = useTheme()
+  const navigate = useNavigate()
+  const { t } = useTranslation()
 
   // Check for OAuth callback token in URL (fallback for wrong redirect URL)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    const github = params.get("github");
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
+    const github = params.get('github')
 
-    logger.debug("LandingPage - Checking for token in URL");
-    logger.debug("LandingPage - Token found:", token ? "Yes" : "No");
-    logger.debug("LandingPage - GitHub username check:", github ? "Present" : "Missing");
+    logger.debug('LandingPage - Checking for token in URL')
+    logger.debug('LandingPage - Token found:', token ? 'Yes' : 'No')
+    logger.debug('LandingPage - GitHub username check:', github ? 'Present' : 'Missing')
 
     if (token) {
-      logger.debug("LandingPage - Redirecting to /auth/callback");
+      logger.debug('LandingPage - Redirecting to /auth/callback')
       // If there's a token in the URL, redirect to the proper callback handler
-      navigate(`/auth/callback?token=${token}`, { replace: true });
+      navigate(`/auth/callback?token=${token}`, { replace: true })
     }
-  }, [navigate]);
+  }, [navigate])
 
   return (
     <div
       className={`min-h-screen transition-colors ${
-        theme === "dark"
-          ? "bg-gradient-to-br from-[#1a1512] via-[#231c17] to-[#2d241d]"
-          : "bg-gradient-to-br from-[#e8dfd0] via-[#d4c5b0] to-[#c9b89a]"
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-[#1a1512] via-[#231c17] to-[#2d241d]'
+          : 'bg-gradient-to-br from-[#e8dfd0] via-[#d4c5b0] to-[#c9b89a]'
       }`}
     >
+      {/* Skip Link */}
+      <a
+        href="#landing-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-[#c9983a] focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#c9983a] focus:ring-offset-2 transition-all"
+      >
+        {t('common.skipToContent')}
+      </a>
+
       <Navbar />
-      <Hero />
-      <Features />
-      <HowItWorks />
-      <WhyChooseUs />
-      <Testimonials />
+      <main id="landing-main" tabIndex={-1} className="outline-none">
+        <Hero />
+        <Features />
+        <HowItWorks />
+        <WhyChooseUs />
+        <Testimonials />
+      </main>
       <Footer />
     </div>
-  );
+  )
 }
 
 function Features() {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
 
   const features = [
     {
       icon: Code,
-      title: "Smart Matching",
+      title: 'Smart Matching',
       description:
-        "AI-powered algorithm matches contributors with projects that fit their skills and interests.",
+        'AI-powered algorithm matches contributors with projects that fit their skills and interests.',
     },
     {
       icon: GitBranch,
-      title: "Seamless Integration",
-      description:
-        "Connect your GitHub, track contributions, and manage everything in one place.",
+      title: 'Seamless Integration',
+      description: 'Connect your GitHub, track contributions, and manage everything in one place.',
     },
     {
       icon: Award,
-      title: "Rewards & Recognition",
-      description:
-        "Get compensated for your contributions with transparent grant distribution.",
+      title: 'Rewards & Recognition',
+      description: 'Get compensated for your contributions with transparent grant distribution.',
     },
     {
       icon: Shield,
-      title: "Secure & Transparent",
-      description:
-        "Built on blockchain technology ensuring secure, transparent transactions.",
+      title: 'Secure & Transparent',
+      description: 'Built on blockchain technology ensuring secure, transparent transactions.',
     },
     {
       icon: Zap,
-      title: "Real-time Updates",
+      title: 'Real-time Updates',
       description:
-        "Stay informed with instant notifications about project updates and opportunities.",
+        'Stay informed with instant notifications about project updates and opportunities.',
     },
     {
       icon: Users,
-      title: "Community Driven",
+      title: 'Community Driven',
       description:
-        "Join a thriving community of developers, maintainers, and open-source enthusiasts.",
+        'Join a thriving community of developers, maintainers, and open-source enthusiasts.',
     },
-  ];
+  ]
 
   return (
-    <section
-      id="features"
-      className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6"
-    >
+    <section id="features" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2
             className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-              theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+              theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
             }`}
           >
             Everything You Need to Succeed
           </h2>
           <p
             className={`text-xl max-w-2xl mx-auto transition-colors ${
-              theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+              theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
             }`}
           >
             Powerful features designed to streamline your open-source journey
@@ -131,9 +142,9 @@ function Features() {
             <div
               key={index}
               className={`group backdrop-blur-[40px] border rounded-[24px] p-8 transition-all hover:scale-105 hover:border-[#c9983a]/30 hover:shadow-[0_12px_36px_rgba(201,152,58,0.15)] ${
-                theme === "dark"
-                  ? "bg-white/[0.08] border-white/15 hover:bg-white/[0.12]"
-                  : "bg-white/[0.15] border-white/25 hover:bg-white/[0.2]"
+                theme === 'dark'
+                  ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.12]'
+                  : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2]'
               }`}
             >
               <div className="w-14 h-14 rounded-[14px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/15 border border-[#c9983a]/30 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-[0_4px_12px_rgba(201,152,58,0.15)]">
@@ -141,14 +152,14 @@ function Features() {
               </div>
               <h3
                 className={`text-xl font-semibold mb-3 transition-colors ${
-                  theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                 }`}
               >
                 {feature.title}
               </h3>
               <p
                 className={`transition-colors ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`}
               >
                 {feature.description}
@@ -158,57 +169,51 @@ function Features() {
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 function HowItWorks() {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
 
   const steps = [
     {
-      number: "01",
-      title: "Create Your Profile",
-      description:
-        "Sign up and showcase your skills, interests, and open-source experience.",
+      number: '01',
+      title: 'Create Your Profile',
+      description: 'Sign up and showcase your skills, interests, and open-source experience.',
     },
     {
-      number: "02",
-      title: "Discover Projects",
+      number: '02',
+      title: 'Discover Projects',
       description:
-        "Browse through curated projects or get matched with opportunities that fit you.",
+        'Browse through curated projects or get matched with opportunities that fit you.',
     },
     {
-      number: "03",
-      title: "Start Contributing",
-      description:
-        "Connect with maintainers, pick up tasks, and start making an impact.",
+      number: '03',
+      title: 'Start Contributing',
+      description: 'Connect with maintainers, pick up tasks, and start making an impact.',
     },
     {
-      number: "04",
-      title: "Earn Rewards",
-      description:
-        "Receive grants and recognition for your valuable contributions.",
+      number: '04',
+      title: 'Earn Rewards',
+      description: 'Receive grants and recognition for your valuable contributions.',
     },
-  ];
+  ]
 
   return (
-    <section
-      id="how-it-works"
-      className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6"
-    >
+    <section id="how-it-works" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2
             className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-              theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+              theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
             }`}
           >
             How It Works
           </h2>
           <p
             className={`text-xl max-w-2xl mx-auto transition-colors ${
-              theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+              theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
             }`}
           >
             Get started in four simple steps
@@ -226,20 +231,18 @@ function HowItWorks() {
 
               <div className="text-center">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/15 border border-[#c9983a]/30 flex items-center justify-center mx-auto mb-6 shadow-[0_4px_12px_rgba(201,152,58,0.15)]">
-                  <span className="text-2xl font-bold text-[#c9983a]">
-                    {step.number}
-                  </span>
+                  <span className="text-2xl font-bold text-[#c9983a]">{step.number}</span>
                 </div>
                 <h3
                   className={`text-xl font-semibold mb-3 transition-colors ${
-                    theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                    theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                   }`}
                 >
                   {step.title}
                 </h3>
                 <p
                   className={`transition-colors ${
-                    theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   {step.description}
@@ -250,45 +253,41 @@ function HowItWorks() {
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 function WhyChooseUs() {
-  const { theme } = useTheme();
-  const { display } = useLandingStats();
+  const { theme } = useTheme()
+  const { display } = useLandingStats()
 
   const benefits = [
-    "Verified and vetted projects from trusted organizations",
-    "Fair compensation with transparent grant distribution",
-    "Comprehensive skill development and mentorship",
-    "Active community support and collaboration",
-    "Real-time project tracking and analytics",
-    "Secure blockchain-based transactions",
-  ];
+    'Verified and vetted projects from trusted organizations',
+    'Fair compensation with transparent grant distribution',
+    'Comprehensive skill development and mentorship',
+    'Active community support and collaboration',
+    'Real-time project tracking and analytics',
+    'Secure blockchain-based transactions',
+  ]
 
   return (
-    <section
-      id="why-choose-us"
-      className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6"
-    >
+    <section id="why-choose-us" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left: Benefits */}
           <div>
             <h2
               className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-                theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
               }`}
             >
               Why Choose Grainlify?
             </h2>
             <p
               className={`text-xl mb-8 transition-colors ${
-                theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
               }`}
             >
-              We're more than just a platform – we're your partner in
-              open-source success.
+              We're more than just a platform – we're your partner in open-source success.
             </p>
 
             <div className="space-y-4">
@@ -297,7 +296,7 @@ function WhyChooseUs() {
                   <CheckCircle className="w-6 h-6 text-[#c9983a] mt-0.5 flex-shrink-0" />
                   <span
                     className={`transition-colors ${
-                      theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                      theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                     }`}
                   >
                     {benefit}
@@ -311,7 +310,7 @@ function WhyChooseUs() {
                 <div className="text-3xl font-bold text-[#c9983a]">98%</div>
                 <div
                   className={`text-sm transition-colors ${
-                    theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   Satisfaction Rate
@@ -321,7 +320,7 @@ function WhyChooseUs() {
                 <div className="text-3xl font-bold text-[#c9983a]">24/7</div>
                 <div
                   className={`text-sm transition-colors ${
-                    theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                    theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                   }`}
                 >
                   Support Available
@@ -333,44 +332,40 @@ function WhyChooseUs() {
           {/* Right: Visual Element */}
           <div
             className={`backdrop-blur-[40px] border rounded-[24px] p-8 ${
-              theme === "dark"
-                ? "bg-white/[0.08] border-white/15"
-                : "bg-white/[0.15] border-white/25"
+              theme === 'dark'
+                ? 'bg-white/[0.08] border-white/15'
+                : 'bg-white/[0.15] border-white/25'
             }`}
           >
             <div className="grid grid-cols-1 gap-6">
               {[
                 {
                   icon: TrendingUp,
-                  label: "Growing Ecosystem",
-                  value: "+45%",
+                  label: 'Growing Ecosystem',
+                  value: '+45%',
                 },
                 {
                   icon: Users,
-                  label: "Active Users",
+                  label: 'Active Users',
                   value: display.contributors,
                 },
                 {
                   icon: Award,
-                  label: "Projects Funded",
+                  label: 'Projects Funded',
                   value: display.activeProjects,
                 },
               ].map((item, index) => (
                 <div
                   key={index}
                   className={`flex items-center justify-between p-4 rounded-[16px] ${
-                    theme === "dark"
-                      ? "bg-white/[0.05]"
-                      : "bg-white/[0.1]"
+                    theme === 'dark' ? 'bg-white/[0.05]' : 'bg-white/[0.1]'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
                     <item.icon className="w-5 h-5 text-[#c9983a]" />
                     <span
                       className={`transition-colors ${
-                        theme === "dark"
-                          ? "text-[#b8a898]"
-                          : "text-[#7a6b5a]"
+                        theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                       }`}
                     >
                       {item.label}
@@ -378,7 +373,7 @@ function WhyChooseUs() {
                   </div>
                   <span
                     className={`font-semibold transition-colors ${
-                      theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                      theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                     }`}
                   >
                     {item.value}
@@ -390,60 +385,54 @@ function WhyChooseUs() {
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 function Testimonials() {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
 
   const testimonials = [
     {
-      name: "Sarah Chen",
-      role: "Full Stack Developer",
-      avatar:
-        "https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=400",
+      name: 'Sarah Chen',
+      role: 'Full Stack Developer',
+      avatar: 'https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=400',
       content:
-        "Grainlify helped me find amazing projects that align with my interests. The grant system is transparent and fair!",
+        'Grainlify helped me find amazing projects that align with my interests. The grant system is transparent and fair!',
       rating: 5,
     },
     {
-      name: "Marcus Johnson",
-      role: "Project Maintainer",
-      avatar:
-        "https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=400",
+      name: 'Marcus Johnson',
+      role: 'Project Maintainer',
+      avatar: 'https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=400',
       content:
-        "As a maintainer, this platform has been incredible for finding talented contributors. Highly recommend!",
+        'As a maintainer, this platform has been incredible for finding talented contributors. Highly recommend!',
       rating: 5,
     },
     {
-      name: "Emily Rodriguez",
-      role: "Open Source Contributor",
-      avatar:
-        "https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=400",
+      name: 'Emily Rodriguez',
+      role: 'Open Source Contributor',
+      avatar: 'https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=400',
       content:
         "The community here is amazing. I've learned so much and made great connections through Grainlify.",
       rating: 5,
     },
-  ];
+  ]
 
   return (
-    <section
-      id="testimonials"
-      className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6"
-    >
+    <section id="testimonials" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2
             className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-              theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+              theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
             }`}
           >
             What Builders Say
           </h2>
           <p
             className={`text-xl max-w-2xl mx-auto transition-colors ${
-              theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+              theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
             }`}
           >
             Hear from our community of contributors and maintainers
@@ -456,9 +445,9 @@ function Testimonials() {
             <div
               key={index}
               className={`backdrop-blur-[40px] border rounded-[24px] p-8 transition-all hover:border-[#c9983a]/30 hover:shadow-[0_12px_36px_rgba(201,152,58,0.15)] ${
-                theme === "dark"
-                  ? "bg-white/[0.08] border-white/15 hover:bg-white/[0.12]"
-                  : "bg-white/[0.15] border-white/25 hover:bg-white/[0.2]"
+                theme === 'dark'
+                  ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.12]'
+                  : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2]'
               }`}
             >
               <Quote className="w-10 h-10 text-[#c9983a]/30 mb-6" />
@@ -466,17 +455,14 @@ function Testimonials() {
               {/* Rating */}
               <div className="flex space-x-1 mb-6">
                 {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className="w-5 h-5 fill-[#c9983a] text-[#c9983a]"
-                  />
+                  <Star key={i} className="w-5 h-5 fill-[#c9983a] text-[#c9983a]" />
                 ))}
               </div>
 
               {/* Content */}
               <p
                 className={`mb-6 transition-colors ${
-                  theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                 }`}
               >
                 {testimonial.content}
@@ -494,14 +480,14 @@ function Testimonials() {
                 <div>
                   <div
                     className={`font-semibold transition-colors ${
-                      theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                      theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                     }`}
                   >
                     {testimonial.name}
                   </div>
                   <div
                     className={`text-sm transition-colors ${
-                      theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                      theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                     }`}
                   >
                     {testimonial.role}
@@ -513,11 +499,11 @@ function Testimonials() {
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 function Footer() {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
 
   return (
     <footer className="relative py-16 px-6 border-t border-white/20">
@@ -529,7 +515,7 @@ function Footer() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c9983a] to-[#d4af37] shadow-[0_2px_8px_rgba(201,152,58,0.4)]" />
               <span
                 className={`text-xl font-semibold transition-colors ${
-                  theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                  theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                 }`}
               >
                 Grainlify
@@ -537,7 +523,7 @@ function Footer() {
             </div>
             <p
               className={`transition-colors ${
-                theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
               }`}
             >
               Connecting talent with opportunity in the open-source ecosystem.
@@ -548,7 +534,7 @@ function Footer() {
           <div>
             <h4
               className={`font-semibold mb-4 transition-colors ${
-                theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
               }`}
             >
               Product
@@ -557,7 +543,7 @@ function Footer() {
               <a
                 href="#features"
                 className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`}
               >
                 Features
@@ -565,7 +551,7 @@ function Footer() {
               <a
                 href="#how-it-works"
                 className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`}
               >
                 How it Works
@@ -573,7 +559,7 @@ function Footer() {
               <a
                 href="#"
                 className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`}
               >
                 Pricing
@@ -584,7 +570,7 @@ function Footer() {
           <div>
             <h4
               className={`font-semibold mb-4 transition-colors ${
-                theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
               }`}
             >
               Company
@@ -593,7 +579,7 @@ function Footer() {
               <a
                 href="#"
                 className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`}
               >
                 About
@@ -601,7 +587,7 @@ function Footer() {
               <a
                 href="#"
                 className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`}
               >
                 Blog
@@ -609,7 +595,7 @@ function Footer() {
               <a
                 href="#"
                 className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`}
               >
                 Careers
@@ -620,7 +606,7 @@ function Footer() {
           <div>
             <h4
               className={`font-semibold mb-4 transition-colors ${
-                theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+                theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
               }`}
             >
               Support
@@ -629,7 +615,7 @@ function Footer() {
               <a
                 href="#"
                 className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`}
               >
                 Documentation
@@ -637,7 +623,7 @@ function Footer() {
               <a
                 href="#"
                 className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`}
               >
                 Help Center
@@ -645,7 +631,7 @@ function Footer() {
               <a
                 href="#"
                 className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                 }`}
               >
                 Contact
@@ -656,14 +642,12 @@ function Footer() {
 
         <div
           className={`pt-8 border-t text-center transition-colors ${
-            theme === "dark"
-              ? "border-white/10 text-[#b8a898]"
-              : "border-white/20 text-[#7a6b5a]"
+            theme === 'dark' ? 'border-white/10 text-[#b8a898]' : 'border-white/20 text-[#7a6b5a]'
           }`}
         >
           <p>© 2024 Grainlify. All rights reserved.</p>
         </div>
       </div>
     </footer>
-  );
+  )
 }

@@ -1,16 +1,16 @@
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Home } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import { Link } from 'react-router-dom'
+import { ArrowLeft, Home } from 'lucide-react'
+import { useTheme } from '../contexts/ThemeContext'
 
 interface ResourceNotFoundProps {
   /** Main heading text. Defaults to "Resource not found". */
-  title?: string;
+  title?: string
   /** Secondary message. Defaults to a generic "couldn't find" message. */
-  message?: string;
+  message?: string
   /** Where the primary action button should navigate to. Defaults to "/dashboard". */
-  backTo?: string;
+  backTo?: string
   /** Label for the primary action button. Defaults to "Back to Dashboard". */
-  backLabel?: string;
+  backLabel?: string
 }
 
 /**
@@ -23,8 +23,8 @@ export function ResourceNotFound({
   backTo = '/dashboard',
   backLabel = 'Back to Dashboard',
 }: ResourceNotFoundProps) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   return (
     <div className="space-y-6">
@@ -71,5 +71,5 @@ export function ResourceNotFound({
         </div>
       </div>
     </div>
-  );
+  )
 }

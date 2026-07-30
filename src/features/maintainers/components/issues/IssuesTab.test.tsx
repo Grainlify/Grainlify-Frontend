@@ -509,4 +509,208 @@ describe('IssuesTab', () => {
     // Verify by checking the filter count badge drops back to 1 (only default status=open)
     expect(screen.getByText('1')).toBeInTheDocument()
   })
+
+  // ─── Combined filter interactions ─────────────────────────────────────────
+
+  it('correctly splits mixed labels into categories and languages', async () => {
+    const issues = [
+      {
+        ...ISSUES[0],
+        labels: [{ name: 'typescript' }, { name: 'bug' }, { name: 'rust' }, { name: 'ui' }],
+      },
+    ]
+    mockGetMaintainerIssues.mockResolvedValue({ issues })
+    const user = userEvent.setup()
+
+    renderWithTheme(<IssuesTab onNavigate={vi.fn()} selectedProjects={PROJECTS} />)
+
+    await screen.findByText('Fix styling bug')
+    await openFilterPanel(user)
+
+    const catSection = screen.getByText('Categories').closest('div')!
+    expect(within(catSection).getByRole('button', { name: 'bug' })).toBeInTheDocument()
+    expect(within(catSection).getByRole('button', { name: 'ui' })).toBeInTheDocument()
+    expect(within(catSection).queryByRole('button', { name: 'typescript' })).not.toBeInTheDocument()
+    expect(within(catSection).queryByRole('button', { name: 'rust' })).not.toBeInTheDocument()
+
+    const langSection = screen.getByText('Languages').closest('div')!
+    expect(within(langSection).getByRole('button', { name: 'typescript' })).toBeInTheDocument()
+    expect(within(langSection).getByRole('button', { name: 'rust' })).toBeInTheDocument()
+    expect(within(langSection).queryByRole('button', { name: 'bug' })).not.toBeInTheDocument()
+    expect(within(langSection).queryByRole('button', { name: 'ui' })).not.toBeInTheDocument()
+  })
+
+  it('category and language filters compose with AND semantics', async () => {
+    const issues = [
+      {
+        ...ISSUES[0],
+        github_issue_id: 101,
+        number: 1,
+        title: 'TS bug issue',
+        labels: [{ name: 'typescript' }, { name: 'bug' }],
+      },
+      {
+        ...ISSUES[0],
+        github_issue_id: 102,
+        number: 2,
+        title: 'TS ui issue',
+        labels: [{ name: 'typescript' }, { name: 'ui' }],
+      },
+      {
+        ...ISSUES[0],
+        github_issue_id: 103,
+        number: 3,
+        title: 'Rust bug issue',
+        labels: [{ name: 'rust' }, { name: 'bug' }],
+      },
+      {
+        ...ISSUES[0],
+        github_issue_id: 104,
+        number: 4,
+        title: 'Python issue',
+        labels: [{ name: 'python' }],
+      },
+    ]
+    mockGetMaintainerIssues.mockResolvedValue({ issues })
+    const user = userEvent.setup()
+
+    renderWithTheme(<IssuesTab onNavigate={vi.fn()} selectedProjects={PROJECTS} />)
+
+    expect(await screen.findByText('TS bug issue')).toBeInTheDocument()
+    expect(screen.getByText('TS ui issue')).toBeInTheDocument()
+    expect(screen.getByText('Rust bug issue')).toBeInTheDocument()
+    expect(screen.getByText('Python issue')).toBeInTheDocument()
+
+    await openFilterPanel(user)
+
+    const catSection = screen.getByText('Categories').closest('div')!
+    await user.click(within(catSection).getByRole('button', { name: 'bug' }))
+
+    const langSection = screen.getByText('Languages').closest('div')!
+    await user.click(within(langSection).getByRole('button', { name: 'typescript' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('TS bug issue')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('TS ui issue')).not.toBeInTheDocument()
+    expect(screen.queryByText('Rust bug issue')).not.toBeInTheDocument()
+    expect(screen.queryByText('Python issue')).not.toBeInTheDocument()
+  })
+
+  it('search query narrows an already-category-filtered set', async () => {
+    const issues = [
+      {
+        ...ISSUES[0],
+        github_issue_id: 101,
+        number: 1,
+        title: 'Bug fix in login',
+        labels: [{ name: 'bug' }],
+      },
+      {
+        ...ISSUES[0],
+        github_issue_id: 102,
+        number: 2,
+        title: 'Add TypeScript types',
+        labels: [{ name: 'typescript' }],
+      },
+      {
+        ...ISSUES[0],
+        github_issue_id: 103,
+        number: 3,
+        title: 'Bug fix in Rust module',
+        labels: [{ name: 'bug' }, { name: 'rust' }],
+      },
+    ]
+    mockGetMaintainerIssues.mockResolvedValue({ issues })
+    const user = userEvent.setup()
+
+    renderWithTheme(<IssuesTab onNavigate={vi.fn()} selectedProjects={PROJECTS} />)
+
+    expect(await screen.findByText('Bug fix in login')).toBeInTheDocument()
+    expect(screen.getByText('Add TypeScript types')).toBeInTheDocument()
+    expect(screen.getByText('Bug fix in Rust module')).toBeInTheDocument()
+
+    await openFilterPanel(user)
+
+    const catSection = screen.getByText('Categories').closest('div')!
+    await user.click(within(catSection).getByRole('button', { name: 'bug' }))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Add TypeScript types')).not.toBeInTheDocument()
+    })
+    expect(screen.getByText('Bug fix in login')).toBeInTheDocument()
+    expect(screen.getByText('Bug fix in Rust module')).toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('Filter issues'))
+
+    const searchInput = screen.getByPlaceholderText('Search')
+    await user.type(searchInput, 'Rust')
+
+    await waitFor(() => {
+      expect(screen.queryByText('Bug fix in login')).not.toBeInTheDocument()
+    })
+    expect(screen.getByText('Bug fix in Rust module')).toBeInTheDocument()
+  })
+
+  // ─── Combined filter edge cases ─────────────────────────────────────────
+
+  it('classifies labels case-insensitively against KNOWN_LANGUAGES', async () => {
+    const issueWithCaseMixedLabels = [
+      {
+        ...ISSUES[0],
+        labels: [{ name: 'TypeScript' }, { name: 'BUG' }],
+      },
+    ]
+    mockGetMaintainerIssues.mockResolvedValue({ issues: issueWithCaseMixedLabels })
+    const user = userEvent.setup()
+
+    renderWithTheme(<IssuesTab onNavigate={vi.fn()} selectedProjects={PROJECTS} />)
+
+    await screen.findByText('Fix styling bug')
+    await openFilterPanel(user)
+
+    const langSection = screen.getByText('Languages').closest('div')!
+    expect(within(langSection).getByRole('button', { name: 'TypeScript' })).toBeInTheDocument()
+    expect(within(langSection).queryByRole('button', { name: 'BUG' })).not.toBeInTheDocument()
+
+    const catSection = screen.getByText('Categories').closest('div')!
+    expect(within(catSection).getByRole('button', { name: 'BUG' })).toBeInTheDocument()
+    expect(within(catSection).queryByRole('button', { name: 'TypeScript' })).not.toBeInTheDocument()
+  })
+
+  it('search narrowing yields empty-state message when no issues match', async () => {
+    const issues = [
+      {
+        ...ISSUES[0],
+        github_issue_id: 101,
+        number: 1,
+        title: 'Bug fix in login',
+        labels: [{ name: 'bug' }],
+      },
+    ]
+    mockGetMaintainerIssues.mockResolvedValue({ issues })
+    const user = userEvent.setup()
+
+    renderWithTheme(<IssuesTab onNavigate={vi.fn()} selectedProjects={PROJECTS} />)
+
+    expect(await screen.findByText('Bug fix in login')).toBeInTheDocument()
+
+    await openFilterPanel(user)
+
+    const catSection = screen.getByText('Categories').closest('div')!
+    await user.click(within(catSection).getByRole('button', { name: 'bug' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Bug fix in login')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByLabelText('Filter issues'))
+
+    const searchInput = screen.getByPlaceholderText('Search')
+    await user.type(searchInput, 'Nonexistent')
+
+    await waitFor(() => {
+      expect(screen.getByText('No issues match the filters')).toBeInTheDocument()
+    })
+  })
 })

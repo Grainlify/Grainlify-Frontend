@@ -1,7 +1,25 @@
-import { useState, useEffect } from 'react'
-import { Search, ArrowRight, X, FileText, FolderGit2, User, ChevronLeft } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import {
+  Search,
+  ArrowRight,
+  X,
+  FileText,
+  FolderGit2,
+  User,
+  ChevronLeft,
+  LucideIcon,
+} from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useDebouncedValue } from '../../../shared/hooks/useDebouncedValue'
+
+/** Maximum number of characters allowed in the search query. */
+const MAX_SEARCH_LENGTH = 100
+
+/**
+ * Show the character counter once the query length is within this many
+ * characters of {@link MAX_SEARCH_LENGTH}, so users get advance notice.
+ */
+const SEARCH_COUNTER_THRESHOLD = MAX_SEARCH_LENGTH - 20
 
 /**
  * Props for the {@link SearchPage} component.
@@ -22,7 +40,7 @@ interface SearchResult {
   type: 'issue' | 'project' | 'contributor'
   title: string
   subtitle?: string
-  icon: any
+  icon: LucideIcon
 }
 
 /**
@@ -44,6 +62,12 @@ export function SearchPage({
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const darkTheme = theme === 'dark'
+
+  const queryLength = searchQuery.length
+  const isAtSearchLimit = queryLength >= MAX_SEARCH_LENGTH
+  const showSearchCounter = queryLength >= SEARCH_COUNTER_THRESHOLD
+
+  const [filter, setFilter] = useState<'all' | 'issue' | 'project' | 'contributor'>('all')
 
   // Debounce the query so filtering only runs once the user pauses typing.
   const debouncedQuery = useDebouncedValue(searchQuery, 300)
@@ -82,62 +106,82 @@ export function SearchPage({
     ],
   }
 
+  // Computes results for `rawQuery` against the current filter. Shared by
+  // the debounced live-search effect below and the "Submit search" button,
+  // which re-runs the search immediately against the un-debounced query
+  // instead of waiting out the debounce delay.
+  const runSearch = useCallback(
+    (rawQuery: string) => {
+      if (!rawQuery.trim()) {
+        setSearchResults([])
+        return
+      }
+
+      // Trim leading/trailing whitespace so padded queries match cleanly.
+      const query = rawQuery.trim().toLowerCase()
+      const results: SearchResult[] = []
+
+      // Search issues
+      if (filter === 'all' || filter === 'issue') {
+        allData.issues.forEach((issue) => {
+          if (
+            issue.title.toLowerCase().includes(query) ||
+            issue.project.toLowerCase().includes(query)
+          ) {
+            results.push({
+              id: issue.id,
+              type: 'issue',
+              title: issue.title,
+              subtitle: issue.project,
+              icon: FileText,
+            })
+          }
+        })
+      }
+
+      // Search projects
+      if (filter === 'all' || filter === 'project') {
+        allData.projects.forEach((project) => {
+          if (
+            project.name.toLowerCase().includes(query) ||
+            project.description.toLowerCase().includes(query)
+          ) {
+            results.push({
+              id: project.id,
+              type: 'project',
+              title: project.name,
+              subtitle: project.description,
+              icon: FolderGit2,
+            })
+          }
+        })
+      }
+
+      // Search contributors
+      if (filter === 'all' || filter === 'contributor') {
+        allData.contributors.forEach((contributor) => {
+          if (contributor.name.toLowerCase().includes(query)) {
+            results.push({
+              id: contributor.id,
+              type: 'contributor',
+              title: contributor.name,
+              subtitle: `${contributor.contributions} contributions`,
+              icon: User,
+            })
+          }
+        })
+      }
+
+      setSearchResults(results)
+    },
+    [filter]
+  )
+
   useEffect(() => {
-    if (!debouncedQuery.trim()) {
-      setSearchResults([])
-      return
-    }
+    runSearch(debouncedQuery)
+  }, [debouncedQuery, runSearch])
 
-    const query = debouncedQuery.toLowerCase()
-    const results: SearchResult[] = []
-
-    // Search issues
-    allData.issues.forEach((issue) => {
-      if (
-        issue.title.toLowerCase().includes(query) ||
-        issue.project.toLowerCase().includes(query)
-      ) {
-        results.push({
-          id: issue.id,
-          type: 'issue',
-          title: issue.title,
-          subtitle: issue.project,
-          icon: FileText,
-        })
-      }
-    })
-
-    // Search projects
-    allData.projects.forEach((project) => {
-      if (
-        project.name.toLowerCase().includes(query) ||
-        project.description.toLowerCase().includes(query)
-      ) {
-        results.push({
-          id: project.id,
-          type: 'project',
-          title: project.name,
-          subtitle: project.description,
-          icon: FolderGit2,
-        })
-      }
-    })
-
-    // Search contributors
-    allData.contributors.forEach((contributor) => {
-      if (contributor.name.toLowerCase().includes(query)) {
-        results.push({
-          id: contributor.id,
-          type: 'contributor',
-          title: contributor.name,
-          subtitle: `${contributor.contributions} contributions`,
-          icon: User,
-        })
-      }
-    })
-
-    setSearchResults(results)
-  }, [debouncedQuery])
+  const handleSubmitSearch = () => runSearch(searchQuery)
 
   const handleResultClick = (result: SearchResult) => {
     if (result.type === 'issue') {
@@ -220,6 +264,8 @@ export function SearchPage({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search issues, projects, contributors..."
+              maxLength={MAX_SEARCH_LENGTH}
+              aria-describedby="search-input-counter"
               autoFocus
               className={`flex-1 bg-transparent outline-none text-[16px] transition-colors ${
                 darkTheme
@@ -243,6 +289,7 @@ export function SearchPage({
             )}
             <button
               type="button"
+              onClick={handleSubmitSearch}
               aria-label="Submit search"
               className={`w-10 h-10 rounded-full flex items-center justify-center ml-3 flex-shrink-0 transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9983a] focus-visible:ring-offset-2 ${
                 darkTheme
@@ -254,6 +301,47 @@ export function SearchPage({
             </button>
           </div>
         </div>
+
+        {/* Filters */}
+        <div className="flex gap-2 mb-8 justify-center">
+          {(['all', 'issue', 'project', 'contributor'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              aria-pressed={filter === f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                filter === f
+                  ? 'bg-[#c9983a] text-white'
+                  : darkTheme
+                    ? 'bg-[#2d2820]/60 text-[#b8a898] hover:bg-[#2d2820]/80'
+                    : 'bg-white/60 text-[#6b5d4d] hover:bg-white/80'
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Character counter — announced to screen readers near the limit */}
+        {showSearchCounter && (
+          <p
+            id="search-input-counter"
+            aria-live="polite"
+            className={`text-[13px] -mt-6 mb-8 text-right transition-colors ${
+              isAtSearchLimit
+                ? darkTheme
+                  ? 'text-[#f59e0b]'
+                  : 'text-[#d97706]'
+                : darkTheme
+                  ? 'text-[#b8a898]/80'
+                  : 'text-[#6b5d4d]/80'
+            }`}
+          >
+            {isAtSearchLimit ? 'Character limit reached. ' : ''}
+            {queryLength}/{MAX_SEARCH_LENGTH}
+          </p>
+        )}
 
         {/* Search Results */}
         {searchResults.length > 0 && (

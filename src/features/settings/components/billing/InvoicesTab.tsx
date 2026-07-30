@@ -4,17 +4,40 @@ import { Download, FileText, CheckCircle2, Clock, AlertCircle, Loader2 } from 'l
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { Invoice, InvoiceStatus } from '../../types'
 import { downloadInvoice } from '../../../../shared/api/client'
+import { useIntlFormatters, useTranslation, type MessageId } from '../../../../shared/i18n'
+import { SkeletonLoader } from '../../../../shared/components/SkeletonLoader'
 
 interface InvoicesTabProps {
   invoices: Invoice[]
+  isLoading?: boolean
+  error?: string | null
 }
 
 function sanitizeFilename(raw: string): string {
   return raw.replace(/[^a-zA-Z0-9\-_]/g, '-')
 }
 
-export function InvoicesTab({ invoices }: InvoicesTabProps) {
+/** Catalog ids for the invoice table headers, kept in display order. */
+const INVOICE_TABLE_HEADER_IDS = [
+  'invoices.table.invoice',
+  'invoices.table.date',
+  'invoices.table.amount',
+  'invoices.table.period',
+  'invoices.table.status',
+  'invoices.table.action',
+] as const satisfies readonly MessageId[]
+
+/** Static status-label lookup; invoice status values never become message ids. */
+const INVOICE_STATUS_MESSAGE_IDS: Record<InvoiceStatus, MessageId> = {
+  paid: 'invoices.status.paid',
+  pending: 'invoices.status.pending',
+  overdue: 'invoices.status.overdue',
+}
+
+export function InvoicesTab({ invoices, isLoading = false, error = null }: InvoicesTabProps) {
   const { theme } = useTheme()
+  const { t } = useTranslation()
+  const { formatDate, formatCurrency } = useIntlFormatters()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>({})
 
@@ -82,7 +105,7 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
       link.click()
       URL.revokeObjectURL(objectUrl)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Download failed. Please try again.'
+      const message = err instanceof Error ? err.message : t('invoices.errors.downloadFailed')
       setDownloadErrors((prev) => ({ ...prev, [invoice.id]: message }))
     } finally {
       setDownloadingId(null)
@@ -102,18 +125,110 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
             theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
           }`}
         >
-          Invoices
+          {t('invoices.title')}
         </h3>
         <p
           className={`text-[14px] transition-colors ${
             theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
           }`}
         >
-          View and download your billing invoices.
+          {t('invoices.description')}
         </p>
       </div>
 
-      {invoices.length > 0 ? (
+      {error ? (
+        <div className="text-center py-12" data-testid="invoices-error">
+          <div
+            className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
+              theme === 'dark' ? 'bg-[#ef4444]/10' : 'bg-red-50'
+            }`}
+          >
+            <AlertCircle
+              className={`w-8 h-8 ${theme === 'dark' ? 'text-[#ef4444]' : 'text-red-500'}`}
+            />
+          </div>
+          <p
+            className={`text-[14px] mb-2 font-bold transition-colors ${
+              theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
+            }`}
+          >
+            {t('invoices.errors.downloadFailed')}
+          </p>
+          <p
+            className={`text-[13px] transition-colors ${
+              theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+            }`}
+          >
+            {error}
+          </p>
+        </div>
+      ) : isLoading ? (
+        <div className="space-y-3" data-testid="invoices-loading">
+          <div className="overflow-x-auto">
+            <div className="min-w-[640px]">
+              <div
+                className={`grid grid-cols-[1.2fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-4 px-6 py-3 border-b-2 transition-colors ${
+                  theme === 'dark' ? 'border-white/20' : 'border-white/20'
+                }`}
+              >
+                {INVOICE_TABLE_HEADER_IDS.map((id) => (
+                  <div
+                    key={id}
+                    className={`text-[12px] font-bold uppercase tracking-wide transition-colors ${
+                      theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
+                    }`}
+                  >
+                    {t(id)}
+                  </div>
+                ))}
+              </div>
+
+              {[1, 2, 3].map((index) => (
+                <div key={index} className="mt-3">
+                  <div
+                    className={`grid grid-cols-[1.2fr_1fr_1fr_1fr_0.8fr_0.6fr] gap-4 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border transition-all ${
+                      theme === 'dark'
+                        ? 'bg-white/[0.08] border-white/15'
+                        : 'bg-white/[0.08] border-white/15'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div
+                          className={`w-8 h-8 rounded-[10px] flex items-center justify-center ${
+                            theme === 'dark' ? 'bg-[#c9983a]/20' : 'bg-[#c9983a]/15'
+                          }`}
+                        >
+                          <FileText className="w-4 h-4 text-[#c9983a]" />
+                        </div>
+                        <SkeletonLoader className="h-4 w-32" />
+                      </div>
+                      <div className="ml-10">
+                        <SkeletonLoader className="h-3 w-40" />
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <SkeletonLoader className="h-4 w-20" />
+                    </div>
+                    <div className="flex items-center">
+                      <SkeletonLoader className="h-4 w-16" />
+                    </div>
+                    <div className="flex items-center">
+                      <SkeletonLoader className="h-4 w-24" />
+                    </div>
+                    <div className="flex items-center">
+                      <SkeletonLoader className="h-6 w-20 rounded-[8px]" />
+                    </div>
+                    <div className="flex items-center">
+                      <SkeletonLoader className="h-8 w-8 rounded-[10px]" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : invoices.length > 0 ? (
         <div className="space-y-3">
           {/* overflow-x-auto + min-w prevents the grid from collapsing on narrow screens */}
           <div className="overflow-x-auto">
@@ -124,14 +239,14 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                   theme === 'dark' ? 'border-white/20' : 'border-white/20'
                 }`}
               >
-                {['Invoice', 'Date', 'Amount', 'Period', 'Status', 'Action'].map((col) => (
+                {INVOICE_TABLE_HEADER_IDS.map((id) => (
                   <div
-                    key={col}
+                    key={id}
                     className={`text-[12px] font-bold uppercase tracking-wide transition-colors ${
                       theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'
                     }`}
                   >
-                    {col}
+                    {t(id)}
                   </div>
                 ))}
               </div>
@@ -186,7 +301,7 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                             theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                           }`}
                         >
-                          {new Date(invoice.date).toLocaleDateString('en-US', {
+                          {formatDate(invoice.date, {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
@@ -201,8 +316,7 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                             theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                           }`}
                         >
-                          {invoice.amount.toLocaleString('en-US', {
-                            style: 'currency',
+                          {formatCurrency(invoice.amount, {
                             currency: invoice.currency,
                           })}
                         </span>
@@ -228,7 +342,7 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                           <span
                             className={`text-[11px] font-semibold capitalize ${statusConfig.text}`}
                           >
-                            {invoice.status}
+                            {t(INVOICE_STATUS_MESSAGE_IDS[invoice.status])}
                           </span>
                         </div>
                       </div>
@@ -238,7 +352,11 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
                         <button
                           onClick={() => handleDownloadInvoice(invoice)}
                           disabled={isDownloading}
-                          aria-label={isDownloading ? 'Downloading…' : 'Download Invoice'}
+                          aria-label={
+                            isDownloading
+                              ? t('invoices.actions.downloading')
+                              : t('invoices.actions.downloadInvoice')
+                          }
                           className={`p-2.5 rounded-[10px] transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                             theme === 'dark'
                               ? 'hover:bg-white/[0.15] text-[#c9983a]'
@@ -286,14 +404,14 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
               theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
             }`}
           >
-            No invoices yet
+            {t('invoices.empty.title')}
           </p>
           <p
             className={`text-[13px] transition-colors ${
               theme === 'dark' ? 'text-[#8a7e70]' : 'text-[#9a8b7a]'
             }`}
           >
-            Your billing invoices will appear here
+            {t('invoices.empty.description')}
           </p>
         </div>
       )}

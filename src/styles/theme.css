@@ -94,6 +94,25 @@
   --font-weight-normal: 400;
   --ring: rgba(201, 152, 58, 0.5);
 
+  /*
+   * Text-color design tokens (light theme).
+   *
+   * Single source of truth for foreground text by role, replacing per-element
+   * `theme === 'dark' ? '#…' : '#…'` ternaries. Consumed via the Tailwind
+   * `text-text-primary` / `-secondary` / `-tertiary` / `-muted` utilities (see
+   * the `@theme inline` block) or the helpers in
+   * `src/shared/utils/textColorClasses.ts`.
+   *
+   *  - primary   : headings and high-emphasis body text
+   *  - secondary : supporting / body copy
+   *  - tertiary  : de-emphasised captions and hints
+   *  - muted     : lowest-emphasis text (placeholders, fine print)
+   */
+  --text-primary: #2d2820;
+  --text-secondary: #7a6b5a;
+  --text-tertiary: #8a7d6f;
+  --text-muted: rgba(45, 40, 32, 0.6);
+
   /* Semantic status tokens (light theme) */
   --status-success: #22c55e;
   --status-success-foreground: #166534;
@@ -171,6 +190,12 @@
   --font-weight-medium: 500;
   --font-weight-normal: 400;
 
+  /* Text-color design tokens (dark theme) — see light-theme block for roles. */
+  --text-primary: #f5efe5;
+  --text-secondary: #d4c5b0;
+  --text-tertiary: #a3a3a3;
+  --text-muted: rgba(245, 245, 245, 0.6);
+
   /* Semantic status tokens (dark theme) */
   --status-success: #22c55e;
   --status-success-foreground: #bbf7d0;
@@ -231,6 +256,11 @@
   --color-input-background: var(--input-background);
   --color-switch-background: var(--switch-background);
   --color-ring: var(--ring);
+  /* Text-color tokens → `text-text-primary` / `-secondary` / `-tertiary` / `-muted`. */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-muted: var(--text-muted);
   --color-status-success: var(--status-success);
   --color-status-success-foreground: var(--status-success-foreground);
   --color-status-success-bg: var(--status-success-bg);

@@ -33,7 +33,12 @@ const FILTER_META: Record<string, { dataKey: string; color: string }> = {
   prMerged: { dataKey: 'prMerged', color: '#8b6914' },
 }
 
-const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+// Vendored same-origin copy of world-atlas@2/countries-110m.json (see
+// public/data/countries-110m.json). <Geographies> performs its own internal
+// fetch() for this URL, which is subject to the CSP connect-src directive;
+// the CDN host isn't (and shouldn't be) allowlisted there, so this must
+// stay same-origin rather than pointing at the CDN.
+const GEO_URL = '/data/countries-110m.json'
 
 const COUNTRY_COORDINATES: Record<string, [number, number]> = {
   'United Kingdom': [-3.435973, 55.378051],

@@ -1,8 +1,8 @@
-﻿import { logger } from '../../../shared/utils/logger'
+import { logger } from '../../../shared/utils/logger'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { Heart, Star, GitFork, ArrowUpRight, Target, Zap } from 'lucide-react'
 import { IssueCard } from '../../../shared/components/ui/IssueCard'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type MouseEvent } from 'react'
 import { IssueDetailPage } from './IssueDetailPage'
 import { ProjectDetailPage } from './ProjectDetailPage'
 import { getRecommendedProjects, getPublicProjectIssues } from '../../../shared/api/client'
@@ -204,6 +204,25 @@ export function DiscoverPage({ onGoToBilling, onGoToOpenSourceWeek }: DiscoverPa
     projectId?: string
   } | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  // No favorites backend endpoint exists yet (see shared/api/client.ts) --
+  // tracked as local UI state per project id, keyed independently of
+  // whichever project card is currently selected/expanded.
+  const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set())
+
+  const toggleFavorite = (projectId: string, event: MouseEvent) => {
+    // The heart button sits inside the card's own onClick-to-select handler;
+    // stop it from also opening the project.
+    event.stopPropagation()
+    setFavoritedIds((current) => {
+      const next = new Set(current)
+      if (next.has(projectId)) {
+        next.delete(projectId)
+      } else {
+        next.add(projectId)
+      }
+      return next
+    })
+  }
 
   // Use optimistic data hook for projects with 30-second cache
   const {
@@ -323,7 +342,7 @@ export function DiscoverPage({ onGoToBilling, onGoToOpenSourceWeek }: DiscoverPa
     }
 
     loadRecommendedIssues()
-  }, [projects, fetchIssues])
+  }, [projects, isLoadingProjects, fetchIssues])
 
   // If an issue is selected, show the detail page instead
   if (selectedIssue) {
@@ -527,11 +546,21 @@ export function DiscoverPage({ onGoToBilling, onGoToOpenSourceWeek }: DiscoverPa
                     </div>
                   )}
                   <button
+                    type="button"
+                    onClick={(event) => toggleFavorite(String(project.id), event)}
                     className="text-[#c9983a] hover:text-[#a67c2e] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c9983a] rounded-lg"
-                    aria-label="Add to favorites"
-                    aria-pressed="false"
+                    aria-label={
+                      favoritedIds.has(String(project.id))
+                        ? 'Remove from favorites'
+                        : 'Add to favorites'
+                    }
+                    aria-pressed={favoritedIds.has(String(project.id))}
                   >
-                    <Heart className="w-5 h-5" aria-hidden="true" />
+                    <Heart
+                      className="w-5 h-5"
+                      aria-hidden="true"
+                      fill={favoritedIds.has(String(project.id)) ? 'currentColor' : 'none'}
+                    />
                   </button>
                 </div>
 

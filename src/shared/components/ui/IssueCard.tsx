@@ -3,9 +3,17 @@ import { Users, Circle } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { LanguageIcon } from '../LanguageIcon'
 
+// This is the general, prop-driven IssueCard used across most of the app.
+// src/features/maintainers/components/issues/MaintainerIssueCard.tsx is a
+// separate, unrelated component for the maintainers issue-list sidebar
+// specifically (single `issue: Issue` prop, its own rendering logic) — it
+// was previously also named `IssueCard`, an identically-named collision with
+// no shared code; renamed to disambiguate. See that file for the reciprocal
+// note. (Issue #659)
 export interface IssueCardProps {
   id: string
   number?: string
+
   title: string
   repository?: string
   applicants?: number
@@ -19,7 +27,7 @@ export interface IssueCardProps {
   onClick?: () => void
   icon?: ReactNode
   showTags?: boolean
-  // New props for recommended issues format
+
   description?: string
   language?: string
   daysLeft?: string
@@ -28,6 +36,7 @@ export interface IssueCardProps {
 }
 
 export function IssueCard({
+  id,
   number,
   title,
   repository,
@@ -54,6 +63,7 @@ export function IssueCard({
 
     return (
       <div
+        data-testid={`issue-card-${id}`}
         {...rest}
         onClick={onClick}
         className={`backdrop-blur-[30px] rounded-[16px] border p-5 transition-all cursor-pointer ${
@@ -64,6 +74,7 @@ export function IssueCard({
       >
         <div className="flex items-start justify-between mb-2">
           <h4
+            data-testid={`issue-title-${id}`}
             className={`text-[16px] font-semibold leading-6 min-h-[3rem] line-clamp-2 transition-colors ${
               isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
             }`}
