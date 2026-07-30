@@ -28,6 +28,18 @@ function renderTable(props: Partial<React.ComponentProps<typeof ContributorsTabl
 }
 
 describe('ContributorsTable states', () => {
+  it('keeps tied contributors as distinct rows', () => {
+    const tiedContributors = [
+      contributors[0],
+      { ...contributors[0], username: 'another-contributor', user_id: 'uid-2' },
+    ]
+
+    renderTable({ data: tiedContributors })
+
+    expect(screen.getByText('octocat')).toBeInTheDocument()
+    expect(screen.getByText('another-contributor')).toBeInTheDocument()
+  })
+
   it('renders a row per contributor when data is present', () => {
     renderTable()
     expect(screen.getByText('octocat')).toBeInTheDocument()
