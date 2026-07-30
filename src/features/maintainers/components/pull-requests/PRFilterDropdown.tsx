@@ -20,6 +20,7 @@ export function PRFilterDropdown({ value, onChange, isOpen, onToggle, onClose }:
       isOpen={isOpen}
       onToggle={onToggle}
       onClose={onClose}
+      ariaLabel="Pull request status"
     />
   );
 }
