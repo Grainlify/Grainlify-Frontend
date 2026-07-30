@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { screen, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PaymentMethodsTab, validateWalletAddress } from './PaymentMethodsTab'
 import { renderWithTheme } from '../../../../test/renderWithTheme'
@@ -357,5 +357,61 @@ describe('PaymentMethodsTab - delete confirmation', () => {
 
     expect(onRemovePaymentMethod).toHaveBeenCalledTimes(1)
     expect(onRemovePaymentMethod).toHaveBeenCalledWith(2)
+  })
+})
+
+describe('PaymentMethodsTab - copy address', () => {
+  const sampleMethods: PaymentMethod[] = [
+    {
+      id: 1,
+      ecosystem: 'stellar',
+      cryptoType: 'usdc',
+      walletAddress: VALID_G,
+      isDefault: false,
+      createdAt: '2024-01-15T10:00:00Z',
+    },
+  ]
+
+  const originalClipboard = navigator.clipboard
+
+  afterEach(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: originalClipboard,
+      configurable: true,
+    })
+  })
+
+  function stubClipboard(writeText: ReturnType<typeof vi.fn>) {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+  }
+
+  it('has an accessible name before copying', () => {
+    setup(sampleMethods)
+    expect(screen.getByRole('button', { name: 'Copy wallet address' })).toBeInTheDocument()
+  })
+
+  it('updates the accessible name and copies the address on click', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    stubClipboard(writeText)
+    setup(sampleMethods)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy wallet address' }))
+
+    expect(writeText).toHaveBeenCalledWith(VALID_G)
+    expect(await screen.findByRole('button', { name: 'Address copied' })).toBeInTheDocument()
+  })
+
+  it('shows an alert instead of silently failing when the clipboard write rejects', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('permission denied'))
+    stubClipboard(writeText)
+    setup(sampleMethods)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy wallet address' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't copy address/i)
+    expect(screen.getByRole('button', { name: 'Copy wallet address' })).toBeInTheDocument()
   })
 })
