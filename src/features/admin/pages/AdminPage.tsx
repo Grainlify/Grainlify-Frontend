@@ -904,6 +904,7 @@ export function AdminPage() {
                               : 'hover:bg-amber-500/30 text-amber-600'
                           }`}
                           title="Edit ecosystem"
+                          aria-label="Edit ecosystem"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
@@ -918,6 +919,7 @@ export function AdminPage() {
                                 : 'hover:bg-red-500/30 text-red-600'
                           }`}
                           title="Delete ecosystem"
+                          aria-label="Delete ecosystem"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1160,6 +1162,7 @@ export function AdminPage() {
                         : 'hover:bg-red-500/30 text-red-600'
                     }`}
                     title="Delete event"
+                    aria-label="Delete event"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

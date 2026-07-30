@@ -170,3 +170,23 @@ describe('AdminPage pagination', () => {
     expect(screen.queryByText('Ecosystem 14')).not.toBeInTheDocument()
   })
 })
+
+describe('AdminPage icon-only action buttons', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('has an accessible name on the ecosystem edit/delete buttons and event delete button', async () => {
+    mockGetAdminEcosystems.mockResolvedValue({ ecosystems: [makeEcosystem(0)] })
+    mockGetAdminOpenSourceWeekEvents.mockResolvedValue({ events: [makeOswEvent(0)] })
+
+    renderAdminPage()
+
+    expect(await screen.findByText('Ecosystem 0')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit ecosystem' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete ecosystem' })).toBeInTheDocument()
+
+    expect(await screen.findByText('Event 0')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete event' })).toBeInTheDocument()
+  })
+})
