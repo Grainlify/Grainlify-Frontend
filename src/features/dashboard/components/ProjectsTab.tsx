@@ -4,6 +4,20 @@ import { GithubIcon } from '../../../shared/components/GithubIcon'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useMemo, useCallback, memo } from 'react'
 
+interface Project {
+  id: string | number
+  logo: string
+  name: string
+  lead?: string
+  billingProfile?: string
+  contributors: number
+  availableIssues: string
+  myContributions: number
+  myRewards: string
+  languages: string[]
+  repository?: string
+}
+
 /**
  * Props for the ProjectRow component.
  */
