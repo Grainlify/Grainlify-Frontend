@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * Guarded logger utility for the Grainlify application.
  *
@@ -21,7 +20,7 @@ export const logger = {
    */
   debug(message?: any, ...optionalParams: any[]): void {
     if (!import.meta.env.PROD) {
-      console.debug(message, ...optionalParams);
+      console.debug(message, ...optionalParams)
     }
   },
 
@@ -33,7 +32,7 @@ export const logger = {
    */
   info(message?: any, ...optionalParams: any[]): void {
     if (!import.meta.env.PROD) {
-      console.info(message, ...optionalParams);
+      console.info(message, ...optionalParams)
     }
   },
 
@@ -48,7 +47,7 @@ export const logger = {
    * @param optionalParams - Additional parameters or context to log.
    */
   warn(message?: any, ...optionalParams: any[]): void {
-    console.warn(message, ...optionalParams);
+    console.warn(message, ...optionalParams)
   },
 
   /**
@@ -62,6 +61,6 @@ export const logger = {
    * @param optionalParams - Additional parameters or context to log.
    */
   error(message?: any, ...optionalParams: any[]): void {
-    console.error(message, ...optionalParams);
-  }
-};
+    console.error(message, ...optionalParams)
+  },
+}
