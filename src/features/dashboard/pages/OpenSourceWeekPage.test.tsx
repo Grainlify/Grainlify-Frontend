@@ -101,4 +101,28 @@ describe('OpenSourceWeekPage', () => {
 
     expect(mockOnEventClick).toHaveBeenCalledWith('123', 'Click Me')
   })
+
+  it('navigates to the event when Join Event is clicked', async () => {
+    ;(getOpenSourceWeekEvents as any).mockResolvedValue({
+      events: [
+        {
+          id: '456',
+          title: 'Join Me',
+          description: 'Desc',
+          location: 'Remote',
+          status: 'upcoming',
+          start_at: '2023-01-01T10:00:00Z',
+          end_at: '2023-01-07T10:00:00Z',
+        },
+      ],
+    })
+
+    renderPage()
+    await waitFor(() => expect(screen.getByText('Join Me')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Join Event' }))
+
+    expect(mockOnEventClick).toHaveBeenCalledTimes(1)
+    expect(mockOnEventClick).toHaveBeenCalledWith('456', 'Join Me')
+  })
 })
