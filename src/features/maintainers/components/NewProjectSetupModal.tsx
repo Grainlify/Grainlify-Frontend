@@ -1,21 +1,21 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { X, Loader2, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import { X, Loader2, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react'
+import { useTheme } from '../../../shared/contexts/ThemeContext'
 import {
   getEcosystems,
   updateProjectMetadata,
   type PendingSetupProject,
-} from '../../../shared/api/client';
-import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
+} from '../../../shared/api/client'
+import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 
 interface NewProjectSetupModalProps {
-  isOpen: boolean;
-  project: PendingSetupProject | null;
-  onClose: () => void;
-  onSuccess: () => void;
+  isOpen: boolean
+  project: PendingSetupProject | null
+  onClose: () => void
+  onSuccess: () => void
   /** Optional title (e.g. "Edit project" when editing). */
-  title?: string;
+  title?: string
 }
 
 export function NewProjectSetupModal({
@@ -25,22 +25,22 @@ export function NewProjectSetupModal({
   onSuccess,
   title: titleOverride,
 }: NewProjectSetupModalProps) {
-  const { theme } = useTheme();
-  const darkTheme = theme === 'dark';
+  const { theme } = useTheme()
+  const darkTheme = theme === 'dark'
 
-  const [description, setDescription] = useState('');
-  const [ecosystemName, setEcosystemName] = useState('');
-  const [language, setLanguage] = useState('');
-  const [tags, setTags] = useState('');
-  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('')
+  const [ecosystemName, setEcosystemName] = useState('')
+  const [language, setLanguage] = useState('')
+  const [tags, setTags] = useState('')
+  const [category, setCategory] = useState('')
 
-  const [ecosystems, setEcosystems] = useState<Array<{ name: string; slug: string }>>([]);
-  const [isLoadingEcosystems, setIsLoadingEcosystems] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [ecosystemDropdownOpen, setEcosystemDropdownOpen] = useState(false);
-  const ecosystemDropdownRef = useRef<HTMLDivElement>(null);
+  const [ecosystems, setEcosystems] = useState<Array<{ name: string; slug: string }>>([])
+  const [isLoadingEcosystems, setIsLoadingEcosystems] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [ecosystemDropdownOpen, setEcosystemDropdownOpen] = useState(false)
+  const ecosystemDropdownRef = useRef<HTMLDivElement>(null)
 
   /**
    * Tracks the live `isOpen` value for async callbacks. A submission started
@@ -49,10 +49,10 @@ export function NewProjectSetupModal({
    * modal is gone and bail out instead of firing success handlers — or leaking
    * state — for a project that is no longer being edited.
    */
-  const isOpenRef = useRef(isOpen);
+  const isOpenRef = useRef(isOpen)
   useEffect(() => {
-    isOpenRef.current = isOpen;
-  }, [isOpen]);
+    isOpenRef.current = isOpen
+  }, [isOpen])
 
   /**
    * Restores every form and submission field to its empty initial value.
@@ -63,41 +63,52 @@ export function NewProjectSetupModal({
    * leak into another's submission.
    */
   const resetForm = useCallback(() => {
-    setDescription('');
-    setEcosystemName('');
-    setLanguage('');
-    setTags('');
-    setCategory('');
-    setError(null);
-    setSuccess(false);
-    setIsSubmitting(false);
-    setEcosystemDropdownOpen(false);
-  }, []);
+    setDescription('')
+    setEcosystemName('')
+    setLanguage('')
+    setTags('')
+    setCategory('')
+    setError(null)
+    setSuccess(false)
+    setIsSubmitting(false)
+    setEcosystemDropdownOpen(false)
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (ecosystemDropdownRef.current && !ecosystemDropdownRef.current.contains(e.target as Node)) {
-        setEcosystemDropdownOpen(false);
+      if (
+        ecosystemDropdownRef.current &&
+        !ecosystemDropdownRef.current.contains(e.target as Node)
+      ) {
+        setEcosystemDropdownOpen(false)
       }
-    };
-    if (ecosystemDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [ecosystemDropdownOpen]);
+    if (ecosystemDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [ecosystemDropdownOpen])
 
   // Populate form whenever the modal opens or the project changes (so Edit shows existing data)
   useEffect(() => {
     if (isOpen && project) {
-      setDescription(project.description ?? '');
-      setEcosystemName(project.ecosystem_name ?? '');
-      setLanguage(project.language ?? '');
-      setTags(Array.isArray(project.tags) ? project.tags.join(', ') : '');
-      setCategory(project.category ?? '');
-      setError(null);
-      setSuccess(false);
+      setDescription(project.description ?? '')
+      setEcosystemName(project.ecosystem_name ?? '')
+      setLanguage(project.language ?? '')
+      setTags(Array.isArray(project.tags) ? project.tags.join(', ') : '')
+      setCategory(project.category ?? '')
+      setError(null)
+      setSuccess(false)
     }
-  }, [isOpen, project?.id, project?.description, project?.ecosystem_name, project?.language, project?.tags, project?.category]);
+  }, [
+    isOpen,
+    project?.id,
+    project?.description,
+    project?.ecosystem_name,
+    project?.language,
+    project?.tags,
+    project?.category,
+  ])
 
   // Reset the form whenever the modal transitions to closed. The component
   // stays mounted across opens (the parent only toggles `isOpen`), so React
@@ -107,47 +118,47 @@ export function NewProjectSetupModal({
   // still in flight. This is what guarantees the next open is clean.
   useEffect(() => {
     if (!isOpen) {
-      resetForm();
+      resetForm()
     }
-  }, [isOpen, resetForm]);
+  }, [isOpen, resetForm])
 
   useEffect(() => {
     if (isOpen) {
-      loadEcosystems();
+      loadEcosystems()
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   const loadEcosystems = async () => {
-    setIsLoadingEcosystems(true);
-    setError(null);
+    setIsLoadingEcosystems(true)
+    setError(null)
     try {
-      const data = await getEcosystems();
-      setEcosystems(data.ecosystems.map((eco) => ({ name: eco.name, slug: eco.slug })));
+      const data = await getEcosystems()
+      setEcosystems(data.ecosystems.map((eco) => ({ name: eco.name, slug: eco.slug })))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load ecosystems');
+      setError(err instanceof Error ? err.message : 'Failed to load ecosystems')
     } finally {
-      setIsLoadingEcosystems(false);
+      setIsLoadingEcosystems(false)
     }
-  };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!project) return;
-    setError(null);
-    setSuccess(false);
+    e.preventDefault()
+    if (!project) return
+    setError(null)
+    setSuccess(false)
 
     if (!ecosystemName.trim()) {
-      setError('Ecosystem is required');
-      return;
+      setError('Ecosystem is required')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
 
     try {
       const tagsArray = tags
         .split(',')
         .map((tag) => tag.trim())
-        .filter((tag) => tag.length > 0);
+        .filter((tag) => tag.length > 0)
 
       await updateProjectMetadata(project.id, {
         description: description.trim() || undefined,
@@ -155,31 +166,31 @@ export function NewProjectSetupModal({
         language: language.trim() || undefined,
         tags: tagsArray.length > 0 ? tagsArray : undefined,
         category: category.trim() || undefined,
-      });
+      })
 
       // The modal may have been closed (e.g. parent-driven) while this request
       // was in flight. If so, the form has already been reset — do not flash a
       // success state or fire callbacks for what is now a stale submission.
-      if (!isOpenRef.current) return;
+      if (!isOpenRef.current) return
 
-      setSuccess(true);
+      setSuccess(true)
       setTimeout(() => {
         // Re-check on the deferred callback too: the modal could close during
         // the 800ms success delay.
-        if (!isOpenRef.current) return;
-        onSuccess();
-        onClose();
-        setSuccess(false);
-      }, 800);
+        if (!isOpenRef.current) return
+        onSuccess()
+        onClose()
+        setSuccess(false)
+      }, 800)
     } catch (err) {
       // Swallow the error if the modal closed mid-request; surfacing it would
       // write to state the close already cleared.
-      if (!isOpenRef.current) return;
-      setError(err instanceof Error ? err.message : 'Failed to save project details');
+      if (!isOpenRef.current) return
+      setError(err instanceof Error ? err.message : 'Failed to save project details')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   // User-initiated close (X button / backdrop). Blocked while a submission is
   // in flight so the user cannot abandon an active save by accident. The form
@@ -187,11 +198,11 @@ export function NewProjectSetupModal({
   // effect, so there is no per-field cleanup to duplicate here.
   const handleClose = () => {
     if (!isSubmitting) {
-      onClose();
+      onClose()
     }
-  };
+  }
 
-  if (!isOpen || !project) return null;
+  if (!isOpen || !project) return null
 
   const modalContent = (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
@@ -203,9 +214,7 @@ export function NewProjectSetupModal({
 
       <div
         className={`relative w-full max-w-[520px] rounded-[24px] border-2 shadow-[0_16px_64px_rgba(0,0,0,0.4)] transition-colors ${
-          darkTheme
-            ? 'bg-[#3a3228] border-white/30'
-            : 'bg-[#d4c5b0] border-white/40'
+          darkTheme ? 'bg-[#3a3228] border-white/30' : 'bg-[#d4c5b0] border-white/40'
         }`}
       >
         <div
@@ -224,13 +233,14 @@ export function NewProjectSetupModal({
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
+            aria-label="Close"
             className={`p-2 rounded-[10px] transition-all cursor-pointer ${
               darkTheme
                 ? 'hover:bg-white/10 text-[#b8a898] hover:text-[#e8dfd0]'
                 : 'hover:bg-white/20 text-[#7a6b5a] hover:text-[#2d2820]'
             } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -319,7 +329,10 @@ export function NewProjectSetupModal({
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => !(isSubmitting || ecosystems.length === 0) && setEcosystemDropdownOpen((o) => !o)}
+                  onClick={() =>
+                    !(isSubmitting || ecosystems.length === 0) &&
+                    setEcosystemDropdownOpen((o) => !o)
+                  }
                   disabled={isSubmitting || ecosystems.length === 0}
                   className={`w-full px-4 py-3 rounded-[12px] border-2 transition-all flex items-center justify-between gap-2 text-left ${
                     darkTheme
@@ -353,8 +366,8 @@ export function NewProjectSetupModal({
                       role="option"
                       aria-selected={!ecosystemName}
                       onClick={() => {
-                        setEcosystemName('');
-                        setEcosystemDropdownOpen(false);
+                        setEcosystemName('')
+                        setEcosystemDropdownOpen(false)
                       }}
                       className={`px-4 py-2.5 cursor-pointer text-[14px] transition-colors ${
                         darkTheme
@@ -370,13 +383,11 @@ export function NewProjectSetupModal({
                         role="option"
                         aria-selected={ecosystemName === eco.name}
                         onClick={() => {
-                          setEcosystemName(eco.name);
-                          setEcosystemDropdownOpen(false);
+                          setEcosystemName(eco.name)
+                          setEcosystemDropdownOpen(false)
                         }}
                         className={`px-4 py-2.5 cursor-pointer text-[14px] transition-colors ${
-                          darkTheme
-                            ? 'hover:bg-white/15'
-                            : 'hover:bg-white/40'
+                          darkTheme ? 'hover:bg-white/15' : 'hover:bg-white/40'
                         } ${ecosystemName === eco.name ? (darkTheme ? 'bg-white/10' : 'bg-white/30') : ''}`}
                       >
                         {eco.name}
@@ -466,7 +477,7 @@ export function NewProjectSetupModal({
         </form>
       </div>
     </div>
-  );
+  )
 
-  return createPortal(modalContent, document.body);
+  return createPortal(modalContent, document.body)
 }
