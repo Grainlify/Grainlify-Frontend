@@ -1,16 +1,16 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { ChevronDown } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { useTheme } from '../contexts/ThemeContext'
 
 interface GlassDropdownProps<T extends string> {
-  value: T;
-  onChange: (value: T) => void;
-  options: T[];
-  isOpen: boolean;
-  onToggle: () => void;
-  onClose: () => void;
+  value: T
+  onChange: (value: T) => void
+  options: T[]
+  isOpen: boolean
+  onToggle: () => void
+  onClose: () => void
   /** Accessible name describing the filter represented by the menu. */
-  ariaLabel?: string;
+  ariaLabel?: string
 }
 
 /**
@@ -37,81 +37,81 @@ export function GlassDropdown<T extends string>({
   onClose,
   ariaLabel = 'Select option',
 }: GlassDropdownProps<T>) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-  const menuId = useId();
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const menuId = useId()
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const [activeIndex, setActiveIndex] = useState(0)
 
   // When the menu opens, start from the currently selected option (or the
   // first one) and move focus to it.
   useEffect(() => {
-    if (!isOpen) return;
-    const selectedIndex = options.indexOf(value);
-    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
-  }, [isOpen, options, value]);
+    if (!isOpen) return
+    const selectedIndex = options.indexOf(value)
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
+  }, [isOpen, options, value])
 
   // Keep DOM focus in sync with the active option while the menu is open.
   useEffect(() => {
-    if (!isOpen) return;
-    optionRefs.current[activeIndex]?.focus();
-  }, [isOpen, activeIndex]);
+    if (!isOpen) return
+    optionRefs.current[activeIndex]?.focus()
+  }, [isOpen, activeIndex])
 
   const handleSelect = (option: T) => {
-    onChange(option);
-    onClose();
+    onChange(option)
+    onClose()
     // Return focus to the trigger after a selection.
-    buttonRef.current?.focus();
-  };
+    buttonRef.current?.focus()
+  }
 
   const closeAndRestoreFocus = () => {
-    onClose();
-    buttonRef.current?.focus();
-  };
+    onClose()
+    buttonRef.current?.focus()
+  }
 
   const handleButtonKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (!isOpen && (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ')) {
-      event.preventDefault();
-      onToggle();
+      event.preventDefault()
+      onToggle()
     }
-  };
+  }
 
   const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     switch (event.key) {
       case 'ArrowDown':
-        event.preventDefault();
-        setActiveIndex((index) => (index + 1) % options.length);
-        break;
+        event.preventDefault()
+        setActiveIndex((index) => (index + 1) % options.length)
+        break
       case 'ArrowUp':
-        event.preventDefault();
-        setActiveIndex((index) => (index - 1 + options.length) % options.length);
-        break;
+        event.preventDefault()
+        setActiveIndex((index) => (index - 1 + options.length) % options.length)
+        break
       case 'Home':
-        event.preventDefault();
-        setActiveIndex(0);
-        break;
+        event.preventDefault()
+        setActiveIndex(0)
+        break
       case 'End':
-        event.preventDefault();
-        setActiveIndex(options.length - 1);
-        break;
+        event.preventDefault()
+        setActiveIndex(options.length - 1)
+        break
       case 'Enter':
       case ' ':
-        event.preventDefault();
-        handleSelect(options[activeIndex]);
-        break;
+        event.preventDefault()
+        handleSelect(options[activeIndex])
+        break
       case 'Escape':
-        event.preventDefault();
-        closeAndRestoreFocus();
-        break;
+        event.preventDefault()
+        closeAndRestoreFocus()
+        break
       case 'Tab':
         // Allow focus to leave naturally, but collapse the menu.
-        onClose();
-        break;
+        onClose()
+        break
       default:
-        break;
+        break
     }
-  };
+  }
 
   return (
     <div className="relative">
@@ -130,7 +130,9 @@ export function GlassDropdown<T extends string>({
         onClick={onToggle}
         onKeyDown={handleButtonKeyDown}
       >
-        <span className={`text-[14px] font-semibold ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'}`}>
+        <span
+          className={`text-[14px] font-semibold ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'}`}
+        >
           {value}
         </span>
         <ChevronDown
@@ -161,14 +163,16 @@ export function GlassDropdown<T extends string>({
                 <button
                   key={option}
                   ref={(element) => {
-                    optionRefs.current[index] = element;
+                    optionRefs.current[index] = element
                   }}
                   type="button"
                   role="option"
                   aria-selected={value === option}
                   tabIndex={-1}
                   className={`w-full px-5 py-2.5 text-left text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#c9983a] ${
-                    isDark ? 'text-[#e8dfd0] hover:bg-[#4a3e30]' : 'text-[#2d2820] hover:bg-[#c9b8a0]'
+                    isDark
+                      ? 'text-[#e8dfd0] hover:bg-[#4a3e30]'
+                      : 'text-[#2d2820] hover:bg-[#c9b8a0]'
                   }`}
                   onClick={() => handleSelect(option)}
                 >
@@ -180,5 +184,5 @@ export function GlassDropdown<T extends string>({
         </>
       )}
     </div>
-  );
+  )
 }

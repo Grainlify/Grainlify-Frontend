@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { AlertCircle, Check, Filter, Hourglass, LayoutGrid, RefreshCw, Search } from 'lucide-react'
+import { AlertCircle, Check, Hourglass, LayoutGrid, RefreshCw, Search } from 'lucide-react'
 import { getProfileRewards, type ProfileReward } from '../../../shared/api/client'
 import { GithubIcon } from '../../../shared/components/GithubIcon'
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
@@ -63,10 +63,7 @@ function formatRewardAmount(
   }
 }
 
-const formatRewardDate = (
-  reward: ProfileReward,
-  formatDate: UseIntlFormatters['formatDate']
-) => {
+const formatRewardDate = (reward: ProfileReward, formatDate: UseIntlFormatters['formatDate']) => {
   const dateValue = reward.date || reward.awarded_at || reward.created_at
   if (!dateValue) return fallbackText
 
@@ -116,6 +113,21 @@ function EmptyState({ theme }: { theme: string }) {
       <GithubIcon className="w-14 h-14 mx-auto mb-4 opacity-50" />
       <p className="text-[16px] font-semibold">No rewards yet</p>
       <p className="text-[13px] mt-2">Rewards from accepted contributions will appear here.</p>
+    </div>
+  )
+}
+
+function NoResultsState({ theme }: { theme: string }) {
+  return (
+    <div
+      role="status"
+      className={`text-center py-16 backdrop-blur-[30px] bg-white/[0.12] rounded-[20px] border border-white/20 ${
+        theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+      }`}
+    >
+      <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+      <p className="text-[16px] font-semibold">No matching rewards</p>
+      <p className="text-[13px] mt-2">Try a different project, contributor, or reward ID.</p>
     </div>
   )
 }
@@ -192,6 +204,7 @@ export function RewardsTab() {
     }
   )
   const [columnSearchQuery, setColumnSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [state, setState] = useState<RewardsState>({ status: 'loading' })
 
   const fetchRewards = useCallback(() => {
@@ -200,7 +213,9 @@ export function RewardsTab() {
       .then((response) => {
         setState({
           status: 'ok',
-          rewards: (response.rewards || []).map((r) => normalizeReward(r, formatCurrency, formatDate)),
+          rewards: (response.rewards || []).map((r) =>
+            normalizeReward(r, formatCurrency, formatDate)
+          ),
         })
       })
       .catch(() => {
@@ -213,6 +228,22 @@ export function RewardsTab() {
   }, [fetchRewards])
 
   const rewards = state.status === 'ok' ? state.rewards : []
+  const filteredRewards = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return rewards
+
+    return rewards.filter((reward) =>
+      [
+        reward.id,
+        reward.date,
+        reward.project,
+        reward.from,
+        reward.contribution,
+        reward.amount,
+        reward.status,
+      ].some((value) => value.toLowerCase().includes(query))
+    )
+  }, [rewards, searchQuery])
   const visibleColumnOptions = useMemo(
     () => columns.filter((col) => col.toLowerCase().includes(columnSearchQuery.toLowerCase())),
     [columnSearchQuery]
@@ -221,15 +252,14 @@ export function RewardsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 sm:gap-3">
-        <button className="h-12 flex-shrink-0 w-10 sm:w-12 flex items-center justify-center rounded-[12px] backdrop-blur-[30px] bg-white/[0.15] border border-white/25 text-[#7a6b5a] hover:bg-white/[0.2] hover:border-[#c9983a]/40 transition-all">
-          <Filter className="w-5 h-5" />
-        </button>
-
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a6b5a] z-10" />
           <input
             type="text"
             placeholder="Search"
+            aria-label="Search rewards"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-12 pl-12 pr-4 py-2.5 sm:py-3 rounded-[12px] backdrop-blur-[30px] bg-white/[0.15] border border-white/25 text-[#2d2820] placeholder-[#7a6b5a] focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/40 transition-all text-[13px]"
           />
         </div>
@@ -302,10 +332,13 @@ export function RewardsTab() {
 
           <div className="px-5 py-4 border-t border-white/20 flex items-center justify-between">
             <button
-              onClick={() => setIsColumnsModalOpen(false)}
+              onClick={() => {
+                setSelectedColumns(columns)
+                setIsColumnsModalOpen(false)
+              }}
               className="text-[13px] text-[#7a6b5a] hover:text-[#2d2820] transition-all font-medium"
             >
-              Pending request
+              Reset columns
             </button>
             <button
               onClick={() => setIsColumnsModalOpen(false)}
@@ -324,6 +357,8 @@ export function RewardsTab() {
         <ErrorState theme={theme} onRetry={fetchRewards} />
       ) : rewards.length === 0 ? (
         <EmptyState theme={theme} />
+      ) : filteredRewards.length === 0 ? (
+        <NoResultsState theme={theme} />
       ) : (
         <>
           <div className="hidden md:block backdrop-blur-[30px] bg-white/[0.12] rounded-[20px] border border-white/20 overflow-hidden">
@@ -344,7 +379,7 @@ export function RewardsTab() {
                 </tr>
               </thead>
               <tbody>
-                {rewards.map((reward, idx) => (
+                {filteredRewards.map((reward, idx) => (
                   <tr
                     key={reward.id}
                     className={`border-b border-white/10 hover:bg-white/[0.05] transition-colors ${
@@ -388,7 +423,7 @@ export function RewardsTab() {
           </div>
 
           <div className="md:hidden space-y-3">
-            {rewards.map((reward) => (
+            {filteredRewards.map((reward) => (
               <MobileRewardCard key={reward.id} reward={reward} theme={theme} />
             ))}
           </div>

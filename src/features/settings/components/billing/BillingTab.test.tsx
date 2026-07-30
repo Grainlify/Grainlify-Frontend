@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { BillingTab } from './BillingTab'
 import { toast } from 'sonner'
 import { I18nProvider } from '../../../../shared/i18n'
@@ -315,6 +315,53 @@ describe('BillingTab', () => {
       await openInvoicesTab()
 
       expect(await screen.findByTestId('invoices-error')).toBeInTheDocument()
+    })
+  })
+
+  describe('KYC poll cleanup on unmount', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('stops polling getKYCStatus once the component unmounts', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window)
+      mockGetKYCStatus.mockResolvedValue({ status: 'pending' })
+      const originalStatus = mockProfiles[0].status
+      mockProfiles[0].status = 'missing-verification'
+
+      try {
+        const { unmount } = render(<BillingTab />)
+        const card = await screen.findByText('John Doe')
+        await act(async () => {
+          fireEvent.click(card)
+        })
+
+        const verifyBtn = await screen.findByRole('button', { name: 'Verify KYC' })
+        await act(async () => {
+          fireEvent.click(verifyBtn)
+        })
+
+        // Flush the initial (non-interval) status check triggered right after the window opens.
+        await act(async () => {
+          await Promise.resolve()
+        })
+
+        const callsAtUnmount = mockGetKYCStatus.mock.calls.length
+        expect(callsAtUnmount).toBeGreaterThan(0)
+
+        unmount()
+
+        // Advance well past several 3s poll ticks.
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10_000)
+        })
+
+        expect(mockGetKYCStatus.mock.calls.length).toBe(callsAtUnmount)
+      } finally {
+        mockProfiles[0].status = originalStatus
+        openSpy.mockRestore()
+      }
     })
   })
 })

@@ -26,7 +26,9 @@ describe('ResourceNotFound', () => {
     it('renders the default message when no props are passed', () => {
       renderWithRouter(<ResourceNotFound />)
       expect(
-        screen.getByText("We couldn't find what you're looking for. It may have been moved or removed."),
+        screen.getByText(
+          "We couldn't find what you're looking for. It may have been moved or removed."
+        )
       ).toBeInTheDocument()
     })
 
