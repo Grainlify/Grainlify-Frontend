@@ -170,6 +170,43 @@ describe('RewardsTab', () => {
     expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument()
   })
 
+  it('filters rewards from the main search input and restores them when cleared', async () => {
+    mockGetProfileRewards.mockResolvedValue({
+      rewards: [
+        {
+          id: 'alpha-1',
+          project_name: 'Alpha Project',
+          contributor_login: 'alice',
+          amount: 10,
+          currency: 'USD',
+          status: 'Complete',
+        },
+        {
+          id: 'beta-2',
+          project_name: 'Beta Project',
+          contributor_login: 'bob',
+          amount: 20,
+          currency: 'USD',
+          status: 'Processing',
+        },
+      ],
+    })
+
+    renderRewardsTab()
+    await waitFor(() => expect(screen.getAllByText('Alpha Project').length).toBeGreaterThan(0))
+
+    const search = screen.getByRole('textbox', { name: 'Search rewards' })
+    await userEvent.type(search, 'alice')
+    expect(screen.getAllByText('Alpha Project').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Beta Project')).not.toBeInTheDocument()
+
+    await userEvent.clear(search)
+    expect(screen.getAllByText('Beta Project').length).toBeGreaterThan(0)
+
+    await userEvent.type(search, 'does-not-exist')
+    expect(screen.getByRole('status')).toHaveTextContent('No matching rewards')
+  })
+
   describe('columns popover (Radix UI)', () => {
     it('opens the columns popover when the trigger button is clicked', async () => {
       mockGetProfileRewards.mockResolvedValue({ rewards: [] })

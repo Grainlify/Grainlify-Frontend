@@ -120,6 +120,21 @@ function EmptyState({ theme }: { theme: string }) {
   )
 }
 
+function NoResultsState({ theme }: { theme: string }) {
+  return (
+    <div
+      role="status"
+      className={`text-center py-16 backdrop-blur-[30px] bg-white/[0.12] rounded-[20px] border border-white/20 ${
+        theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+      }`}
+    >
+      <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+      <p className="text-[16px] font-semibold">No matching rewards</p>
+      <p className="text-[13px] mt-2">Try a different project, contributor, or reward ID.</p>
+    </div>
+  )
+}
+
 function ErrorState({ theme, onRetry }: { theme: string; onRetry: () => void }) {
   return (
     <div
@@ -192,6 +207,7 @@ export function RewardsTab() {
     }
   )
   const [columnSearchQuery, setColumnSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [state, setState] = useState<RewardsState>({ status: 'loading' })
 
   const fetchRewards = useCallback(() => {
@@ -213,6 +229,15 @@ export function RewardsTab() {
   }, [fetchRewards])
 
   const rewards = state.status === 'ok' ? state.rewards : []
+  const filteredRewards = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return rewards
+
+    return rewards.filter((reward) =>
+      [reward.id, reward.date, reward.project, reward.from, reward.contribution, reward.amount, reward.status]
+        .some((value) => value.toLowerCase().includes(query))
+    )
+  }, [rewards, searchQuery])
   const visibleColumnOptions = useMemo(
     () => columns.filter((col) => col.toLowerCase().includes(columnSearchQuery.toLowerCase())),
     [columnSearchQuery]
@@ -230,6 +255,9 @@ export function RewardsTab() {
           <input
             type="text"
             placeholder="Search"
+            aria-label="Search rewards"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-12 pl-12 pr-4 py-2.5 sm:py-3 rounded-[12px] backdrop-blur-[30px] bg-white/[0.15] border border-white/25 text-[#2d2820] placeholder-[#7a6b5a] focus:outline-none focus:bg-white/[0.2] focus:border-[#c9983a]/40 transition-all text-[13px]"
           />
         </div>
@@ -324,6 +352,8 @@ export function RewardsTab() {
         <ErrorState theme={theme} onRetry={fetchRewards} />
       ) : rewards.length === 0 ? (
         <EmptyState theme={theme} />
+      ) : filteredRewards.length === 0 ? (
+        <NoResultsState theme={theme} />
       ) : (
         <>
           <div className="hidden md:block backdrop-blur-[30px] bg-white/[0.12] rounded-[20px] border border-white/20 overflow-hidden">
@@ -344,7 +374,7 @@ export function RewardsTab() {
                 </tr>
               </thead>
               <tbody>
-                {rewards.map((reward, idx) => (
+                {filteredRewards.map((reward, idx) => (
                   <tr
                     key={reward.id}
                     className={`border-b border-white/10 hover:bg-white/[0.05] transition-colors ${
@@ -388,7 +418,7 @@ export function RewardsTab() {
           </div>
 
           <div className="md:hidden space-y-3">
-            {rewards.map((reward) => (
+            {filteredRewards.map((reward) => (
               <MobileRewardCard key={reward.id} reward={reward} theme={theme} />
             ))}
           </div>
