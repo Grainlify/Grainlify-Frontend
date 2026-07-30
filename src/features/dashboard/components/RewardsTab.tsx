@@ -63,10 +63,7 @@ function formatRewardAmount(
   }
 }
 
-const formatRewardDate = (
-  reward: ProfileReward,
-  formatDate: UseIntlFormatters['formatDate']
-) => {
+const formatRewardDate = (reward: ProfileReward, formatDate: UseIntlFormatters['formatDate']) => {
   const dateValue = reward.date || reward.awarded_at || reward.created_at
   if (!dateValue) return fallbackText
 
@@ -200,7 +197,9 @@ export function RewardsTab() {
       .then((response) => {
         setState({
           status: 'ok',
-          rewards: (response.rewards || []).map((r) => normalizeReward(r, formatCurrency, formatDate)),
+          rewards: (response.rewards || []).map((r) =>
+            normalizeReward(r, formatCurrency, formatDate)
+          ),
         })
       })
       .catch(() => {

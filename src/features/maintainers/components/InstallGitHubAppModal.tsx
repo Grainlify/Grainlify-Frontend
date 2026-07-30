@@ -257,13 +257,14 @@ export function InstallGitHubAppModal({ isOpen, onClose, onSuccess }: InstallGit
           <button
             onClick={onClose}
             disabled={isInstalling}
+            aria-label="Close"
             className={`p-2 rounded-[10px] transition-all ${
               darkTheme
                 ? 'hover:bg-white/10 text-[#b8a898] hover:text-[#e8dfd0]'
                 : 'hover:bg-white/20 text-[#7a6b5a] hover:text-[#2d2820]'
             } ${isInstalling ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 

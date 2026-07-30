@@ -1,7 +1,16 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { BillingTab } from './BillingTab'
 import { toast } from 'sonner'
+import { I18nProvider } from '../../../../shared/i18n'
+
+function renderBillingTab() {
+  return render(
+    <I18nProvider>
+      <BillingTab />
+    </I18nProvider>
+  )
+}
 
 vi.mock('../../../../shared/contexts/ThemeContext', () => ({
   useTheme: () => ({ theme: 'light' }),
@@ -28,15 +37,17 @@ vi.mock('../../contexts/BillingProfilesContext', () => ({
 }))
 
 const mockGetKYCStatus = vi.fn().mockResolvedValue({ status: 'verified' })
+const mockGetInvoices = vi.fn().mockResolvedValue([])
 
 vi.mock('../../../../shared/api/client', () => ({
   getBillingProfiles: vi.fn().mockResolvedValue([]),
   getKYCStatus: (...args: unknown[]) => mockGetKYCStatus(...args),
   startKYCVerification: vi.fn().mockResolvedValue({ url: 'https://example.com' }),
+  getInvoices: (...args: unknown[]) => mockGetInvoices(...args),
 }))
 
 async function navigateToDetailView() {
-  render(<BillingTab />)
+  renderBillingTab()
   const card = await screen.findByText('John Doe')
   await act(async () => {
     fireEvent.click(card)
@@ -47,11 +58,12 @@ describe('BillingTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetKYCStatus.mockResolvedValue({ status: 'verified' })
+    mockGetInvoices.mockResolvedValue([])
     vi.stubEnv('VITE_USE_MOCK_DATA', 'true')
   })
 
   it('shows an error toast when trying to create a duplicate individual profile', async () => {
-    render(<BillingTab />)
+    renderBillingTab()
 
     const newProfileBtn = await screen.findByText('New Profile')
     fireEvent.click(newProfileBtn)
@@ -138,6 +150,218 @@ describe('BillingTab', () => {
         (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()
       )
       expect(textNodes).toHaveLength(0)
+    })
+
+    it('opens the KYC verification window with noopener,noreferrer', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window)
+      mockGetKYCStatus.mockResolvedValue({ status: 'not_started' })
+      const originalStatus = mockProfiles[0].status
+      mockProfiles[0].status = 'missing-verification'
+
+      try {
+        await navigateToDetailView()
+
+        const verifyBtn = await screen.findByRole('button', { name: 'Verify KYC' })
+        await act(async () => {
+          fireEvent.click(verifyBtn)
+        })
+
+        expect(openSpy).toHaveBeenCalledWith(
+          'https://example.com',
+          '_blank',
+          'width=800,height=600,noopener,noreferrer'
+        )
+      } finally {
+        mockProfiles[0].status = originalStatus
+        openSpy.mockRestore()
+      }
+    })
+  })
+
+  describe('Invoices tab', () => {
+    async function openInvoicesTab() {
+      await navigateToDetailView()
+      await act(async () => {
+        fireEvent.click(screen.getByText('Invoices'))
+      })
+    }
+
+    it('fetches invoices for the selected profile when the tab is opened', async () => {
+      await openInvoicesTab()
+
+      await waitFor(() => {
+        expect(mockGetInvoices).toHaveBeenCalledWith(1)
+      })
+    })
+
+    it('renders a genuine empty state when the backend returns no invoices', async () => {
+      await openInvoicesTab()
+
+      await waitFor(() => expect(mockGetInvoices).toHaveBeenCalled())
+      expect(await screen.findByText('No invoices yet')).toBeInTheDocument()
+    })
+
+    it('renders real invoice rows returned by the backend', async () => {
+      mockGetInvoices.mockResolvedValue([
+        {
+          id: 'inv-1',
+          invoiceNumber: 'INV-2024-001',
+          date: '2024-01-01',
+          amount: 100,
+          currency: 'USD',
+          status: 'paid',
+          description: 'Monthly fee',
+          billingPeriod: 'Jan 2024',
+        },
+      ])
+
+      await openInvoicesTab()
+
+      expect(await screen.findByText('INV-2024-001')).toBeInTheDocument()
+    })
+
+    it('shows the loading state while invoices are being fetched', async () => {
+      let resolveInvoices: (value: unknown[]) => void = () => {}
+      mockGetInvoices.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveInvoices = resolve
+          })
+      )
+
+      await openInvoicesTab()
+
+      expect(screen.getByTestId('invoices-loading')).toBeInTheDocument()
+
+      resolveInvoices([])
+      await waitFor(() => {
+        expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument()
+      })
+    })
+
+    it('shows an error state when fetching invoices fails', async () => {
+      mockGetInvoices.mockRejectedValue(new Error('network error'))
+
+      await openInvoicesTab()
+
+      expect(await screen.findByTestId('invoices-error')).toBeInTheDocument()
+    })
+  })
+
+  describe('Invoices tab', () => {
+    async function openInvoicesTab() {
+      await navigateToDetailView()
+      await act(async () => {
+        fireEvent.click(screen.getByText('Invoices'))
+      })
+    }
+
+    it('fetches invoices for the selected profile when the tab is opened', async () => {
+      await openInvoicesTab()
+
+      await waitFor(() => {
+        expect(mockGetInvoices).toHaveBeenCalledWith(1)
+      })
+    })
+
+    it('renders a genuine empty state when the backend returns no invoices', async () => {
+      await openInvoicesTab()
+
+      await waitFor(() => expect(mockGetInvoices).toHaveBeenCalled())
+      expect(await screen.findByText('No invoices yet')).toBeInTheDocument()
+    })
+
+    it('renders real invoice rows returned by the backend', async () => {
+      mockGetInvoices.mockResolvedValue([
+        {
+          id: 'inv-1',
+          invoiceNumber: 'INV-2024-001',
+          date: '2024-01-01',
+          amount: 100,
+          currency: 'USD',
+          status: 'paid',
+          description: 'Monthly fee',
+          billingPeriod: 'Jan 2024',
+        },
+      ])
+
+      await openInvoicesTab()
+
+      expect(await screen.findByText('INV-2024-001')).toBeInTheDocument()
+    })
+
+    it('shows the loading state while invoices are being fetched', async () => {
+      let resolveInvoices: (value: unknown[]) => void = () => {}
+      mockGetInvoices.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveInvoices = resolve
+          })
+      )
+
+      await openInvoicesTab()
+
+      expect(screen.getByTestId('invoices-loading')).toBeInTheDocument()
+
+      resolveInvoices([])
+      await waitFor(() => {
+        expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument()
+      })
+    })
+
+    it('shows an error state when fetching invoices fails', async () => {
+      mockGetInvoices.mockRejectedValue(new Error('network error'))
+
+      await openInvoicesTab()
+
+      expect(await screen.findByTestId('invoices-error')).toBeInTheDocument()
+    })
+  })
+
+  describe('KYC poll cleanup on unmount', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('stops polling getKYCStatus once the component unmounts', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window)
+      mockGetKYCStatus.mockResolvedValue({ status: 'pending' })
+      const originalStatus = mockProfiles[0].status
+      mockProfiles[0].status = 'missing-verification'
+
+      try {
+        const { unmount } = render(<BillingTab />)
+        const card = await screen.findByText('John Doe')
+        await act(async () => {
+          fireEvent.click(card)
+        })
+
+        const verifyBtn = await screen.findByRole('button', { name: 'Verify KYC' })
+        await act(async () => {
+          fireEvent.click(verifyBtn)
+        })
+
+        // Flush the initial (non-interval) status check triggered right after the window opens.
+        await act(async () => {
+          await Promise.resolve()
+        })
+
+        const callsAtUnmount = mockGetKYCStatus.mock.calls.length
+        expect(callsAtUnmount).toBeGreaterThan(0)
+
+        unmount()
+
+        // Advance well past several 3s poll ticks.
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10_000)
+        })
+
+        expect(mockGetKYCStatus.mock.calls.length).toBe(callsAtUnmount)
+      } finally {
+        mockProfiles[0].status = originalStatus
+        openSpy.mockRestore()
+      }
     })
   })
 })

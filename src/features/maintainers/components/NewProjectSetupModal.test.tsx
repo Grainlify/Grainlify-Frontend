@@ -95,6 +95,19 @@ describe('NewProjectSetupModal', () => {
       expect(getTags()).toHaveValue('Payments, DeFi')
       expect(getCategory()).toHaveValue('Backend')
     })
+    it('has an accessible name on the close button', async () => {
+      renderWithTheme(
+        <NewProjectSetupModal
+          isOpen
+          project={makeProject()}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />
+      )
+
+      await waitFor(() => expect(getDescription()).toHaveValue('Original description'))
+      expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument()
+    })
   })
 
   describe('form reset on close', () => {
@@ -351,7 +364,6 @@ describe('NewProjectSetupModal', () => {
       await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1), { timeout: 2000 })
       expect(onClose).toHaveBeenCalledTimes(1)
     })
-
     it('deduplicates case-variant tags before calling updateProjectMetadata', async () => {
       const user = userEvent.setup()
       const onClose = vi.fn()

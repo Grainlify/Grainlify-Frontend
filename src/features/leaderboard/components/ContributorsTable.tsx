@@ -220,9 +220,7 @@ export function ContributorsTable({
   const rowAnimationStyles = useMemo<CSSProperties[]>(
     () =>
       data.map((_, index) => ({
-        animation: isLoaded
-          ? `slideInLeft 0.5s ease-out ${1.1 + index * 0.1}s both`
-          : 'none',
+        animation: isLoaded ? `slideInLeft 0.5s ease-out ${1.1 + index * 0.1}s both` : 'none',
       })),
     [data.length, isLoaded]
   )
@@ -279,7 +277,7 @@ export function ContributorsTable({
         <div className="divide-y divide-white/10">
           {data.map((leader, index) => (
             <ContributorRow
-              key={leader.rank}
+              key={leader.user_id ?? leader.username}
               leader={leader}
               index={index}
               activeFilter={activeFilter}

@@ -453,7 +453,13 @@ describe('DashboardTab onRefresh', () => {
     vi.mocked(getProjectIssues).mockResolvedValue({ issues: [] } as any)
     vi.mocked(getProjectPRs).mockResolvedValue({ prs: [] } as any)
 
-    render(<DashboardTab selectedProjects={[{ id: 'proj-1', github_full_name: 'test/repo', status: 'active' }]} isLoadingProjects={false} onRefresh={onRefresh} />)
+    render(
+      <DashboardTab
+        selectedProjects={[{ id: 'proj-1', github_full_name: 'test/repo', status: 'active' }]}
+        isLoadingProjects={false}
+        onRefresh={onRefresh}
+      />
+    )
 
     expect(onRefresh).not.toHaveBeenCalled()
 

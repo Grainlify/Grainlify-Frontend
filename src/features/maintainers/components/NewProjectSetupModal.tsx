@@ -236,13 +236,14 @@ export function NewProjectSetupModal({
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
+            aria-label="Close"
             className={`p-2 rounded-[10px] transition-all cursor-pointer ${
               darkTheme
                 ? 'hover:bg-white/10 text-[#b8a898] hover:text-[#e8dfd0]'
                 : 'hover:bg-white/20 text-[#7a6b5a] hover:text-[#2d2820]'
             } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 

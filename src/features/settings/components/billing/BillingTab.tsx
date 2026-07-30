@@ -8,9 +8,9 @@ import {
   BillingProfileStatus,
   ProfileDetailTabType,
   PaymentMethod,
+  Invoice,
 } from '../../types'
-import { getBillingProfiles } from '../../../../shared/api/client'
-import { sampleInvoices } from '../../data/invoicesData'
+import { getBillingProfiles, getInvoices } from '../../../../shared/api/client'
 import { BillingProfileCard } from './BillingProfileCard'
 import { PaymentMethodsTab } from './PaymentMethodsTab'
 import { InvoicesTab } from './InvoicesTab'
@@ -159,6 +159,11 @@ export function BillingTab() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isCheckingKYC, setIsCheckingKYC] = useState(false)
   const [kycWindowOpened, setKycWindowOpened] = useState(false)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [invoicesLoading, setInvoicesLoading] = useState(false)
+  const [invoicesError, setInvoicesError] = useState<string | null>(null)
 
   const handleCreateProfile = () => {
     if (!profileName.trim()) return
@@ -206,6 +211,16 @@ export function BillingTab() {
     }
   }, [useMock])
 
+  // Clear any in-flight KYC poll interval/timeout on unmount. Without this,
+  // navigating away mid-poll leaves the interval running for up to 5
+  // minutes, calling getKYCStatus() and setState on an unmounted component.
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current)
+    }
+  }, [])
+
   // Existing KYC effect stays unchanged
   useEffect(() => {
     if (selectedProfile) {
@@ -217,6 +232,33 @@ export function BillingTab() {
       }
     }
   }, [selectedProfile])
+
+  // Fetch this profile's invoices when the Invoices sub-tab becomes active.
+  // Always hits the real endpoint regardless of useMock, matching the KYC
+  // calls above (which are also not gated by mock mode) -- useMock only
+  // controls whether the *profiles list* comes from local seed data.
+  useEffect(() => {
+    if (!selectedProfile || detailTab !== 'invoices') return
+
+    let cancelled = false
+    setInvoicesLoading(true)
+    setInvoicesError(null)
+    getInvoices(selectedProfile.id)
+      .then((data) => {
+        if (!cancelled) setInvoices(data)
+      })
+      .catch((err) => {
+        logger.error('Failed to fetch invoices:', err)
+        if (!cancelled) setInvoicesError('Failed to load invoices. Please try again.')
+      })
+      .finally(() => {
+        if (!cancelled) setInvoicesLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedProfile, detailTab])
 
   const checkKYCStatus = async () => {
     setIsCheckingKYC(true)
@@ -270,7 +312,11 @@ export function BillingTab() {
 
       // Open the KYC URL in a new window
       if (response.url) {
-        const kycWindow = window.open(response.url, '_blank', 'width=800,height=600')
+        const kycWindow = window.open(
+          response.url,
+          '_blank',
+          'width=800,height=600,noopener,noreferrer'
+        )
         setErrorMessage('')
 
         // Window opened successfully - update state to reflect this
@@ -289,13 +335,13 @@ export function BillingTab() {
         }
 
         // Poll for status updates
-        const pollInterval = setInterval(async () => {
+        pollIntervalRef.current = setInterval(async () => {
           try {
             const statusResponse = await getKYCStatus()
             setKycStatus(statusResponse.status || null)
 
             if (statusResponse.status === 'verified') {
-              clearInterval(pollInterval)
+              if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
               setKycWindowOpened(false)
               if (statusResponse.extracted) {
                 updateProfileWithKYCData(statusResponse.extracted)
@@ -304,7 +350,7 @@ export function BillingTab() {
               statusResponse.status === 'rejected' ||
               statusResponse.status === 'expired'
             ) {
-              clearInterval(pollInterval)
+              if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
               setKycWindowOpened(false)
             }
           } catch (error) {
@@ -316,9 +362,9 @@ export function BillingTab() {
         }, 3000) // Poll every 3 seconds
 
         // Stop polling after 5 minutes
-        setTimeout(
+        pollTimeoutRef.current = setTimeout(
           () => {
-            clearInterval(pollInterval)
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
             setKycWindowOpened(false)
           },
           5 * 60 * 1000
@@ -901,7 +947,9 @@ export function BillingTab() {
         )}
 
         {/* Invoices Tab */}
-        {detailTab === 'invoices' && <InvoicesTab invoices={sampleInvoices} />}
+        {detailTab === 'invoices' && (
+          <InvoicesTab invoices={invoices} isLoading={invoicesLoading} error={invoicesError} />
+        )}
       </div>
     )
   }

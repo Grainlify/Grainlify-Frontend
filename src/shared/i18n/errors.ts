@@ -102,4 +102,3 @@ export const handleIntlError: NonNullable<IntlConfig['onError']> = (error) => {
   }
   throw error
 }
-
