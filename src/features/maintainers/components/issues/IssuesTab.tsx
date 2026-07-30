@@ -122,6 +122,17 @@ interface CommentFromAPI {
   updated_at: string
 }
 
+interface IssueAssignee {
+  login: string
+  avatar_url?: string
+}
+
+interface IssueLabel {
+  name: string
+  color?: string
+  description?: string | null
+}
+
 interface IssueFromAPI {
   github_issue_id: number
   number: number
@@ -129,8 +140,8 @@ interface IssueFromAPI {
   title: string
   description: string | null
   author_login: string
-  assignees: any[]
-  labels: any[]
+  assignees: IssueAssignee[]
+  labels: IssueLabel[]
   comments_count: number
   comments: CommentFromAPI[]
   url: string
@@ -758,7 +769,7 @@ Only applications submitted via the apply link above will be considered. Please 
       const matchesCategories =
         selectedFilters.categories.length === 0 ||
         selectedFilters.categories.some((category) => {
-          const issueTags = issue.labels?.map((l: any) => (l.name || l).toLowerCase()) || []
+          const issueTags = issue.labels?.map((l) => l.name.toLowerCase()) || []
           return issueTags.includes(category.toLowerCase())
         })
 
@@ -766,7 +777,7 @@ Only applications submitted via the apply link above will be considered. Please 
       const matchesLanguages =
         selectedFilters.languages.length === 0 ||
         selectedFilters.languages.some((lang) => {
-          const issueTags = issue.labels?.map((l: any) => (l.name || l).toLowerCase()) || []
+          const issueTags = issue.labels?.map((l) => l.name.toLowerCase()) || []
           return issueTags.includes(lang.toLowerCase())
         })
 
@@ -774,7 +785,7 @@ Only applications submitted via the apply link above will be considered. Please 
       const matchesLabels =
         selectedFilters.labels.length === 0 ||
         selectedFilters.labels.some((label) => {
-          const issueTags = issue.labels?.map((l: any) => (l.name || l).toLowerCase()) || []
+          const issueTags = issue.labels?.map((l) => l.name.toLowerCase()) || []
           return issueTags.includes(label.toLowerCase())
         })
 
@@ -797,8 +808,8 @@ Only applications submitted via the apply link above will be considered. Please 
     const labelsSet = new Set<string>()
     issues.forEach((issue) => {
       if (Array.isArray(issue.labels)) {
-        issue.labels.forEach((label: any) => {
-          const labelName = typeof label === 'string' ? label : label.name
+        issue.labels.forEach((label) => {
+          const labelName = label.name
           if (labelName) {
             labelsSet.add(sanitizeLabelName(labelName))
           }
@@ -818,8 +829,8 @@ Only applications submitted via the apply link above will be considered. Please 
     const catSet = new Set<string>()
     issues.forEach((issue) => {
       if (Array.isArray(issue.labels)) {
-        issue.labels.forEach((label: any) => {
-          const raw = typeof label === 'string' ? label : label?.name
+        issue.labels.forEach((label) => {
+          const raw = label.name
           if (raw && !KNOWN_LANGUAGES.has(raw.toLowerCase())) {
             catSet.add(sanitizeLabelName(raw))
           }
@@ -838,8 +849,8 @@ Only applications submitted via the apply link above will be considered. Please 
     const langSet = new Set<string>()
     issues.forEach((issue) => {
       if (Array.isArray(issue.labels)) {
-        issue.labels.forEach((label: any) => {
-          const raw = typeof label === 'string' ? label : label?.name
+        issue.labels.forEach((label) => {
+          const raw = label.name
           if (raw && KNOWN_LANGUAGES.has(raw.toLowerCase())) {
             langSet.add(sanitizeLabelName(raw))
           }
@@ -868,7 +879,7 @@ Only applications submitted via the apply link above will be considered. Please 
       repo: match.projectName,
       user: match.author_login,
       timeAgo: timeAgoFormatted,
-      tags: match.labels?.map((l: any) => l.name || l) || [],
+      tags: match.labels?.map((l) => l.name) || [],
       applicants: countApplicationComments(match.comments),
       comments: match.comments_count || 0,
       applicant: undefined,
@@ -1050,7 +1061,7 @@ Only applications submitted via the apply link above will be considered. Please 
                   repo: issue.projectName,
                   user: issue.author_login,
                   timeAgo: timeAgoFormatted,
-                  tags: issue.labels?.map((l: any) => l.name || l) || [],
+                  tags: issue.labels?.map((l) => l.name) || [],
                   applicants: countApplicationComments(issue.comments),
                   comments: issue.comments_count || 0,
                   applicant: undefined,
@@ -1072,7 +1083,7 @@ Only applications submitted via the apply link above will be considered. Please 
                       avatar: `https://github.com/${issue.author_login}.png?size=40`,
                     }}
                     timeAgo={timeAgoFormatted}
-                    tags={issue.labels?.map((l: any) => l.name || l) || []}
+                    tags={issue.labels?.map((l) => l.name) || []}
                     isSelected={selectedIssue?.id === issue.github_issue_id.toString()}
                     onClick={() => {
                       setSelectedIssue(issueForCard)

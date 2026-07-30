@@ -95,7 +95,6 @@ describe('NewProjectSetupModal', () => {
       expect(getTags()).toHaveValue('Payments, DeFi')
       expect(getCategory()).toHaveValue('Backend')
     })
-
     it('has an accessible name on the close button', async () => {
       renderWithTheme(
         <NewProjectSetupModal
@@ -364,6 +363,36 @@ describe('NewProjectSetupModal', () => {
       // real-timer wait so it does not race the async ecosystem load.
       await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1), { timeout: 2000 })
       expect(onClose).toHaveBeenCalledTimes(1)
+    })
+    it('deduplicates case-variant tags before calling updateProjectMetadata', async () => {
+      const user = userEvent.setup()
+      const onClose = vi.fn()
+      const onSuccess = vi.fn()
+      renderWithTheme(
+        <NewProjectSetupModal
+          isOpen
+          project={makeProject()}
+          onClose={onClose}
+          onSuccess={onSuccess}
+        />
+      )
+
+      await waitFor(() => expect(getDescription()).toHaveValue('Original description'))
+
+      const tagsInput = screen.getByPlaceholderText(/payments, defi, tooling/i)
+      await user.clear(tagsInput)
+      await user.type(tagsInput, 'Payments, payments, DeFi, defi, Payments')
+
+      await user.click(screen.getByRole('button', { name: /save & continue/i }))
+
+      await waitFor(() => expect(updateProjectMetadata).toHaveBeenCalledTimes(1))
+      expect(updateProjectMetadata).toHaveBeenCalledWith('proj-1', {
+        description: 'Original description',
+        ecosystem_name: 'Stellar',
+        language: 'TypeScript',
+        tags: ['Payments', 'DeFi'],
+        category: 'Backend',
+      })
     })
 
     it('shows a validation error and never calls the API when ecosystem is empty', async () => {

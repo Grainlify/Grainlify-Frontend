@@ -159,6 +159,9 @@ export function NewProjectSetupModal({
         .split(',')
         .map((tag) => tag.trim())
         .filter((tag) => tag.length > 0)
+        .filter(
+          (tag, index, arr) => arr.findIndex((t) => t.toLowerCase() === tag.toLowerCase()) === index
+        )
 
       await updateProjectMetadata(project.id, {
         description: description.trim() || undefined,

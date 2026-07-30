@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Plus, Trash2, Wallet, Copy, CheckCircle2, Star, X } from 'lucide-react'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { Modal, ModalFooter, ModalButton } from '../../../../shared/components/ui/Modal'
+import { useIntlFormatters } from '../../../../shared/i18n'
 import { PaymentMethod, EcosystemType, CryptoType } from '../../types'
 
 /**
@@ -59,6 +60,7 @@ export function PaymentMethodsTab({
   onSetDefault,
 }: PaymentMethodsTabProps) {
   const { theme } = useTheme()
+  const { formatDate } = useIntlFormatters()
   const [showAddModal, setShowAddModal] = useState(false)
   const selectedEcosystem: EcosystemType = 'stellar'
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoType>('usdc')
@@ -234,7 +236,7 @@ export function PaymentMethodsTab({
                         theme === 'dark' ? 'text-[#8a7e70]' : 'text-[#9a8b7a]'
                       }`}
                     >
-                      Added {new Date(method.createdAt).toLocaleDateString()}
+                      Added {formatDate(method.createdAt)}
                     </p>
                   </div>
                 </div>

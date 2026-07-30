@@ -446,10 +446,10 @@ describe('InvoicesTab — loading state', () => {
 
   it('renders loading skeletons instead of rows or empty state when isLoading is true', () => {
     const { queryAllByTestId } = setup([INVOICE_PAID], { isLoading: true })
-    
+
     // Skeletons are visible
     expect(queryAllByTestId('skeleton-loader').length).toBeGreaterThan(0)
-    
+
     // Rows and empty state are not visible
     expect(screen.queryByText('INV-2024-001')).not.toBeInTheDocument()
     expect(screen.queryByText('No invoices yet')).not.toBeInTheDocument()
@@ -457,10 +457,10 @@ describe('InvoicesTab — loading state', () => {
 
   it('renders loading skeletons instead of empty state when invoices list is empty and isLoading is true', () => {
     const { queryAllByTestId } = setup([], { isLoading: true })
-    
+
     // Skeletons are visible
     expect(queryAllByTestId('skeleton-loader').length).toBeGreaterThan(0)
-    
+
     // Empty state is not visible
     expect(screen.queryByText('No invoices yet')).not.toBeInTheDocument()
   })

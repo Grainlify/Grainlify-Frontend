@@ -20,8 +20,10 @@ vi.mock('../../../shared/contexts/ThemeContext', () => ({
 
 vi.mock('../../../shared/i18n', () => ({
   useIntlFormatters: () => ({
-    formatCurrency: (value: number, options: { currency: string; maximumFractionDigits?: number }) =>
-      new Intl.NumberFormat('en-US', { style: 'currency', ...options }).format(value),
+    formatCurrency: (
+      value: number,
+      options: { currency: string; maximumFractionDigits?: number }
+    ) => new Intl.NumberFormat('en-US', { style: 'currency', ...options }).format(value),
     formatDate: (date: Date, options?: Intl.DateTimeFormatOptions) =>
       new Intl.DateTimeFormat('en-US', options).format(date),
   }),
@@ -99,6 +101,15 @@ describe('RewardsTab', () => {
     expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument()
   })
 
+  it('does not render the inactive filter control', async () => {
+    mockGetProfileRewards.mockResolvedValue({ rewards: [] })
+
+    renderRewardsTab()
+
+    await screen.findByText('No rewards yet')
+    expect(screen.queryByRole('button', { name: /filter rewards/i })).not.toBeInTheDocument()
+  })
+
   it('shows an error state and retries successfully', async () => {
     mockGetProfileRewards.mockRejectedValueOnce(new Error('network'))
 
@@ -170,6 +181,43 @@ describe('RewardsTab', () => {
     expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument()
   })
 
+  it('filters rewards from the main search input and restores them when cleared', async () => {
+    mockGetProfileRewards.mockResolvedValue({
+      rewards: [
+        {
+          id: 'alpha-1',
+          project_name: 'Alpha Project',
+          contributor_login: 'alice',
+          amount: 10,
+          currency: 'USD',
+          status: 'Complete',
+        },
+        {
+          id: 'beta-2',
+          project_name: 'Beta Project',
+          contributor_login: 'bob',
+          amount: 20,
+          currency: 'USD',
+          status: 'Processing',
+        },
+      ],
+    })
+
+    renderRewardsTab()
+    await waitFor(() => expect(screen.getAllByText('Alpha Project').length).toBeGreaterThan(0))
+
+    const search = screen.getByRole('textbox', { name: 'Search rewards' })
+    await userEvent.type(search, 'alice')
+    expect(screen.getAllByText('Alpha Project').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Beta Project')).not.toBeInTheDocument()
+
+    await userEvent.clear(search)
+    expect(screen.getAllByText('Beta Project').length).toBeGreaterThan(0)
+
+    await userEvent.type(search, 'does-not-exist')
+    expect(screen.getByRole('status')).toHaveTextContent('No matching rewards')
+  })
+
   describe('columns popover (Radix UI)', () => {
     it('opens the columns popover when the trigger button is clicked', async () => {
       mockGetProfileRewards.mockResolvedValue({ rewards: [] })
@@ -191,15 +239,29 @@ describe('RewardsTab', () => {
       expect(screen.queryByText('Rewards columns')).not.toBeInTheDocument()
     })
 
-    it('closes the popover when the Pending request button is clicked', async () => {
+    it('resets selected columns and closes when Reset columns is clicked', async () => {
       mockGetProfileRewards.mockResolvedValue({ rewards: [] })
       renderRewardsTab()
 
       await userEvent.click(screen.getByRole('button', { name: /toggle column visibility/i }))
       expect(screen.getByText('Rewards columns')).toBeInTheDocument()
 
-      await userEvent.click(screen.getByRole('button', { name: /pending request/i }))
+      await userEvent.click(screen.getByRole('button', { name: /^status$/i }))
+      expect(JSON.parse(localStorage.getItem('rewards_selected_columns') ?? '[]')).not.toContain(
+        'Status'
+      )
+
+      await userEvent.click(screen.getByRole('button', { name: /reset columns/i }))
       expect(screen.queryByText('Rewards columns')).not.toBeInTheDocument()
+      expect(JSON.parse(localStorage.getItem('rewards_selected_columns') ?? '[]')).toEqual([
+        'Date',
+        'ID',
+        'Project',
+        'From',
+        'Contributions',
+        'Amount',
+        'Status',
+      ])
     })
 
     it('column search filters the visible column options inside the popover', async () => {
