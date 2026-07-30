@@ -35,7 +35,6 @@ export default defineConfig({
         'src/**/*.test.{ts,tsx}',
         'src/**/*.spec.{ts,tsx}',
         'src/test/**',
-        'src/test-setup.ts',
         'src/**/*.d.ts',
         // app entry point — wires providers, no logic to test
         'src/main.tsx',
