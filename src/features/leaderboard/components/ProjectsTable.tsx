@@ -115,7 +115,7 @@ export function ProjectsTable({
             const detailPath = projectDetailPath(project.id)
             return (
               <div
-                key={project.rank}
+                key={project.id ?? project.name}
                 className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group"
                 style={{
                   animation: isLoaded
