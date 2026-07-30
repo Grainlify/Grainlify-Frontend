@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { BillingTab } from './BillingTab'
 import { toast } from 'sonner'
 
@@ -138,6 +138,53 @@ describe('BillingTab', () => {
         (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()
       )
       expect(textNodes).toHaveLength(0)
+    })
+  })
+
+  describe('KYC poll cleanup on unmount', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('stops polling getKYCStatus once the component unmounts', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window)
+      mockGetKYCStatus.mockResolvedValue({ status: 'pending' })
+      const originalStatus = mockProfiles[0].status
+      mockProfiles[0].status = 'missing-verification'
+
+      try {
+        const { unmount } = render(<BillingTab />)
+        const card = await screen.findByText('John Doe')
+        await act(async () => {
+          fireEvent.click(card)
+        })
+
+        const verifyBtn = await screen.findByRole('button', { name: 'Verify KYC' })
+        await act(async () => {
+          fireEvent.click(verifyBtn)
+        })
+
+        // Flush the initial (non-interval) status check triggered right after the window opens.
+        await act(async () => {
+          await Promise.resolve()
+        })
+
+        const callsAtUnmount = mockGetKYCStatus.mock.calls.length
+        expect(callsAtUnmount).toBeGreaterThan(0)
+
+        unmount()
+
+        // Advance well past several 3s poll ticks.
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10_000)
+        })
+
+        expect(mockGetKYCStatus.mock.calls.length).toBe(callsAtUnmount)
+      } finally {
+        mockProfiles[0].status = originalStatus
+        openSpy.mockRestore()
+      }
     })
   })
 })
