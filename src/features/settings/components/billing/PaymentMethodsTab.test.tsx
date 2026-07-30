@@ -151,6 +151,27 @@ describe('PaymentMethodsTab - wallet address validation', () => {
     )
   })
 
+  it('assigns distinct ids to two payment methods added within the same millisecond', async () => {
+    const fixedNow = 1_700_000_000_000
+    vi.spyOn(Date, 'now').mockReturnValue(fixedNow)
+
+    const { onAddPaymentMethod } = setup()
+    await openModal()
+    await typeAddress(VALID_G)
+    await submit()
+
+    await openModal()
+    await typeAddress(VALID_C)
+    await submit()
+
+    expect(onAddPaymentMethod).toHaveBeenCalledTimes(2)
+    const firstId = onAddPaymentMethod.mock.calls[0][0].id
+    const secondId = onAddPaymentMethod.mock.calls[1][0].id
+    expect(firstId).not.toBe(secondId)
+
+    vi.restoreAllMocks()
+  })
+
   it('trims whitespace before validation and uses trimmed address', async () => {
     const { onAddPaymentMethod } = setup()
     await openModal()

@@ -38,6 +38,13 @@ export function validateWalletAddress(address: string): string | null {
   return null
 }
 
+// Monotonically increasing, seeded from the current timestamp so ids stay
+// roughly chronological. A plain `Date.now()` per add can collide when two
+// payment methods are added within the same millisecond (e.g. rapid
+// double-submit); incrementing guarantees every id generated in this
+// session is unique regardless of timing.
+let nextPaymentMethodId = Date.now()
+
 interface PaymentMethodsTabProps {
   paymentMethods: PaymentMethod[]
   onAddPaymentMethod: (method: PaymentMethod) => void
@@ -75,7 +82,7 @@ export function PaymentMethodsTab({
     setWalletAddressError(null)
 
     const newMethod: PaymentMethod = {
-      id: Date.now(),
+      id: nextPaymentMethodId++,
       ecosystem: selectedEcosystem,
       cryptoType: selectedCrypto,
       walletAddress: trimmed,
