@@ -3,7 +3,7 @@ import { useTheme } from '../../../../shared/contexts/ThemeContext'
 import { getTermsStatus, acceptTerms } from '../../../../shared/api/client'
 import { Skeleton } from '../../../../shared/components/ui/skeleton'
 import { logger } from '../../../../shared/utils/logger'
-import { useTranslation } from '../../../../shared/i18n'
+import { useIntlFormatters, useTranslation } from '../../../../shared/i18n'
 
 /**
  * Current version of the terms and conditions.
@@ -24,6 +24,7 @@ export const SKELETON_DELAY_MS = 300
 export function TermsTab() {
   const { theme } = useTheme()
   const { t } = useTranslation()
+  const { formatDate } = useIntlFormatters()
   const loadStatusFailedMessage = t('terms.errors.loadStatusFailed')
   const [isLoading, setIsLoading] = useState(true)
   const [isAccepting, setIsAccepting] = useState(false)
@@ -249,7 +250,7 @@ export function TermsTab() {
               <p className="text-[12px] text-green-500 font-medium">
                 {t('terms.status.acceptedVersion', {
                   version: acceptedVersion,
-                  date: new Date(acceptedDate).toLocaleDateString(),
+                  date: formatDate(acceptedDate),
                 })}
               </p>
             ) : isVersionMismatch ? (
