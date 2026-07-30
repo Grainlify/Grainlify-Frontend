@@ -1,4 +1,3 @@
- 
 /**
  * Guarded logger utility for the Grainlify application.
  *
