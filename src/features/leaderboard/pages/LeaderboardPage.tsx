@@ -11,6 +11,7 @@ import { LeaderboardHero } from '../components/LeaderboardHero'
 import { ContributorsPodium } from '../components/ContributorsPodium'
 import { ProjectsPodium } from '../components/ProjectsPodium'
 import { FiltersSection } from '../components/FiltersSection'
+import { LeaderboardStyles } from '../components/LeaderboardStyles'
 import { ContributorsTable } from '../components/ContributorsTable'
 import { ContributorsTableSkeleton } from '../components/ContributorsTableSkeleton'
 import { ProjectsTable } from '../components/ProjectsTable'
@@ -257,6 +258,7 @@ export function LeaderboardPage() {
       }`}
     >
       <FallingPetals petals={petals} />
+      <LeaderboardStyles />
 
       <div className="relative z-10 max-w-[1200px] mx-auto px-4 py-8 space-y-6">
         {/* Type Toggle */}
