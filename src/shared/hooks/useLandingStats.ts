@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { getLandingStats, type LandingStats } from '../api/client';
 import { useTranslation } from '../i18n';
@@ -40,12 +40,25 @@ export function useLandingStats() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchStats = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const s = await getLandingStats();
+      setStats(s);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load stats');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
 
     (async () => {
+      setIsLoading(true);
       try {
-        setIsLoading(true);
         const s = await getLandingStats();
         if (!isMounted) return;
         setStats(s);
@@ -80,7 +93,7 @@ export function useLandingStats() {
     };
   }, [stats, locale]);
 
-  return { stats, display, isLoading, error };
+  return { stats, display, isLoading, error, refetch: fetchStats };
 }
 
 
