@@ -12,9 +12,12 @@ import {
   CheckCircle,
   Star,
   Quote,
+  DollarSign,
+  RefreshCw,
 } from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useLandingStats } from '../../../shared/hooks/useLandingStats'
+import { SkeletonLoader } from '../../../shared/components/SkeletonLoader'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logger } from '../../../shared/utils/logger'
@@ -258,7 +261,7 @@ function HowItWorks() {
 
 function WhyChooseUs() {
   const { theme } = useTheme()
-  const { display } = useLandingStats()
+  const { display, isLoading, error, refetch } = useLandingStats()
 
   const benefits = [
     'Verified and vetted projects from trusted organizations',
@@ -348,11 +351,19 @@ function WhyChooseUs() {
                   icon: Users,
                   label: 'Active Users',
                   value: display.contributors,
+                  statKey: 'contributors' as const,
                 },
                 {
                   icon: Award,
                   label: 'Projects Funded',
                   value: display.activeProjects,
+                  statKey: 'activeProjects' as const,
+                },
+                {
+                  icon: DollarSign,
+                  label: 'Grants Distributed',
+                  value: display.grantsDistributed,
+                  statKey: 'grantsDistributed' as const,
                 },
               ].map((item, index) => (
                 <div
@@ -376,7 +387,20 @@ function WhyChooseUs() {
                       theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                     }`}
                   >
-                    {item.value}
+                    {item.statKey && isLoading ? (
+                      <SkeletonLoader width="60px" height="24px" />
+                    ) : item.statKey && error ? (
+                      <button
+                        onClick={refetch}
+                        className="text-xs text-[#c9983a] hover:underline flex items-center gap-1"
+                        data-testid={`retry-${item.statKey}`}
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        Retry
+                      </button>
+                    ) : (
+                      item.value
+                    )}
                   </span>
                 </div>
               ))}

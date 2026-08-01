@@ -16,14 +16,24 @@ vi.mock('../../../shared/contexts/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: false, logout: vi.fn() }),
 }))
 
+let mockUseLandingStats: {
+  display: { activeProjects: string; contributors: string; grantsDistributed: string }
+  isLoading: boolean
+  error: string | null
+  refetch: ReturnType<typeof vi.fn>
+} = {
+  display: {
+    activeProjects: '1,234',
+    contributors: '5,678',
+    grantsDistributed: '$2.1M',
+  },
+  isLoading: false,
+  error: null,
+  refetch: vi.fn(),
+}
+
 vi.mock('../../../shared/hooks/useLandingStats', () => ({
-  useLandingStats: () => ({
-    display: {
-      activeProjects: '1,234',
-      contributors: '5,678',
-      grantsDistributed: '$2.1M',
-    },
-  }),
+  useLandingStats: () => mockUseLandingStats,
 }))
 
 vi.mock('../../../shared/utils/logger', () => ({
@@ -169,5 +179,61 @@ describe('ImageWithFallback security', () => {
     renderWithRouter(<LandingPage />)
     const images = screen.getAllByTestId('image-with-fallback')
     expect(images.length).toBe(3)
+  })
+})
+
+describe('WhyChooseUs stats', () => {
+  beforeEach(() => {
+    mockUseLandingStats = {
+      display: {
+        activeProjects: '1,234',
+        contributors: '5,678',
+        grantsDistributed: '$2.1M',
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    }
+  })
+
+  it('shows formatted stat values on success', () => {
+    renderWithRouter(<LandingPage />)
+    expect(screen.getAllByText('5,678').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('1,234').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('$2.1M').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows skeleton loaders while loading', () => {
+    mockUseLandingStats = {
+      ...mockUseLandingStats,
+      isLoading: true,
+    }
+    renderWithRouter(<LandingPage />)
+    const skeletons = screen.getAllByTestId('skeleton-loader')
+    // At least 2 skeleton loaders for the stat values (Active Users, Projects Funded)
+    expect(skeletons.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('shows retry buttons on error', () => {
+    mockUseLandingStats = {
+      ...mockUseLandingStats,
+      error: 'Failed to load stats',
+    }
+    renderWithRouter(<LandingPage />)
+    const retryBtns = screen.getAllByTestId(/^retry-/)
+    expect(retryBtns.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('calls refetch when retry button is clicked', () => {
+    const refetchMock = vi.fn()
+    mockUseLandingStats = {
+      ...mockUseLandingStats,
+      error: 'Failed to load stats',
+      refetch: refetchMock,
+    }
+    renderWithRouter(<LandingPage />)
+    const retryBtn = screen.getByTestId('retry-contributors')
+    retryBtn.click()
+    expect(refetchMock).toHaveBeenCalledTimes(1)
   })
 })
