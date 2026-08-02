@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { ThemeProvider } from '../../../shared/contexts/ThemeContext'
 
 // --- Mock the API client -------------------------------------------------
@@ -80,11 +81,13 @@ function makeResponse(count: number, total: number, start = 0) {
 
 const cards = () => screen.queryAllByTestId(/^project-card-/).length
 
-const renderPage = () =>
+const renderPage = (initialEntries?: string[]) =>
   render(
-    <ThemeProvider>
-      <BrowsePage />
-    </ThemeProvider>
+    <MemoryRouter initialEntries={initialEntries ?? ['/dashboard/discover']}>
+      <ThemeProvider>
+        <BrowsePage />
+      </ThemeProvider>
+    </MemoryRouter>
   )
 
 beforeEach(() => {
@@ -425,6 +428,63 @@ describe('BrowsePage filters', () => {
     await userEvent.click(xButton as HTMLButtonElement)
 
     await waitFor(() => expect(screen.queryByText('TypeScript')).not.toBeInTheDocument())
+  })
+
+  it('persists selected filters across re-mount via URL search params', async () => {
+    getPublicProjects.mockResolvedValue(makeResponse(2, 2))
+    // Render with a URL that already has filters
+    renderPage(['/dashboard/discover?languages=TypeScript&ecosystems=TestNet'])
+    await waitFor(() => expect(cards()).toBe(2))
+
+    // Filters should be restored from URL params
+    expect(screen.getByText('TypeScript')).toBeInTheDocument()
+    expect(screen.getByText('TestNet')).toBeInTheDocument()
+
+    // Verify the API call includes the restored filters
+    expect(getPublicProjects).toHaveBeenCalledWith(
+      expect.objectContaining({ language: 'TypeScript', ecosystem: 'TestNet' })
+    )
+  })
+
+  it('clears all filters when clear-filters chip is clicked and resets URL params', async () => {
+    getPublicProjects.mockResolvedValue(makeResponse(2, 2))
+    renderPage()
+    await waitFor(() => expect(cards()).toBe(2))
+
+    // Select two filters (mock Dropdown always toggles 'TypeScript')
+    await userEvent.click(screen.getByRole('button', { name: 'filter-languages' }))
+    await screen.findByText('TypeScript')
+    await userEvent.click(screen.getByRole('button', { name: 'filter-ecosystems' }))
+
+    // Both filters show 'TypeScript' because the mock always passes that value
+    await waitFor(() => {
+      const chips = screen.getAllByText('TypeScript')
+      expect(chips.length).toBeGreaterThanOrEqual(2)
+    })
+
+    // Clear one filter via its X button
+    const chips = screen.getAllByText('TypeScript')
+    const chip = chips[0].closest('span')
+    expect(chip).toBeTruthy()
+    const xButton = chip!.querySelector('button')
+    expect(xButton).toBeTruthy()
+    await userEvent.click(xButton as HTMLButtonElement)
+
+    await waitFor(() => {
+      // After removing one chip, only one 'TypeScript' chip should remain
+      const remaining = screen.getAllByText('TypeScript')
+      expect(remaining.length).toBe(1)
+    })
+  })
+
+  it('does not carry stale filters from a previous URL when none are provided', async () => {
+    getPublicProjects.mockResolvedValue(makeResponse(2, 2))
+    renderPage()
+    await waitFor(() => expect(cards()).toBe(2))
+
+    // No filters should be active
+    expect(screen.queryByText('TypeScript')).not.toBeInTheDocument()
+    expect(getPublicProjects).toHaveBeenCalledWith({ limit: 12, offset: 0 })
   })
 })
 

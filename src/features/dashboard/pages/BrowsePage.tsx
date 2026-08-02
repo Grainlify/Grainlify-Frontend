@@ -2,6 +2,7 @@ import { logger } from '../../../shared/utils/logger'
 import { X } from 'lucide-react'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Dropdown } from '../../../shared/components/ui/Dropdown'
 import { ProjectCard, Project } from '../components/ProjectCard'
 import { ProjectCardSkeleton } from '../components/ProjectCardSkeleton'
@@ -135,20 +136,21 @@ const mapApiProjects = (projectsArray: any[]): Project[] =>
 
 export function BrowsePage({ onProjectClick }: BrowsePageProps) {
   const { theme } = useTheme()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({
-    languages: '',
-    ecosystems: '',
-    categories: '',
-    tags: '',
+    languages: searchParams.get('q_languages') || '',
+    ecosystems: searchParams.get('q_ecosystems') || '',
+    categories: searchParams.get('q_categories') || '',
+    tags: searchParams.get('q_tags') || '',
   })
   const [selectedFilters, setSelectedFilters] = useState<{
     [key: string]: string[]
   }>({
-    languages: [],
-    ecosystems: [],
-    categories: [],
-    tags: [],
+    languages: searchParams.get('languages')?.split(',').filter(Boolean) || [],
+    ecosystems: searchParams.get('ecosystems')?.split(',').filter(Boolean) || [],
+    categories: searchParams.get('categories')?.split(',').filter(Boolean) || [],
+    tags: searchParams.get('tags')?.split(',').filter(Boolean) || [],
   })
 
   // --- Pagination state ---------------------------------------------------
@@ -269,6 +271,30 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
   const handleSearchChange = useCallback((filterType: string, value: string) => {
     setSearchTerms((prev) => ({ ...prev, [filterType]: value }))
   }, [])
+
+  // Sync filter state to URL search params for persistence across navigation.
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    for (const key of ['languages', 'ecosystems', 'categories', 'tags'] as const) {
+      const vals = selectedFilters[key]
+      if (vals.length > 0) {
+        next.set(key, vals.join(','))
+      } else {
+        next.delete(key)
+      }
+    }
+    for (const key of ['languages', 'ecosystems', 'categories', 'tags'] as const) {
+      const qKey = `q_${key}`
+      const val = searchTerms[key]
+      if (val) {
+        next.set(qKey, val)
+      } else {
+        next.delete(qKey)
+      }
+    }
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFilters, searchTerms])
 
   const handleToggleOpen = useCallback((filterType: string) => {
     setOpenDropdown((prev) => (prev === filterType ? null : filterType))
