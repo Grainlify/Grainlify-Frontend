@@ -175,6 +175,52 @@ describe('ProfileTab', () => {
     expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled()
   })
 
+  it('shows an error toast when an SVG file is uploaded (XSS security)', async () => {
+    mockGetCurrentUser.mockResolvedValue(mockUser)
+    const { container } = renderWithTheme(<ProfileTab />)
+    await waitFor(() => expect(screen.getByDisplayValue('John')).toBeInTheDocument())
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    const svgFile = new File(['<svg></svg>'], 'avatar.svg', { type: 'image/svg+xml' })
+
+    // Use fireEvent.change to directly trigger the onChange handler
+    const { fireEvent } = await import('@testing-library/react')
+    fireEvent.change(fileInput, { target: { files: [svgFile] } })
+
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('SVG files are not supported'))
+  })
+
+  it('shows an error toast when an oversized file is uploaded (>5MB)', async () => {
+    const user = userEvent.setup()
+    mockGetCurrentUser.mockResolvedValue(mockUser)
+    const { container } = renderWithTheme(<ProfileTab />)
+    await waitFor(() => expect(screen.getByDisplayValue('John')).toBeInTheDocument())
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    // Create a file larger than 5MB
+    const largeContent = new Uint8Array(6 * 1024 * 1024)
+    const largeFile = new File([largeContent], 'large.png', { type: 'image/png' })
+    await user.upload(fileInput, largeFile)
+
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('less than 5MB'))
+  })
+
+  it('accepts a valid PNG file for upload', async () => {
+    const user = userEvent.setup()
+    mockGetCurrentUser.mockResolvedValue(mockUser)
+    const { container } = renderWithTheme(<ProfileTab />)
+    await waitFor(() => expect(screen.getByDisplayValue('John')).toBeInTheDocument())
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    const validFile = new File(['avatar-content'], 'avatar.png', { type: 'image/png' })
+    await user.upload(fileInput, validFile)
+
+    // No error toast should be shown for a valid file
+    expect(toast.error).not.toHaveBeenCalled()
+    // The "Save Picture" button should appear after a valid upload
+    expect(await screen.findByRole('button', { name: /save picture/i })).toBeInTheDocument()
+  })
+
   it('shows a dedicated avatar-upload pending state without affecting the form Save button', async () => {
     const user = userEvent.setup()
     mockGetCurrentUser.mockResolvedValue(mockUser)
