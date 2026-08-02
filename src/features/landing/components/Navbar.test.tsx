@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { I18nProvider } from '../../../shared/i18n'
@@ -79,5 +79,45 @@ describe('Navbar i18n strings', () => {
 
     expect(screen.getAllByText('Dashboard').length).toBeGreaterThanOrEqual(2)
     expect(screen.getAllByText('Sign Out').length).toBeGreaterThanOrEqual(2)
+  })
+})
+
+describe('Navbar mobile menu focus trap', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    document.body.innerHTML = ''
+  })
+
+  it('moves focus into the mobile menu when opened', async () => {
+    const user = userEvent.setup()
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, logout: vi.fn() })
+    renderNavbar()
+
+    await user.click(screen.getByLabelText('Open menu'))
+
+    const mobileMenu = document.getElementById('mobile-menu')
+    expect(mobileMenu).toBeInTheDocument()
+    // The first focusable element inside the menu should receive focus.
+    expect(mobileMenu?.contains(document.activeElement)).toBe(true)
+  })
+
+  it('closes the mobile menu when Escape is pressed and returns focus to the toggle', async () => {
+    const user = userEvent.setup()
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, logout: vi.fn() })
+    renderNavbar()
+
+    const toggle = screen.getByLabelText('Open menu')
+    await user.click(toggle)
+
+    // Mobile menu should be visible.
+    expect(screen.getByLabelText('Close menu')).toBeInTheDocument()
+
+    // Press Escape to close the menu.
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+
+    // Menu should close and the toggle button should regain focus.
+    expect(screen.getByLabelText('Open menu')).toBeInTheDocument()
+    // The toggle button should have focus (returnFocus from useFocusTrap).
+    expect(screen.getByLabelText('Open menu')).toHaveFocus()
   })
 })

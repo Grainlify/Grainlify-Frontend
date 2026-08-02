@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useModeAnimation } from 'react-theme-switch-animation'
 import { useTheme } from '../../../shared/contexts/ThemeContext'
 import { useAuth } from '../../../shared/contexts/AuthContext'
+import { useFocusTrap } from '../../../shared/utils/focusTrap'
 import grainlifyLogo from '../../../assets/grainlify_log.svg'
 
 export function Navbar() {
@@ -14,6 +15,12 @@ export function Navbar() {
   const { ref, toggleSwitchTheme } = useModeAnimation({
     isDarkMode: theme === 'dark',
     onDarkModeChange: (isDark) => setThemeFromAnimation(isDark),
+  })
+  const mobileMenuRef = useFocusTrap<HTMLDivElement>(mobileMenuOpen, {
+    onEscape: () => {
+      setMobileMenuOpen(false)
+      // Focus returns to the hamburger toggle automatically via useFocusTrap's returnFocus
+    },
   })
 
   return (
@@ -156,7 +163,7 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div id="mobile-menu" className="md:hidden mt-4 pb-4 space-y-4">
+          <div id="mobile-menu" ref={mobileMenuRef} className="md:hidden mt-4 pb-4 space-y-4">
             <a
               href="#features"
               className={`block transition-colors font-medium ${
