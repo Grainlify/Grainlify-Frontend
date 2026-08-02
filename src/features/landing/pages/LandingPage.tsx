@@ -258,7 +258,7 @@ function HowItWorks() {
 
 function WhyChooseUs() {
   const { theme } = useTheme()
-  const { display } = useLandingStats()
+  const { display, isLoading, error } = useLandingStats()
 
   const benefits = [
     'Verified and vetted projects from trusted organizations',
@@ -337,50 +337,69 @@ function WhyChooseUs() {
                 : 'bg-white/[0.15] border-white/25'
             }`}
           >
-            <div className="grid grid-cols-1 gap-6">
-              {[
-                {
-                  icon: TrendingUp,
-                  label: 'Growing Ecosystem',
-                  value: '+45%',
-                },
-                {
-                  icon: Users,
-                  label: 'Active Users',
-                  value: display.contributors,
-                },
-                {
-                  icon: Award,
-                  label: 'Projects Funded',
-                  value: display.activeProjects,
-                },
-              ].map((item, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center justify-between p-4 rounded-[16px] ${
-                    theme === 'dark' ? 'bg-white/[0.05]' : 'bg-white/[0.1]'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <item.icon className="w-5 h-5 text-[#c9983a]" />
-                    <span
-                      className={`transition-colors ${
-                        theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  </div>
-                  <span
-                    className={`font-semibold transition-colors ${
-                      theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+            {error ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center" role="alert">
+                <span className="text-4xl mb-3">⚠️</span>
+                <p className={`text-sm transition-colors ${
+                  theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                }`}>
+                  Unable to load live statistics. Please try again later.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {[
+                  {
+                    icon: TrendingUp,
+                    label: 'Growing Ecosystem',
+                    value: '+45%',
+                  },
+                  {
+                    icon: Users,
+                    label: 'Active Users',
+                    value: isLoading ? (
+                      <span className="inline-block w-16 h-5 rounded bg-current opacity-20 animate-pulse" />
+                    ) : (
+                      display.contributors
+                    ),
+                  },
+                  {
+                    icon: Award,
+                    label: 'Projects Funded',
+                    value: isLoading ? (
+                      <span className="inline-block w-16 h-5 rounded bg-current opacity-20 animate-pulse" />
+                    ) : (
+                      display.activeProjects
+                    ),
+                  },
+                ].map((item, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center justify-between p-4 rounded-[16px] ${
+                      theme === 'dark' ? 'bg-white/[0.05]' : 'bg-white/[0.1]'
                     }`}
                   >
-                    {item.value}
-                  </span>
-                </div>
-              ))}
-            </div>
+                    <div className="flex items-center space-x-3">
+                      <item.icon className="w-5 h-5 text-[#c9983a]" />
+                      <span
+                        className={`transition-colors ${
+                          theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                    </div>
+                    <span
+                      className={`font-semibold transition-colors ${
+                        theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                      }`}
+                    >
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
