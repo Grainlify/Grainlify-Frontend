@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { LandingPage } from './LandingPage'
 import { MemoryRouter } from 'react-router-dom'
 import { I18nProvider } from '../../../shared/i18n'
+import { useLandingStats } from '../../../shared/hooks/useLandingStats'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -16,15 +17,18 @@ vi.mock('../../../shared/contexts/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: false, logout: vi.fn() }),
 }))
 
-vi.mock('../../../shared/hooks/useLandingStats', () => ({
-  useLandingStats: () => ({
+vi.mock('../../../shared/hooks/useLandingStats', () => {
+  const mockFn = vi.fn(() => ({
     display: {
       activeProjects: '1,234',
       contributors: '5,678',
       grantsDistributed: '$2.1M',
     },
-  }),
-}))
+    isLoading: false,
+    error: null,
+  }))
+  return { useLandingStats: mockFn }
+})
 
 vi.mock('../../../shared/utils/logger', () => ({
   logger: {
@@ -169,5 +173,55 @@ describe('ImageWithFallback security', () => {
     renderWithRouter(<LandingPage />)
     const images = screen.getAllByTestId('image-with-fallback')
     expect(images.length).toBe(3)
+  })
+})
+
+describe('WhyChooseUs stats states', () => {
+  beforeEach(() => {
+    vi.mocked(useLandingStats).mockImplementation(() => ({
+      stats: {} as any,
+      display: { activeProjects: '1,234', contributors: '5,678', grantsDistributed: '$2.1M' },
+      isLoading: false,
+      error: null,
+    }))
+  })
+
+  it('shows skeleton pulse placeholders while stats are loading', () => {
+    vi.mocked(useLandingStats).mockImplementation(() => ({
+      stats: null,
+      display: { activeProjects: '—', contributors: '—', grantsDistributed: '—' },
+      isLoading: true,
+      error: null,
+    }))
+
+    renderWithRouter(<LandingPage />)
+    // The stats section (WhyChooseUs) shows 2 pulse placeholders for Active Users and Projects Funded
+    // Hero also uses useLandingStats but renders SkeletonLoader, not animate-pulse
+    const whyChooseUs = document.getElementById('why-choose-us')
+    const pulses = whyChooseUs?.querySelectorAll('.animate-pulse') ?? []
+    expect(pulses.length).toBe(2)
+  })
+
+  it('shows error fallback when stats fail to load', () => {
+    vi.mocked(useLandingStats).mockImplementation(() => ({
+      stats: null,
+      display: { activeProjects: '—', contributors: '—', grantsDistributed: '—' },
+      isLoading: false,
+      error: 'Network error',
+    }))
+
+    renderWithRouter(<LandingPage />)
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByText(/unable to load live statistics/i)).toBeInTheDocument()
+  })
+
+  it('shows formatted stats when data loads successfully', () => {
+    renderWithRouter(<LandingPage />)
+    // Hero section also renders the same stats values, so use getAllByText
+    const contributors = screen.getAllByText('5,678')
+    expect(contributors.length).toBeGreaterThanOrEqual(1)
+
+    const projects = screen.getAllByText('1,234')
+    expect(projects.length).toBeGreaterThanOrEqual(1)
   })
 })
