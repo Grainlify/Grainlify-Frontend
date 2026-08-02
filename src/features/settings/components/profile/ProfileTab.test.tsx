@@ -231,4 +231,80 @@ describe('ProfileTab', () => {
 
     openSpy.mockRestore()
   })
+
+  it('shows toast.error for invalid file type instead of alert()', async () => {
+    mockGetCurrentUser.mockResolvedValue(mockUser)
+    const { container } = renderWithTheme(<ProfileTab />)
+
+    await waitFor(() => expect(screen.getByDisplayValue('John')).toBeInTheDocument())
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    // Use fireEvent.change to ensure the file type is set correctly
+    const { fireEvent } = await import('@testing-library/react')
+    const invalidFile = new File(['not-an-image'], 'test.bin', { type: 'application/octet-stream' })
+    await fireEvent.change(fileInput, { target: { files: [invalidFile] } })
+
+    expect(toast.error).toHaveBeenCalledWith(
+      'Please select a valid image file (SVG, PNG, JPG, or GIF)'
+    )
+  })
+
+  it('shows toast.error for oversized file instead of alert()', async () => {
+    const user = userEvent.setup()
+    mockGetCurrentUser.mockResolvedValue(mockUser)
+    const { container } = renderWithTheme(<ProfileTab />)
+
+    await waitFor(() => expect(screen.getByDisplayValue('John')).toBeInTheDocument())
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    // Create a file larger than 5MB
+    const oversizedFile = new File(['x'.repeat(6 * 1024 * 1024)], 'large.png', {
+      type: 'image/png',
+    })
+    await user.upload(fileInput, oversizedFile)
+
+    expect(toast.error).toHaveBeenCalledWith('File size must be less than 5MB')
+  })
+
+  it('resets file input value after validation failure so the same file can be re-selected', async () => {
+    const user = userEvent.setup()
+    mockGetCurrentUser.mockResolvedValue(mockUser)
+    const { container } = renderWithTheme(<ProfileTab />)
+
+    await waitFor(() => expect(screen.getByDisplayValue('John')).toBeInTheDocument())
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+
+    // Upload an invalid file type
+    const invalidFile = new File(['bad'], 'test.txt', { type: 'text/plain' })
+    await user.upload(fileInput, invalidFile)
+
+    // After rejection, the input value should be reset so the same file can be re-selected
+    expect(fileInput.value).toBe('')
+  })
+
+  it('does not call window.alert for any validation error', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    const user = userEvent.setup()
+    mockGetCurrentUser.mockResolvedValue(mockUser)
+    const { container } = renderWithTheme(<ProfileTab />)
+
+    await waitFor(() => expect(screen.getByDisplayValue('John')).toBeInTheDocument())
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+
+    // Test invalid file type
+    const invalidFile = new File(['bad'], 'test.txt', { type: 'text/plain' })
+    await user.upload(fileInput, invalidFile)
+    expect(alertSpy).not.toHaveBeenCalled()
+
+    // Test oversized file
+    const oversizedFile = new File(['x'.repeat(6 * 1024 * 1024)], 'large.png', {
+      type: 'image/png',
+    })
+    await user.upload(fileInput, oversizedFile)
+    expect(alertSpy).not.toHaveBeenCalled()
+
+    alertSpy.mockRestore()
+  })
 })
