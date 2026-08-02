@@ -179,16 +179,18 @@ export function ProfileTab() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
-    const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif']
+    // Validate file type — reject SVG due to XSS risk, limit to safe raster formats
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp']
     if (!validTypes.includes(file.type)) {
-      alert('Please select a valid image file (SVG, PNG, JPG, or GIF)')
+      toast.error(
+        'Please select a valid image file (PNG, JPG, GIF, or WebP). SVG files are not supported for security reasons.'
+      )
       return
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB')
+      toast.error('File size must be less than 5MB.')
       return
     }
 
@@ -412,7 +414,7 @@ export function ProfileTab() {
             type="file"
             ref={fileInputRef}
             onChange={handleFileUpload}
-            accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
+            accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
             className="hidden"
           />
           <button
