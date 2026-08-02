@@ -76,8 +76,6 @@ export function AuthCallbackPage() {
             setError(errorParam || 'An unexpected error occurred')
           }
           setIsProcessing(false)
-          // Redirect to signin after 3 seconds
-          setTimeout(() => navigate('/signin', { replace: true }), 3000)
           return
         }
 
@@ -86,7 +84,6 @@ export function AuthCallbackPage() {
           sessionStorage.removeItem(AUTH_RETURN_TO_KEY)
           setError('No authentication token received')
           setIsProcessing(false)
-          setTimeout(() => navigate('/signin', { replace: true }), 3000)
           return
         }
 
@@ -101,7 +98,6 @@ export function AuthCallbackPage() {
         sessionStorage.removeItem(AUTH_RETURN_TO_KEY)
         setError(err instanceof Error ? err.message : 'Authentication failed')
         setIsProcessing(false)
-        setTimeout(() => navigate('/signin', { replace: true }), 3000)
       }
     }
 
@@ -146,19 +142,31 @@ export function AuthCallbackPage() {
               Authentication Failed
             </h2>
             <p
-              className={`text-sm transition-colors ${
+              className={`text-sm mb-6 transition-colors ${
                 theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
               }`}
             >
               {error}
             </p>
-            <p
-              className={`text-xs mt-4 transition-colors ${
-                theme === 'dark' ? 'text-[#a3a3a3]' : 'text-[#8a7d6f]'
+            <button
+              type="button"
+              onClick={() => navigate('/signin', { replace: true })}
+              className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+                theme === 'dark'
+                  ? 'bg-[#c9983a] text-[#1a1512] hover:bg-[#d4af37]'
+                  : 'bg-[#c9983a] text-white hover:bg-[#b8892a]'
               }`}
             >
-              Redirecting to sign in...
-            </p>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Try signing in again
+            </button>
           </div>
         ) : isProcessing ? (
           <div className="text-center">

@@ -498,9 +498,9 @@ describe('AuthCallbackPage OAuth token history exposure', () => {
     expect(screen.getByText('bad token')).toBeInTheDocument()
     expect(window.location.href).not.toContain('leaked-jwt')
 
-    // Fire the delayed redirect; it replaces the callback entry instead of pushing.
+    // Click the retry button; it replaces the callback entry instead of pushing.
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      fireEvent.click(screen.getByRole('button', { name: /try signing in again/i }))
     })
     expect(screen.getByTestId('location')).toHaveTextContent('/signin')
 
@@ -523,8 +523,9 @@ describe('AuthCallbackPage OAuth token history exposure', () => {
     renderCallbackWithHistory(['/signin', '/auth/callback?error=access_denied'], 1)
 
     await flushCallback()
+    expect(screen.getByRole('button', { name: /try signing in again/i })).toBeInTheDocument()
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      fireEvent.click(screen.getByRole('button', { name: /try signing in again/i }))
     })
     expect(screen.getByTestId('location')).toHaveTextContent('/signin')
 
@@ -544,8 +545,9 @@ describe('AuthCallbackPage OAuth token history exposure', () => {
     renderCallbackWithHistory(['/signin', '/auth/callback'], 1)
 
     await flushCallback()
+    expect(screen.getByRole('button', { name: /try signing in again/i })).toBeInTheDocument()
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      fireEvent.click(screen.getByRole('button', { name: /try signing in again/i }))
     })
     expect(screen.getByTestId('location')).toHaveTextContent('/signin')
 
@@ -553,5 +555,90 @@ describe('AuthCallbackPage OAuth token history exposure', () => {
       fireEvent.click(screen.getByRole('button', { name: /go back/i }))
     })
     expect(screen.getByTestId('location')).toHaveTextContent('/signin')
+  })
+})
+
+describe('AuthCallbackPage retry button', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    sessionStorage.clear()
+  })
+
+  it('renders a retry button when OAuth returns an error param', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback?error=access_denied')
+
+    expect(await screen.findByText('Login was cancelled. Please try again.')).toBeInTheDocument()
+    const retryBtn = screen.getByRole('button', { name: /try signing in again/i })
+    expect(retryBtn).toBeInTheDocument()
+  })
+
+  it('renders a retry button when login fails with a network error', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockRejectedValue(new Error('Network error')),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback?token=network-fail')
+
+    expect(await screen.findByText('Network error')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /try signing in again/i })).toBeInTheDocument()
+  })
+
+  it('renders a retry button when no token is present', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockResolvedValue(undefined),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback')
+
+    expect(await screen.findByText('No authentication token received')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /try signing in again/i })).toBeInTheDocument()
+  })
+
+  it('navigates to /signin when the retry button is clicked', async () => {
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockRejectedValue(new Error('bad token')),
+      isAuthenticated: false,
+    })
+
+    window.history.pushState({}, '', '/auth/callback?token=bad')
+    render(
+      <MemoryRouter initialEntries={['/auth/callback?token=bad']}>
+        <Routes>
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/signin" element={<div data-testid="signin-page">Sign In</div>} />
+          <Route path="*" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText('bad token')).toBeInTheDocument()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /try signing in again/i }))
+    })
+    expect(screen.getByTestId('signin-page')).toBeInTheDocument()
+  })
+
+  it('renders the retry button in dark theme', async () => {
+    mockUseTheme.mockReturnValue({ theme: 'dark' })
+    mockUseAuth.mockReturnValue({
+      login: vi.fn().mockRejectedValue(new Error('dark failure')),
+      isAuthenticated: false,
+    })
+
+    renderCallback('/auth/callback?token=dark-jwt')
+
+    expect(await screen.findByText('Authentication Failed')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /try signing in again/i })).toBeInTheDocument()
   })
 })
