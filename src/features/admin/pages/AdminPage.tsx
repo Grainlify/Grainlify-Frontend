@@ -528,16 +528,6 @@ export function AdminPage() {
       links: Ecosystem['links']
       key_areas: Ecosystem['key_areas']
       technologies: Ecosystem['technologies']
-    } = {
-      name: ecosystem.name ?? '',
-      description: ecosystem.description ?? null,
-      logo_url: ecosystem.logo_url ?? null,
-      website_url: ecosystem.website_url ?? null,
-      status: ecosystem.status ?? 'active',
-      about: ecosystem.about ?? null,
-      links: ecosystem.links ?? null,
-      key_areas: ecosystem.key_areas ?? null,
-      technologies: ecosystem.technologies ?? null,
     }
     try {
       const detail = await getAdminEcosystem(ecosystem.id)
@@ -1934,7 +1924,7 @@ export function AdminPage() {
             <ModalSelect
               label="Status"
               value={oswForm.status}
-              onChange={(value) => setOswForm({ ...oswForm, status: value })}
+              onChange={(value) => setOswForm({ ...oswForm, status: value as OswStatus })}
               options={[
                 { value: 'upcoming', label: 'Upcoming' },
                 { value: 'running', label: 'Running' },
