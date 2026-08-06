@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { I18nProvider } from '../../shared/i18n'
 
 // ─── mock dependencies ──────────────────────────────────────────────────────
@@ -371,5 +371,37 @@ describe('DashboardLayout icon-only controls accessibility', () => {
       // Focus should be returned to the open button (sensible focus restoration)
       expect(document.activeElement).toBe(openBtn)
     })
+  })
+})
+
+describe('DashboardLayout ErrorBoundary', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    vi.clearAllMocks()
+  })
+
+  it('catches errors in child routes and shows fallback while sidebar remains intact', () => {
+    function ThrowingChild(): React.ReactNode {
+      throw new Error('test dashboard error')
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard/discover']}>
+        <I18nProvider>
+          <Routes>
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route path="discover" element={<ThrowingChild />} />
+            </Route>
+          </Routes>
+        </I18nProvider>
+      </MemoryRouter>
+    )
+
+    // Sidebar should still be visible
+    expect(screen.getByText('Discover')).toBeInTheDocument()
+    expect(screen.getByText('Browse')).toBeInTheDocument()
+
+    // Error boundary fallback should be shown
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument()
   })
 })
