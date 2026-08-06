@@ -27,22 +27,10 @@ export function SignInPage() {
     }
   }, [navigate]);
 
-  const handleGithubSign = async () => {
-        setLoading(true);
-            try {
-                    const provider = new GithubAuthProvider();
-                            console.log("sign in false ",false)
-                                    const github1 = await signInWithPopup(auth, provider);
-                                            console.log("Redirecting to :", github1);
-                                                    // subject to github login
-                                                            window.location.href = github1;
-
-                                                                } catch (error) {
-                                                                        console.log(error);
-                                                                            }
-                                                                            };
-
-  
+  const handleGitHubSignIn = () => {
+    setIsRedirecting(true);
+    window.location.href = getGitHubLoginUrl();
+  };
 
   return (
     <div className={`min-h-screen flex items-center justify-center px-6 relative overflow-hidden transition-colors ${
