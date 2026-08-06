@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Info, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { NotificationSettings } from '../../types'
@@ -42,6 +42,13 @@ export function NotificationsTab() {
     sponsorsTransactionsWeekly: false,
   })
 
+  // Always tracks the latest notifications value so async handlers can build
+  // their payloads from up-to-date state instead of a stale render closure.
+  const notificationsRef = useRef(notifications)
+  useEffect(() => {
+    notificationsRef.current = notifications
+  }, [notifications])
+
   useEffect(() => {
     let active = true
     const fetchSettings = async () => {
@@ -67,14 +74,14 @@ export function NotificationsTab() {
   }, [])
 
   const updateNotification = async (key: keyof NotificationSettings, value: boolean) => {
-    const previousValue = notifications[key]
+    const previousValue = notificationsRef.current[key]
+    const nextSettings = { ...notificationsRef.current, [key]: value }
 
     // Optimistic Update
-    setNotifications((prev) => ({ ...prev, [key]: value }))
+    setNotifications(nextSettings)
     setUpdatingKeys((prev) => ({ ...prev, [key]: true }))
 
     try {
-      const nextSettings = { ...notifications, [key]: value }
       await updateNotificationSettings(nextSettings)
     } catch (err) {
       // Revert on error
@@ -90,14 +97,15 @@ export function NotificationsTab() {
   }
 
   const enableAll = async () => {
-    const previousSettings = { ...notifications }
-    const allEnabled = Object.keys(notifications).reduce((acc, key) => {
+    const current = notificationsRef.current
+    const previousSettings = { ...current }
+    const allEnabled = Object.keys(current).reduce((acc, key) => {
       acc[key as keyof NotificationSettings] = true
       return acc
     }, {} as NotificationSettings)
 
     setNotifications(allEnabled)
-    const allKeysUpdating = Object.keys(notifications).reduce(
+    const allKeysUpdating = Object.keys(current).reduce(
       (acc, key) => {
         acc[key] = true
         return acc
@@ -118,14 +126,15 @@ export function NotificationsTab() {
   }
 
   const disableAll = async () => {
-    const previousSettings = { ...notifications }
-    const allDisabled = Object.keys(notifications).reduce((acc, key) => {
+    const current = notificationsRef.current
+    const previousSettings = { ...current }
+    const allDisabled = Object.keys(current).reduce((acc, key) => {
       acc[key as keyof NotificationSettings] = false
       return acc
     }, {} as NotificationSettings)
 
     setNotifications(allDisabled)
-    const allKeysUpdating = Object.keys(notifications).reduce(
+    const allKeysUpdating = Object.keys(current).reduce(
       (acc, key) => {
         acc[key] = true
         return acc
