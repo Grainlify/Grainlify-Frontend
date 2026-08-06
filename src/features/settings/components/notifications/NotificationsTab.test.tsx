@@ -191,4 +191,44 @@ describe('NotificationsTab', () => {
     expect(toggleButton).toHaveAttribute('aria-checked', 'false')
     expect(toast.success).toHaveBeenCalledWith('All notifications disabled')
   })
+
+  it('persists both changes when two toggles are fired in quick succession', async () => {
+    mockGetNotificationSettings.mockResolvedValue(mockSettings)
+    // Let ALL calls resolve immediately so the test can check the final payload
+    mockUpdateNotificationSettings.mockResolvedValue({ ok: true })
+
+    renderWithTheme(<NotificationsTab />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Notification Preferences')).toBeInTheDocument()
+    })
+
+    // Toggle two different notification keys in the same microtask
+    const toggleBilling = screen.getByLabelText('Email notifications for Billing Profile')
+    const toggleMarketing = screen.getByLabelText('Email notifications for Marketing')
+
+    await userEvent.click(toggleBilling)
+    await userEvent.click(toggleMarketing)
+
+    // Wait for all async state updates to settle
+    await waitFor(() => {
+      expect(toggleBilling).toHaveAttribute('aria-checked', 'true')
+      expect(toggleMarketing).toHaveAttribute('aria-checked', 'true')
+    })
+
+    // Both toggles should have been persisted; the final API call must include
+    // both changes (not just the last one, as would happen with a stale closure).
+    const calls = mockUpdateNotificationSettings.mock.calls
+    expect(calls.length).toBeGreaterThanOrEqual(2)
+
+    // At least one call carries both changes (the stale-closure bug would
+    // produce two calls where the first only has billing=true and the second
+    // only has marketing=true — each missing the other's change).
+    const hasBothChanges = calls.some(
+      (call: unknown[]) =>
+        (call[0] as Record<string, boolean>).globalBillingEmail === true &&
+        (call[0] as Record<string, boolean>).globalMarketingEmail === true
+    )
+    expect(hasBothChanges).toBe(true)
+  })
 })
