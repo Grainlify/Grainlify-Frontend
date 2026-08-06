@@ -500,7 +500,7 @@ export function Dashboard() {
                   <button
                     key={item.id}
                     onClick={() => handleNavigation(item.id)}
-                    className={`group w-full flex items-center rounded-[12px] transition-all duration-300 ${
+                    className={`group relative w-full flex items-center rounded-[12px] backdrop-blur-[40px] transition-all duration-300 ${
                       isSidebarCollapsed
                         ? "justify-center px-0 h-[49px]"
                         : "justify-start px-3 py-2.5"
@@ -508,11 +508,20 @@ export function Dashboard() {
                       isActive
                         ? "bg-[#c9983a] shadow-[inset_0px_0px_4px_0px_rgba(255,255,255,0.25)] border-[0.5px] border-[rgba(245,239,235,0.16)]"
                         : darkTheme
-                          ? "hover:bg-white/[0.08]"
-                          : "hover:bg-white/[0.1]"
+                          ? "bg-[#2d2820] shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] hover:scale-[1.01]"
+                          : "bg-[#d4c5b0] shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] hover:scale-[1.01]"
                     }`}
                     title={isSidebarCollapsed ? item.label : ""}
                   >
+                    {!isActive && (
+                      <div
+                        className={`absolute inset-0 pointer-events-none rounded-[12px] ${
+                          darkTheme
+                            ? "shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.5),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.11)]"
+                            : "shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.15),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.35)]"
+                        }`}
+                      />
+                    )}
                     <Icon
                       className={`w-6 h-6 transition-colors ${isSidebarCollapsed ? "" : "flex-shrink-0"} ${
                         isActive
