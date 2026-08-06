@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom'
+import { ErrorBoundary } from '../../shared/components/ErrorBoundary'
 import {
   Search,
   Compass,
@@ -16,7 +17,6 @@ import {
   Shield,
   X,
   Menu,
-  LucideIcon,
 } from 'lucide-react'
 import { useModeAnimation } from 'react-theme-switch-animation'
 import { useAuth } from '../../shared/contexts/AuthContext'
@@ -163,7 +163,7 @@ export function DashboardLayout() {
   }
 
   // Role-based navigation items
-  const navItems: { id: string; icon: LucideIcon; label: string; path: string }[] = [
+  const navItems = [
     {
       id: 'discover',
       icon: Compass,
@@ -304,7 +304,7 @@ export function DashboardLayout() {
             <nav className={`space-y-2 mb-auto ${isSidebarCollapsed ? 'px-[8px]' : 'px-2'}`}>
               {navItems.map((item) => {
                 const isActive = currentPage === item.id
-                const Icon = item.icon
+                const Icon = item.icon as any
                 return (
                   <Link
                     key={item.id}
@@ -464,6 +464,7 @@ export function DashboardLayout() {
             {/* Role Switcher */}
             <RoleSwitcher
               currentRole={activeRole}
+              isSmallDevice={!!isSmallDevice}
               showMobileNav={!!showMobileNav}
               closeMobileNav={closeMobileNav}
               onRoleChange={handleRoleChange}
@@ -533,7 +534,9 @@ export function DashboardLayout() {
 
           {/* Page Content - Outlet for nested routes */}
           <div className="pt-[68px]">
-            <Outlet />
+            <ErrorBoundary key={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </div>
         </div>
       </main>
