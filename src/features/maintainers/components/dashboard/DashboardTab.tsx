@@ -24,7 +24,7 @@ interface DashboardTabProps {
   onNavigateToIssue?: (issueId: string, projectId: string) => void;
 }
 
-export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRefresh, onNavigateToIssue }: DashboardTabProps) {
+export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRefresh: _onRefresh, onNavigateToIssue }: DashboardTabProps) {
   const { theme } = useTheme();
   const [issues, setIssues] = useState<any[]>([]);
   const [prs, setPrs] = useState<any[]>([]);

@@ -26,3 +26,14 @@ This is a code bundle for Glassmorphism Landing Page. The original project is av
 ## Running the code
 
 Run `pnpm run dev` to start the development server.
+
+## Testing
+
+```bash
+pnpm run typecheck     # tsc --noEmit
+pnpm run test          # vitest run
+pnpm run test:coverage # vitest run --coverage
+pnpm run test:e2e      # playwright test (local only, not run in CI)
+```
+
+CI (`.github/workflows/ci.yml`) runs typecheck, build, and test on every push/PR, and gates deploys on them passing.

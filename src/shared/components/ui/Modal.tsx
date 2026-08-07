@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useRef, useEffect } from 'react';
+import React, { ReactNode } from 'react';
 import { X, ChevronDown, Check } from 'lucide-react';
 import * as Select from '@radix-ui/react-select';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -11,7 +11,6 @@ interface ModalProps {
   icon?: ReactNode;
   width?: 'sm' | 'md' | 'lg' | 'xl';
   showCloseButton?: boolean;
-  maxHeight?: boolean;
   footer?: ReactNode;
   dimBackdrop?: boolean;
 }
@@ -31,7 +30,6 @@ export function Modal({
   icon,
   width = 'md',
   showCloseButton = true,
-  maxHeight = false,
   footer,
   dimBackdrop = true
 }: ModalProps) {
@@ -180,6 +178,7 @@ interface ModalInputProps {
   rows?: number;
   className?: string;
   error?: string | null;
+  autoFocus?: boolean;
 }
 
 export function ModalInput({
@@ -192,7 +191,8 @@ export function ModalInput({
   required = false,
   rows,
   className = '',
-  error
+  error,
+  autoFocus = false
 }: ModalInputProps) {
   const { theme } = useTheme();
 
@@ -225,6 +225,7 @@ export function ModalInput({
           onBlur={onBlur}
           className={`${inputClasses} resize-none`}
           placeholder={placeholder}
+          autoFocus={autoFocus}
         />
       ) : (
         <input
@@ -235,6 +236,7 @@ export function ModalInput({
           onBlur={onBlur}
           className={inputClasses}
           placeholder={placeholder}
+          autoFocus={autoFocus}
         />
       )}
       {isError && (

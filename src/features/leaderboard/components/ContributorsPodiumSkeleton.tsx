@@ -1,10 +1,6 @@
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
 
 export function ContributorsPodiumSkeleton() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-
   return (
     <div className="flex items-end justify-center gap-4 mt-8">
       {/* Second Place */}

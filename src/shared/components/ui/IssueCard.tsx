@@ -1,5 +1,4 @@
-import { ReactNode } from 'react';
-import { GitBranch, Users, Circle } from 'lucide-react';
+import { Users, Circle } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { LanguageIcon } from '../LanguageIcon';
 
@@ -17,7 +16,6 @@ export interface IssueCardProps {
   tags?: string[];
   isSelected?: boolean;
   onClick?: () => void;
-  icon?: ReactNode;
   showTags?: boolean;
   // New props for recommended issues format
   description?: string;
@@ -28,7 +26,7 @@ export interface IssueCardProps {
 }
 
 export function IssueCard({
-  id,
+  id: _id,
   number,
   title,
   repository,
@@ -38,7 +36,6 @@ export function IssueCard({
   tags = [],
   isSelected = false,
   onClick,
-  icon,
   showTags = false,
   description,
   language,

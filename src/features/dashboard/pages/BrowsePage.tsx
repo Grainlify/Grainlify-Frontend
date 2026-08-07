@@ -107,7 +107,6 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
   } = useOptimisticData<Project[]>([], { cacheDuration: 30000 });
 
   const [ecosystems, setEcosystems] = useState<Array<{ name: string }>>([]);
-  const [isLoadingEcosystems, setIsLoadingEcosystems] = useState(true);
 
   // Filter options data
   const filterOptions = {
@@ -140,7 +139,6 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
   // Fetch ecosystems from API
   useEffect(() => {
     const fetchEcosystems = async () => {
-      setIsLoadingEcosystems(true);
       try {
         const response = await getEcosystems();
         // Handle different response structures
@@ -175,8 +173,6 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
         console.error("BrowsePage: Failed to fetch ecosystems:", err);
         // Fallback to empty array on error
         setEcosystems([]);
-      } finally {
-        setIsLoadingEcosystems(false);
       }
     };
 
@@ -197,13 +193,6 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
       ...prev,
       [filterType]: prev[filterType].filter((v) => v !== value),
     }));
-  };
-
-  const getFilteredOptions = (filterType: string) => {
-    const searchTerm = searchTerms[filterType].toLowerCase();
-    return filterOptions[filterType as keyof typeof filterOptions].filter(
-      (option: any) => option.name.toLowerCase().includes(searchTerm),
-    );
   };
 
   // Fetch projects from API

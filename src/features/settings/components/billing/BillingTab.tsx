@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Loader2, AlertCircle, Info, ChevronDown, MessageSquare } from 'lucide-react';
-import { BillingProfile, BillingProfileType, BillingProfileStatus, ProfileDetailTabType, PaymentMethod, Invoice } from '../../types';
-import { initialBillingProfiles } from '../../data/billingProfilesData';
+import { BillingProfile, BillingProfileType, BillingProfileStatus, ProfileDetailTabType, PaymentMethod } from '../../types';
 import { sampleInvoices } from '../../data/invoicesData';
 import { BillingProfileCard } from './BillingProfileCard';
 import { PaymentMethodsTab } from './PaymentMethodsTab';
 import { InvoicesTab } from './InvoicesTab';
-import { SkeletonLoader } from '../shared/SkeletonLoader';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { startKYCVerification, getKYCStatus } from '../../../../shared/api/client';
 import { useBillingProfiles } from '../../contexts/BillingProfilesContext';
@@ -126,7 +124,6 @@ function ProfileTypeSelect({
 export function BillingTab() {
   const { theme } = useTheme();
   const { profiles, setProfiles, addProfile, updateProfile } = useBillingProfiles();
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<BillingProfile | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [profileName, setProfileName] = useState('');
@@ -225,7 +222,7 @@ export function BillingTab() {
 
       // Open the KYC URL in a new window
       if (response.url) {
-        window.open(response.url, '_blank', 'width=800,height=600');
+        const kycWindow = window.open(response.url, '_blank', 'width=800,height=600');
         setErrorMessage("");
         
         // Window opened successfully - update state to reflect this
@@ -330,16 +327,6 @@ export function BillingTab() {
     setProfiles(updatedProfiles);
     setSelectedProfile(updatedProfile);
   };
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <SkeletonLoader className="h-[180px]" />
-        <SkeletonLoader className="h-[180px]" />
-        <SkeletonLoader className="h-[180px]" />
-      </div>
-    );
-  }
 
   if (selectedProfile) {
     // Profile Detail View

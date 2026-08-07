@@ -16,6 +16,9 @@ node_modules
 coverage
 *.lcov
 .nyc_output
+/test-results/
+/playwright-report/
+/blob-report/
 
 # Production
 dist
@@ -134,3 +137,5 @@ precache-manifest.*.js
 
 
 
+.vercel
+.env*

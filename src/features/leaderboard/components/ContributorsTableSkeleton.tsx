@@ -1,10 +1,6 @@
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
-import { useTheme } from '../../../shared/contexts/ThemeContext';
 
 export function ContributorsTableSkeleton() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-
   return (
     <div className={`backdrop-blur-[40px] bg-white/[0.12] rounded-[24px] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden`}>
       {/* Table Header */}

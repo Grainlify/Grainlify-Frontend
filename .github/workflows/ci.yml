@@ -1,0 +1,84 @@
+name: CI
+
+# Scoped to this working branch, not main - production is deployed by hand
+# from this exact branch today. Gating automation on an eventual main merge
+# (undated, non-trivial given the structural divergence between branches)
+# would mean indefinitely more manual deploys. Revisit this trigger if/when
+# this branch merges into main.
+on:
+  push:
+    branches: [design/discover-page-redesign]
+  pull_request:
+    branches: [design/discover-page-redesign]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Typecheck, build, and test
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-test-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          # jsdom 30's undici dependency needs worker_threads.markAsUncloneable
+          # (added in Node 21); 22 is current LTS.
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      # No lint step: no ESLint config exists on this branch. Bootstrapping
+      # one (rule set, fixing latent violations, husky/prettier wiring) is a
+      # separate initiative from test coverage.
+      - name: Build
+        run: pnpm run build
+
+      - name: Test
+        run: pnpm run test:coverage
+
+  deploy:
+    name: Deploy to Vercel
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+
+      - name: Build project artifacts
+        run: vercel build --prod --token=$VERCEL_TOKEN
+
+      - name: Deploy prebuilt artifacts
+        run: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN

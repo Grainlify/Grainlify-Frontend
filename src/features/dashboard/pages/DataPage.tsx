@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, Info } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line as RechartsLine, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
+import { Bar, Line as RechartsLine, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup, Line as MapLine } from "react-simple-maps";
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 
@@ -399,14 +399,14 @@ export function DataPage() {
                 <ZoomableGroup
                   zoom={mapZoom}
                   center={mapCenter}
-                  onMoveEnd={({ coordinates, zoom }) => {
-                    setMapCenter(coordinates as [number, number]);
+                  onMoveEnd={({ coordinates, zoom }: { coordinates: [number, number]; zoom: number }) => {
+                    setMapCenter(coordinates);
                     setMapZoom(zoom);
                   }}
                 >
                   <Geographies geography={geoUrl}>
-                    {({ geographies }) =>
-                      geographies.map((geo) => {
+                    {({ geographies }: { geographies: any[] }) =>
+                      geographies.map((geo: any) => {
                         const isHighlighted = Object.keys(countryCoordinates).some(country =>
                           geo.properties.name === country ||
                           (country === "United Kingdom" && geo.properties.name === "United Kingdom") || // Add aliases if needed

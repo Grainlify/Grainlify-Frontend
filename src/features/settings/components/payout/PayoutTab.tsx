@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Info } from 'lucide-react';
-import { SkeletonLoader } from '../shared/SkeletonLoader';
+import { SkeletonLoader } from '../../../../shared/components/SkeletonLoader';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { getProjectsContributed } from '../../../../shared/api/client';
 import { useBillingProfiles } from '../../contexts/BillingProfilesContext';
@@ -179,7 +179,7 @@ const [errorMessage, setErrorMessage] = useState<string | null>(null);
                       project.language ? '' : 'bg-gradient-to-br from-[#c9983a]/20 to-[#a67c2e]/20 border border-[#c9983a]/30'
                     }`}>
                       {project.language ? (
-                        <LanguageIcon language={project.language} size={40} />
+                        <LanguageIcon language={project.language} className="w-10 h-10" />
                       ) : (
                         <span className={`text-[14px] font-bold transition-colors ${
                           theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#2d2820]'

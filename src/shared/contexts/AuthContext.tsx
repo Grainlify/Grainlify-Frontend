@@ -6,7 +6,7 @@ export type UserRole = 'contributor' | 'maintainer' | 'admin' | null;
 export interface User {
   id: string;
   role: string;
-  github: {
+  github?: {
     login: string;
     avatar_url: string;
   };
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('AuthContext - User authenticated:', {
           role: userData.role,
           id: userData.id,
-          githubLogin: userData.github.login
+          githubLogin: userData.github?.login
         });
       } catch (error) {
         // Token is invalid, remove it
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: userData.role,
         id: userData.id,
         isAuthenticated: true,
-        githubLogin: userData.github.login
+        githubLogin: userData.github?.login
       });
     } catch (error) {
       console.error('AuthContext - Login failed:', error);

@@ -15,7 +15,9 @@ import { useTheme } from "../../../shared/contexts/ThemeContext";
 export function ContributionsTab() {
   const { theme } = useTheme();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState("");
+  // Project-filter value isn't consulted anywhere yet (only ever reset by
+  // "Clear Filters") - keep the setter for that reset, drop the unread value.
+  const [, setSelectedProject] = useState("");
   const [selectedRewards, setSelectedRewards] = useState<string[]>([
     "Rewarded",
     "Unrewarded",

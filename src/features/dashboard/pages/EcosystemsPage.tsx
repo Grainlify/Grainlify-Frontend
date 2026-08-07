@@ -471,7 +471,6 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
         title="Request Ecosystem Addition"
         icon={<Sparkles className="w-5 h-5 md:w-6 md:h-6 text-white" />}
         width="lg"
-        maxHeight
       >
         <p className={`text-[13px] md:text-[14px] mb-4 md:mb-6 transition-colors ${
           theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'

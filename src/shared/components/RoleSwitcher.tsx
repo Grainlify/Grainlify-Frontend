@@ -1,6 +1,5 @@
 import { Shield, Users, Code, Lock } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { useEffect , useState} from 'react';
 
 interface RoleSwitcherProps {
   currentRole: 'contributor' | 'maintainer' | 'admin';
@@ -10,7 +9,7 @@ interface RoleSwitcherProps {
   closeMobileNav:()=>void
 }
 
-export function RoleSwitcher({ currentRole, onRoleChange , showMobileNav , isSmallDevice, closeMobileNav}: RoleSwitcherProps) {
+export function RoleSwitcher({ currentRole, onRoleChange , showMobileNav , isSmallDevice: _isSmallDevice, closeMobileNav}: RoleSwitcherProps) {
   const { theme } = useTheme();
 
   const roles = [

@@ -14,9 +14,11 @@ import {
 interface UserProfileDropdownProps {
   onPageChange?: (page: string) => void;
   showMobileNav:boolean
+  /** Overrides the default logout behavior — used by Dashboard to also clear its own admin session state. */
+  onLogout?: () => void;
 }
 
-export function UserProfileDropdown({ onPageChange,showMobileNav }: UserProfileDropdownProps) {
+export function UserProfileDropdown({ onPageChange, showMobileNav, onLogout }: UserProfileDropdownProps) {
   const { user, userRole, logout } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -43,6 +45,10 @@ export function UserProfileDropdown({ onPageChange,showMobileNav }: UserProfileD
   };
 
   const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+      return;
+    }
     logout();
     navigate('/');
   };
@@ -82,15 +88,15 @@ export function UserProfileDropdown({ onPageChange,showMobileNav }: UserProfileD
               : 'shadow-[inset_1px_-1px_1px_0px_rgba(0,0,0,0.15),inset_-2px_2px_1px_-1px_rgba(255,255,255,0.35)]'
           }`} />
           <img
-            src={user.github.avatar_url}
-            alt={user.github.login}
+            src={user.github?.avatar_url || ''}
+            alt={user.github?.login || 'User'}
             className="w-7 h-7 rounded-full border-2 border-[#c9983a] relative z-10 flex-shrink-0"
           />
           <div className="flex flex-col items-start relative z-10 min-w-0">
             <span className={`text-[13px] font-medium leading-tight truncate max-w-[120px] ${ 
               darkTheme ? 'text-[rgba(255,255,255,0.69)]' : 'text-[rgba(45,40,32,0.75)]'
             }`}>
-              {user.github.login}
+              {user.github?.login || 'User'}
             </span>
             <span className="text-[11px] text-[#c9983a] capitalize leading-tight font-medium">
               {userRole}
@@ -117,15 +123,15 @@ export function UserProfileDropdown({ onPageChange,showMobileNav }: UserProfileD
         }`}>
           <div className="flex items-center space-x-3">
             <img
-              src={user.github.avatar_url}
-              alt={user.github.login}
+              src={user.github?.avatar_url || ''}
+              alt={user.github?.login || 'User'}
               className="w-12 h-12 rounded-full border-2 border-[#c9983a] shadow-[0_0_12px_rgba(201,152,58,0.4)]"
             />
             <div className="flex-1">
               <p className={`font-semibold text-sm ${
                 darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
               }`}>
-                {user.github.login}
+                {user.github?.login || 'User'}
               </p>
               <p className="text-xs text-[#c9983a] capitalize font-medium">
                 {userRole}

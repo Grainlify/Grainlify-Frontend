@@ -4,31 +4,17 @@ import { motion, AnimatePresence } from "motion/react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
-  Bell,
   Compass,
   Grid3x3,
   Calendar,
   Globe,
   Users,
-  FolderGit2,
   Trophy,
   Database,
-  Plus,
   FileText,
-  Sparkles,
-  Heart,
-  Star,
-  GitFork,
-  ArrowUpRight,
-  Target,
-  Zap,
-  ChevronDown,
-  CircleDot,
-  Clock,
   Moon,
   Sun,
   Shield,
-  Code,
   X,
   Menu
 } from "lucide-react";
@@ -36,7 +22,6 @@ import { useThemeToggleAnimation } from "../../shared/hooks/useThemeToggleAnimat
 import { useAuth } from "../../shared/contexts/AuthContext";
 import grainlifyLogo from "../../assets/grainlify_log.svg";
 import { useTheme } from "../../shared/contexts/ThemeContext";
-import { LanguageIcon } from "../../shared/components/LanguageIcon";
 import { UserProfileDropdown } from "../../shared/components/UserProfileDropdown";
 import { NotificationsDropdown } from "../../shared/components/NotificationsDropdown";
 import { RoleSwitcher } from "../../shared/components/RoleSwitcher";
@@ -67,7 +52,7 @@ import { SearchPage } from "./pages/SearchPage";
 import { SettingsTabType } from "../settings/types";
 
 export function Dashboard() {
-  const { userRole, logout, login } = useAuth();
+  const { logout, login } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const { ref: themeToggleRef, toggleWithAnimation: toggleSwitchTheme } =
@@ -110,7 +95,6 @@ export function Dashboard() {
   const [activeRole, setActiveRole] = useState<
     "contributor" | "maintainer" | "admin"
   >("contributor");
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   // Initialize viewing user from URL so profile page gets correct user on first render (avoids race with own profile fetch)
   const [viewingUserId, setViewingUserId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -169,9 +153,6 @@ export function Dashboard() {
   const [adminAuthenticated, setAdminAuthenticated] = useState(() => {
     return sessionStorage.getItem("admin_authenticated") === "true";
   });
-  const [pendingAdminTarget, setPendingAdminTarget] = useState<
-    "nav" | "role" | null
-  >(null);
 
   // Check URL params for viewing other users' profiles (tab=profile or page=profile)
   // Re-run when location.search changes so profile user is correct after navigation or reload
@@ -239,16 +220,6 @@ export function Dashboard() {
     localStorage.setItem("dashboardTab", currentPage);
   }, [currentPage, selectedProjectId, selectedIssue, viewingUserId, viewingUserLogin]);
 
-  // Example tab list
-  const tabs = [
-    "discover",
-    "browse",
-    "open-source-week",
-    "ecosystems",
-    "contributors",
-    "settings",
-  ];
-
   // Keyboard shortcut for search (Cmd+K / Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -287,18 +258,8 @@ export function Dashboard() {
     navigate("/");
   };
 
-  const openAdminAuthModal = (target: "nav" | "role") => {
-    setPendingAdminTarget(target);
+  const openAdminAuthModal = () => {
     setShowAdminPasswordModal(true);
-  };
-
-  const handleAdminClick = () => {
-    if (adminAuthenticated) {
-      setActiveRole("admin");
-      handleNavigation("admin");
-      return;
-    }
-    openAdminAuthModal("nav");
   };
 
   const handleAdminPasswordSubmit = async (e: React.FormEvent) => {
@@ -321,7 +282,6 @@ export function Dashboard() {
       setAdminPassword("");
     } finally {
       setIsAuthenticating(false);
-      setPendingAdminTarget(null);
     }
   };
 
@@ -332,7 +292,7 @@ export function Dashboard() {
         handleNavigation("admin");
       } else {
         // Non-admin users can click admin, but must authenticate first.
-        openAdminAuthModal("role");
+        openAdminAuthModal();
       }
       return;
     }
@@ -711,7 +671,7 @@ export function Dashboard() {
             <NotificationsDropdown showMobileNav={!!showMobileNav} closeMobileNav={closeMobileNav}/>
 
             {/* User Profile Dropdown - Shows profile when authenticated, Sign In when not */}
-            <UserProfileDropdown onPageChange={handleNavigation} showMobileNav={!!showMobileNav} />
+            <UserProfileDropdown onPageChange={handleNavigation} showMobileNav={!!showMobileNav} onLogout={handleLogout} />
             {/* mobile nav open button  */}
              <button
             className={`lg:hidden transition-colors ml-auto mr-[8px] ${showMobileNav? 'hidden' : 'block'} ${
@@ -816,7 +776,7 @@ export function Dashboard() {
                     />
                   )}
                 {currentPage === "contributors" && <ContributorsPage />}
-                {currentPage === "maintainers" && <MaintainersPage />}
+                {currentPage === "maintainers" && <MaintainersPage onNavigate={handleNavigation} />}
                 {currentPage === "profile" && (
                   <ProfilePage
                     viewingUserId={viewingUserId}
@@ -869,7 +829,7 @@ export function Dashboard() {
                         Enter the admin password to continue.
                       </p>
                       <button
-                        onClick={() => openAdminAuthModal("nav")}
+                        onClick={() => openAdminAuthModal()}
                         className="px-6 py-3 bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white rounded-[16px] font-semibold text-[14px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_10px_30px_rgba(162,121,44,0.5)] transition-all"
                       >
                         Authenticate
@@ -889,8 +849,9 @@ export function Dashboard() {
                       setProjectBackTarget("discover");
                       setCurrentPage("discover");
                     }}
-                    onContributorClick={(id) => {
-                      // Navigate to profile page or contributors page with selected contributor
+                    onContributorClick={() => {
+                      // TODO: search results are mock data today (no real contributor id
+                      // to view a profile for yet) - revisit once search is backed by the API.
                       setCurrentPage("contributors");
                     }}
                   />
@@ -907,7 +868,6 @@ export function Dashboard() {
         onClose={() => {
           setShowAdminPasswordModal(false);
           setAdminPassword("");
-          setPendingAdminTarget(null);
         }}
         title="Admin Authentication"
         icon={<Shield className="w-6 h-6 text-[#c9983a]" />}
@@ -940,7 +900,6 @@ export function Dashboard() {
               onClick={() => {
                 setShowAdminPasswordModal(false);
                 setAdminPassword("");
-                setPendingAdminTarget(null);
               }}
               disabled={isAuthenticating}
             >
