@@ -89,7 +89,6 @@ out
 
 # Gatsby (if you ever migrate)
 .cache/
-public
 
 # Storybook build outputs
 storybook-static
