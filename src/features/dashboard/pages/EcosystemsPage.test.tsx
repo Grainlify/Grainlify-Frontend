@@ -363,6 +363,15 @@ describe('EcosystemsPage — initial load', () => {
     expect(screen.getByText('No ecosystems found matching your search.')).toBeInTheDocument()
   })
 
+  it('shows filtered count when search filters out some ecosystems', async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByText('Ecosystem 0')).toBeInTheDocument())
+    await userEvent.type(screen.getByPlaceholderText('Search ecosystems...'), 'zzznomatch')
+    await waitFor(() => expect(screen.getByText(/Filtered from/)).toBeInTheDocument())
+    // With 2 ecosystems in the fixture, the plural form should be shown
+    expect(screen.getByText(/Filtered from 2 ecosystems/)).toBeInTheDocument()
+  })
+
   it('re-fetches ecosystems when "ecosystems-updated" event fires', async () => {
     renderPage()
     await waitFor(() => expect(mockGetEcosystems).toHaveBeenCalledTimes(1))

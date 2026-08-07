@@ -183,7 +183,7 @@ export const en = {
   'ecosystems.searchPlaceholder': 'Search ecosystems...',
   'ecosystems.empty.noMatch': 'No ecosystems found matching your search.',
   'ecosystems.empty.none': 'No ecosystems available yet.',
-  'ecosystems.filteredCount': '(Filtered from {count} ecosystems)',
+  'ecosystems.filteredCount': '({count, plural, one {Filtered from # ecosystem} other {Filtered from # ecosystems}})',
   'ecosystems.card.projects': 'Projects',
   'ecosystems.card.contributors': 'Contributors',
   'ecosystems.card.visitWebsite': 'Visit Website',
