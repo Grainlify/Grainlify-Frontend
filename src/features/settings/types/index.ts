@@ -57,36 +57,9 @@ export interface PayoutProject {
   billingProfile: string | null;
 }
 
-// Notification types
-export interface NotificationSettings {
-  // Global
-  globalBillingEmail: boolean;
-  globalBillingWeekly: boolean;
-  globalMarketingEmail: boolean;
-  globalMarketingWeekly: boolean;
-  
-  // Contributor
-  contributorProjectEmail: boolean;
-  contributorProjectWeekly: boolean;
-  contributorRewardEmail: boolean;
-  contributorRewardWeekly: boolean;
-  contributorRewardAcceptedEmail: boolean;
-  contributorRewardAcceptedWeekly: boolean;
-  
-  // Maintainer
-  maintainerProjectContributorEmail: boolean;
-  maintainerProjectContributorWeekly: boolean;
-  maintainerProjectProgramEmail: boolean;
-  maintainerProjectProgramWeekly: boolean;
-  
-  // Programs
-  programsTransactionsEmail: boolean;
-  programsTransactionsWeekly: boolean;
-  
-  // Sponsors
-  sponsorsTransactionsEmail: boolean;
-  sponsorsTransactionsWeekly: boolean;
-}
+// Notification types live in shared/api/client.ts (NotificationPreference) -
+// preferences are a dynamic list keyed by backend notification type, not a
+// fixed set of named boolean fields.
 
 // Wallet types
 export interface TokenWallets {

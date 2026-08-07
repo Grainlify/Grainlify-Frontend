@@ -47,8 +47,8 @@ async function apiRequest<T>(
     console.log("API Request - API_BASE_URL:", API_BASE_URL);
     console.log("API Request - endpoint:", endpoint);
   }
-  const requestHeaders: HeadersInit = {
-    ...headers,
+  const requestHeaders: Record<string, string> = {
+    ...(headers as Record<string, string>),
   };
 
   // Avoid forcing CORS preflight for simple GET/HEAD requests by only setting
@@ -60,7 +60,7 @@ async function apiRequest<T>(
   } else if (
     method !== "GET" &&
     method !== "HEAD" &&
-    !("Content-Type" in (requestHeaders as any))
+    !("Content-Type" in requestHeaders)
   ) {
     // Non-GET/HEAD without an explicit content-type: default to JSON for our API.
     requestHeaders["Content-Type"] = "application/json";
@@ -351,6 +351,11 @@ export const updateProfile = (data: {
   location?: string;
   website?: string;
   bio?: string;
+  telegram?: string;
+  linkedin?: string;
+  whatsapp?: string;
+  twitter?: string;
+  discord?: string;
 }) =>
   apiRequest<{ message: string }>("/profile/update", {
     method: "PUT",
@@ -772,6 +777,62 @@ export const getKYCStatus = () =>
     data?: any;
     extracted?: any;
   }>("/auth/kyc/status", { requiresAuth: true });
+
+// Notifications
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  body?: string;
+  link_path?: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+export const getNotifications = (params?: { limit?: number; offset?: number; unreadOnly?: boolean }) => {
+  const q = new URLSearchParams();
+  if (params?.limit) q.append("limit", params.limit.toString());
+  if (params?.offset) q.append("offset", params.offset.toString());
+  if (params?.unreadOnly) q.append("unread_only", "true");
+  const qs = q.toString();
+  return apiRequest<{ notifications: AppNotification[] }>(
+    `/notifications/${qs ? `?${qs}` : ""}`,
+    { requiresAuth: true }
+  );
+};
+
+export const getNotificationCount = () =>
+  apiRequest<{ count: number }>("/notifications/unread-count", { requiresAuth: true });
+
+export const markNotificationRead = (id: string) =>
+  apiRequest<{ ok: boolean }>(`/notifications/${id}/read`, {
+    requiresAuth: true,
+    method: "POST",
+  });
+
+export const markAllNotificationsRead = () =>
+  apiRequest<{ ok: boolean }>("/notifications/read-all", {
+    requiresAuth: true,
+    method: "POST",
+  });
+
+export interface NotificationPreference {
+  type: string;
+  in_app: boolean;
+  email: boolean;
+}
+
+export const getNotificationPreferences = () =>
+  apiRequest<{ preferences: NotificationPreference[] }>("/notifications/preferences", {
+    requiresAuth: true,
+  });
+
+export const updateNotificationPreferences = (preferences: NotificationPreference[]) =>
+  apiRequest<{ ok: boolean }>("/notifications/preferences", {
+    requiresAuth: true,
+    method: "PUT",
+    body: JSON.stringify({ preferences }),
+  });
 
 // My Projects (for maintainers)
 export const getMyProjects = () =>
