@@ -93,3 +93,41 @@ jobs:
 
       - name: Deploy prebuilt artifacts
         run: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+
+      # Verifies the artifact that's actually live, not just that the build
+      # succeeded - a pre-deploy test runs against source code, never
+      # against what Vercel's own env var resolution and CDN actually serve.
+      # Added after a real incident: a Vercel env var typed "Sensitive"
+      # silently baked the literal string "[SENSITIVE]" into the production
+      # bundle instead of the real backend URL (Vercel only resolves
+      # Sensitive vars during its own native builds, not CLI-driven ones
+      # like this deploy job), breaking sign-in with no error anywhere in
+      # this pipeline. The build succeeded; the deploy succeeded; the site
+      # was still broken. This step exists so that specific failure mode -
+      # and the general class of "build fine, serve broken" - shows up here
+      # instead of being discovered by a user.
+      - name: Smoke test production
+        run: |
+          echo "Checking the homepage loads..."
+          html=$(curl -sf -m 15 https://grainlify.0xo.in/)
+          if ! echo "$html" | grep -q "<title>Grainlify</title>"; then
+            echo "::error::Homepage did not return the expected title"
+            exit 1
+          fi
+
+          bundle_path=$(echo "$html" | grep -oE '/assets/index-[A-Za-z0-9]+\.js' | head -1)
+          if [ -z "$bundle_path" ]; then
+            echo "::error::Could not find the main JS bundle reference in the homepage HTML"
+            exit 1
+          fi
+          bundle=$(curl -sf -m 15 "https://grainlify.0xo.in$bundle_path")
+
+          if echo "$bundle" | grep -q '\[SENSITIVE\]'; then
+            echo "::error::Production bundle contains the literal string [SENSITIVE] - a Vercel env var is misconfigured as Sensitive and isn't resolving for CLI-driven builds. See VITE_API_BASE_URL in the Vercel dashboard (must be Non-sensitive)."
+            exit 1
+          fi
+          if ! echo "$bundle" | grep -qE "https://api\.grainlify\.0xo\.in"; then
+            echo "::error::Production bundle does not contain the expected backend API URL"
+            exit 1
+          fi
+          echo "Bundle OK: backend URL correctly baked in, no [SENSITIVE] placeholder"
