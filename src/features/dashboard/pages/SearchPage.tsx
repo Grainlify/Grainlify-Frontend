@@ -119,12 +119,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
   };
 
   return (
-    <div className={`min-h-screen rounded-[29px] transition-colors ${
-      darkTheme
-        ? 'bg-[#2d2820]/[0.4]'
-        : 'bg-white/[0.35]'
-    }`}>
-      <div className="max-w-[1100px] mx-auto px-8 py-12">
+    <div className="max-w-[1100px] mx-auto px-4 md:px-8 py-8 md:py-12">
         {/* Back Button */}
         <button
           onClick={onBack}
@@ -312,6 +307,5 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
           </div>
         )}
       </div>
-    </div>
   );
 }
