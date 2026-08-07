@@ -1,5 +1,26 @@
 @custom-variant dark (&:is(.dark *));
 
+/* Native <button>/<select> elements don't get cursor: pointer by default in any
+   browser (only <a href> does) — apply it site-wide to every clickable control. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+a[href],
+input[type="submit"]:not(:disabled),
+input[type="button"]:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+select:not(:disabled),
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */
