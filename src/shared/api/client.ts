@@ -207,11 +207,24 @@ export const resyncGitHubProfile = () =>
     };
   }>("/me/github/resync", { requiresAuth: true, method: "POST" });
 
+// Referral code storage: captured from a "?ref=" URL param at app root
+// (see App.tsx) and persisted here so it survives navigation to whatever
+// page the user actually clicks "Sign in" from.
+const REFERRAL_CODE_STORAGE_KEY = "grainlify_ref_code";
+
+export const captureReferralCodeFromURL = (): void => {
+  const ref = new URLSearchParams(window.location.search).get("ref");
+  if (ref) localStorage.setItem(REFERRAL_CODE_STORAGE_KEY, ref);
+};
+
 export const getGitHubLoginUrl = () => {
   // Pass the current frontend origin as redirect parameter
   // This allows the backend to redirect back to the correct frontend after OAuth
   const redirectAfterLogin = window.location.origin;
-  return `${API_BASE_URL}/auth/github/login/start?redirect=${encodeURIComponent(redirectAfterLogin)}`;
+  const params = new URLSearchParams({ redirect: redirectAfterLogin });
+  const refCode = localStorage.getItem(REFERRAL_CODE_STORAGE_KEY);
+  if (refCode) params.set("ref", refCode);
+  return `${API_BASE_URL}/auth/github/login/start?${params.toString()}`;
 };
 
 export const getGitHubStatus = () =>
@@ -777,6 +790,19 @@ export const getKYCStatus = () =>
     data?: any;
     extracted?: any;
   }>("/auth/kyc/status", { requiresAuth: true });
+
+// Referral program
+export interface ReferralStats {
+  code: string;
+  total_referred: number;
+  pending: number;
+  completed: number;
+  points_earned: number;
+  points_per_referral: number;
+}
+
+export const getReferralStats = () =>
+  apiRequest<ReferralStats>("/referrals/me", { requiresAuth: true });
 
 // Notifications
 export interface AppNotification {

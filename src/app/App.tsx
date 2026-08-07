@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/contexts/AuthContext";
 import { ThemeProvider } from "../shared/contexts/ThemeContext";
@@ -5,6 +6,7 @@ import { LandingPage } from "../features/landing";
 import { SignInPage, SignUpPage, AuthCallbackPage } from "../features/auth";
 import { Dashboard } from "../features/dashboard";
 import Toast from "../shared/components/Toast";
+import { captureReferralCodeFromURL } from "../shared/api/client";
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -19,6 +21,13 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 }
 
 export default function App() {
+  // Captures "?ref=" from whatever page the user first lands on (landing
+  // page, a shared project link, etc.) so it's available later when they
+  // actually click Sign in - see shared/api/client.ts getGitHubLoginUrl.
+  useEffect(() => {
+    captureReferralCodeFromURL();
+  }, []);
+
   return (
     <BrowserRouter>
       <ThemeProvider>

@@ -38,6 +38,11 @@ const NOTIFICATION_TYPE_INFO: Record<string, NotificationTypeInfo> = {
     title: 'Reward received',
     description: 'When you receive a reward for a completed contribution.',
   },
+  referral_completed: {
+    section: 'Contributor',
+    title: 'Referral reward earned',
+    description: 'When someone you referred completes GitHub sign-in and identity verification.',
+  },
   issue_application_submitted: {
     section: 'Maintainer',
     title: 'New application',

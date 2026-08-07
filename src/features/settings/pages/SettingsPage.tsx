@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SettingsTabType } from '../types';
 import { ProfileTab } from '../components/profile/ProfileTab';
 import { NotificationsTab } from '../components/notifications/NotificationsTab';
+import { ReferralsTab } from '../components/referrals/ReferralsTab';
 import { PayoutTab } from '../components/payout/PayoutTab';
 import { BillingTab } from '../components/billing/BillingTab';
 import { TermsTab } from '../components/terms/TermsTab';
@@ -19,6 +20,7 @@ export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
   const tabs: { id: SettingsTabType; label: string }[] = [
     { id: 'profile', label: 'Profile' },
     { id: 'notifications', label: 'Notifications' },
+    { id: 'referrals', label: 'Referrals' },
     { id: 'payout', label: 'Payout Preferences' },
     { id: 'billing', label: 'Billing Profiles' },
     { id: 'terms', label: 'Terms and Conditions' },
@@ -57,6 +59,7 @@ export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
         {/* Tab Content */}
         {activeTab === 'profile' && <ProfileTab />}
         {activeTab === 'notifications' && <NotificationsTab />}
+        {activeTab === 'referrals' && <ReferralsTab />}
         {activeTab === 'payout' && <PayoutTab />}
         {activeTab === 'billing' && <BillingTab />}
         {activeTab === 'terms' && <TermsTab />}

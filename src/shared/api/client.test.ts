@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   checkHealth,
   getCurrentUser,
@@ -7,6 +7,8 @@ import {
   getPublicProjects,
   getEcosystems,
   bootstrapAdmin,
+  getGitHubLoginUrl,
+  captureReferralCodeFromURL,
 } from './client'
 
 // This codebase's convention is 100% manual fetch mocking (no msw). The base
@@ -258,4 +260,36 @@ describe('endpoint exports (table-driven spot checks)', () => {
       }
     }
   )
+})
+
+describe('referral code capture and injection', () => {
+  afterEach(() => {
+    window.history.pushState({}, '', '/')
+  })
+
+  it('captureReferralCodeFromURL stores a "ref" query param into localStorage', () => {
+    window.history.pushState({}, '', '/?ref=ABC123')
+    captureReferralCodeFromURL()
+    expect(window.localStorage.getItem('grainlify_ref_code')).toBe('ABC123')
+  })
+
+  it('captureReferralCodeFromURL does nothing when there is no "ref" param', () => {
+    window.history.pushState({}, '', '/?foo=bar')
+    captureReferralCodeFromURL()
+    expect(window.localStorage.getItem('grainlify_ref_code')).toBeNull()
+  })
+
+  it('getGitHubLoginUrl includes "ref" when a code was previously captured', () => {
+    window.history.pushState({}, '', '/?ref=XYZ789')
+    captureReferralCodeFromURL()
+
+    const url = new URL(getGitHubLoginUrl())
+    expect(url.searchParams.get('ref')).toBe('XYZ789')
+    expect(url.searchParams.get('redirect')).toBe(window.location.origin)
+  })
+
+  it('getGitHubLoginUrl omits "ref" when no code was ever captured', () => {
+    const url = new URL(getGitHubLoginUrl())
+    expect(url.searchParams.has('ref')).toBe(false)
+  })
 })

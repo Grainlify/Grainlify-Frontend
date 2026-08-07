@@ -75,4 +75,9 @@ describe('App routing', () => {
 
     expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
   })
+
+  it('captures a "ref" query param from the landing URL into localStorage', () => {
+    renderAppAt('/?ref=WELCOME42')
+    expect(window.localStorage.getItem('grainlify_ref_code')).toBe('WELCOME42')
+  })
 })
