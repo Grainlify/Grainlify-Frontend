@@ -43,6 +43,21 @@ const NOTIFICATION_TYPE_INFO: Record<string, NotificationTypeInfo> = {
     title: 'Referral reward earned',
     description: 'When someone you referred completes GitHub sign-in and identity verification.',
   },
+  social_follow_completed: {
+    section: 'Contributor',
+    title: 'Social follow reward earned',
+    description: 'When your follow proof is approved for every platform.',
+  },
+  redemption_paid: {
+    section: 'Contributor',
+    title: 'Redemption paid',
+    description: 'When a points-to-USDC redemption request is paid out.',
+  },
+  redemption_rejected: {
+    section: 'Contributor',
+    title: 'Redemption rejected',
+    description: 'When a redemption request is rejected and your points are refunded.',
+  },
   issue_application_submitted: {
     section: 'Maintainer',
     title: 'New application',

@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { Modal, ModalFooter, ModalButton, ModalInput, ModalSelect } from '../../../shared/components/ui/Modal';
 import { DatePicker } from '../../../shared/components/ui/DatePicker';
 import { createEcosystem, getAdminEcosystems, getAdminEcosystem, deleteEcosystem, updateEcosystem, createOpenSourceWeekEvent, getAdminOpenSourceWeekEvents, deleteOpenSourceWeekEvent } from '../../../shared/api/client';
+import { SocialFollowReview } from '../components/SocialFollowReview';
+import { RedemptionsReview } from '../components/RedemptionsReview';
 
 interface EcosystemLink {
   label: string;
@@ -943,6 +945,9 @@ export function AdminPage() {
           </div>
         )}
       </div>
+
+      <SocialFollowReview />
+      <RedemptionsReview />
 
       {/* Add Ecosystem Modal */}
       <Modal

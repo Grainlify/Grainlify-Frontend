@@ -31,6 +31,15 @@ vi.mock('sonner', () => ({
   },
 }))
 
+// Unrelated to what this file tests (ecosystems/OSW CRUD) - covered by their
+// own SocialFollowReview.test.tsx / RedemptionsReview.test.tsx.
+vi.mock('../components/SocialFollowReview', () => ({
+  SocialFollowReview: () => null,
+}))
+vi.mock('../components/RedemptionsReview', () => ({
+  RedemptionsReview: () => null,
+}))
+
 // The real DatePicker is a Radix Popover + react-day-picker calendar — driving
 // it via click-through-a-calendar-grid is brittle and jsdom lacks the pointer
 // APIs Radix Select/Popover reach for. Stub it as a plain labeled input so the

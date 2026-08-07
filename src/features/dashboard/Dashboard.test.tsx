@@ -56,6 +56,16 @@ vi.mock('../../shared/api/client', () => ({
   bootstrapAdmin: vi.fn(),
 }))
 
+// The admin-activation flow below renders the real AdminPage, which in turn
+// renders these two - unrelated to what this suite tests (shell nav/auth),
+// and covered by their own SocialFollowReview.test.tsx / RedemptionsReview.test.tsx.
+vi.mock('../admin/components/SocialFollowReview', () => ({
+  SocialFollowReview: () => null,
+}))
+vi.mock('../admin/components/RedemptionsReview', () => ({
+  RedemptionsReview: () => null,
+}))
+
 const { mockLogin, mockLogout } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
   mockLogout: vi.fn(),

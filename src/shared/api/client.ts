@@ -804,6 +804,116 @@ export interface ReferralStats {
 export const getReferralStats = () =>
   apiRequest<ReferralStats>("/referrals/me", { requiresAuth: true });
 
+// Points balance (shared across referrals + social-follow + any future source)
+export interface PointsBalance {
+  balance: number;
+  usdc_per_point: number;
+  min_redemption_points: number;
+}
+
+export const getPointsBalance = () =>
+  apiRequest<PointsBalance>("/points/me", { requiresAuth: true });
+
+// Social-follow program
+export const SOCIAL_FOLLOW_PLATFORMS = ["github", "telegram", "linkedin"] as const;
+export type SocialFollowPlatform = (typeof SOCIAL_FOLLOW_PLATFORMS)[number];
+
+export interface SocialFollowPlatformStatus {
+  platform: string;
+  status: "pending" | "approved" | "rejected" | null;
+  rejection_reason?: string;
+}
+
+export interface SocialFollowStatus {
+  platforms: SocialFollowPlatformStatus[];
+  completed: boolean;
+  points_awarded: number;
+  points_reward: number;
+}
+
+export const getSocialFollowStatus = () =>
+  apiRequest<SocialFollowStatus>("/social-follow/me", { requiresAuth: true });
+
+export const submitSocialFollowProof = (platform: SocialFollowPlatform, screenshot: string) =>
+  apiRequest<{ ok: boolean }>(`/social-follow/${platform}/submit`, {
+    requiresAuth: true,
+    method: "POST",
+    body: JSON.stringify({ screenshot }),
+  });
+
+export interface SocialFollowSubmission {
+  id: string;
+  user_id: string;
+  login?: string;
+  platform: string;
+  screenshot: string;
+  status: string;
+  created_at: string;
+}
+
+export const getAdminSocialFollowSubmissions = (status: string = "pending") =>
+  apiRequest<{ submissions: SocialFollowSubmission[] }>(
+    `/admin/social-follow/submissions?status=${encodeURIComponent(status)}`,
+    { requiresAuth: true }
+  );
+
+export const approveSocialFollowSubmission = (id: string) =>
+  apiRequest<{ ok: boolean }>(`/admin/social-follow/submissions/${id}/approve`, {
+    requiresAuth: true,
+    method: "POST",
+  });
+
+export const rejectSocialFollowSubmission = (id: string, reason?: string) =>
+  apiRequest<{ ok: boolean }>(`/admin/social-follow/submissions/${id}/reject`, {
+    requiresAuth: true,
+    method: "POST",
+    body: JSON.stringify({ reason: reason ?? "" }),
+  });
+
+// Points -> USDC redemption
+export interface Redemption {
+  id: string;
+  points_spent: number;
+  usdc_amount: string;
+  stellar_wallet_address: string;
+  status: "pending" | "paid" | "rejected";
+  created_at: string;
+}
+
+export const createRedemption = (points: number, stellarWalletAddress: string) =>
+  apiRequest<{ id: string; usdc_amount: number }>("/redemptions", {
+    requiresAuth: true,
+    method: "POST",
+    body: JSON.stringify({ points, stellar_wallet_address: stellarWalletAddress }),
+  });
+
+export const getMyRedemptions = () =>
+  apiRequest<{ redemptions: Redemption[] }>("/redemptions/me", { requiresAuth: true });
+
+export interface AdminRedemption extends Redemption {
+  user_id: string;
+  login?: string;
+}
+
+export const getAdminRedemptions = (status: string = "pending") =>
+  apiRequest<{ redemptions: AdminRedemption[] }>(
+    `/admin/redemptions?status=${encodeURIComponent(status)}`,
+    { requiresAuth: true }
+  );
+
+export const markRedemptionPaid = (id: string) =>
+  apiRequest<{ ok: boolean }>(`/admin/redemptions/${id}/mark-paid`, {
+    requiresAuth: true,
+    method: "POST",
+  });
+
+export const rejectRedemption = (id: string, reason?: string) =>
+  apiRequest<{ ok: boolean }>(`/admin/redemptions/${id}/reject`, {
+    requiresAuth: true,
+    method: "POST",
+    body: JSON.stringify({ reason: reason ?? "" }),
+  });
+
 // Notifications
 export interface AppNotification {
   id: string;

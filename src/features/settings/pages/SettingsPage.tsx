@@ -3,6 +3,7 @@ import { SettingsTabType } from '../types';
 import { ProfileTab } from '../components/profile/ProfileTab';
 import { NotificationsTab } from '../components/notifications/NotificationsTab';
 import { ReferralsTab } from '../components/referrals/ReferralsTab';
+import { RewardsTab } from '../components/rewards/RewardsTab';
 import { PayoutTab } from '../components/payout/PayoutTab';
 import { BillingTab } from '../components/billing/BillingTab';
 import { TermsTab } from '../components/terms/TermsTab';
@@ -21,6 +22,7 @@ export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
     { id: 'profile', label: 'Profile' },
     { id: 'notifications', label: 'Notifications' },
     { id: 'referrals', label: 'Referrals' },
+    { id: 'rewards', label: 'Rewards' },
     { id: 'payout', label: 'Payout Preferences' },
     { id: 'billing', label: 'Billing Profiles' },
     { id: 'terms', label: 'Terms and Conditions' },
@@ -60,6 +62,7 @@ export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
         {activeTab === 'profile' && <ProfileTab />}
         {activeTab === 'notifications' && <NotificationsTab />}
         {activeTab === 'referrals' && <ReferralsTab />}
+        {activeTab === 'rewards' && <RewardsTab />}
         {activeTab === 'payout' && <PayoutTab />}
         {activeTab === 'billing' && <BillingTab />}
         {activeTab === 'terms' && <TermsTab />}

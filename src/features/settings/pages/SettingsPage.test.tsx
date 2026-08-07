@@ -12,6 +12,9 @@ vi.mock('../components/notifications/NotificationsTab', () => ({
 vi.mock('../components/referrals/ReferralsTab', () => ({
   ReferralsTab: () => <div data-testid="referrals-tab" />,
 }))
+vi.mock('../components/rewards/RewardsTab', () => ({
+  RewardsTab: () => <div data-testid="rewards-tab" />,
+}))
 vi.mock('../components/payout/PayoutTab', () => ({
   PayoutTab: () => <div data-testid="payout-tab" />,
 }))
@@ -28,6 +31,7 @@ describe('SettingsPage', () => {
     expect(screen.getByTestId('profile-tab')).toBeInTheDocument()
     expect(screen.queryByTestId('notifications-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('referrals-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('rewards-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('payout-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('billing-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('terms-tab')).not.toBeInTheDocument()
@@ -39,7 +43,7 @@ describe('SettingsPage', () => {
     expect(screen.queryByTestId('profile-tab')).not.toBeInTheDocument()
   })
 
-  it('clicking each of the 6 tab buttons swaps which mocked tab renders', async () => {
+  it('clicking each of the 7 tab buttons swaps which mocked tab renders', async () => {
     const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)
 
@@ -54,9 +58,13 @@ describe('SettingsPage', () => {
     expect(screen.getByTestId('referrals-tab')).toBeInTheDocument()
     expect(screen.queryByTestId('notifications-tab')).not.toBeInTheDocument()
 
+    await user.click(screen.getByRole('button', { name: 'Rewards' }))
+    expect(screen.getByTestId('rewards-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('referrals-tab')).not.toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: 'Payout Preferences' }))
     expect(screen.getByTestId('payout-tab')).toBeInTheDocument()
-    expect(screen.queryByTestId('referrals-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('rewards-tab')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Billing Profiles' }))
     expect(screen.getByTestId('billing-tab')).toBeInTheDocument()
