@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "motion/react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
@@ -13,7 +15,6 @@ import {
   Database,
   Plus,
   FileText,
-  ChevronRight,
   Sparkles,
   Heart,
   Star,
@@ -31,7 +32,7 @@ import {
   X,
   Menu
 } from "lucide-react";
-import { useModeAnimation } from "react-theme-switch-animation";
+import { useThemeToggleAnimation } from "../../shared/hooks/useThemeToggleAnimation";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import grainlifyLogo from "../../assets/grainlify_log.svg";
 import { useTheme } from "../../shared/contexts/ThemeContext";
@@ -67,12 +68,10 @@ import { SettingsTabType } from "../settings/types";
 
 export function Dashboard() {
   const { userRole, logout, login } = useAuth();
-  const { theme, setThemeFromAnimation } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-  const { ref: themeToggleRef, toggleSwitchTheme } = useModeAnimation({
-    isDarkMode: theme === "dark",
-    onDarkModeChange: (isDark) => setThemeFromAnimation(isDark),
-  });
+  const { ref: themeToggleRef, toggleWithAnimation: toggleSwitchTheme } =
+    useThemeToggleAnimation({ onToggle: toggleTheme });
   const navigate = useNavigate();
   // const [currentPage, setCurrentPage] = useState('discover');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
@@ -103,8 +102,11 @@ export function Dashboard() {
   const [selectedEventName, setSelectedEventName] = useState<string | null>(
     null,
   );
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
-     typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [hoveredNavItem, setHoveredNavItem] = useState<{
+    label: string;
+    top: number;
+    left: number;
+  } | null>(null);
   const [activeRole, setActiveRole] = useState<
     "contributor" | "maintainer" | "admin"
   >("contributor");
@@ -423,26 +425,8 @@ export function Dashboard() {
         />
       </div>
 
-      {/* Sidebar */}
-      <aside
-        className={`fixed top-2 left-2 bottom-2 z-50 transition-all duration-300 ${isSidebarCollapsed ? "w-[65px] mr-2" : "w-56 mr-2"}`}
-      >
-        {/* Toggle Arrow Button - positioned at top of sidebar aligned with header */}
-        <button
-          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className={`absolute z-[100] backdrop-blur-[90px] rounded-full border-[0.5px] w-6 h-6 shadow-md hover:shadow-lg transition-all flex items-center justify-center ${
-            isSidebarCollapsed ? "-right-3 top-[60px]" : "-right-3 top-[60px]"
-          } ${
-            darkTheme
-              ? "bg-[#2d2820]/[0.85] border-[rgba(201,152,58,0.2)]"
-              : "bg-white/[0.85] border-[rgba(245,239,235,0.32)]"
-          }`}
-        >
-          <ChevronRight
-            className={`w-3 h-3 text-[#c9983a] transition-transform duration-300 ${isSidebarCollapsed ? "" : "rotate-180"}`}
-          />
-        </button>
-
+      {/* Sidebar — permanently collapsed to an icon rail; labels show via hover tooltip */}
+      <aside className="fixed top-2 left-2 bottom-2 z-50 w-[65px] mr-2">
         <div
           className={`h-full backdrop-blur-[90px] rounded-[29px] border shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] relative overflow-y-auto scrollbar-hide transition-colors ${
             darkTheme
@@ -451,48 +435,27 @@ export function Dashboard() {
           }`}
         >
           <div className="flex flex-col h-full px-0 py-[40px]">
-            {/* Logo/Avatar */}
-            <div
-              className={`flex items-center mb-6 transition-all ${isSidebarCollapsed ? "px-[8px] justify-center" : "px-2 justify-start"}`}
-            >
-              {isSidebarCollapsed ? (
-                <img
-                  src={grainlifyLogo}
-                  alt="Grainlify"
-                  className="w-12 h-12 grainlify-logo"
-                />
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <img
-                    src={grainlifyLogo}
-                    alt="Grainlify"
-                    className="w-12 h-12 grainlify-logo"
-                  />
-                  <span
-                    className={`text-[20px] font-bold transition-colors ${
-                      darkTheme ? "text-[#f5efe5]" : "text-[#2d2820]"
-                    }`}
-                  >
-                    Grainlify
-                  </span>
-                </div>
-              )}
+            {/* Logo */}
+            <div className="flex items-center justify-center mb-6 px-[8px]">
+              <img
+                src={grainlifyLogo}
+                alt="Grainlify"
+                className="w-12 h-12 grainlify-logo"
+              />
             </div>
 
             {/* Divider */}
             <div
               className="h-[0.5px] opacity-[0.24] mb-6 mx-auto"
               style={{
-                width: isSidebarCollapsed ? "60px" : "100%",
+                width: "60px",
                 backgroundImage:
                   'url(\'data:image/svg+xml;utf8,<svg viewBox="0 0 104 0.5" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><rect x="0" y="0" height="100%" width="100%" fill="url(%23grad)" opacity="1"/><defs><radialGradient id="grad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="10" gradientTransform="matrix(3.1841e-16 0.025 -5.2 1.5308e-18 52 0.25)"><stop stop-color="rgba(67,44,44,1)" offset="0"/><stop stop-color="rgba(80,28,28,0)" offset="1"/></radialGradient></defs></svg>\')',
               }}
             />
 
             {/* Main Navigation */}
-            <nav
-              className={`space-y-2 mb-auto ${isSidebarCollapsed ? "px-[8px]" : "px-2"}`}
-            >
+            <nav className="space-y-2 mb-auto px-[8px]">
               {navItems.map((item) => {
                 const isActive = currentPage === item.id;
                 const Icon = item.icon as any;
@@ -500,18 +463,22 @@ export function Dashboard() {
                   <button
                     key={item.id}
                     onClick={() => handleNavigation(item.id)}
-                    className={`group relative w-full flex items-center rounded-[12px] backdrop-blur-[40px] transition-all duration-300 ${
-                      isSidebarCollapsed
-                        ? "justify-center px-0 h-[49px]"
-                        : "justify-start px-3 py-2.5"
-                    } ${
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setHoveredNavItem({
+                        label: item.label,
+                        top: rect.top + rect.height / 2,
+                        left: rect.right,
+                      });
+                    }}
+                    onMouseLeave={() => setHoveredNavItem(null)}
+                    className={`group relative w-full flex items-center justify-center px-0 h-[49px] rounded-[12px] backdrop-blur-[40px] transition-all duration-300 ${
                       isActive
                         ? "bg-[#c9983a] shadow-[inset_0px_0px_4px_0px_rgba(255,255,255,0.25)] border-[0.5px] border-[rgba(245,239,235,0.16)]"
                         : darkTheme
                           ? "bg-[#2d2820] shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] hover:scale-[1.01]"
                           : "bg-[#d4c5b0] shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] hover:scale-[1.01]"
                     }`}
-                    title={isSidebarCollapsed ? item.label : ""}
                   >
                     {!isActive && (
                       <div
@@ -523,7 +490,7 @@ export function Dashboard() {
                       />
                     )}
                     <Icon
-                      className={`w-6 h-6 transition-colors ${isSidebarCollapsed ? "" : "flex-shrink-0"} ${
+                      className={`w-6 h-6 transition-colors ${
                         isActive
                           ? "text-white"
                           : darkTheme
@@ -531,19 +498,6 @@ export function Dashboard() {
                             : "text-[#a2792c]"
                       }`}
                     />
-                    {!isSidebarCollapsed && (
-                      <span
-                        className={`ml-3 font-medium text-[14px] ${
-                          isActive
-                            ? "text-white"
-                            : darkTheme
-                              ? "text-[#d4c5b0]"
-                              : "text-[#6b5d4d]"
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                    )}
                   </button>
                 );
               })}
@@ -552,16 +506,40 @@ export function Dashboard() {
         </div>
       </aside>
 
+      {/* Sidebar hover tooltip — portaled to body so it can't be clipped by the
+          sidebar's own overflow-y-auto (which implicitly clips overflow-x too) */}
+      {createPortal(
+        <AnimatePresence>
+          {hoveredNavItem && (
+            <motion.div
+              initial={{ opacity: 0, x: -4 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -4 }}
+              transition={{ duration: 0.15 }}
+              className={`fixed z-[300] pointer-events-none px-3 py-1.5 rounded-[10px] text-[13px] font-medium whitespace-nowrap backdrop-blur-[20px] border shadow-[0_4px_16px_rgba(0,0,0,0.24)] ${
+                darkTheme
+                  ? "bg-[#2d2820]/95 border-white/15 text-[#f5efe5]"
+                  : "bg-white/95 border-white/40 text-[#2d2820]"
+              }`}
+              style={{
+                top: hoveredNavItem.top,
+                left: hoveredNavItem.left + 12,
+                transform: "translateY(-50%)",
+              }}
+            >
+              {hoveredNavItem.label}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
+
       {/* Main Content */}
-      <main
-        className={`mr-2 my-2 relative z-10 transition-all duration-300 ${isSidebarCollapsed ? "ml-[81px]" : "ml-[240px]"}`}
-      >
+      <main className="mr-2 my-2 relative z-10 ml-[81px]">
         <div className="max-w-[1400px] mx-auto">
           {/* Premium Pill-Style Header - Greatest of All Time */}
           <div
-            className={`fixed top-2 right-2 left-auto z-[9999] flex items-center gap-1 md:gap-2 lg:gap-3 lg:h-[52px] py-3 rounded-[26px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] backdrop-blur-[90px] border transition-all duration-300 ${
-              isSidebarCollapsed ? "ml-[81px]" : "ml-[240px]"
-            } ${
+            className={`fixed top-2 right-2 left-auto z-[9999] flex items-center gap-1 md:gap-2 lg:gap-3 lg:h-[52px] py-3 rounded-[26px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] backdrop-blur-[90px] border ml-[81px] transition-all duration-300 ${
               darkTheme
                 ? "bg-[#2d2820]/[0.4] border-white/10 shadow-[inset_0px_0px_9px_0px_rgba(201,152,58,0.1)]"
                 : "bg-white/[0.35] border-white shadow-[inset_0px_0px_9px_0px_rgba(255,255,255,0.5)]"
@@ -569,7 +547,7 @@ export function Dashboard() {
           ${showMobileNav? "h-screen flex-col":"" } 
           `}
             style={{
-              width: `calc(100vw - ${isSidebarCollapsed ? "81px" : "240px"} - 8px - 8px)`,
+              width: `calc(100vw - 81px - 8px - 8px)`,
             }}
           >
           
