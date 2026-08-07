@@ -56,8 +56,8 @@ export function IssueCard({
         onClick={onClick}
         className={`backdrop-blur-[30px] rounded-[16px] border p-5 transition-all cursor-pointer ${
           isDark
-            ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.12]'
-            : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2]'
+            ? 'bg-white/[0.08] border-white/15 shadow-[0_4px_16px_rgba(0,0,0,0.24)] hover:bg-white/[0.12]'
+            : 'bg-white/[0.15] border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:bg-white/[0.2]'
         }`}
       >
         <div className="flex items-start justify-between mb-2">
@@ -114,8 +114,8 @@ export function IssueCard({
             ? 'border-[#c9983a] bg-[#c9983a]/10'
             : 'border-2 border-[#c9983a] bg-gradient-to-br from-[#c9983a]/20 to-[#d4af37]/15 shadow-sm hover:from-[#c9983a]/25 hover:to-[#d4af37]/20'
           : isDark
-            ? 'bg-white/[0.12] border-white/20 hover:bg-white/[0.15]'
-            : 'bg-white/[0.12] border-white/20 hover:bg-white/[0.15]'
+            ? 'bg-white/[0.12] border-white/20 shadow-[0_4px_16px_rgba(0,0,0,0.24)] hover:bg-white/[0.15]'
+            : 'bg-white/[0.12] border-white/20 shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:bg-white/[0.15]'
       }`}
     >
       {/* Issue Header */}

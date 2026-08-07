@@ -7,7 +7,7 @@ export function ProjectCardSkeleton() {
 
   return (
     <div
-      className={`backdrop-blur-[30px] rounded-[18px] border p-5 ${
+      className={`backdrop-blur-[30px] rounded-[16px] border p-5 ${
         isDark
           ? 'bg-white/[0.08] border-white/15'
           : 'bg-white/[0.15] border-white/25'
@@ -49,9 +49,9 @@ export function ProjectCardSkeleton() {
 
       {/* Tags */}
       <div className="flex flex-wrap gap-1.5">
-        <SkeletonLoader className="h-6 w-20 rounded-[8px]" />
-        <SkeletonLoader className="h-6 w-24 rounded-[8px]" />
-        <SkeletonLoader className="h-6 w-16 rounded-[8px]" />
+        <SkeletonLoader className="h-6 w-20 rounded-full" />
+        <SkeletonLoader className="h-6 w-24 rounded-full" />
+        <SkeletonLoader className="h-6 w-16 rounded-full" />
       </div>
     </div>
   );

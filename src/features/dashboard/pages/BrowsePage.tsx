@@ -1,6 +1,7 @@
-import { X } from "lucide-react";
+import { X, SearchX, AlertCircle } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useState, useEffect } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { Dropdown } from "../../../shared/components/ui/Dropdown";
 import { ProjectCard, Project } from "../components/ProjectCard";
 import { ProjectCardSkeleton } from "../components/ProjectCardSkeleton";
@@ -9,6 +10,11 @@ import {
   isValidProject,
   getRepoName,
 } from "../../../shared/utils/projectFilter";
+import { EmptyState } from "../../../shared/components/EmptyState";
+import {
+  cardContainerVariants,
+  cardVariants,
+} from "../../../shared/utils/motionVariants";
 
 import { useOptimisticData } from "../../../shared/hooks/useOptimisticData";
 
@@ -74,6 +80,8 @@ const truncateDescription = (
 
 export function BrowsePage({ onProjectClick }: BrowsePageProps) {
   const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const prefersReducedMotion = useReducedMotion();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({
     languages: "",
@@ -281,8 +289,8 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
             values.map((value) => (
               <span
                 key={`${filterType}-${value}`}
-                className={`px-3.5 py-2 rounded-[10px] text-[13px] font-semibold border-[1.5px] flex items-center gap-2 transition-all hover:scale-105 shadow-lg ${
-                  theme === "dark"
+                className={`px-3.5 py-2 rounded-full text-[13px] font-semibold border-[1.5px] flex items-center gap-2 transition-all hover:scale-105 shadow-lg ${
+                  isDark
                     ? "bg-[#a17932] border-[#c9983a] text-white"
                     : "bg-[#b8872f] border-[#a17932] text-white"
                 }`}
@@ -329,29 +337,34 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
             <ProjectCardSkeleton key={idx} />
           ))}
         </div>
+      ) : hasError ? (
+        <EmptyState
+          icon={AlertCircle}
+          title="Couldn't load projects"
+          description="Something went wrong while fetching projects. Please try again in a moment."
+        />
       ) : projects.length === 0 ? (
-        <div
-          className={`p-8 rounded-[16px] border text-center ${
-            theme === "dark"
-              ? "bg-white/[0.08] border-white/15 text-[#d4d4d4]"
-              : "bg-white/[0.15] border-white/25 text-[#7a6b5a]"
-          }`}
-        >
-          <p className="text-[16px] font-semibold">No projects found</p>
-          <p className="text-[14px] mt-2">
-            Try adjusting your filters or check back later.
-          </p>
-        </div>
+        <EmptyState
+          icon={SearchX}
+          title="No projects found"
+          description="Try adjusting your filters or check back later."
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5"
+          variants={cardContainerVariants}
+          initial={prefersReducedMotion ? false : "hidden"}
+          animate="visible"
+        >
           {projects.map((project) => (
             <ProjectCard
               key={project.id}
               project={project}
               onClick={onProjectClick}
+              variants={cardVariants}
             />
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );

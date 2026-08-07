@@ -67,21 +67,8 @@ export function useOptimisticData<T>(
         setHasError(false);
       } catch (err) {
         console.error('Failed to fetch data:', err);
-        
-        const isNetworkError =
-          err instanceof TypeError ||
-          (err instanceof Error &&
-            (err.message.includes('fetch') ||
-              err.message.includes('network') ||
-              err.message.includes('Unable to connect') ||
-              err.message.includes('Failed to fetch')));
-
-        if (isNetworkError) {
-          setHasError(true);
-        } else {
-          setIsLoading(false);
-          setHasError(true);
-        }
+        setIsLoading(false);
+        setHasError(true);
       }
     },
     [data, initialData, cacheDuration]

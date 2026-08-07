@@ -1,5 +1,16 @@
 import { useTheme } from "../../../shared/contexts/ThemeContext";
-import { Heart, Star, GitFork, ArrowUpRight, Target, Zap } from "lucide-react";
+import {
+  GitFork,
+  ArrowUpRight,
+  Target,
+  Zap,
+  Github,
+  Star,
+  GitPullRequest,
+  Sparkles,
+  ChevronDown,
+} from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import { IssueCard } from "../../../shared/components/ui/IssueCard";
 import { useState, useEffect } from "react";
 import { IssueDetailPage } from "./IssueDetailPage";
@@ -10,6 +21,24 @@ import {
 } from "../../../shared/api/client";
 import { SkeletonLoader } from "../../../shared/components/SkeletonLoader";
 import { useOptimisticData } from "../../../shared/hooks/useOptimisticData";
+import { EmptyState } from "../../../shared/components/EmptyState";
+import {
+  DiscoverProjectCard,
+  type DiscoverProject,
+} from "./DiscoverProjectCard";
+import {
+  sectionContainerVariants,
+  sectionVariants,
+  cardContainerVariants,
+  cardVariants,
+  getOnBrandGradient,
+} from "../../../shared/utils/motionVariants";
+
+// Design tiers used throughout this page (kept local, not global tokens — see plan):
+//   Outer section card : rounded-[24px]  + shadow-[0_8px_32px_rgba(0,0,0,0.08)] + backdrop-blur-[40px]
+//   Inner content card  : rounded-[16px] + backdrop-blur-[30px] + resting/hover shadow
+//   Button               : rounded-[14px] + gold shadow (resting/hover)
+//   Pill / chip           : rounded-full
 
 // Helper function to format numbers (e.g., 1234 -> "1.2K", 1234567 -> "1.2M")
 const formatNumber = (num: number): string => {
@@ -29,23 +58,8 @@ const getProjectIcon = (githubFullName: string): string => {
   return `https://github.com/${owner}.png?size=200`;
 };
 
-// Helper function to get gradient color based on project name
-const getProjectColor = (name: string): string => {
-  const colors = [
-    "from-blue-500 to-cyan-500",
-    "from-purple-500 to-pink-500",
-    "from-green-500 to-emerald-500",
-    "from-red-500 to-pink-500",
-    "from-orange-500 to-red-500",
-    "from-gray-600 to-gray-800",
-    "from-green-600 to-green-800",
-    "from-cyan-500 to-blue-600",
-  ];
-  const hash = name
-    .split("")
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return colors[hash % colors.length];
-};
+// On-brand gradient for the avatar-fallback initial letter — shared with ProjectCard.tsx
+const getProjectColor = getOnBrandGradient;
 
 // Helper function to truncate description to first line or first 80 characters
 const truncateDescription = (
@@ -138,18 +152,7 @@ const getPrimaryTag = (labels: any[]): string | undefined => {
   return undefined;
 };
 
-type ProjectType = {
-  id: string;
-  name: string;
-  icon: string;
-  stars: string;
-  forks: string;
-  issues: number;
-  description: string;
-  tags: string[];
-  color: string;
-  ecosystem_name: string | null;
-};
+type ProjectType = DiscoverProject;
 
 type IssueType = {
   id: string;
@@ -166,11 +169,22 @@ interface DiscoverPageProps {
   onGoToOpenSourceWeek?: () => void;
 }
 
+// Decorative icon chips that gently float around the hero on large screens.
+// Positions deliberately avoid the centered text column (roughly the middle 60% width).
+const heroFloatingIcons = [
+  { icon: Github, className: "top-[14%] left-[6%]", duration: 5, delay: 0 },
+  { icon: Star, className: "top-[22%] right-[9%]", duration: 4.2, delay: 0.6 },
+  { icon: GitPullRequest, className: "bottom-[26%] left-[10%]", duration: 4.8, delay: 0.3 },
+  { icon: Sparkles, className: "bottom-[18%] right-[6%]", duration: 4.4, delay: 0.9 },
+];
+
 export function DiscoverPage({
   onGoToBilling,
   onGoToOpenSourceWeek,
 }: DiscoverPageProps) {
   const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const prefersReducedMotion = useReducedMotion();
   const [selectedIssue, setSelectedIssue] = useState<{
     issueId: string;
     projectId?: string;
@@ -252,8 +266,16 @@ export function DiscoverPage({
   // Fetch recommended issues from top projects (useOptimisticData manages loading state)
   useEffect(() => {
     const loadRecommendedIssues = async () => {
-      // Only fetch issues if we have projects and they're loaded
-      if (isLoadingProjects || projects.length === 0) return;
+      // Still waiting on projects to resolve — don't touch issues loading state yet.
+      if (isLoadingProjects) return;
+
+      // No projects means there's nothing to source issues from. Resolve with an
+      // empty result instead of returning early, which would leave isLoadingIssues
+      // stuck at its initial `true` forever (fetchIssues would never be called).
+      if (projects.length === 0) {
+        await fetchIssues(async () => []);
+        return;
+      }
 
       await fetchIssues(async () => {
         const issues: IssueType[] = [];
@@ -296,7 +318,7 @@ export function DiscoverPage({
     };
 
     loadRecommendedIssues();
-  }, [projects, fetchIssues]);
+  }, [projects, isLoadingProjects, fetchIssues]);
 
   // If an issue is selected, show the detail page instead
   if (selectedIssue) {
@@ -320,91 +342,213 @@ export function DiscoverPage({
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 px-4 md:px-0 pb-8">
-      {/* Hero Section */}
-      <div className={`backdrop-blur-[40px] rounded-[28px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 md:p-12 text-center transition-colors ${theme === 'dark'
-        ? 'bg-gradient-to-br from-white/[0.08] to-white/[0.04] border-white/10'
-        : 'bg-gradient-to-br from-white/[0.15] to-white/[0.08] border-white/20'
-        }`}>
-        <h1 className={`text-2xl md:text-[36px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+    <motion.div
+      className="space-y-4 md:space-y-6 px-4 md:px-0 pb-8"
+      variants={sectionContainerVariants}
+      initial={prefersReducedMotion ? false : "hidden"}
+      animate="visible"
+    >
+      {/* Hero Section — fills (almost) the entire first screen, landing-page style */}
+      <motion.div
+        variants={sectionVariants}
+        className={`relative overflow-hidden backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] flex flex-col items-center justify-center text-center px-6 md:px-12 py-16 min-h-[70vh] md:min-h-[calc(100vh-96px)] transition-colors ${isDark
+          ? 'bg-white/[0.08] border-white/10'
+          : 'bg-white/[0.12] border-white/20'
           }`}>
-          Get matched to your next
-        </h1>
-        <h2 className="text-3xl md:text-[42px] font-bold bg-gradient-to-r from-[#c9983a] via-[#a67c2e] to-[#8b7355] bg-clip-text text-transparent mb-4 md:mb-6">
-          Open source contributions!
-        </h2>
-        <p className={`text-sm md:text-[16px] mb-6 md:mb-8 max-w-2xl mx-auto transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}>
-          Get matched automatically once you add your billing profile and verify your KYC so we can route rewards on-chain.
-        </p>
-        <button
-          onClick={onGoToBilling}
-          disabled={!onGoToBilling}
-          className={`w-full md:w-auto px-6 py-3 md:px-8 md:py-4 rounded-[16px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-sm md:text-[16px] shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] transition-all inline-flex items-center justify-center space-x-2 border border-white/10 ${!onGoToBilling ? 'opacity-70 cursor-default' : ''
-            }`}
-        >
-          <span>Add billing profile & verify KYC (1/3)</span>
-          <ArrowUpRight className="w-5 h-5 flex-shrink-0" />
-        </button>
-      </div>
+        {/* Aurora blobs */}
+        <motion.div
+          className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-[#c9983a]/30 blur-[100px] pointer-events-none"
+          animate={prefersReducedMotion ? undefined : { x: [0, 40, -20, 0], y: [0, -30, 20, 0] }}
+          transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute -bottom-32 -right-16 w-[480px] h-[480px] rounded-full bg-[#a67c2e]/25 blur-[110px] pointer-events-none"
+          animate={prefersReducedMotion ? undefined : { x: [0, -30, 20, 0], y: [0, 30, -20, 0] }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        />
+        <motion.div
+          className="absolute top-1/3 right-1/4 w-[280px] h-[280px] rounded-full bg-[#d4af37]/20 blur-[90px] pointer-events-none"
+          animate={prefersReducedMotion ? undefined : { x: [0, 20, -20, 0], y: [0, 20, -10, 0] }}
+          transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+        />
 
-      {/* Embark on GrainHack */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 md:p-8 transition-colors ${theme === 'dark'
-        ? 'bg-gradient-to-br from-white/[0.1] to-white/[0.06] border-white/15'
-        : 'bg-gradient-to-br from-white/[0.18] to-white/[0.12] border-white/25'
-        }`}>
-        <div className="flex flex-col-reverse md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex-1">
-            <h3 className={`text-xl md:text-[28px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+        {/* Floating icon chips — large screens only, sit in the flanking whitespace */}
+        {heroFloatingIcons.map(({ icon: Icon, className, duration, delay }, idx) => (
+          <motion.div
+            key={idx}
+            className={`hidden lg:flex absolute w-12 h-12 rounded-full items-center justify-center border backdrop-blur-[20px] pointer-events-none ${className} ${isDark ? 'bg-white/[0.06] border-white/15' : 'bg-white/30 border-white/40'
+              }`}
+            animate={prefersReducedMotion ? undefined : { y: [0, -14, 0] }}
+            transition={{ duration, repeat: Infinity, ease: 'easeInOut', delay }}
+          >
+            <Icon className="w-5 h-5 text-[#c9983a]" />
+          </motion.div>
+        ))}
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center max-w-2xl">
+          <div className="w-14 h-14 mb-6 rounded-full flex items-center justify-center border bg-gradient-to-br from-[#c9983a]/25 to-[#a67c2e]/10 border-[#c9983a]/30">
+            <Target className="w-7 h-7 text-[#c9983a]" />
+          </div>
+
+          <h1 className={`text-4xl md:text-6xl font-bold mb-5 leading-[1.1] transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}>
+            Get matched to your next
+            <br />
+            <span className="text-[#c9983a]">open source contribution</span>
+          </h1>
+
+          <p className={`text-base md:text-lg mb-10 max-w-xl transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}>
+            Add your billing profile and verify your KYC so we can route rewards on-chain — we'll take it from there.
+          </p>
+
+          <button
+            onClick={onGoToBilling}
+            disabled={!onGoToBilling}
+            className={`px-8 py-4 md:px-10 md:py-5 rounded-[14px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-base md:text-[17px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.45)] transition-all inline-flex items-center justify-center gap-2 border border-white/10 ${!onGoToBilling ? 'opacity-70 cursor-default' : ''
+              }`}
+          >
+            <span>Continue setup</span>
+            <ArrowUpRight className="w-5 h-5 flex-shrink-0" />
+          </button>
+
+          {/* Step tracker — visualizes the "(1/3)" that used to be buried in the button label */}
+          <div className="flex items-center w-full max-w-md mt-12">
+            {[
+              { n: 1, label: 'Billing profile' },
+              { n: 2, label: 'Verify KYC' },
+              { n: 3, label: 'Get matched' },
+            ].map((step, idx, arr) => {
+              const isCurrent = step.n === 1;
+              return (
+                <div key={step.n} className={`flex items-center ${idx < arr.length - 1 ? 'flex-1' : ''}`}>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold border transition-colors ${isCurrent
+                      ? 'bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white border-transparent shadow-[0_2px_8px_rgba(201,152,58,0.4)]'
+                      : isDark
+                        ? 'bg-white/[0.06] border-white/15 text-[#8a7d6f]'
+                        : 'bg-white/30 border-white/40 text-[#a89685]'
+                      }`}>
+                      {step.n}
+                    </div>
+                    <span className={`hidden sm:inline text-[13px] font-medium whitespace-nowrap transition-colors ${isCurrent
+                      ? isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                      : isDark ? 'text-[#8a7d6f]' : 'text-[#a89685]'
+                      }`}>
+                      {step.label}
+                    </span>
+                  </div>
+                  {idx < arr.length - 1 && (
+                    <div className={`flex-1 h-px mx-3 transition-colors ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Scroll hint */}
+        <motion.div
+          className={`absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none ${isDark ? 'text-[#8a7d6f]' : 'text-[#a89685]'
+            }`}
+          animate={prefersReducedMotion ? undefined : { y: [0, 6, 0] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <span className="text-[11px] font-medium tracking-wide uppercase">Scroll for more</span>
+          <ChevronDown className="w-4 h-4" />
+        </motion.div>
+      </motion.div>
+
+      {/* Embark on GrainHack — an elevated feature banner: a real moment, but not a second full hero */}
+      <motion.div
+        variants={sectionVariants}
+        className={`relative overflow-hidden backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-colors ${isDark
+          ? 'bg-white/[0.08] border-white/10'
+          : 'bg-white/[0.12] border-white/20'
+          }`}>
+        {/* Aurora accent */}
+        <motion.div
+          className="absolute -top-16 right-[-60px] w-[360px] h-[360px] rounded-full bg-[#c9983a]/25 blur-[100px] pointer-events-none"
+          animate={prefersReducedMotion ? undefined : { x: [0, -20, 20, 0], y: [0, 20, -10, 0] }}
+          transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
+        />
+
+        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 md:gap-12 px-6 md:px-12 py-10 md:py-14">
+          <div className="flex-1 text-center md:text-left">
+            <h3 className={`text-2xl md:text-[34px] font-bold mb-3 leading-tight transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
               }`}>
               Join the <span className="text-[#c9983a]">GrainHack</span>
             </h3>
-            <p className={`text-sm md:text-[16px] mb-6 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            <p className={`text-sm md:text-[16px] mb-6 max-w-md mx-auto md:mx-0 transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
               }`}>
-              Join our GrainHack week and track your Open Source Week progress directly from your dashboard.
+              Track your Open Source Week progress directly from your dashboard and compete for a spot on the leaderboard.
             </p>
             <button
               onClick={onGoToOpenSourceWeek}
               disabled={!onGoToOpenSourceWeek}
-              className={`w-full md:w-auto px-6 py-3 rounded-[14px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[14px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_24px_rgba(162,121,44,0.4)] transition-all border border-white/10 ${!onGoToOpenSourceWeek ? 'opacity-70 cursor-default' : ''
+              className={`px-7 py-3.5 rounded-[14px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[15px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.45)] transition-all inline-flex items-center gap-2 border border-white/10 ${!onGoToOpenSourceWeek ? 'opacity-70 cursor-default' : ''
                 }`}
             >
-              Let's go
+              <span>Let's go</span>
+              <ArrowUpRight className="w-4 h-4" />
             </button>
           </div>
-          <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-[#c9983a] to-[#a67c2e] flex items-center justify-center shadow-[0_8px_24px_rgba(162,121,44,0.3)] border border-white/15 flex-shrink-0">
-            <Target className="w-8 h-8 md:w-12 md:h-12 text-white" />
+
+          {/* Radar-ping badge */}
+          <div className="relative flex-shrink-0 w-28 h-28 md:w-36 md:h-36 flex items-center justify-center">
+            {!prefersReducedMotion && (
+              <>
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-[#c9983a]/40"
+                  animate={{ scale: [1, 1.4], opacity: [0.6, 0] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut' }}
+                />
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-[#c9983a]/40"
+                  animate={{ scale: [1, 1.4], opacity: [0.6, 0] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeOut', delay: 1.2 }}
+                />
+              </>
+            )}
+            <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-[#c9983a] to-[#a67c2e] flex items-center justify-center shadow-[0_8px_24px_rgba(162,121,44,0.4)] border border-white/15">
+              <Target className="w-9 h-9 md:w-11 md:h-11 text-white" />
+            </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Recommended Projects */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 md:p-8 transition-colors ${theme === 'dark'
-        ? 'bg-white/[0.08] border-white/10'
-        : 'bg-white/[0.12] border-white/20'
-        }`}>
+      <motion.div
+        variants={sectionVariants}
+        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 md:p-8 transition-colors ${isDark
+          ? 'bg-white/[0.08] border-white/10'
+          : 'bg-white/[0.12] border-white/20'
+          }`}>
         <div className="flex items-center space-x-3 mb-2">
           <Zap className="w-5 h-5 md:w-6 md:h-6 text-[#c9983a] drop-shadow-sm" />
-          <h3 className={`text-xl md:text-[24px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+          <h3 className={`text-xl md:text-[24px] font-bold transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
             }`}>
             Recommended Projects ({projects.length})
           </h3>
         </div>
-        <p className={`text-[13px] md:text-[14px] mb-6 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}>
-          Finding best suited your interests and expertise
-        </p>
+        {isLoadingProjects && (
+          <p className={`text-[13px] md:text-[14px] mb-6 transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}>
+            Finding projects best suited to your interests and expertise
+          </p>
+        )}
 
         {isLoadingProjects ? (
-          <div className="flex flex-col md:flex-row gap-4 md:gap-6 overflow-x-auto pb-2">
-            {[...Array(4)].map((_, idx) => (
-              <div key={idx} className={`flex-shrink-0 w-full md:w-[320px] rounded-[20px] border p-6 ${theme === 'dark' ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mt-6">
+            {[...Array(8)].map((_, idx) => (
+              <div key={idx} className={`backdrop-blur-[30px] rounded-[16px] border p-6 ${isDark ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
                 }`}>
                 {/* Icon and Heart button */}
                 <div className="flex items-start justify-between mb-4">
                   <SkeletonLoader
                     variant="default"
-                    className="w-12 h-12 rounded-[14px]"
+                    className="w-12 h-12 rounded-[12px]"
                   />
                   <SkeletonLoader
                     variant="default"
@@ -427,128 +571,60 @@ export function DiscoverPage({
 
                 {/* Tags */}
                 <div className="flex flex-wrap gap-2">
-                  <SkeletonLoader className="h-7 w-20 rounded-[10px]" />
-                  <SkeletonLoader className="h-7 w-24 rounded-[10px]" />
+                  <SkeletonLoader className="h-7 w-20 rounded-full" />
+                  <SkeletonLoader className="h-7 w-24 rounded-full" />
                 </div>
               </div>
             ))}
           </div>
         ) : projects.length === 0 ? (
-          <div className={`p-8 rounded-[16px] border text-center ${theme === 'dark'
-            ? 'bg-white/[0.08] border-white/15 text-[#d4d4d4]'
-            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a]'
-            }`}>
-            <p className="text-[16px] font-semibold">No recommended projects found</p>
+          <div className="mt-6">
+            <EmptyState
+              icon={Target}
+              title="No recommended projects found"
+              description="Finish setting up your profile so we can match you with projects."
+            />
           </div>
         ) : (
-          <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mt-6"
+            variants={cardContainerVariants}
+            initial={prefersReducedMotion ? false : "hidden"}
+            animate="visible"
+          >
             {projects.map((project) => (
-              <div
+              <DiscoverProjectCard
                 key={project.id}
+                project={project}
                 onClick={() => setSelectedProjectId(String(project.id))}
-                className={`backdrop-blur-[30px] rounded-[20px] border p-6 transition-all cursor-pointer flex-shrink-0 w-full md:w-[320px] ${theme === 'dark'
-                  ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.12] hover:shadow-[0_8px_24px_rgba(201,152,58,0.15)]'
-                  : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)]'
-                  }`}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  {project.icon.startsWith("http") ? (
-                    <img
-                      src={project.icon}
-                      alt={project.name}
-                      className="w-12 h-12 rounded-[14px] border border-white/20 flex-shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          `https://github.com/github.png?size=40`;
-                      }}
-                    />
-                  ) : (
-                    <div
-                      className={`w-12 h-12 rounded-[14px] bg-gradient-to-br ${project.color} flex items-center justify-center shadow-md text-2xl`}
-                    >
-                      {project.icon}
-                    </div>
-                  )}
-                  <button className="text-[#c9983a] hover:text-[#a67c2e] transition-colors">
-                    <Heart className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <h4
-                  className={`text-[18px] font-bold mb-2 transition-colors ${
-                    theme === "dark" ? "text-[#f5f5f5]" : "text-[#2d2820]"
-                  }`}
-                >
-                  {project.name}
-                </h4>
-                <p
-                  className={`text-[13px] mb-4 line-clamp-2 transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
-                  }`}
-                >
-                  {project.description}
-                </p>
-
-                <div
-                  className={`flex items-center space-x-4 text-[13px] mb-4 transition-colors ${
-                    theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
-                  }`}
-                >
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-3.5 h-3.5 text-[#c9983a]" />
-                    <span>{project.stars}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <GitFork className="w-3.5 h-3.5 text-[#c9983a]" />
-                    <span>{project.forks}</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {project.ecosystem_name && (
-                    <span
-                      className={`px-3 py-1.5 rounded-[10px] border text-[12px] font-semibold ${theme === 'dark'
-                        ? 'bg-white/10 border-white/25 text-[#e8dfd0]'
-                        : 'bg-white/20 border-white/30 text-[#2d2820]'
-                        }`}
-                    >
-                      {project.ecosystem_name}
-                    </span>
-                  )}
-                  {project.tags.map((tag, idx) => (
-                    <span
-                      key={idx}
-                      className={`px-3 py-1.5 rounded-[10px] border text-[12px] font-semibold shadow-[0_2px_8px_rgba(201,152,58,0.15)] ${theme === 'dark'
-                        ? 'bg-[#c9983a]/15 border-[#c9983a]/30 text-[#f5c563]'
-                        : 'bg-[#c9983a]/20 border-[#c9983a]/35 text-[#8b6f3a]'
-                        }`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
+                variants={cardVariants}
+              />
             ))}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       {/* Recommended Issues */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 md:p-8 transition-colors ${theme === 'dark'
-        ? 'bg-white/[0.08] border-white/10'
-        : 'bg-white/[0.12] border-white/20'
-        }`}>
-        <h3 className={`text-xl md:text-[24px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-          }`}>Recommended Issues</h3>
-        <p className={`text-[13px] md:text-[14px] mb-6 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+      <motion.div
+        variants={sectionVariants}
+        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 md:p-8 transition-colors ${isDark
+          ? 'bg-white/[0.08] border-white/10'
+          : 'bg-white/[0.12] border-white/20'
+          }`}>
+        <div className="flex items-center space-x-3 mb-2">
+          <GitFork className="w-5 h-5 md:w-6 md:h-6 text-[#c9983a] drop-shadow-sm" />
+          <h3 className={`text-xl md:text-[24px] font-bold transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}>Recommended Issues</h3>
+        </div>
+        <p className={`text-[13px] md:text-[14px] mb-6 transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
           }`}>
           Issues that match your interests and expertise
         </p>
 
         {isLoadingIssues ? (
-          <div className="flex flex-col md:flex-row gap-4 md:overflow-x-auto pb-2">
-            {[...Array(3)].map((_, idx) => (
-              <div key={idx} className={`flex-shrink-0 w-full md:w-[480px] rounded-[16px] border p-6 ${theme === 'dark' ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+            {[...Array(6)].map((_, idx) => (
+              <div key={idx} className={`backdrop-blur-[30px] rounded-[16px] border p-6 ${isDark ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
                 }`}>
                 {/* Title with status indicator */}
                 <div className="flex items-start gap-3 mb-3">
@@ -572,23 +648,30 @@ export function DiscoverPage({
                     <SkeletonLoader className="h-4 w-20" />
                     <SkeletonLoader className="h-4 w-16" />
                   </div>
-                  <SkeletonLoader className="h-6 w-24 rounded-[6px]" />
+                  <SkeletonLoader className="h-6 w-24 rounded-[8px]" />
                 </div>
               </div>
             ))}
           </div>
         ) : recommendedIssues.length === 0 ? (
-          <div className={`p-8 rounded-[16px] border text-center ${theme === 'dark'
-            ? 'bg-white/[0.08] border-white/15 text-[#d4d4d4]'
-            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a]'
-            }`}>
-            <p className="text-[16px] font-semibold">No recommended issues found</p>
-            <p className="text-[14px] mt-2">Try checking back later or explore projects manually.</p>
-          </div>
+          <EmptyState
+            icon={Target}
+            title="No recommended issues found"
+            description="Try checking back later or explore projects manually."
+          />
         ) : (
-          <div className="flex flex-col md:flex-row gap-4 md:overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"
+            variants={cardContainerVariants}
+            initial={prefersReducedMotion ? false : "hidden"}
+            animate="visible"
+          >
             {recommendedIssues.map((issue) => (
-              <div key={issue.id} className="flex-shrink-0 w-full md:w-[480px]">
+              <motion.div
+                key={issue.id}
+                variants={cardVariants}
+                className="motion-safe:hover:-translate-y-1 transition-transform active:scale-[0.98]"
+              >
                 <IssueCard
                   id={issue.id}
                   title={issue.title}
@@ -604,11 +687,11 @@ export function DiscoverPage({
                     })
                   }
                 />
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
