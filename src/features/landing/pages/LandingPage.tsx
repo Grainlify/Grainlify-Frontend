@@ -645,7 +645,9 @@ function Footer() {
             </h4>
             <div className="space-y-2">
               <a
-                href="#"
+                href="https://grainlify-docs.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className={`block transition-colors hover:text-[#c9983a] ${
                   theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
                 }`}
