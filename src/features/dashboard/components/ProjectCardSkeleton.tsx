@@ -11,6 +11,7 @@ export function ProjectCardSkeleton() {
     // If you change the padding, border radius, or grid structure of ProjectCard,
     // update this skeleton accordingly.
     <div
+      data-testid="project-card-skeleton"
       className={`w-full text-left backdrop-blur-[30px] rounded-[18px] border p-5 ${
         isDark ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
       }`}
