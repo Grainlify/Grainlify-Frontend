@@ -13,20 +13,20 @@ interface LightStrand {
   nodes: number[];
 }
 
-// Diagonal "string light" strands - a faint gold line with a few glowing nodes
-// along it, each flickering on its own staggered timer. Adapted from
-// Aceternity UI's Hero Section With Flickering Lights, restyled as a scattered
-// ambient background instead of the original's single right-side panel, since
-// this hero centers its content rather than splitting it two-column.
+// Two longer "string light" staircases climbing toward the center from
+// opposite corners, each with evenly spaced glowing nodes that flicker on
+// their own staggered timer - reads as one clear ascending motif per side
+// (matching the reference's climbing-lights look) rather than scattered
+// fragments. Adapted from Aceternity UI's Hero Section With Flickering
+// Lights, whose original is a single right-side panel; mirrored here across
+// both sides since this hero centers its content instead of splitting it
+// two-column.
 const LIGHT_STRANDS: LightStrand[] = [
-  { top: "18%", left: "58%", width: 260, rotate: -18, nodes: [0.1, 0.5, 0.9] },
-  { top: "12%", left: "8%", width: 200, rotate: 22, nodes: [0.2, 0.75] },
-  { top: "68%", left: "62%", width: 300, rotate: -12, nodes: [0.15, 0.5, 0.85] },
-  { top: "72%", left: "4%", width: 220, rotate: 16, nodes: [0.3, 0.8] },
-  { top: "38%", left: "82%", width: 180, rotate: -28, nodes: [0.25, 0.75] },
+  { top: "62%", left: "2%", width: 420, rotate: -22, nodes: [0.08, 0.32, 0.56, 0.8] },
+  { top: "30%", left: "72%", width: 420, rotate: -22, nodes: [0.08, 0.32, 0.56, 0.8] },
 ];
 
-const FLICKER_DELAYS = [0, 0.6, 1.3, 2, 0.9, 1.7];
+const FLICKER_DELAYS = [0, 0.7, 1.4, 2.1, 0.5, 1.9, 1.1, 0.3];
 
 function FlickeringLights({ isDark }: { isDark: boolean }) {
   return (
@@ -46,7 +46,7 @@ function FlickeringLights({ isDark }: { isDark: boolean }) {
           <div
             className="h-px w-full"
             style={{
-              background: `linear-gradient(to right, transparent, ${isDark ? "rgba(201,152,58,0.45)" : "rgba(166,124,46,0.35)"}, transparent)`,
+              background: `linear-gradient(to right, transparent, ${isDark ? "rgba(212,175,55,0.7)" : "rgba(166,124,46,0.55)"}, transparent)`,
             }}
           />
           {strand.nodes.map((t, nIdx) => (
@@ -55,13 +55,13 @@ function FlickeringLights({ isDark }: { isDark: boolean }) {
               className="animate-flicker absolute rounded-full"
               style={{
                 left: `${t * 100}%`,
-                top: -4,
-                width: 8,
-                height: 8,
-                marginLeft: -4,
-                background: "radial-gradient(circle, #f5d78e 0%, #c9983a 60%, transparent 100%)",
-                boxShadow: "0 0 14px 4px rgba(201,152,58,0.55)",
-                animationDelay: `${FLICKER_DELAYS[(sIdx + nIdx) % FLICKER_DELAYS.length]}s`,
+                top: -5,
+                width: 10,
+                height: 10,
+                marginLeft: -5,
+                background: "radial-gradient(circle, #f9e4ae 0%, #d4af37 55%, transparent 100%)",
+                boxShadow: "0 0 18px 6px rgba(212,175,55,0.65)",
+                animationDelay: `${FLICKER_DELAYS[(sIdx * 4 + nIdx) % FLICKER_DELAYS.length]}s`,
               }}
             />
           ))}
@@ -80,17 +80,15 @@ export function Hero() {
       {/* Golden Glassmorphism Orbs (hidden on very small screens to avoid overflow) */}
       <div className="hidden sm:block absolute top-1/4 left-1/4 w-64 sm:w-96 h-64 sm:h-96 rounded-full bg-[#c9983a]/30 blur-3xl animate-pulse" />
       <div className="hidden sm:block absolute bottom-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 rounded-full bg-[#d4af37]/20 blur-3xl animate-pulse delay-1000" />
-      {/* Subtle grid texture for depth */}
+      {/* Circuit-grid texture, gold-tinted so it reads as part of the light
+          strands' motif rather than a neutral background pattern */}
       <div
         aria-hidden="true"
-        className={`absolute inset-0 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,black,transparent)] ${
-          theme === "dark" ? "opacity-[0.05]" : "opacity-[0.06]"
-        }`}
+        className="absolute inset-0 [mask-image:radial-gradient(ellipse_75%_65%_at_50%_35%,black,transparent)]"
         style={{
           backgroundImage:
-            "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
-          backgroundSize: "56px 56px",
-          color: theme === "dark" ? "#e8dfd0" : "#2d2820",
+            `linear-gradient(to right, ${theme === "dark" ? "rgba(212,175,55,0.16)" : "rgba(166,124,46,0.14)"} 1px, transparent 1px), linear-gradient(to bottom, ${theme === "dark" ? "rgba(212,175,55,0.16)" : "rgba(166,124,46,0.14)"} 1px, transparent 1px)`,
+          backgroundSize: "40px 40px",
         }}
       />
       <FlickeringLights isDark={theme === "dark"} />

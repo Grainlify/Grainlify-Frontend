@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Navbar } from "../components/Navbar";
 import { Hero } from "../components/Hero";
-import { ParallaxScroll, type ParallaxTile } from "../components/ParallaxScroll";
 import { BentoGrid, BentoGridItem } from "../components/BentoGrid";
 import { TestimonialsMarquee, type MarqueeTestimonial } from "../components/TestimonialsMarquee";
 import { FAQAccordion } from "../components/FAQAccordion";
@@ -54,7 +53,7 @@ export function LandingPage() {
     >
       <Navbar />
       <Hero />
-      <TechStack />
+      <MissionStatement />
       <Features />
       <HowItWorks />
       <WhyChooseUs />
@@ -116,38 +115,52 @@ function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: 
   );
 }
 
-// Real, well-known language/framework/tool orgs - illustrates stack breadth
-// (GitHub-based, so genuinely language-agnostic) rather than claiming these
-// specific orgs are Grainlify customers or partners.
-const TECH_STACK: ParallaxTile[] = [
-  { key: "react", src: "https://github.com/facebook.png?size=200", label: "React" },
-  { key: "vue", src: "https://github.com/vuejs.png?size=200", label: "Vue" },
-  { key: "angular", src: "https://github.com/angular.png?size=200", label: "Angular" },
-  { key: "svelte", src: "https://github.com/sveltejs.png?size=200", label: "Svelte" },
-  { key: "vite", src: "https://github.com/vitejs.png?size=200", label: "Vite" },
-  { key: "go", src: "https://github.com/golang.png?size=200", label: "Go" },
-  { key: "rust", src: "https://github.com/rust-lang.png?size=200", label: "Rust" },
-  { key: "python", src: "https://github.com/python.png?size=200", label: "Python" },
-  { key: "node", src: "https://github.com/nodejs.png?size=200", label: "Node.js" },
-  { key: "deno", src: "https://github.com/denoland.png?size=200", label: "Deno" },
-  { key: "kubernetes", src: "https://github.com/kubernetes.png?size=200", label: "Kubernetes" },
-  { key: "docker", src: "https://github.com/docker.png?size=200", label: "Docker" },
-  { key: "tailwind", src: "https://github.com/tailwindlabs.png?size=200", label: "Tailwind CSS" },
-  { key: "postgres", src: "https://github.com/postgres.png?size=200", label: "PostgreSQL" },
-  { key: "stellar", src: "https://github.com/stellar.png?size=200", label: "Stellar" },
+interface MissionWord {
+  text: string;
+  emphasis?: boolean;
+}
+
+const splitWords = (str: string, emphasis = false): MissionWord[] =>
+  str.split(" ").map((text) => ({ text, emphasis }));
+
+const MISSION_WORDS: MissionWord[] = [
+  ...splitWords("Millions of pull requests ship every day."),
+  ...splitWords("Almost none of them pay.", true),
+  ...splitWords("Grainlify turns your contributions into"),
+  ...splitWords("real, on-chain earnings", true),
+  ...splitWords("- no matter what you build or where you build it."),
 ];
 
-function TechStack() {
-  return (
-    <section id="stack" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
-      <div className="max-w-7xl mx-auto">
-        <SectionHeader
-          eyebrow="Any Stack Welcome"
-          title="Any Language. Any Stack."
-          subtitle="Grainlify works with any codebase on GitHub - contribute in the languages and tools you already know."
-        />
+// A bold, text-only statement of intent between Hero and Features - no
+// images or logos, just Grainlify's own mission, with each word blurring
+// into focus as the section scrolls into view.
+function MissionStatement() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
-        <ParallaxScroll items={TECH_STACK} />
+  return (
+    <section className="relative py-20 sm:py-28 px-4 sm:px-6">
+      <div className="max-w-4xl mx-auto text-center">
+        <p className="text-2xl sm:text-3xl md:text-4xl font-bold leading-snug">
+          {MISSION_WORDS.map((w, i) => (
+            <motion.span
+              key={i}
+              initial={{ opacity: 0, filter: "blur(6px)" }}
+              whileInView={{ opacity: 1, filter: "blur(0px)" }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.4, delay: i * 0.025 }}
+              className={`inline-block mr-[0.28em] ${
+                w.emphasis
+                  ? "bg-gradient-to-r from-[#c9983a] to-[#d4af37] bg-clip-text text-transparent"
+                  : isDark
+                    ? "text-[#e8dfd0]"
+                    : "text-[#2d2820]"
+              }`}
+            >
+              {w.text}
+            </motion.span>
+          ))}
+        </p>
       </div>
     </section>
   );
