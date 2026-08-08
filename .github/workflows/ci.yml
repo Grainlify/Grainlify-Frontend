@@ -108,18 +108,30 @@ jobs:
       # instead of being discovered by a user.
       - name: Smoke test production
         run: |
-          echo "Checking the homepage loads..."
-          html=$(curl -sf -m 15 https://grainlify.0xo.in/)
-          if ! echo "$html" | grep -q "<title>Grainlify</title>"; then
-            echo "::error::Homepage did not return the expected title"
-            exit 1
-          fi
+          # vercel deploy returns as soon as Vercel ACCEPTS the deployment,
+          # not once it's actually live on the production edge network - a
+          # single immediate curl can catch that propagation gap and fail on
+          # a perfectly good deploy (observed directly: the exact same check
+          # failed here, then passed by hand a few seconds later against the
+          # same URL). Poll like the backend's own smoke test does, instead
+          # of checking once.
+          echo "Checking the homepage loads with the new bundle..."
+          html=""
+          bundle_path=""
+          for i in $(seq 1 12); do
+            html=$(curl -sf -m 15 https://grainlify.0xo.in/ || true)
+            bundle_path=$(echo "$html" | grep -oE '/assets/index-[A-Za-z0-9]+\.js' | head -1)
+            if echo "$html" | grep -q "<title>Grainlify</title>" && [ -n "$bundle_path" ]; then
+              echo "Homepage OK on attempt $i: $bundle_path"
+              break
+            fi
+            if [ "$i" -eq 12 ]; then
+              echo "::error::Homepage did not return the expected title and bundle reference within 60s"
+              exit 1
+            fi
+            sleep 5
+          done
 
-          bundle_path=$(echo "$html" | grep -oE '/assets/index-[A-Za-z0-9]+\.js' | head -1)
-          if [ -z "$bundle_path" ]; then
-            echo "::error::Could not find the main JS bundle reference in the homepage HTML"
-            exit 1
-          fi
           bundle=$(curl -sf -m 15 "https://grainlify.0xo.in$bundle_path")
 
           if echo "$bundle" | grep -q '\[SENSITIVE\]'; then
