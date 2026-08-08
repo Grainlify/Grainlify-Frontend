@@ -108,43 +108,57 @@ jobs:
       # instead of being discovered by a user.
       - name: Smoke test production
         run: |
-          # The real bug, found by finally printing the actual rejected
-          # response instead of assuming a timing/CDN issue: Vite's content
-          # hash uses [A-Za-z0-9_-] (it's base64url), but this regex was
-          # [A-Za-z0-9] only - missing '_' and '-'. Any bundle hash containing
-          # either character (e.g. "index-CWTl_saf.js") silently never
-          # matched, so this step could fail forever no matter how long it
-          # retried. Two earlier commits "fixed" this by adding and then
-          # extending a retry loop - neither could have worked, since the
-          # check was deterministically wrong, not flaky. Keep a short retry
-          # for genuine transient blips, but the fix is the character class.
-          echo "Checking the homepage loads with the new bundle..."
+          # This step has failed twice before for two different real reasons
+          # (see git log for both), and a third time for a subtler one worth
+          # recording: the homepage fetch and the bundle fetch used to be a
+          # loop-then-single-shot pair - retry the HTML until it looks right,
+          # then fetch whatever bundle path it named exactly once. Vercel's
+          # HTML cache and its asset routing for the production alias don't
+          # necessarily flip at the same instant: an attempt can see a
+          # stale-but-plausible HTML naming an old bundle hash that the alias
+          # has already stopped serving, so that one unretried bundle fetch
+          # 404s (confirmed directly: the exact hash CI rejected was live and
+          # correct by hand seconds later, under a *different*, newer hash).
+          # Retry the whole thing - HTML fetch, bundle fetch, and content
+          # checks - as one unit so an inconsistent snapshot just tries again
+          # instead of failing on a deploy that's actually fine.
+          echo "Checking the homepage loads with a consistent, verifiable bundle..."
           html=""
-          bundle_path=""
+          success=false
           for i in $(seq 1 12); do
             html=$(curl -sf -m 15 https://grainlify.0xo.in/ || true)
             bundle_path=$(echo "$html" | grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' | head -1)
-            if echo "$html" | grep -q "<title>Grainlify</title>" && [ -n "$bundle_path" ]; then
-              echo "Homepage OK on attempt $i: $bundle_path"
-              break
+            if ! echo "$html" | grep -q "<title>Grainlify</title>" || [ -z "$bundle_path" ]; then
+              echo "Attempt $i: homepage not ready yet"
+              sleep 5
+              continue
             fi
-            if [ "$i" -eq 12 ]; then
-              echo "::error::Homepage did not return the expected title and bundle reference within 60s"
-              echo "Last response received (first 2000 chars):"
-              echo "$html" | head -c 2000
+
+            bundle=$(curl -sf -m 15 "https://grainlify.0xo.in$bundle_path" || true)
+            if [ -z "$bundle" ]; then
+              echo "Attempt $i: homepage named $bundle_path but it wasn't fetchable yet (stale HTML vs. already-rotated asset routing) - retrying"
+              sleep 5
+              continue
+            fi
+
+            if echo "$bundle" | grep -q '\[SENSITIVE\]'; then
+              echo "::error::Production bundle contains the literal string [SENSITIVE] - a Vercel env var is misconfigured as Sensitive and isn't resolving for CLI-driven builds. See VITE_API_BASE_URL in the Vercel dashboard (must be Non-sensitive)."
               exit 1
             fi
-            sleep 5
+            if ! echo "$bundle" | grep -qE "https://api\.grainlify\.0xo\.in"; then
+              echo "Attempt $i: fetched $bundle_path but it's missing the expected API URL - retrying in case this was a stale/inconsistent response"
+              sleep 5
+              continue
+            fi
+
+            echo "Homepage + bundle OK on attempt $i: $bundle_path"
+            success=true
+            break
           done
 
-          bundle=$(curl -sf -m 15 "https://grainlify.0xo.in$bundle_path")
-
-          if echo "$bundle" | grep -q '\[SENSITIVE\]'; then
-            echo "::error::Production bundle contains the literal string [SENSITIVE] - a Vercel env var is misconfigured as Sensitive and isn't resolving for CLI-driven builds. See VITE_API_BASE_URL in the Vercel dashboard (must be Non-sensitive)."
+          if [ "$success" != true ]; then
+            echo "::error::Could not confirm a consistent, correctly-built production deploy within 60s"
+            echo "Last homepage response (first 2000 chars):"
+            echo "$html" | head -c 2000
             exit 1
           fi
-          if ! echo "$bundle" | grep -qE "https://api\.grainlify\.0xo\.in"; then
-            echo "::error::Production bundle does not contain the expected backend API URL"
-            exit 1
-          fi
-          echo "Bundle OK: backend URL correctly baked in, no [SENSITIVE] placeholder"
