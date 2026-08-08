@@ -262,4 +262,47 @@ describe('ProfilePage', () => {
     renderWithProviders(<ProfilePage />, { theme: 'dark' })
     expect(screen.getByText('Projects led / Most')).toBeInTheDocument()
   })
+
+  // Regression coverage for a dark-mode-only contrast bug: the rank badge
+  // number, the "Unranked" fallback, and the contribution-calendar legend
+  // all used to render a fixed, unthemed color that was legible in light
+  // mode but nearly invisible against the dark background.
+  describe('dark mode contrast', () => {
+    it('rank number uses a light-starting gradient in dark mode, and a dark-starting one in light mode', async () => {
+      const { container: darkContainer } = renderWithProviders(<ProfilePage />, { theme: 'dark' })
+      await waitFor(() => expect(getUserProfile).toHaveBeenCalled())
+      const darkRankEl = darkContainer.querySelector('.bg-clip-text')
+      expect(darkRankEl).toBeTruthy()
+      expect(darkRankEl?.className).toContain('from-white')
+      expect(darkRankEl?.className).not.toContain('from-[#1a1410]')
+
+      const { container: lightContainer } = renderWithProviders(<ProfilePage />, { theme: 'light' })
+      await waitFor(() => expect(getUserProfile).toHaveBeenCalled())
+      const lightRankEl = lightContainer.querySelector('.bg-clip-text')
+      expect(lightRankEl?.className).toContain('from-[#1a1410]')
+    })
+
+    it('the Unranked fallback uses a light, readable color in dark mode', async () => {
+      vi.mocked(getUserProfile).mockResolvedValue({
+        ...OWN_PROFILE,
+        rank: { position: null, tier: 'bronze', tier_name: 'Bronze', tier_color: '#999999' },
+      })
+
+      renderWithProviders(<ProfilePage />, { theme: 'dark' })
+
+      const unranked = await screen.findByText('Unranked')
+      expect(unranked.className).toContain('text-[#e8dfd0]')
+      expect(unranked.className).not.toContain('text-gray-400')
+    })
+
+    it('the calendar Less/More legend switches to a light color in dark mode', async () => {
+      renderWithProviders(<ProfilePage />, { theme: 'dark' })
+
+      const less = await screen.findByText('Less')
+      const more = screen.getByText('More')
+      expect(less.className).toContain('text-[#d4d4d4]')
+      expect(more.className).toContain('text-[#d4d4d4]')
+      expect(less.className).not.toContain('text-[#7a6b5a]')
+    })
+  })
 })

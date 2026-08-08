@@ -24,6 +24,7 @@ vi.mock('lucide-react', () => ({
   Circle: () => null,
   ArrowLeft: () => null,
   GitPullRequest: () => null,
+  ChevronDown: () => null,
 }))
 
 vi.mock('react-markdown', () => ({
@@ -238,6 +239,36 @@ describe('ProjectDetailPage', () => {
     expect(screen.queryByTestId('markdown')).not.toBeInTheDocument()
     // Renders once in the header and once in the Overview section.
     expect(screen.getAllByText('A widget for acme').length).toBeGreaterThan(0)
+  })
+
+  it('does not show a Show more toggle for a short README', async () => {
+    renderWithProviders(<ProjectDetailPage projectId="proj-123" />)
+
+    await waitFor(() => expect(screen.getByTestId('markdown')).toBeInTheDocument())
+    expect(screen.queryByText('Show more')).not.toBeInTheDocument()
+  })
+
+  it('collapses a long README behind a Show more toggle, expanding on click', async () => {
+    const longReadme = '# Widget\n\n' + 'A great widget project. '.repeat(40) // well over 600 chars
+    vi.mocked(getPublicProject).mockResolvedValue(buildProject({ readme: longReadme }))
+    const user = userEvent.setup()
+
+    renderWithProviders(<ProjectDetailPage projectId="proj-123" />)
+
+    await waitFor(() => expect(screen.getByTestId('markdown')).toBeInTheDocument())
+    const toggle = screen.getByText('Show more')
+    expect(toggle).toBeInTheDocument()
+    // Collapsed: the markdown content's wrapper is height-clamped.
+    expect(screen.getByTestId('markdown').parentElement).toHaveClass('max-h-[280px]')
+
+    await user.click(toggle)
+
+    expect(screen.getByText('Show less')).toBeInTheDocument()
+    expect(screen.getByTestId('markdown').parentElement).not.toHaveClass('max-h-[280px]')
+
+    await user.click(screen.getByText('Show less'))
+
+    expect(screen.getByText('Show more')).toBeInTheDocument()
   })
 
   it('falls back to a GitHub link when there is no README and no description', async () => {

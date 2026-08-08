@@ -812,7 +812,9 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                 {isLoadingProfile ? (
                   <SkeletonLoader variant="text" width="120px" height="64px" className="mx-auto" />
                 ) : profileData?.rank?.position ? (
-                  <div className="text-[64px] font-black bg-gradient-to-b from-[#1a1410] via-[#2d2820] to-[#c9983a] bg-clip-text text-transparent leading-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.2)]" style={{ letterSpacing: '-0.02em' }}>
+                  <div className={`text-[64px] font-black bg-gradient-to-b bg-clip-text text-transparent leading-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.2)] ${
+                    theme === 'dark' ? 'from-white via-[#f5efe5] to-[#c9983a]' : 'from-[#1a1410] via-[#2d2820] to-[#c9983a]'
+                  }`} style={{ letterSpacing: '-0.02em' }}>
                     {profileData.rank.position}
                     <span className="text-[36px] align-super">
                       {profileData.rank.position === 1 ? 'st' :
@@ -821,7 +823,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                     </span>
                   </div>
                 ) : (
-                  <div className="text-[48px] font-black text-gray-400 leading-none">
+                  <div className={`text-[48px] font-black leading-none ${theme === 'dark' ? 'text-[#e8dfd0]' : 'text-gray-400'}`}>
                     Unranked
                   </div>
                 )}
@@ -1209,11 +1211,13 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
 
                 {/* Center Total with Animation */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <div className="text-[13px] font-bold text-[#7a6b5a] uppercase tracking-wider mb-1 animate-pulse">Total</div>
-                  <div className="text-[36px] font-black bg-gradient-to-b from-[#2d2820] to-[#c9983a] bg-clip-text text-transparent leading-none group-hover/chart:scale-110 transition-transform duration-300">
+                  <div className={`text-[13px] font-bold uppercase tracking-wider mb-1 animate-pulse transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Total</div>
+                  <div className={`text-[36px] font-black bg-gradient-to-b bg-clip-text text-transparent leading-none group-hover/chart:scale-110 transition-transform duration-300 ${
+                    theme === 'dark' ? 'from-white to-[#c9983a]' : 'from-[#2d2820] to-[#c9983a]'
+                  }`}>
                     ${(totalRewards / 1000).toFixed(1)}K
                   </div>
-                  <div className="text-[11px] font-semibold text-[#7a6b5a] mt-1">USD Earned</div>
+                  <div className={`text-[11px] font-semibold mt-1 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>USD Earned</div>
                 </div>
               </div>
             </div>
@@ -1234,9 +1238,9 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                       style={{ backgroundColor: item.color }}
                     />
                     <div className="flex-1">
-                      <div className="text-[13px] font-semibold text-[#2d2820] mb-1 group-hover/card:text-[#c9983a] transition-colors">{item.name}</div>
+                      <div className={`text-[13px] font-semibold mb-1 group-hover/card:text-[#c9983a] transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>{item.name}</div>
                       <div className="flex items-baseline gap-2">
-                        <div className="text-[20px] font-black text-[#2d2820] group-hover/card:scale-105 transition-transform origin-left">
+                        <div className={`text-[20px] font-black group-hover/card:scale-105 transition-transform origin-left ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>
                           ${item.amount.toLocaleString()}
                         </div>
                         <div className="text-[11px] font-bold text-[#c9983a] group-hover/card:scale-110 transition-transform">{item.value}%</div>
@@ -1365,14 +1369,14 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
 
           {/* Legend */}
           <div className="flex items-center justify-end gap-4 mt-6">
-            <span className="text-[13px] font-bold text-[#7a6b5a]">Less</span>
+            <span className={`text-[13px] font-bold transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Less</span>
             <div className="flex items-center gap-2.5">
               <div className="w-[16px] h-[16px] rounded-[4px] bg-white/40 border-2 border-white/60 shadow-[0_2px_8px_rgba(255,255,255,0.3)]" />
               <div className="w-[16px] h-[16px] rounded-[4px] bg-[#c9983a]/50 border-2 border-[#c9983a]/70 shadow-[0_2px_10px_rgba(201,152,58,0.3)]" />
               <div className="w-[16px] h-[16px] rounded-[4px] bg-[#c9983a]/75 border-2 border-[#c9983a]/90 shadow-[0_3px_14px_rgba(201,152,58,0.45)]" />
               <div className="w-[16px] h-[16px] rounded-[4px] bg-gradient-to-br from-[#c9983a] to-[#b8873a] border-2 border-[#ffd700] shadow-[0_4px_20px_rgba(201,152,58,0.6),0_0_15px_rgba(255,215,0,0.4)]" />
             </div>
-            <span className="text-[13px] font-bold text-[#7a6b5a]">More</span>
+            <span className={`text-[13px] font-bold transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>More</span>
           </div>
         </div>
       </div>

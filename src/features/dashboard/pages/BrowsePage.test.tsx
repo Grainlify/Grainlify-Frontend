@@ -41,8 +41,8 @@ function makeApiProject(
   }
 }
 
-// github_full_name's part after the slash becomes the card's display name
-// (getRepoName / isValidProject, from shared/utils/projectFilter).
+// github_full_name's part before the slash is the org Browse groups by; the
+// part after becomes the repo card's display name (getRepoName / isValidProject).
 const projectX = makeApiProject({
   id: 'x1',
   github_full_name: 'foo/alpha-lib',
@@ -52,6 +52,16 @@ const projectX = makeApiProject({
   contributors_count: 12,
   open_issues_count: 4,
   open_prs_count: 2,
+})
+
+// Second repo under the SAME org as projectX, to exercise grouping.
+const projectZ = makeApiProject({
+  id: 'z1',
+  github_full_name: 'foo/gamma-app',
+  description: 'Gamma app for other things',
+  stars_count: 100,
+  forks_count: 5,
+  contributors_count: 8,
 })
 
 const projectY = makeApiProject({
@@ -67,7 +77,7 @@ describe('BrowsePage', () => {
     vi.resetAllMocks()
   })
 
-  it('shows the loading skeleton, then a populated grid of projects', async () => {
+  it('shows the loading skeleton, then a populated grid of organizations (not individual repos)', async () => {
     mockedGetEcosystems.mockResolvedValue({ ecosystems: [] })
     mockedGetPublicProjects.mockResolvedValue({
       projects: [projectX, projectY],
@@ -81,10 +91,78 @@ describe('BrowsePage', () => {
     expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0)
 
     await waitFor(() => {
-      expect(screen.getByText('alpha-lib')).toBeInTheDocument()
+      expect(screen.getByText('foo')).toBeInTheDocument()
     })
-    expect(screen.getByText('beta-tool')).toBeInTheDocument()
+    expect(screen.getByText('bar')).toBeInTheDocument()
+    // Individual repo names only appear after drilling into an org.
+    expect(screen.queryByText('alpha-lib')).not.toBeInTheDocument()
     expect(container.querySelectorAll('.animate-shimmer').length).toBe(0)
+  })
+
+  it('groups repos under the same org into one organization card', async () => {
+    mockedGetEcosystems.mockResolvedValue({ ecosystems: [] })
+    mockedGetPublicProjects.mockResolvedValue({
+      projects: [projectX, projectZ, projectY],
+      total: 3,
+      limit: 20,
+      offset: 0,
+    })
+
+    renderWithProviders(<BrowsePage />)
+
+    await waitFor(() => expect(screen.getByText('foo')).toBeInTheDocument())
+    // foo has 2 repos (alpha-lib, gamma-app); bar has 1.
+    expect(screen.getByText('2 repositories')).toBeInTheDocument()
+    expect(screen.getByText('1 repository')).toBeInTheDocument()
+  })
+
+  it('clicking an organization drills into its repo list, with a way back', async () => {
+    mockedGetEcosystems.mockResolvedValue({ ecosystems: [] })
+    mockedGetPublicProjects.mockResolvedValue({
+      projects: [projectX, projectZ, projectY],
+      total: 3,
+      limit: 20,
+      offset: 0,
+    })
+    const user = userEvent.setup()
+
+    renderWithProviders(<BrowsePage />)
+    await waitFor(() => expect(screen.getByText('foo')).toBeInTheDocument())
+
+    await user.click(screen.getByText('foo'))
+
+    // Both of foo's repos show; bar's repo does not.
+    expect(await screen.findByText('alpha-lib')).toBeInTheDocument()
+    expect(screen.getByText('gamma-app')).toBeInTheDocument()
+    expect(screen.queryByText('beta-tool')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Back to Organizations/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Back to Organizations/i }))
+
+    // Back to the org grid; repo cards are gone again.
+    expect(await screen.findByText('bar')).toBeInTheDocument()
+    expect(screen.queryByText('alpha-lib')).not.toBeInTheDocument()
+  })
+
+  it('calls onProjectClick with the clicked repo id once drilled into its org', async () => {
+    mockedGetEcosystems.mockResolvedValue({ ecosystems: [] })
+    mockedGetPublicProjects.mockResolvedValue({
+      projects: [projectX, projectY],
+      total: 2,
+      limit: 20,
+      offset: 0,
+    })
+    const onProjectClick = vi.fn()
+    const user = userEvent.setup()
+
+    renderWithProviders(<BrowsePage onProjectClick={onProjectClick} />)
+    await waitFor(() => expect(screen.getByText('foo')).toBeInTheDocument())
+
+    await user.click(screen.getByText('foo'))
+    await user.click(await screen.findByText('alpha-lib'))
+
+    expect(onProjectClick).toHaveBeenCalledTimes(1)
+    expect(onProjectClick).toHaveBeenCalledWith('x1')
   })
 
   it('renders an empty-results state (not the error state) when the API returns zero projects', async () => {
@@ -106,8 +184,8 @@ describe('BrowsePage', () => {
   // "distinct error state" the redesign intended.
   //
   // In practice, on a rejected fetch, that branch is unreachable: `useOptimisticData`
-  // is invoked here as `useOptimisticData<Project[]>([], {...})` with a fresh `[]`
-  // literal every render, and the hook's `fetchData` is memoized on
+  // is invoked here as `useOptimisticData<BrowseProject[]>([], {...})` with a fresh
+  // `[]` literal every render, and the hook's `fetchData` is memoized on
   // `[data, initialData, cacheDuration]` — i.e. on that raw, ever-changing literal.
   // A successful fetch masks this (the 30s cache short-circuits the resulting extra
   // effect run before it can change any state), but a *rejected* fetch never
@@ -161,7 +239,7 @@ describe('BrowsePage', () => {
 
     renderWithProviders(<BrowsePage />)
     await waitFor(() => {
-      expect(screen.getByText('alpha-lib')).toBeInTheDocument()
+      expect(screen.getByText('foo')).toBeInTheDocument()
     })
 
     await user.click(screen.getByRole('button', { name: /Select languages/i }))
@@ -178,27 +256,5 @@ describe('BrowsePage', () => {
     expect(screen.getByText('JavaScript')).toBeInTheDocument()
     expect(screen.queryByText('Python')).not.toBeInTheDocument()
     expect(screen.queryByText('Java')).not.toBeInTheDocument()
-  })
-
-  it('calls onProjectClick with the clicked project id', async () => {
-    mockedGetEcosystems.mockResolvedValue({ ecosystems: [] })
-    mockedGetPublicProjects.mockResolvedValue({
-      projects: [projectX, projectY],
-      total: 2,
-      limit: 20,
-      offset: 0,
-    })
-    const onProjectClick = vi.fn()
-    const user = userEvent.setup()
-
-    renderWithProviders(<BrowsePage onProjectClick={onProjectClick} />)
-    await waitFor(() => {
-      expect(screen.getByText('alpha-lib')).toBeInTheDocument()
-    })
-
-    await user.click(screen.getByText('alpha-lib'))
-
-    expect(onProjectClick).toHaveBeenCalledTimes(1)
-    expect(onProjectClick).toHaveBeenCalledWith('x1')
   })
 })

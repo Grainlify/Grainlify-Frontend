@@ -1,10 +1,11 @@
-import { X, SearchX, AlertCircle } from "lucide-react";
+import { X, SearchX, AlertCircle, ChevronLeft } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Dropdown } from "../../../shared/components/ui/Dropdown";
 import { ProjectCard, Project } from "../components/ProjectCard";
 import { ProjectCardSkeleton } from "../components/ProjectCardSkeleton";
+import { OrganizationCard, Organization } from "../components/OrganizationCard";
 import { getPublicProjects, getEcosystems } from "../../../shared/api/client";
 import {
   isValidProject,
@@ -20,6 +21,16 @@ import { useOptimisticData } from "../../../shared/hooks/useOptimisticData";
 
 interface BrowsePageProps {
   onProjectClick?: (id: string) => void;
+}
+
+// BrowsePage's own project shape carries the owning org alongside whatever
+// ProjectCard needs to render - Browse groups by org, ProjectCard doesn't
+// need to know that grouping exists.
+interface BrowseProject extends Project {
+  owner: string;
+  // Raw star count for org-level aggregation - `stars` above is already
+  // formatted for display (e.g. "1.2K") and can't be summed directly.
+  starsCount: number;
 }
 
 // Helper function to format numbers (e.g., 1234 -> "1.2K", 1234567 -> "1.2M")
@@ -97,6 +108,7 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
     categories: [],
     tags: [],
   });
+  const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
 
   // Use optimistic data hook for projects with 30-second cache
   const {
@@ -104,7 +116,40 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
     isLoading,
     hasError,
     fetchData: fetchProjects,
-  } = useOptimisticData<Project[]>([], { cacheDuration: 30000 });
+  } = useOptimisticData<BrowseProject[]>([], { cacheDuration: 30000 });
+
+  // Group projects by their GitHub org/owner - Browse shows orgs first,
+  // drilling into a specific org shows just its repos.
+  const organizations = useMemo<Organization[]>(() => {
+    const byOwner = new Map<string, BrowseProject[]>();
+    for (const project of projects) {
+      const list = byOwner.get(project.owner) ?? [];
+      list.push(project);
+      byOwner.set(project.owner, list);
+    }
+    return Array.from(byOwner.entries())
+      .map(([owner, repos]) => ({
+        name: owner,
+        avatar: `https://github.com/${owner}.png?size=200`,
+        repoCount: repos.length,
+        totalStars: repos.reduce((sum, r) => sum + r.starsCount, 0),
+        totalContributors: repos.reduce((sum, r) => sum + r.contributors, 0),
+      }))
+      .sort((a, b) => b.repoCount - a.repoCount || a.name.localeCompare(b.name));
+  }, [projects]);
+
+  const orgProjects = useMemo(
+    () => (selectedOrg ? projects.filter((p) => p.owner === selectedOrg) : []),
+    [projects, selectedOrg],
+  );
+
+  // If a filter change makes the drilled-into org disappear (no more
+  // matching repos), don't strand the user on an empty drill-down view.
+  useEffect(() => {
+    if (selectedOrg && !isLoading && !organizations.some((o) => o.name === selectedOrg)) {
+      setSelectedOrg(null);
+    }
+  }, [selectedOrg, organizations, isLoading]);
 
   const [ecosystems, setEcosystems] = useState<Array<{ name: string }>>([]);
 
@@ -237,16 +282,18 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
             projectsArray = [];
           }
 
-          // Map API response to Project interface
-          const mappedProjects: Project[] = projectsArray
+          // Map API response to BrowseProject (Project + org grouping info)
+          const mappedProjects: BrowseProject[] = projectsArray
             .filter(isValidProject)
             .map((p) => {
               const repoName = getRepoName(p.github_full_name);
               return {
                 id: p.id || `project-${Date.now()}-${Math.random()}`, // Fallback ID if missing
                 name: repoName,
+                owner: p.github_full_name.split('/')[0] || repoName,
                 icon: getProjectIcon(p.github_full_name),
                 stars: formatNumber(p.stars_count || 0),
+                starsCount: p.stars_count || 0,
                 forks: formatNumber(p.forks_count || 0),
                 contributors: p.contributors_count || 0,
                 openIssues: p.open_issues_count || 0,
@@ -319,7 +366,34 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
         ))}
       </div>
 
-      {/* Projects Grid */}
+      {/* Back button + org header, only while drilled into an organization */}
+      {!isLoading && !hasError && selectedOrg && (
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setSelectedOrg(null)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-[12px] backdrop-blur-[30px] border font-medium text-[14px] transition-all hover:scale-[1.02] ${
+              isDark
+                ? "bg-[#2d2820]/60 hover:bg-[#2d2820]/80 text-[#d4c5b0] border-white/10"
+                : "bg-white/60 hover:bg-white/80 text-[#6b5d4d] border-white/25"
+            }`}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back to Organizations
+          </button>
+          <div className="flex items-center gap-2.5">
+            <img
+              src={`https://github.com/${selectedOrg}.png?size=80`}
+              alt={selectedOrg}
+              className="w-7 h-7 rounded-[8px] border border-white/20"
+            />
+            <h2 className={`text-[16px] font-bold transition-colors ${isDark ? "text-[#f5f5f5]" : "text-[#2d2820]"}`}>
+              {selectedOrg}
+            </h2>
+          </div>
+        </div>
+      )}
+
+      {/* Projects / Organizations Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5">
           {[...Array(8)].map((_, idx) => (
@@ -338,6 +412,22 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
           title="No projects found"
           description="Try adjusting your filters or check back later."
         />
+      ) : selectedOrg ? (
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5"
+          variants={cardContainerVariants}
+          initial={prefersReducedMotion ? false : "hidden"}
+          animate="visible"
+        >
+          {orgProjects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onClick={onProjectClick}
+              variants={cardVariants}
+            />
+          ))}
+        </motion.div>
       ) : (
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5"
@@ -345,11 +435,11 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
           initial={prefersReducedMotion ? false : "hidden"}
           animate="visible"
         >
-          {projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onClick={onProjectClick}
+          {organizations.map((organization) => (
+            <OrganizationCard
+              key={organization.name}
+              organization={organization}
+              onClick={setSelectedOrg}
               variants={cardVariants}
             />
           ))}

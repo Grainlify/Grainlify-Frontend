@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ExternalLink, Copy, Circle, ArrowLeft, GitPullRequest } from 'lucide-react';
+import { ExternalLink, Copy, Circle, ArrowLeft, GitPullRequest, ChevronDown } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { getPublicProject, getPublicProjectIssues, getPublicProjectPRs } from '../../../shared/api/client';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
@@ -109,6 +109,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
   const projectId = propProjectId || paramProjectId;
   const [activeIssueTab, setActiveIssueTab] = useState('all');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [project, setProject] = useState<null | Awaited<ReturnType<typeof getPublicProject>>>(null);
   const [issues, setIssues] = useState<Array<{
@@ -757,9 +758,42 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
               <SkeletonLoader className="h-4 w-3/4" />
             </div>
           ) : project?.readme ? (
-            <div className="prose prose-sm max-w-none [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-[12px] [&_pre]:p-4 [&_pre_code]:!p-0 [&_pre_code]:!bg-transparent [&_pre_code]:!border-0 [&_pre_code]:!text-inherit [&_pre_code]:block">
-              <OverviewMarkdown readme={project.readme} theme={theme} />
-            </div>
+            (() => {
+              // Long READMEs (setup steps, env var tables, full docs) used to
+              // render fully expanded, burying the actual project links and
+              // stats below a wall of text. Collapse anything substantial by
+              // default; short overviews render as-is with no toggle.
+              const isLong = project.readme.length > 600;
+              const collapsed = isLong && !isOverviewExpanded;
+              return (
+                <>
+                  <div className="relative">
+                    {collapsed && (
+                      <div className={`absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t z-10 pointer-events-none ${
+                        theme === 'dark' ? 'from-[#2d2820] to-transparent' : 'from-[#e8dfd0] to-transparent'
+                      }`} />
+                    )}
+                    <div className={`prose prose-sm max-w-none [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-[12px] [&_pre]:p-4 [&_pre_code]:!p-0 [&_pre_code]:!bg-transparent [&_pre_code]:!border-0 [&_pre_code]:!text-inherit [&_pre_code]:block ${
+                      collapsed ? 'max-h-[280px] overflow-hidden' : ''
+                    }`}>
+                      <OverviewMarkdown readme={project.readme} theme={theme} />
+                    </div>
+                  </div>
+                  {isLong && (
+                    <button
+                      type="button"
+                      onClick={() => setIsOverviewExpanded((v) => !v)}
+                      className={`relative z-10 mt-3 text-[13px] font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                        theme === 'dark' ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'
+                      }`}
+                    >
+                      {isOverviewExpanded ? 'Show less' : 'Show more'}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isOverviewExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                  )}
+                </>
+              );
+            })()
           ) : description ? (
             <p className={`text-[15px] leading-relaxed transition-colors ${
               theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#4a3f2f]'
