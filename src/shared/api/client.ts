@@ -1179,6 +1179,21 @@ export const bootstrapAdmin = (bootstrapToken: string) =>
   })
 
 // KYC
+
+/** Structured data extracted from the KYC provider's identity-verification response. */
+export interface KycExtractedData {
+  first_name?: string
+  full_name?: string
+  last_name?: string
+  address?: string
+  city?: string
+  postal_code?: string
+  postalCode?: string
+  country?: string
+  document_number?: string
+  tax_id?: string
+}
+
 export const startKYCVerification = () =>
   apiRequest<{
     session_id: string
@@ -1195,7 +1210,7 @@ export const getKYCStatus = () =>
     verified_at?: string
     rejection_reason?: string
     data?: any
-    extracted?: any
+    extracted?: KycExtractedData
   }>('/auth/kyc/status', { requiresAuth: true })
 
 export const getBillingProfiles = () =>
