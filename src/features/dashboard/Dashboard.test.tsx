@@ -1,9 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useLocation } from 'react-router-dom'
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { Dashboard } from './Dashboard'
 import { bootstrapAdmin } from '../../shared/api/client'
+
+// Dashboard now syncs its URL via react-router's useSearchParams rather than
+// raw window.history, so under the MemoryRouter renderWithProviders uses,
+// window.location.search never changes (that's the whole point of
+// MemoryRouter - it keeps navigation in-memory instead of touching the real
+// browser URL). This spy renders the router's own idea of the current search
+// string as text, which is what these tests assert against instead.
+function LocationSpy() {
+  const location = useLocation()
+  return <div data-testid="location-spy">{location.search}</div>
+}
 
 // Dashboard is a shell component: it renders exactly one internal "page" based on
 // a `currentPage` string state (synced to ?tab= in the URL and to
@@ -124,7 +136,12 @@ describe('Dashboard', () => {
 
   it('clicking a nav item switches the active page and syncs ?tab= in the URL and localStorage', async () => {
     const user = userEvent.setup()
-    const { container } = renderWithProviders(<Dashboard />)
+    const { container } = renderWithProviders(
+      <>
+        <Dashboard />
+        <LocationSpy />
+      </>,
+    )
     expect(await screen.findByTestId('discover-page')).toBeInTheDocument()
 
     const browseNavButton = container.querySelector('[data-icon="Grid3x3"]')?.closest('button')
@@ -135,7 +152,7 @@ describe('Dashboard', () => {
     expect(await screen.findByTestId('browse-page')).toBeInTheDocument()
     expect(screen.queryByTestId('discover-page')).not.toBeInTheDocument()
     await waitFor(() => {
-      expect(window.location.search).toContain('tab=browse')
+      expect(screen.getByTestId('location-spy').textContent).toContain('tab=browse')
     })
     expect(localStorage.getItem('dashboardTab')).toBe('browse')
   })

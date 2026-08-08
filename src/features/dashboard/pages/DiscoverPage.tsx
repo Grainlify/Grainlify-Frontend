@@ -9,6 +9,7 @@ import {
 import { motion, useReducedMotion } from "motion/react";
 import { IssueCard } from "../../../shared/components/ui/IssueCard";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { IssueDetailPage } from "./IssueDetailPage";
 import { ProjectDetailPage } from "./ProjectDetailPage";
 import { DiscoverHero } from "./DiscoverHero";
@@ -178,13 +179,16 @@ export function DiscoverPage({
   const isDark = theme === "dark";
   const { user } = useAuth();
   const prefersReducedMotion = useReducedMotion();
-  const [selectedIssue, setSelectedIssue] = useState<{
-    issueId: string;
-    projectId?: string;
-  } | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    null,
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Derived directly from ?dIssue=/?dProject= (not local state) so this
+  // overlay - previously invisible to the URL entirely - survives a reload
+  // and stays correct on browser back/forward. Distinct param names from
+  // Dashboard's own ?issue=/?project= (that one drives a *different* global
+  // overlay, triggered from Browse/Ecosystems/OSW/Search/Profile).
+  const dIssueId = searchParams.get('dIssue');
+  const dProjectId = searchParams.get('dProject');
+  const selectedIssue = dIssueId ? { issueId: dIssueId, projectId: dProjectId || undefined } : null;
+  const selectedProjectId = !dIssueId ? dProjectId : null;
 
   // Real onboarding status for the hero's setup nudge — billing profiles are
   // stored client-side today (see BillingProfilesContext), KYC comes from the API.
@@ -362,7 +366,12 @@ export function DiscoverPage({
       <IssueDetailPage
         issueId={selectedIssue.issueId}
         projectId={selectedIssue.projectId}
-        onClose={() => setSelectedIssue(null)}
+        onClose={() => {
+          const next = new URLSearchParams(searchParams);
+          next.delete('dIssue');
+          next.delete('dProject');
+          setSearchParams(next);
+        }}
       />
     );
   }
@@ -372,7 +381,11 @@ export function DiscoverPage({
     return (
       <ProjectDetailPage
         projectId={selectedProjectId}
-        onClose={() => setSelectedProjectId(null)}
+        onClose={() => {
+          const next = new URLSearchParams(searchParams);
+          next.delete('dProject');
+          setSearchParams(next);
+        }}
       />
     );
   }
@@ -534,7 +547,11 @@ export function DiscoverPage({
               <DiscoverProjectCard
                 key={project.id}
                 project={project}
-                onClick={() => setSelectedProjectId(String(project.id))}
+                onClick={() => {
+                  const next = new URLSearchParams(searchParams);
+                  next.set('dProject', String(project.id));
+                  setSearchParams(next);
+                }}
                 variants={cardVariants}
               />
             ))}
@@ -631,12 +648,12 @@ export function DiscoverPage({
                   daysLeft={issue.daysLeft}
                   variant="recommended"
                   primaryTag={issue.primaryTag}
-                  onClick={() =>
-                    setSelectedIssue({
-                      issueId: issue.id,
-                      projectId: issue.projectId,
-                    })
-                  }
+                  onClick={() => {
+                    const next = new URLSearchParams(searchParams);
+                    next.set('dIssue', issue.id);
+                    next.set('dProject', issue.projectId);
+                    setSearchParams(next);
+                  }}
                 />
               </motion.div>
             ))}

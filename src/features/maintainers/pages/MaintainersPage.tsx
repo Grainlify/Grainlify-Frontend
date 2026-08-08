@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Plus, Settings as SettingsIcon, AlertCircle, Package } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
@@ -10,9 +11,10 @@ import { getMyProjects, getPendingSetupProjects, type PendingSetupProject } from
 import { InstallGitHubAppModal } from '../components/InstallGitHubAppModal';
 import { NewProjectSetupModal } from '../components/NewProjectSetupModal';
 
+const VALID_TABS: TabType[] = ['Dashboard', 'Issues', 'Pull Requests'];
+
 interface MaintainersPageProps {
   onNavigate: (page: string) => void;
-  initialTab?: TabType;
 }
 
 interface Project {
@@ -43,9 +45,22 @@ interface GroupedRepository {
   }>;
 }
 
-export function MaintainersPage({ onNavigate, initialTab }: MaintainersPageProps) {
+export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = useState<TabType>(initialTab ?? 'Dashboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Derived directly from ?subtab= (not local state) so which sub-tab is
+  // active survives a reload and stays correct on browser back/forward,
+  // instead of always resetting to Dashboard.
+  const activeTab: TabType = (() => {
+    const fromUrl = searchParams.get('subtab');
+    return (VALID_TABS as string[]).includes(fromUrl ?? '') ? (fromUrl as TabType) : 'Dashboard';
+  })();
+
+  const setActiveTab = (tab: TabType) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('subtab', tab);
+    setSearchParams(next);
+  };
   const [isRepoDropdownOpen, setIsRepoDropdownOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [expandedOrgs, setExpandedOrgs] = useState<Set<string>>(new Set());
@@ -94,12 +109,15 @@ export function MaintainersPage({ onNavigate, initialTab }: MaintainersPageProps
 
   // Fetch projects from API
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const fromGitHubInstall = urlParams.get('github_app_installed') === 'true';
+    const fromGitHubInstall = searchParams.get('github_app_installed') === 'true';
 
     if (fromGitHubInstall) {
       setShowNewProjectModalFromRedirect(true);
-      window.history.replaceState({}, '', window.location.pathname);
+      // Strip only this one param - a blanket replaceState(pathname) here would
+      // also wipe tab=/subtab=/etc. that Dashboard's own sync effect just wrote.
+      const next = new URLSearchParams(searchParams);
+      next.delete('github_app_installed');
+      setSearchParams(next, { replace: true });
       // Refresh projects and pending setup after a delay to allow backend sync
       const t = setTimeout(() => {
         loadProjects();

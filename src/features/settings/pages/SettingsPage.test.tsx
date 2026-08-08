@@ -37,10 +37,15 @@ describe('SettingsPage', () => {
     expect(screen.queryByTestId('terms-tab')).not.toBeInTheDocument()
   })
 
-  it('honors an explicit initialTab prop', () => {
-    renderWithProviders(<SettingsPage initialTab="billing" />)
+  it('opens directly on the tab named by ?subtab= (e.g. from Discover\'s "Continue setup")', () => {
+    renderWithProviders(<SettingsPage />, { route: '/dashboard?tab=settings&subtab=billing' })
     expect(screen.getByTestId('billing-tab')).toBeInTheDocument()
     expect(screen.queryByTestId('profile-tab')).not.toBeInTheDocument()
+  })
+
+  it('falls back to Profile when ?subtab= is missing or invalid', () => {
+    renderWithProviders(<SettingsPage />, { route: '/dashboard?tab=settings&subtab=NotARealTab' })
+    expect(screen.getByTestId('profile-tab')).toBeInTheDocument()
   })
 
   it('clicking each of the 7 tab buttons swaps which mocked tab renders', async () => {

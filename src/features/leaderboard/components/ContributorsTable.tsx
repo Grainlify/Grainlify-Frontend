@@ -77,7 +77,7 @@ export function ContributorsTable({
           <div
             key={leader.rank}
             onClick={() => handleRowClick(leader)}
-            className="grid grid-cols-12 gap-4 px-8 py-5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group"
+            className="grid grid-cols-12 gap-4 px-8 py-2.5 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group"
             style={{
               animation: isLoaded
                 ? `slideInLeft 0.5s ease-out ${1.1 + index * 0.1}s both`
@@ -86,9 +86,9 @@ export function ContributorsTable({
           >
             {/* Rank */}
             <div className="col-span-1 flex items-center">
-              <div className="flex items-center justify-center w-8 h-8 rounded-[10px] bg-gradient-to-br from-white/[0.15] to-white/[0.08] border border-white/20 shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
+              <div className="flex items-center justify-center w-7 h-7 rounded-[9px] bg-gradient-to-br from-white/[0.15] to-white/[0.08] border border-white/20 shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
                 <span
-                  className={`text-[15px] font-bold transition-colors ${
+                  className={`text-[13px] font-bold transition-colors ${
                     theme === "dark" ? "text-[#f5f5f5]" : "text-[#2d2820]"
                   }`}
                 >
@@ -99,15 +99,15 @@ export function ContributorsTable({
 
             {/* Trend */}
             <div className="col-span-1 flex items-center">
-              <div className="flex items-center justify-center w-8 h-8 rounded-[10px] bg-gradient-to-br from-white/[0.15] to-white/[0.08] border border-white/20 shadow-sm group-hover:scale-110 transition-all duration-300">
+              <div className="flex items-center justify-center w-7 h-7 rounded-[9px] bg-gradient-to-br from-white/[0.15] to-white/[0.08] border border-white/20 shadow-sm group-hover:scale-110 transition-all duration-300">
                 {getTrendIcon(leader.trend)}
               </div>
             </div>
 
             {/* Contributor */}
-            <div className="col-span-6 flex items-center gap-3">
+            <div className="col-span-6 flex items-center gap-2.5">
               <div
-                className={`relative w-12 h-12 rounded-full bg-gradient-to-br ${getAvatarGradient(index)} flex items-center justify-center text-white font-bold text-[18px] shadow-md border-2 border-white/25 group-hover:scale-125 group-hover:shadow-lg group-hover:rotate-12 transition-all duration-300 overflow-hidden`}
+                className={`relative w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarGradient(index)} flex items-center justify-center text-white font-bold text-[13px] shadow-md border-2 border-white/25 group-hover:scale-125 group-hover:shadow-lg group-hover:rotate-12 transition-all duration-300 overflow-hidden`}
               >
                 {leader.avatar &&
                 (leader.avatar.startsWith("http") ||
@@ -134,7 +134,7 @@ export function ContributorsTable({
               </div>
               <div>
                 <div
-                  className={`text-[15px] font-bold group-hover:text-[#c9983a] transition-colors duration-300 ${
+                  className={`text-[13.5px] font-bold group-hover:text-[#c9983a] transition-colors duration-300 ${
                     theme === "dark" ? "text-[#f5f5f5]" : "text-[#2d2820]"
                   }`}
                 >
@@ -142,7 +142,7 @@ export function ContributorsTable({
                 </div>
                 {activeFilter === "contributions" && leader.contributions && (
                   <div
-                    className={`text-[12px] transition-colors ${
+                    className={`text-[11px] transition-colors ${
                       theme === "dark" ? "text-[#d4d4d4]" : "text-[#7a6b5a]"
                     }`}
                   >
@@ -150,7 +150,7 @@ export function ContributorsTable({
                   </div>
                 )}
                 {activeFilter === "ecosystems" && leader.ecosystems && (
-                  <div className="flex gap-1.5 mt-1">
+                  <div className="flex gap-1.5 mt-0.5">
                     {leader.ecosystems.map((eco, idx) => (
                       <span
                         key={idx}
@@ -166,9 +166,9 @@ export function ContributorsTable({
 
             {/* Score */}
             <div className="col-span-2 flex items-center justify-end">
-              <div className="relative px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/15 border border-[#c9983a]/40 shadow-sm group-hover:shadow-lg group-hover:border-[#c9983a]/70 group-hover:from-[#c9983a]/35 group-hover:to-[#d4af37]/25 group-hover:scale-110 transition-all duration-300">
+              <div className="relative px-4 py-1.5 rounded-[10px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/15 border border-[#c9983a]/40 shadow-sm group-hover:shadow-lg group-hover:border-[#c9983a]/70 group-hover:from-[#c9983a]/35 group-hover:to-[#d4af37]/25 group-hover:scale-110 transition-all duration-300">
                 <div
-                  className={`text-[17px] font-black transition-colors ${
+                  className={`text-[14px] font-black transition-colors ${
                     theme === "dark" ? "text-[#f5f5f5]" : "text-[#2d2820]"
                   }`}
                 >
@@ -184,7 +184,7 @@ export function ContributorsTable({
                   e.stopPropagation();
                   handleRowClick(leader);
                 }}
-                className="px-4 py-2 rounded-[10px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white text-[12px] font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 border border-white/10"
+                className="px-3 py-1.5 rounded-[9px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white text-[11px] font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 border border-white/10"
               >
                 View Profile
               </button>

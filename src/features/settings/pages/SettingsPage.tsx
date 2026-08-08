@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { SettingsTabType } from '../types';
 import { ProfileTab } from '../components/profile/ProfileTab';
 import { NotificationsTab } from '../components/notifications/NotificationsTab';
@@ -10,12 +10,20 @@ import { TermsTab } from '../components/terms/TermsTab';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { BillingProfilesProvider } from '../contexts/BillingProfilesContext';
 
-interface SettingsPageProps {
-  initialTab?: SettingsTabType;
-}
+const VALID_TABS: SettingsTabType[] = ['profile', 'notifications', 'referrals', 'rewards', 'payout', 'billing', 'terms'];
 
-export function SettingsPage({ initialTab = 'profile' }: SettingsPageProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab);
+export function SettingsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Owns its own ?subtab= so which settings tab is active survives a reload.
+  const activeTab: SettingsTabType = (() => {
+    const fromUrl = searchParams.get('subtab');
+    return (VALID_TABS as string[]).includes(fromUrl ?? '') ? (fromUrl as SettingsTabType) : 'profile';
+  })();
+  const setActiveTab = (tab: SettingsTabType) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('subtab', tab);
+    setSearchParams(next);
+  };
   const { theme } = useTheme();
 
   const tabs: { id: SettingsTabType; label: string }[] = [

@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { X, ExternalLink, User, ChevronDown, Plus, Award, Users, Star, CheckCircle, MessageSquare, Filter, Search } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
@@ -58,6 +59,16 @@ interface IssueFromAPI {
 export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSelectedIssueId, initialSelectedProjectId, viewMode = 'maintainer', isLoadingProjects = false }: IssuesTabProps) {
   const { theme } = useTheme();
   const { userRole, user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // When mounted inside Maintainers (viewMode='maintainer'), nothing else
+  // tracks which issue in the list is selected, so it's lost on reload unless
+  // this component persists it itself, distinct from Dashboard's own ?issue=
+  // (which drives the *other* mount of this component, inside IssueDetailPage -
+  // there, initialSelectedIssueId already carries the answer via props).
+  const effectiveInitialIssueId = initialSelectedIssueId ?? searchParams.get('mIssue') ?? undefined;
+  // Which effectiveInitialIssueId the seeding effect below has already handled
+  // (see that effect's comment for why this exists instead of gating on selectedIssue).
+  const seededForIdRef = useRef<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [selectedIssueFromAPI, setSelectedIssueFromAPI] = useState<(IssueFromAPI & { projectName: string; projectId: string }) | null>(null);
@@ -239,6 +250,9 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
 
   const handleProfileClick = () => {
     setSelectedIssue(null);
+    const next = new URLSearchParams(searchParams);
+    next.delete('mIssue');
+    setSearchParams(next);
     onNavigate('profile');
   };
 
@@ -639,14 +653,29 @@ Only applications submitted via the apply link above will be considered. Please 
     return Array.from(labelsSet).sort();
   }, [issues]);
 
-  // If we were opened from a deep-link (e.g. project detail click), auto-select the target issue.
+  // If we were opened from a deep-link (e.g. project detail click) or are
+  // restoring ?mIssue= after a reload, auto-select the target issue.
+  //
+  // Deliberately NOT reactive to selectedIssue (it used to gate on
+  // `if (selectedIssue) return`, using it as an "already seeded" signal).
+  // setSelectedIssue(null) and the ?mIssue= URL clear on close land in
+  // separate renders, not one atomic commit - there's a real transient tick
+  // where selectedIssue is already null but effectiveInitialIssueId hasn't
+  // caught up yet, and gating on selectedIssue would re-open the issue the
+  // user just closed. seededForIdRef tracks "have we already handled this
+  // exact URL id" instead, which isn't affected by that race, and resets once
+  // the URL genuinely clears so navigating back to the same id later (e.g.
+  // browser back/forward) can still seed again.
   useEffect(() => {
-    if (!initialSelectedIssueId) return;
+    if (!effectiveInitialIssueId) {
+      seededForIdRef.current = undefined;
+      return;
+    }
+    if (effectiveInitialIssueId === seededForIdRef.current) return;
     if (isLoadingIssues) return;
-    if (selectedIssue) return;
     if (!issues || issues.length === 0) return;
 
-    const match = issues.find((it) => it.github_issue_id?.toString() === initialSelectedIssueId);
+    const match = issues.find((it) => it.github_issue_id?.toString() === effectiveInitialIssueId);
     if (!match) return;
 
     const timeAgoFormatted = formatTimeAgo(match.updated_at);
@@ -667,9 +696,10 @@ Only applications submitted via the apply link above will be considered. Please 
       url: match.url,
     };
 
+    seededForIdRef.current = effectiveInitialIssueId;
     setSelectedIssue(issueForCard);
     setSelectedIssueFromAPI(match);
-  }, [initialSelectedIssueId, isLoadingIssues, issues, selectedIssue, formatTimeAgo]);
+  }, [effectiveInitialIssueId, isLoadingIssues, issues, formatTimeAgo]);
 
   // Pre-select a repository when provided (e.g. from project detail click)
   useEffect(() => {
@@ -794,8 +824,13 @@ Only applications submitted via the apply link above will be considered. Please 
                     tags={issue.labels?.map((l: any) => l.name || l) || []}
                     isSelected={selectedIssue?.id === issue.github_issue_id.toString()}
                     onClick={() => {
+                      const issueId = issue.github_issue_id.toString();
+                      seededForIdRef.current = issueId;
                       setSelectedIssue(issueForCard);
                       setSelectedIssueFromAPI(issue);
+                      const next = new URLSearchParams(searchParams);
+                      next.set('mIssue', issueId);
+                      setSearchParams(next);
                     }}
                     showTags={false}
                   />
@@ -882,7 +917,13 @@ Only applications submitted via the apply link above will be considered. Please 
               </div>
 
               <button
-                onClick={() => setSelectedIssue(null)}
+                onClick={() => {
+                  setSelectedIssue(null);
+                  const next = new URLSearchParams(searchParams);
+                  next.delete('mIssue');
+                  setSearchParams(next);
+                }}
+                aria-label="Close issue detail"
                 className={`p-2 rounded-[10px] backdrop-blur-[20px] border border-white/25 hover:bg-white/[0.2] transition-all ${isDark ? 'bg-white/[0.08] text-[#f5f5f5]' : 'bg-white/[0.08] text-[#2d2820]'
                   }`}
               >

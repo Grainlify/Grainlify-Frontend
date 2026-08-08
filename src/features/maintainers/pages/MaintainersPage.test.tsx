@@ -1,9 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useLocation } from 'react-router-dom'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { MaintainersPage } from './MaintainersPage'
 import { getMyProjects, getPendingSetupProjects, getAuthToken } from '../../../shared/api/client'
+
+// MaintainersPage now strips github_app_installed via react-router's
+// useSearchParams rather than raw window.history, so under the MemoryRouter
+// renderWithProviders uses, window.location.search never changes - this spy
+// renders the router's own idea of the current search string instead.
+function LocationSpy() {
+  const location = useLocation()
+  return <div data-testid="location-spy">{location.search}</div>
+}
 
 vi.mock('../../../shared/api/client', () => ({
   getMyProjects: vi.fn(),
@@ -92,11 +102,18 @@ describe('MaintainersPage', () => {
     expect(screen.queryByTestId('pull-requests-tab')).not.toBeInTheDocument()
   })
 
-  it('opens directly on the Issues tab when initialTab="Issues" is passed (e.g. from Discover\'s "View all issues")', async () => {
-    renderWithProviders(<MaintainersPage onNavigate={vi.fn()} initialTab="Issues" />)
+  it('opens directly on the Issues tab when the URL has ?subtab=Issues (e.g. from Discover\'s "View all issues")', async () => {
+    renderWithProviders(<MaintainersPage onNavigate={vi.fn()} />, { route: '/dashboard?tab=maintainers&subtab=Issues' })
 
     expect(await screen.findByTestId('issues-tab')).toBeInTheDocument()
     expect(screen.queryByTestId('dashboard-tab')).not.toBeInTheDocument()
+  })
+
+  it('falls back to the Dashboard sub-tab when ?subtab= is missing or invalid', async () => {
+    renderWithProviders(<MaintainersPage onNavigate={vi.fn()} />, { route: '/dashboard?tab=maintainers&subtab=NotARealTab' })
+
+    expect(await screen.findByTestId('dashboard-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('issues-tab')).not.toBeInTheDocument()
   })
 
   it("switches tabs so only the active tab's mocked child renders", async () => {
@@ -163,7 +180,6 @@ describe('MaintainersPage', () => {
   })
 
   it('strips the github_app_installed query param immediately and opens the setup modal after the sync delay', async () => {
-    window.history.pushState({}, '', '/maintainers?github_app_installed=true')
     vi.mocked(getPendingSetupProjects).mockResolvedValue([
       makePendingProject({ id: 'pending-1', github_full_name: 'acme/widgets' }),
     ])
@@ -171,10 +187,16 @@ describe('MaintainersPage', () => {
 
     vi.useFakeTimers()
     try {
-      renderWithProviders(<MaintainersPage onNavigate={vi.fn()} />)
+      renderWithProviders(
+        <>
+          <MaintainersPage onNavigate={vi.fn()} />
+          <LocationSpy />
+        </>,
+        { route: '/maintainers?github_app_installed=true' },
+      )
 
       // The redirect-handling effect strips the query param synchronously.
-      expect(window.location.search).toBe('')
+      expect(screen.getByTestId('location-spy').textContent).toBe('')
       // Neither list is re-fetched immediately — only after the delay, to give
       // the backend time to sync the newly installed app before refetching.
       expect(getMyProjects).not.toHaveBeenCalled()

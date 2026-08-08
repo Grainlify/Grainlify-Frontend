@@ -32,6 +32,25 @@ vi.mock('../../../shared/api/client', () => ({
   getCurrentUser: vi.fn(),
 }))
 
+// Regression coverage below for URL-persisting DiscoverPage's own overlay
+// (?dIssue=/?dProject=) needs these two mounted - stub them so the tests
+// stay focused on DiscoverPage's own logic instead of also covering their
+// unrelated data-fetching.
+vi.mock('./IssueDetailPage', () => ({
+  IssueDetailPage: (props: any) => (
+    <div data-testid="issue-detail-page" data-issue-id={props.issueId} data-project-id={props.projectId}>
+      <button onClick={props.onClose}>Close issue</button>
+    </div>
+  ),
+}))
+vi.mock('./ProjectDetailPage', () => ({
+  ProjectDetailPage: (props: any) => (
+    <div data-testid="project-detail-page" data-project-id={props.projectId}>
+      <button onClick={props.onClose}>Close project</button>
+    </div>
+  ),
+}))
+
 const mockedGetRecommendedProjects = vi.mocked(getRecommendedProjects)
 const mockedGetPublicProjectIssues = vi.mocked(getPublicProjectIssues)
 const mockedGetUserProfile = vi.mocked(getUserProfile)
@@ -323,5 +342,44 @@ describe('DiscoverPage', () => {
 
     await user.click(screen.getByRole('button', { name: /Let's go/i }))
     expect(onGoToOpenSourceWeek).toHaveBeenCalledTimes(1)
+  })
+
+  describe('overlay URL persistence', () => {
+    it('opens the issue overlay named by ?dIssue=/?dProject= after a reload', async () => {
+      mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
+
+      renderWithProviders(<DiscoverPage />, { route: '/dashboard?tab=discover&dIssue=issue-1&dProject=proj-a', withAuth: true })
+
+      const overlay = await screen.findByTestId('issue-detail-page')
+      expect(overlay.getAttribute('data-issue-id')).toBe('issue-1')
+      expect(overlay.getAttribute('data-project-id')).toBe('proj-a')
+    })
+
+    it('opens the project overlay named by ?dProject= (with no ?dIssue=) after a reload', async () => {
+      mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
+
+      renderWithProviders(<DiscoverPage />, { route: '/dashboard?tab=discover&dProject=proj-b', withAuth: true })
+
+      const overlay = await screen.findByTestId('project-detail-page')
+      expect(overlay.getAttribute('data-project-id')).toBe('proj-b')
+    })
+
+    it('clicking a recommended project card writes ?dProject=, and closing clears it', async () => {
+      mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA] })
+      mockedGetPublicProjectIssues.mockResolvedValue({ issues: [] })
+      const user = userEvent.setup()
+
+      renderWithProviders(<DiscoverPage />, { withAuth: true })
+
+      await user.click(await screen.findByText('acme'))
+
+      const overlay = await screen.findByTestId('project-detail-page')
+      expect(overlay.getAttribute('data-project-id')).toBe('proj-a')
+
+      await user.click(screen.getByRole('button', { name: 'Close project' }))
+      expect(screen.queryByTestId('project-detail-page')).not.toBeInTheDocument()
+      // Back to the real Discover content, not stuck on the overlay.
+      expect(await screen.findByText('Recommended Projects (1)')).toBeInTheDocument()
+    })
   })
 })

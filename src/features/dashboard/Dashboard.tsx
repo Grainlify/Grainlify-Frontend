@@ -1,7 +1,7 @@
-import { useState, useEffect, Suspense, lazy } from "react";
+import { useState, useEffect, useRef, Suspense, lazy } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   Search,
   Compass,
@@ -34,8 +34,6 @@ import {
   ModalInput,
 } from "../../shared/components/ui/Modal";
 import { bootstrapAdmin } from "../../shared/api/client";
-import { SettingsTabType } from "../settings/types";
-import { TabType as MaintainersTabType } from "../maintainers/types";
 
 // Every "page" here is a currentPage state swap, not a router path (see App.tsx),
 // so without lazy-loading, the entire dashboard - Discover, Browse, Admin, Settings,
@@ -68,6 +66,12 @@ export function Dashboard() {
   const { ref: themeToggleRef, toggleWithAnimation: toggleSwitchTheme } =
     useThemeToggleAnimation({ onToggle: toggleTheme });
   const navigate = useNavigate();
+  const [, setSearchParams] = useSearchParams();
+  // Every navUrl()-driven URL write should push a new history entry (so the
+  // browser Back button actually steps through in-app navigation) except the
+  // very first one, which would otherwise insert a redundant entry for "you
+  // arrived at the page you're already on" before the user has done anything.
+  const isFirstUrlSync = useRef(true);
   // const [currentPage, setCurrentPage] = useState('discover');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     () => {
@@ -81,10 +85,26 @@ export function Dashboard() {
     const params = new URLSearchParams(window.location.search);
     return params.get("from");
   });
+  // Where "Back" from a contributor's profile should return to - defaults to
+  // Discover (a sensible universal fallback) and is overridden at the one
+  // known entry point (Search) below. Previously hardcoded to "leaderboard"
+  // regardless of actual origin, with a URL write using the wrong param name
+  // ("page=" instead of "tab=") that bypassed the main sync effect entirely.
+  const [profileBackTarget, setProfileBackTarget] = useState("discover");
+  // Reads unconditionally (any currentPage), not just when tab=browse - a
+  // fix for issue overlays opened from Ecosystems/OSW/Maintainers/Discover
+  // not surviving reload.
   const [selectedIssue, setSelectedIssue] = useState<{
     issueId: string;
     projectId?: string;
-  } | null>(null);
+  } | null>(() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    const issueId = params.get("issue");
+    const projectId = params.get("project");
+    if (!issueId) return null;
+    return { issueId, projectId: projectId || undefined };
+  });
   const [selectedEcosystemId, setSelectedEcosystemId] = useState<string | null>(
     null,
   );
@@ -130,10 +150,6 @@ export function Dashboard() {
     }
     return null;
   });
-  const [settingsInitialTab, setSettingsInitialTab] =
-    useState<SettingsTabType>("profile");
-  const [maintainersInitialTab, setMaintainersInitialTab] =
-    useState<MaintainersTabType>("Dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [deviceWidth, setDeviceWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : null
@@ -191,21 +207,18 @@ export function Dashboard() {
     }
   }, [location.search]);
 
-  // Deep link: open specific issue when URL has tab=browse&project=...&issue=... (e.g. "review their application" link)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const projectParam = params.get("project");
-    const issueParam = params.get("issue");
-    const tabParam = params.get("tab") || params.get("page");
-    if (tabParam === "browse" && projectParam && issueParam) {
-      setCurrentPage("browse");
-      setSelectedProjectId(projectParam);
-      setSelectedIssue({ issueId: issueParam, projectId: projectParam });
-    }
-  }, []);
+  // Note: a former "deep link" effect that special-cased tab=browse&project=&issue=
+  // URLs used to live here. It's now redundant - selectedIssue's own useState
+  // initializer above reads ?issue=/?project= unconditionally (any tab), and
+  // currentPage's own initializer independently reads ?tab= from the same URL,
+  // so any deep link that sets all three params is already handled by each
+  // piece of state resolving itself on mount - no extra coordination effect needed.
 
   // *******************************
-  // Keep URL in sync with tab, profile user, and (when viewing an issue) project + issue for shareable links
+  // Keep URL in sync with tab, profile user, and (when viewing an issue) project
+  // + issue for shareable links. Pushes a new history entry for every change
+  // (after the first) so the browser Back button steps through in-app
+  // navigation instead of leaving the app entirely - see isFirstUrlSync above.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     params.set("tab", currentPage);
@@ -223,14 +236,15 @@ export function Dashboard() {
       params.delete("project");
       params.delete("from");
     }
-    if (selectedIssue?.issueId && selectedIssue?.projectId) params.set("issue", selectedIssue.issueId);
-    else if (params.get("issue")) { /* keep from URL until deep-link effect sets state */ }
+    // selectedProjectId is always kept in sync alongside selectedIssue at every
+    // call site in this file, so project= is already handled by the block above.
+    if (selectedIssue?.issueId) params.set("issue", selectedIssue.issueId);
     else params.delete("issue");
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
-    window.history.replaceState({}, "", newUrl);
+    setSearchParams(params, { replace: isFirstUrlSync.current });
+    isFirstUrlSync.current = false;
 
     localStorage.setItem("dashboardTab", currentPage);
-  }, [currentPage, selectedProjectId, selectedIssue, viewingUserId, viewingUserLogin]);
+  }, [currentPage, selectedProjectId, selectedIssue, viewingUserId, viewingUserLogin, projectBackTarget, setSearchParams]);
 
   // Keyboard shortcut for search (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -256,6 +270,7 @@ export function Dashboard() {
     setSelectedEcosystemLogoUrl(null);
     setSelectedEventId(null);
     setSelectedEventName(null);
+    setProfileBackTarget("discover");
     // When switching to profile tab (e.g. "Public Profile" click), show own profile, not last viewed user
     if (page === "profile") {
       setViewingUserId(null);
@@ -311,6 +326,7 @@ export function Dashboard() {
     setActiveRole(role);
     // Auto-navigate based on role and clear selections
     setSelectedProjectId(null);
+    setProjectBackTarget(null);
     setSelectedIssue(null);
     setSelectedEcosystemId(null);
     setSelectedEcosystemName(null);
@@ -318,6 +334,7 @@ export function Dashboard() {
     setSelectedEcosystemLogoUrl(null);
     setSelectedEventId(null);
     setSelectedEventName(null);
+    setProfileBackTarget("discover");
     if (role === "maintainer") {
       setCurrentPage("maintainers");
     } else {
@@ -808,12 +825,22 @@ export function Dashboard() {
                 {currentPage === "discover" && (
                   <DiscoverPage
                     onGoToBilling={() => {
-                      setSettingsInitialTab("billing");
+                      // SettingsPage/MaintainersPage now own their sub-tab via
+                      // their own ?subtab= read (see those files) - writing it
+                      // here too means it's already in place by the time they
+                      // mount, without Dashboard needing to know their tab types.
+                      const params = new URLSearchParams(location.search);
+                      params.set("tab", "settings");
+                      params.set("subtab", "billing");
+                      setSearchParams(params);
                       setCurrentPage("settings");
                     }}
                     onGoToOpenSourceWeek={() => setCurrentPage("osw")}
                     onViewAllIssues={() => {
-                      setMaintainersInitialTab("Issues");
+                      const params = new URLSearchParams(location.search);
+                      params.set("tab", "maintainers");
+                      params.set("subtab", "Issues");
+                      setSearchParams(params);
                       setCurrentPage("maintainers");
                     }}
                   />
@@ -866,7 +893,7 @@ export function Dashboard() {
                   )}
                 {currentPage === "contributors" && <ContributorsPage />}
                 {currentPage === "maintainers" && (
-                  <MaintainersPage onNavigate={handleNavigation} initialTab={maintainersInitialTab} />
+                  <MaintainersPage onNavigate={handleNavigation} />
                 )}
                 {currentPage === "profile" && (
                   <ProfilePage
@@ -875,12 +902,8 @@ export function Dashboard() {
                     onBack={() => {
                       setViewingUserId(null);
                       setViewingUserLogin(null);
-                      setCurrentPage("leaderboard");
-                      window.history.replaceState(
-                        {},
-                        "",
-                        "/dashboard?page=leaderboard",
-                      );
+                      setCurrentPage(profileBackTarget);
+                      setProfileBackTarget("discover");
                     }}
                     onProjectClick={(id) => {
                       setSelectedProjectId(id);
@@ -899,7 +922,7 @@ export function Dashboard() {
                 {currentPage === "redeem" && <RedeemPage />}
                 {currentPage === "blog" && <BlogPage />}
                 {currentPage === "settings" && (
-                  <SettingsPage initialTab={settingsInitialTab} />
+                  <SettingsPage />
                 )}
                 {currentPage === "admin" && adminAuthenticated && <AdminPage />}
                 {currentPage === "admin" && !adminAuthenticated && (
@@ -945,6 +968,7 @@ export function Dashboard() {
                     onContributorClick={(login) => {
                       setViewingUserLogin(login);
                       setViewingUserId(null);
+                      setProfileBackTarget("search");
                       setCurrentPage("profile");
                     }}
                   />
