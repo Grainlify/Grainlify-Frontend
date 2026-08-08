@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Search, ArrowRight, X, FileText, FolderGit2, User, ChevronLeft } from 'lucide-react';
+import { Search, ArrowRight, X, FileText, FolderGit2, User, ChevronLeft, Loader2 } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { searchAll } from '../../../shared/api/client';
+import { getRepoName } from '../../../shared/utils/projectFilter';
 
 interface SearchPageProps {
   onBack: () => void;
-  onIssueClick: (issueId: string) => void;
+  onIssueClick: (issueId: string, projectId: string) => void;
   onProjectClick: (projectId: string) => void;
-  onContributorClick: (contributorId: string) => void;
+  onContributorClick: (login: string) => void;
 }
 
 interface SearchResult {
@@ -15,102 +17,103 @@ interface SearchResult {
   title: string;
   subtitle?: string;
   icon: any;
+  // Extra data each result type needs to navigate on click.
+  projectId?: string;
+  login?: string;
 }
+
+// Real, fixed categories the backend actually filters Browse by (see
+// BrowsePage's own filterOptions.tags) - shown as suggestions so an empty
+// search always leads somewhere real instead of a canned example that
+// wouldn't match anything.
+const searchSuggestions = [
+  'Good first issues',
+  'Bug',
+  'Help wanted',
+  'Documentation',
+];
+
+// Real API calls need debouncing (unlike the old in-memory mock, which could
+// "search" on every keystroke for free) so typing doesn't fire a request per
+// character.
+const SEARCH_DEBOUNCE_MS = 300;
 
 export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributorClick }: SearchPageProps) {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
   const darkTheme = theme === 'dark';
 
-  const searchSuggestions = [
-    "Terminal-based markdown editors worth checking out",
-    "Unity projects for procedural terrain generation",
-    "Find the best GraphQL clients for TypeScript",
-    "AI-powered tools for reviewing pull requests",
-  ];
-
-  // Mock data for search - in real app, this would come from API
-  const allData = {
-    issues: [
-      { id: '1', title: 'Add dark mode support', project: 'React Dashboard' },
-      { id: '2', title: 'Fix navigation bug in mobile view', project: 'Mobile App' },
-      { id: '3', title: 'Implement user authentication', project: 'Backend API' },
-      { id: '4', title: 'Update documentation for API endpoints', project: 'Backend API' },
-      { id: '5', title: 'Refactor component structure', project: 'React Dashboard' },
-    ],
-    projects: [
-      { id: '1', name: 'React Dashboard', description: 'Modern dashboard with React and TypeScript' },
-      { id: '2', name: 'Mobile App', description: 'Cross-platform mobile application' },
-      { id: '3', name: 'Backend API', description: 'RESTful API built with Node.js' },
-      { id: '4', name: 'Design System', description: 'Component library and design tokens' },
-    ],
-    contributors: [
-      { id: '1', name: 'Sarah Johnson', contributions: 245 },
-      { id: '2', name: 'Mike Chen', contributions: 189 },
-      { id: '3', name: 'Emily Rodriguez', contributions: 156 },
-      { id: '4', name: 'David Park', contributions: 134 },
-    ],
-  };
-
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
       setSearchResults([]);
+      setIsSearching(false);
+      setSearchFailed(false);
       return;
     }
 
-    const query = searchQuery.toLowerCase();
-    const results: SearchResult[] = [];
+    let cancelled = false;
+    setIsSearching(true);
+    setSearchFailed(false);
 
-    // Search issues
-    allData.issues.forEach(issue => {
-      if (issue.title.toLowerCase().includes(query) || issue.project.toLowerCase().includes(query)) {
-        results.push({
-          id: issue.id,
-          type: 'issue',
-          title: issue.title,
-          subtitle: issue.project,
-          icon: FileText,
-        });
+    const timer = setTimeout(async () => {
+      try {
+        const data = await searchAll(query);
+        if (cancelled) return;
+
+        const results: SearchResult[] = [
+          ...data.projects.map((project) => ({
+            id: project.id,
+            type: 'project' as const,
+            title: getRepoName(project.github_full_name),
+            subtitle: project.description || project.ecosystem_name || project.github_full_name,
+            icon: FolderGit2,
+          })),
+          ...data.issues.map((issue) => ({
+            id: issue.id,
+            type: 'issue' as const,
+            title: issue.title,
+            subtitle: getRepoName(issue.project_full_name),
+            icon: FileText,
+            projectId: issue.project_id,
+          })),
+          ...data.contributors.map((contributor) => ({
+            id: contributor.login,
+            type: 'contributor' as const,
+            title: contributor.login,
+            subtitle: `${contributor.contributions} contribution${contributor.contributions === 1 ? '' : 's'}`,
+            icon: User,
+            login: contributor.login,
+          })),
+        ];
+
+        setSearchResults(results);
+      } catch {
+        if (!cancelled) {
+          setSearchResults([]);
+          setSearchFailed(true);
+        }
+      } finally {
+        if (!cancelled) setIsSearching(false);
       }
-    });
+    }, SEARCH_DEBOUNCE_MS);
 
-    // Search projects
-    allData.projects.forEach(project => {
-      if (project.name.toLowerCase().includes(query) || project.description.toLowerCase().includes(query)) {
-        results.push({
-          id: project.id,
-          type: 'project',
-          title: project.name,
-          subtitle: project.description,
-          icon: FolderGit2,
-        });
-      }
-    });
-
-    // Search contributors
-    allData.contributors.forEach(contributor => {
-      if (contributor.name.toLowerCase().includes(query)) {
-        results.push({
-          id: contributor.id,
-          type: 'contributor',
-          title: contributor.name,
-          subtitle: `${contributor.contributions} contributions`,
-          icon: User,
-        });
-      }
-    });
-
-    setSearchResults(results);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [searchQuery]);
 
   const handleResultClick = (result: SearchResult) => {
-    if (result.type === 'issue') {
-      onIssueClick(result.id);
+    if (result.type === 'issue' && result.projectId) {
+      onIssueClick(result.id, result.projectId);
     } else if (result.type === 'project') {
       onProjectClick(result.id);
-    } else if (result.type === 'contributor') {
-      onContributorClick(result.id);
+    } else if (result.type === 'contributor' && result.login) {
+      onContributorClick(result.login);
     }
   };
 
@@ -150,10 +153,10 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
         </p>
 
         {/* Search Input */}
-        <div 
+        <div
           className={`relative h-[64px] rounded-[32px] mb-8 transition-colors ${
-            darkTheme 
-              ? 'bg-[#2d2820]/60 border border-white/10' 
+            darkTheme
+              ? 'bg-[#2d2820]/60 border border-white/10'
               : 'bg-white/60 border border-black/10'
           }`}
           style={{ backdropFilter: 'blur(40px)' }}
@@ -169,13 +172,18 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
               placeholder="Search issues, projects, contributors..."
               autoFocus
               className={`flex-1 bg-transparent outline-none text-[16px] transition-colors ${
-                darkTheme 
-                  ? 'text-white placeholder:text-white/40' 
+                darkTheme
+                  ? 'text-white placeholder:text-white/40'
                   : 'text-[#2d2820] placeholder:text-black/40'
               }`}
             />
+            {isSearching && (
+              <Loader2 className={`w-4 h-4 mr-2 flex-shrink-0 animate-spin ${
+                darkTheme ? 'text-white/50' : 'text-black/50'
+              }`} />
+            )}
             {searchQuery && (
-              <button 
+              <button
                 onClick={() => setSearchQuery('')}
                 className={`w-8 h-8 rounded-full flex items-center justify-center ml-4 flex-shrink-0 transition-all hover:scale-105 ${
                   darkTheme
@@ -186,7 +194,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
                 <X className="w-4 h-4" />
               </button>
             )}
-            <button 
+            <button
               className={`w-10 h-10 rounded-full flex items-center justify-center ml-3 flex-shrink-0 transition-all hover:scale-105 ${
                 darkTheme
                   ? 'bg-[#c9983a] hover:bg-[#d4a645]'
@@ -256,13 +264,17 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
         )}
 
         {/* No Results */}
-        {searchQuery && searchResults.length === 0 && (
+        {searchQuery.trim().length >= 2 && !isSearching && searchResults.length === 0 && (
           <div className={`text-center py-12 transition-colors ${
             darkTheme ? 'text-[#b8a898]/60' : 'text-[#6b5d4d]/60'
           }`}>
             <Search className="w-12 h-12 mx-auto mb-4 opacity-40" />
-            <p className="text-[16px] font-medium mb-2">No results found</p>
-            <p className="text-[14px]">Try searching for something else</p>
+            <p className="text-[16px] font-medium mb-2">
+              {searchFailed ? 'Search is temporarily unavailable' : 'No results found'}
+            </p>
+            <p className="text-[14px]">
+              {searchFailed ? 'Please try again in a moment' : 'Try searching for something else'}
+            </p>
           </div>
         )}
 

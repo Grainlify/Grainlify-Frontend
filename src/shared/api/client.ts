@@ -427,6 +427,33 @@ export const getPublicProjects = (params?: {
   }>(endpoint);
 };
 
+// Global search across verified projects, their open issues, and known
+// contributors - backs the Cmd+K search page. Same visibility rule as
+// Browse: a project must be verified, have completed setup, and not be
+// deleted before it (or its issues) can appear here.
+export const searchAll = (query: string) =>
+  apiRequest<{
+    projects: Array<{
+      id: string;
+      github_full_name: string;
+      description: string | null;
+      ecosystem_name: string | null;
+    }>;
+    issues: Array<{
+      id: string;
+      title: string;
+      number: number;
+      project_id: string;
+      project_full_name: string;
+    }>;
+    contributors: Array<{
+      login: string;
+      user_id: string;
+      avatar_url: string;
+      contributions: number;
+    }>;
+  }>(`/search?q=${encodeURIComponent(query)}`);
+
 // Get recommended projects (top by contributors count)
 export const getRecommendedProjects = (limit: number = 8) =>
   apiRequest<{

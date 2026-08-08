@@ -840,8 +840,9 @@ export function Dashboard() {
                 {currentPage === "search" && (
                   <SearchPage
                     onBack={() => setCurrentPage("discover")}
-                    onIssueClick={(id) => {
-                      setSelectedIssue({ issueId: id });
+                    onIssueClick={(issueId, projectId) => {
+                      setSelectedProjectId(projectId);
+                      setSelectedIssue({ issueId, projectId });
                       setCurrentPage("discover");
                     }}
                     onProjectClick={(id) => {
@@ -849,10 +850,10 @@ export function Dashboard() {
                       setProjectBackTarget("discover");
                       setCurrentPage("discover");
                     }}
-                    onContributorClick={() => {
-                      // TODO: search results are mock data today (no real contributor id
-                      // to view a profile for yet) - revisit once search is backed by the API.
-                      setCurrentPage("contributors");
+                    onContributorClick={(login) => {
+                      setViewingUserLogin(login);
+                      setViewingUserId(null);
+                      setCurrentPage("profile");
                     }}
                   />
                 )}
