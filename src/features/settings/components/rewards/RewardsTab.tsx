@@ -1,19 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { siGithub, siTelegram } from 'simple-icons';
-import { Linkedin, Loader2, Gift, Coins, CheckCircle2, Clock, XCircle, Upload, ExternalLink } from 'lucide-react';
+import { Linkedin, Loader2, Gift, Coins, CheckCircle2, Clock, XCircle, Upload, ExternalLink, ArrowLeftRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import {
   getPointsBalance,
   getSocialFollowStatus,
   submitSocialFollowProof,
-  getMyRedemptions,
-  createRedemption,
   SOCIAL_FOLLOW_PLATFORMS,
   type PointsBalance,
   type SocialFollowStatus,
   type SocialFollowPlatform,
-  type Redemption,
 } from '../../../../shared/api/client';
 
 function SimpleIconGlyph({ path, className }: { path: string; className?: string }) {
@@ -156,21 +153,14 @@ export function RewardsTab() {
   const { theme } = useTheme();
   const [balance, setBalance] = useState<PointsBalance | null>(null);
   const [socialFollow, setSocialFollow] = useState<SocialFollowStatus | null>(null);
-  const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadingPlatform, setUploadingPlatform] = useState<string | null>(null);
-  const [redeemPoints, setRedeemPoints] = useState('');
-  const [redeemWallet, setRedeemWallet] = useState('');
-  const [isRedeeming, setIsRedeeming] = useState(false);
 
   const loadAll = () => {
-    return Promise.all([getPointsBalance(), getSocialFollowStatus(), getMyRedemptions()]).then(
-      ([b, s, r]) => {
-        setBalance(b);
-        setSocialFollow(s);
-        setRedemptions(r.redemptions);
-      }
-    );
+    return Promise.all([getPointsBalance(), getSocialFollowStatus()]).then(([b, s]) => {
+      setBalance(b);
+      setSocialFollow(s);
+    });
   };
 
   useEffect(() => {
@@ -215,31 +205,6 @@ export function RewardsTab() {
     reader.readAsDataURL(file);
   };
 
-  const handleRedeem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const points = parseInt(redeemPoints, 10);
-    if (!Number.isFinite(points) || points <= 0) {
-      toast.error('Enter a valid number of points.');
-      return;
-    }
-    if (!redeemWallet.trim()) {
-      toast.error('Enter your Stellar wallet address.');
-      return;
-    }
-    setIsRedeeming(true);
-    try {
-      await createRedemption(points, redeemWallet.trim());
-      toast.success('Redemption request submitted.');
-      setRedeemPoints('');
-      setRedeemWallet('');
-      await loadAll();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to submit redemption.');
-    } finally {
-      setIsRedeeming(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -256,23 +221,35 @@ export function RewardsTab() {
     );
   }
 
-  const usdcPreview = (parseInt(redeemPoints, 10) || 0) * balance.usdc_per_point;
-
   return (
     <div className="space-y-6">
       {/* Points balance */}
       <Card theme={theme}>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#d4af37] flex items-center justify-center shadow-[0_2px_8px_rgba(201,152,58,0.4)]">
-            <Coins className="w-5 h-5 text-white" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#d4af37] flex items-center justify-center shadow-[0_2px_8px_rgba(201,152,58,0.4)]">
+                <Coins className="w-5 h-5 text-white" />
+              </div>
+              <h2 className={`text-[28px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'}`}>
+                {balance.balance.toLocaleString()} points
+              </h2>
+            </div>
+            <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+              ≈ ${(balance.balance * balance.usdc_per_point).toFixed(2)} USDC available to redeem
+            </p>
           </div>
-          <h2 className={`text-[28px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'}`}>
-            {balance.balance.toLocaleString()} points
-          </h2>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = '/dashboard?tab=redeem';
+            }}
+            className="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[14px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_10px_30px_rgba(162,121,44,0.5)] transition-all"
+          >
+            <ArrowLeftRight className="w-4 h-4" />
+            Redeem for USDC
+          </button>
         </div>
-        <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
-          ≈ ${(balance.balance * balance.usdc_per_point).toFixed(2)} USDC available to redeem
-        </p>
       </Card>
 
       {/* Social Follow */}
@@ -316,69 +293,6 @@ export function RewardsTab() {
         )}
       </Card>
 
-      {/* Redeem */}
-      <Card theme={theme}>
-        <h2 className={`text-[22px] font-bold mb-1 transition-colors ${theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'}`}>
-          Redeem for USDC
-        </h2>
-        <p className={`text-[14px] mb-6 transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
-          Minimum {balance.min_redemption_points} points per request. Requests are reviewed by an admin before payout.
-        </p>
-
-        <form onSubmit={handleRedeem} className="flex flex-col md:flex-row gap-3 mb-6">
-          <div className="flex-1">
-            <input
-              type="number"
-              min={balance.min_redemption_points}
-              value={redeemPoints}
-              onChange={(e) => setRedeemPoints(e.target.value)}
-              placeholder={`Points (min ${balance.min_redemption_points})`}
-              className={`w-full px-4 py-3 rounded-[12px] border text-[14px] transition-colors ${
-                theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0] placeholder:text-[#8a7e70]' : 'bg-white/40 border-white/30 text-[#2d2820] placeholder:text-[#a89684]'
-              }`}
-            />
-            {redeemPoints && (
-              <p className={`text-[12px] mt-1 ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>≈ ${usdcPreview.toFixed(2)} USDC</p>
-            )}
-          </div>
-          <div className="flex-[2]">
-            <input
-              type="text"
-              value={redeemWallet}
-              onChange={(e) => setRedeemWallet(e.target.value)}
-              placeholder="Stellar wallet address (G...)"
-              className={`w-full px-4 py-3 rounded-[12px] border text-[14px] font-mono transition-colors ${
-                theme === 'dark' ? 'bg-white/10 border-white/20 text-[#e8dfd0] placeholder:text-[#8a7e70]' : 'bg-white/40 border-white/30 text-[#2d2820] placeholder:text-[#a89684]'
-              }`}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isRedeeming}
-            className="px-6 py-3 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[14px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_10px_30px_rgba(162,121,44,0.5)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isRedeeming ? 'Submitting...' : 'Redeem'}
-          </button>
-        </form>
-
-        {redemptions.length > 0 && (
-          <div className="space-y-2">
-            {redemptions.map((r) => (
-              <div
-                key={r.id}
-                className={`flex items-center justify-between px-4 py-3 rounded-[12px] border text-[13px] transition-colors ${
-                  theme === 'dark' ? 'bg-white/[0.04] border-white/10' : 'bg-white/[0.15] border-white/25'
-                }`}
-              >
-                <div className={theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'}>
-                  {r.points_spent.toLocaleString()} points → ${r.usdc_amount} USDC
-                </div>
-                <StatusBadge status={r.status} />
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
     </div>
   );
 }

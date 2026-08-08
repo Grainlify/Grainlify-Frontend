@@ -1,13 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../../test/renderWithProviders'
 import { RewardsTab } from './RewardsTab'
 
 const mockGetPointsBalance = vi.fn()
 const mockGetSocialFollowStatus = vi.fn()
-const mockGetMyRedemptions = vi.fn()
 const mockSubmitSocialFollowProof = vi.fn()
-const mockCreateRedemption = vi.fn()
 
 vi.mock('../../../../shared/api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../../shared/api/client')>('../../../../shared/api/client')
@@ -15,9 +13,7 @@ vi.mock('../../../../shared/api/client', async () => {
     ...actual,
     getPointsBalance: (...args: unknown[]) => mockGetPointsBalance(...args),
     getSocialFollowStatus: (...args: unknown[]) => mockGetSocialFollowStatus(...args),
-    getMyRedemptions: (...args: unknown[]) => mockGetMyRedemptions(...args),
     submitSocialFollowProof: (...args: unknown[]) => mockSubmitSocialFollowProof(...args),
-    createRedemption: (...args: unknown[]) => mockCreateRedemption(...args),
   }
 })
 
@@ -34,19 +30,42 @@ const BASE_SOCIAL_FOLLOW = {
 }
 
 describe('RewardsTab', () => {
+  const originalLocation = window.location
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetPointsBalance.mockResolvedValue(BASE_BALANCE)
     mockGetSocialFollowStatus.mockResolvedValue(BASE_SOCIAL_FOLLOW)
-    mockGetMyRedemptions.mockResolvedValue({ redemptions: [] })
     mockSubmitSocialFollowProof.mockResolvedValue({ ok: true })
-    mockCreateRedemption.mockResolvedValue({ id: 'redemption-1', usdc_amount: 3 })
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { href: '' },
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: originalLocation,
+    })
   })
 
   it('loads and displays the points balance with its USDC equivalent', async () => {
     renderWithProviders(<RewardsTab />)
     expect(await screen.findByText('600 points')).toBeInTheDocument()
     expect(screen.getByText(/\$6\.00 USDC available/)).toBeInTheDocument()
+  })
+
+  it('the Redeem for USDC button navigates to the dedicated redeem page', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<RewardsTab />)
+    await screen.findByText('600 points')
+
+    await user.click(screen.getByRole('button', { name: /Redeem for USDC/i }))
+
+    expect(window.location.href).toBe('/dashboard?tab=redeem')
   })
 
   it('shows per-platform social-follow status', async () => {
@@ -91,18 +110,6 @@ describe('RewardsTab', () => {
     await user.upload(inputs[0] as HTMLInputElement, badFile)
 
     expect(mockSubmitSocialFollowProof).not.toHaveBeenCalled()
-  })
-
-  it('submitting a redemption calls createRedemption with the entered points and wallet', async () => {
-    const user = userEvent.setup()
-    renderWithProviders(<RewardsTab />)
-    await screen.findByText('600 points')
-
-    await user.type(screen.getByPlaceholderText(/Points \(min/), '300')
-    await user.type(screen.getByPlaceholderText(/Stellar wallet address/), 'GABC123')
-    await user.click(screen.getByRole('button', { name: 'Redeem' }))
-
-    await waitFor(() => expect(mockCreateRedemption).toHaveBeenCalledWith(300, 'GABC123'))
   })
 
   it('shows an error state and does not crash when loading fails', async () => {

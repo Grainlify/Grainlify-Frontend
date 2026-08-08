@@ -16,7 +16,8 @@ import {
   Sun,
   Shield,
   X,
-  Menu
+  Menu,
+  ArrowLeftRight
 } from "lucide-react";
 import { useThemeToggleAnimation } from "../../shared/hooks/useThemeToggleAnimation";
 import { useAuth } from "../../shared/contexts/AuthContext";
@@ -49,6 +50,7 @@ import { BlogPage } from "../blog/pages/BlogPage";
 import { SettingsPage } from "../settings/pages/SettingsPage";
 import { AdminPage } from "../admin/pages/AdminPage";
 import { SearchPage } from "./pages/SearchPage";
+import { RedeemPage } from "./pages/RedeemPage";
 import { SettingsTabType } from "../settings/types";
 
 export function Dashboard() {
@@ -347,6 +349,7 @@ export function Dashboard() {
       ? [{ id: "data", icon: Database, label: "Data" }]
       : []),
     { id: "leaderboard", icon: Trophy, label: "Leaderboard" },
+    { id: "redeem", icon: ArrowLeftRight, label: "Redeem" },
     { id: "blog", icon: FileText, label: "Grainlify Blog" },
   ];
 
@@ -805,6 +808,7 @@ export function Dashboard() {
                 )}
                 {currentPage === "data" && adminAuthenticated && <DataPage />}
                 {currentPage === "leaderboard" && <LeaderboardPage />}
+                {currentPage === "redeem" && <RedeemPage />}
                 {currentPage === "blog" && <BlogPage />}
                 {currentPage === "settings" && (
                   <SettingsPage initialTab={settingsInitialTab} />
