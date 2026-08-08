@@ -333,12 +333,11 @@ export function BillingTab() {
     return (
       <div className="space-y-6">
         {errorMessage && (
-                <div className="text-red-500 bg-red-100 p-2 rounded mb-4 border border-red-200">
-                        {errorMessage}
-                              </div>
-                                  )}
-                                  
-        )
+          <div className="text-red-500 bg-red-100 p-2 rounded mb-4 border border-red-200">
+            {errorMessage}
+          </div>
+        )}
+
         {/* Back Button */}
         <button
           onClick={() => setSelectedProfile(null)}

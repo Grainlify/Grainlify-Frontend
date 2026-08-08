@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { siStellar } from 'simple-icons';
 import { ArrowDown, Wheat, Wallet2, Loader2, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { TokenOnStellarIcon } from '../../../shared/components/icons/TokenIcons';
 import {
   getPointsBalance,
   getMyRedemptions,
@@ -11,41 +11,6 @@ import {
   type PointsBalance,
   type Redemption,
 } from '../../../shared/api/client';
-
-function SimpleIconGlyph({ path, className }: { path: string; className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
-      <path d={path} />
-    </svg>
-  );
-}
-
-// No official USDC mark ships in our icon set - a plain circle in USDC's own
-// brand blue plus the "$" reads clearly, especially paired with the "USDC"
-// label right next to it in the UI.
-function UsdcIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 32 32" className={className} xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <circle cx="16" cy="16" r="16" fill="#2775CA" />
-      <text x="16" y="22" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontWeight="700" fontSize="17" fill="#ffffff">
-        $
-      </text>
-    </svg>
-  );
-}
-
-// USDC-on-Stellar combo badge: the network's own logo overlaps the token's
-// corner, the same convention wallets and exchanges use for "token on chain".
-function UsdcOnStellarIcon({ ringClassName }: { ringClassName: string }) {
-  return (
-    <div className="relative w-8 h-8 shrink-0">
-      <UsdcIcon className="w-8 h-8" />
-      <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#FDDA24] ring-2 flex items-center justify-center ${ringClassName}`}>
-        <SimpleIconGlyph path={siStellar.path} className="w-2.5 h-2.5 text-black" />
-      </div>
-    </div>
-  );
-}
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'paid') {
@@ -237,7 +202,7 @@ export function RedeemPage() {
                 darkTheme ? 'bg-[#2775CA]/10 border-[#2775CA]/30' : 'bg-[#2775CA]/[0.06] border-[#2775CA]/25'
               }`}
             >
-              <UsdcOnStellarIcon ringClassName={darkTheme ? 'ring-[#3a3228]' : 'ring-[#f3ede4]'} />
+              <TokenOnStellarIcon token="usdc" ringClassName={darkTheme ? 'ring-[#3a3228]' : 'ring-[#f3ede4]'} />
               <span className={`font-semibold text-[15px] ${darkTheme ? 'text-[#7db2ee]' : 'text-[#2775CA]'}`}>USDC</span>
             </div>
           </div>
@@ -301,7 +266,12 @@ export function RedeemPage() {
                   darkTheme ? 'bg-white/[0.04] border-white/10' : 'bg-white/[0.4] border-white/30'
                 }`}
               >
-                <div className={valueColor}>
+                <div className={`flex items-center gap-2.5 ${valueColor}`}>
+                  <TokenOnStellarIcon
+                    token="usdc"
+                    className="w-6 h-6"
+                    ringClassName={darkTheme ? 'ring-[#241f18]' : 'ring-[#f3ede4]'}
+                  />
                   {r.points_spent.toLocaleString()} pts → ${r.usdc_amount} USDC
                 </div>
                 <StatusBadge status={r.status} />

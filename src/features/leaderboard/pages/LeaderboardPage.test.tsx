@@ -125,7 +125,9 @@ describe('LeaderboardPage', () => {
     // unrelated to loading state, so the skeletons clearing means the count drops
     // to exactly that 1 (not 0).
     expect(container.querySelectorAll('.animate-shimmer').length).toBe(1)
-    expect(mockedGetLeaderboard).toHaveBeenCalledWith(10, 0, undefined)
+    // Requests PAGE_SIZE+1 (26) so the response length can reveal whether a
+    // next page exists, without the backend needing to return a total count.
+    expect(mockedGetLeaderboard).toHaveBeenCalledWith(26, 0, undefined)
     // The "projects" leaderboard type never loads on mount — only once the user
     // switches tabs — since the default leaderboardType is "contributors".
     expect(mockedGetRecommendedProjects).not.toHaveBeenCalled()
@@ -229,5 +231,90 @@ describe('LeaderboardPage', () => {
     })
     expect(screen.queryByText('#2')).not.toBeInTheDocument()
     expect(screen.queryByText('#3')).not.toBeInTheDocument()
+  })
+
+  describe('Pagination', () => {
+    it('hides the pagination bar entirely when everything fits on one page', async () => {
+      mockedGetLeaderboard.mockResolvedValue([row1, row2, row3])
+
+      renderWithProviders(<LeaderboardPage />)
+
+      await waitFor(() => expect(screen.getAllByText('octocat').length).toBeGreaterThan(0))
+      expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument()
+    })
+
+    it('reveals page 2 and fetches it with the right offset when the first page is full (26 requested, 26 returned)', async () => {
+      const page1 = Array.from({ length: 26 }, (_, i) =>
+        makeLeaderRow({ rank: i + 1, username: `user${i + 1}`, score: 100 - i }),
+      )
+      const page2 = [makeLeaderRow({ rank: 26, username: 'lastuser', score: 1 })]
+      mockedGetLeaderboard.mockImplementation(async (_limit, offset) =>
+        offset === 0 ? page1 : page2,
+      )
+      const user = userEvent.setup()
+
+      renderWithProviders(<LeaderboardPage />)
+
+      // 26 rows came back for a 25-per-page request - page 2 is now known to exist.
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2' })).toBeInTheDocument())
+      // Only the first 25 of the 26 returned rows are actually displayed.
+      expect(screen.getAllByText('user25').length).toBeGreaterThan(0)
+      expect(screen.queryByText('user26')).not.toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Page 2' }))
+
+      await waitFor(() => expect(mockedGetLeaderboard).toHaveBeenCalledWith(26, 25, undefined))
+      expect(await screen.findByText('lastuser')).toBeInTheDocument()
+    })
+
+    it('resets to page 1 when the ecosystem filter changes', async () => {
+      const page1 = Array.from({ length: 26 }, (_, i) =>
+        makeLeaderRow({ rank: i + 1, username: `user${i + 1}` }),
+      )
+      mockedGetLeaderboard.mockResolvedValue(page1)
+      mockedGetEcosystems.mockResolvedValue({
+        ecosystems: [{ name: 'Web3', slug: 'web3', status: 'active' } as any],
+      })
+      const user = userEvent.setup()
+
+      renderWithProviders(<LeaderboardPage />)
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2' })).toBeInTheDocument())
+
+      await user.click(screen.getByRole('button', { name: 'Page 2' }))
+      await waitFor(() => expect(mockedGetLeaderboard).toHaveBeenLastCalledWith(26, 25, undefined))
+
+      await user.click(screen.getByRole('button', { name: 'All Ecosystems' }))
+      await user.click(await screen.findByRole('button', { name: 'Web3' }))
+
+      // Filter changed while on page 2 - the request must go out for page 1
+      // (offset 0) of the new filter, not page 2 of it.
+      await waitFor(() => expect(mockedGetLeaderboard).toHaveBeenLastCalledWith(26, 0, 'web3'))
+    })
+  })
+
+  describe('Projects tab pagination', () => {
+    it('paginates the already-loaded projects list client-side, 25 per page', async () => {
+      const projects = Array.from({ length: 30 }, (_, i) =>
+        makeApiProject({ id: `p${i}`, github_full_name: `org${i}/repo`, contributors_count: 30 - i }),
+      )
+      mockedGetLeaderboard.mockResolvedValue([])
+      mockedGetRecommendedProjects.mockResolvedValue({ projects })
+      const user = userEvent.setup()
+
+      renderWithProviders(<LeaderboardPage />)
+      await user.click(screen.getByRole('button', { name: 'Projects' }))
+
+      // 30 orgs at 25/page - page 2 exists, and it's a real total (the whole
+      // list is already loaded), so no "load more" round-trip is needed.
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2' })).toBeInTheDocument())
+      expect(screen.getAllByText('org0').length).toBeGreaterThan(0)
+      expect(screen.queryByText('org29')).not.toBeInTheDocument()
+      // getRecommendedProjects is called once up front, not once per page.
+      expect(mockedGetRecommendedProjects).toHaveBeenCalledTimes(1)
+
+      await user.click(screen.getByRole('button', { name: 'Page 2' }))
+      expect(mockedGetRecommendedProjects).toHaveBeenCalledTimes(1)
+      expect(screen.getAllByText('org29').length).toBeGreaterThan(0)
+    })
   })
 })

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, Wallet, Copy, CheckCircle2, Star, X } from 'lucide-react';
+import { Plus, Trash2, Copy, CheckCircle2, Star, X, Wallet } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
+import { TokenIcon, StellarIcon } from '../../../../shared/components/icons/TokenIcons';
 import { PaymentMethod, EcosystemType, CryptoType } from '../../types';
 
 interface PaymentMethodsTabProps {
@@ -50,8 +51,6 @@ export function PaymentMethodsTab({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getEcosystemColor = (_ecosystem: EcosystemType) => '#14B6E7'; // Stellar brand color
-
   const getCryptoLabel = (crypto: CryptoType) => {
     return crypto.toUpperCase();
   };
@@ -97,13 +96,7 @@ export function PaymentMethodsTab({
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4 flex-1">
-                  {/* Ecosystem Icon */}
-                  <div 
-                    className="w-12 h-12 rounded-[14px] flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: getEcosystemColor(method.ecosystem) }}
-                  >
-                    <Wallet className="w-6 h-6 text-white" />
-                  </div>
+                  <TokenIcon token={method.cryptoType} className="w-12 h-12 flex-shrink-0" />
 
                   {/* Details */}
                   <div className="flex-1 min-w-0">
@@ -170,6 +163,7 @@ export function PaymentMethodsTab({
                   )}
                   <button
                     onClick={() => onRemovePaymentMethod(method.id)}
+                    aria-label="Remove payment method"
                     className={`p-2.5 rounded-[10px] transition-all ${
                       theme === 'dark'
                         ? 'hover:bg-[#dc2626]/20 text-[#ef4444]'
@@ -232,6 +226,25 @@ export function PaymentMethodsTab({
             </div>
 
             <div className="space-y-5">
+              {/* Network - fixed, not a selector: every payment method on this
+                  platform settles on Stellar today, so presenting this as a
+                  dropdown would offer choices that silently don't work. */}
+              <div>
+                <label className={`block text-[14px] font-semibold mb-3 transition-colors ${
+                  theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
+                }`}>
+                  Network
+                </label>
+                <div className={`flex items-center gap-3 px-4 py-3 rounded-[12px] border-2 border-[#c9983a] bg-[#c9983a]/10`}>
+                  <StellarIcon className="w-7 h-7 flex-shrink-0" />
+                  <span className={`text-[14px] font-bold transition-colors ${
+                    theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+                  }`}>
+                    Stellar
+                  </span>
+                </div>
+              </div>
+
               {/* Crypto Type Selection */}
               <div>
                 <label className={`block text-[14px] font-semibold mb-3 transition-colors ${
@@ -244,7 +257,7 @@ export function PaymentMethodsTab({
                     <button
                       key={crypto}
                       onClick={() => setSelectedCrypto(crypto)}
-                      className={`px-4 py-3 rounded-[12px] backdrop-blur-[25px] border-2 transition-all ${
+                      className={`flex flex-col items-center gap-2 px-4 py-3 rounded-[12px] backdrop-blur-[25px] border-2 transition-all ${
                         selectedCrypto === crypto
                           ? 'border-[#c9983a] bg-[#c9983a]/10'
                           : theme === 'dark'
@@ -252,6 +265,7 @@ export function PaymentMethodsTab({
                             : 'border-white/25 bg-white/[0.15] hover:bg-white/[0.2]'
                       }`}
                     >
+                      <TokenIcon token={crypto} className="w-8 h-8" />
                       <p className={`text-[14px] font-bold transition-colors ${
                         theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
                       }`}>

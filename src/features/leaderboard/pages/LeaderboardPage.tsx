@@ -10,9 +10,12 @@ import { ProjectsPodium } from "../components/ProjectsPodium";
 import { FiltersSection } from "../components/FiltersSection";
 import { ContributorsTable } from "../components/ContributorsTable";
 import { ProjectsTable } from "../components/ProjectsTable";
+import { Pagination } from "../components/Pagination";
 import { LeaderboardStyles } from "../components/LeaderboardStyles";
 import { ContributorsPodiumSkeleton } from "../components/ContributorsPodiumSkeleton";
 import { ContributorsTableSkeleton } from "../components/ContributorsTableSkeleton";
+
+const PAGE_SIZE = 25;
 
 export function LeaderboardPage() {
   const { theme } = useTheme();
@@ -27,44 +30,60 @@ export function LeaderboardPage() {
   const [petals, setPetals] = useState<Petal[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState<LeaderData[]>([]);
+  const [topThreeContributors, setTopThreeContributors] = useState<LeaderData[]>([]);
   const [projectsData, setProjectsData] = useState<ProjectData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // The /leaderboard endpoint returns a bare array with no total count, so
+  // real numbered pagination can't know the total page count upfront. Instead
+  // we over-fetch by one item per page: getting PAGE_SIZE+1 back tells us page+1
+  // exists (grow maxKnownPage), getting <=PAGE_SIZE tells us this is the last
+  // page (isMaxPageFinal). The pagination bar only ever claims pages it has
+  // actually confirmed, growing as the user pages forward.
+  const [page, setPage] = useState(1);
+  const [maxKnownPage, setMaxKnownPage] = useState(1);
+  const [isMaxPageFinal, setIsMaxPageFinal] = useState(false);
+  const [projectsPage, setProjectsPage] = useState(1);
 
   // Fetch leaderboard data
   useEffect(() => {
     const fetchLeaderboard = async () => {
       if (leaderboardType === "contributors") {
         setIsLoading(true);
-        setOffset(0); // Reset offset when switching types
         try {
           const data = await getLeaderboard(
-            10,
-            0,
+            PAGE_SIZE + 1,
+            (page - 1) * PAGE_SIZE,
             selectedEcosystem.value !== "all"
               ? selectedEcosystem.value
               : undefined,
           );
+          const hasNextPage = data.length > PAGE_SIZE;
           // Transform API data to match LeaderData type
-          const transformedData: LeaderData[] = data.map((item) => ({
-            rank: item.rank,
-            rank_tier: item.rank_tier,
-            rank_tier_name: item.rank_tier_name,
-            username: item.username,
-            avatar:
-              item.avatar || `https://github.com/${item.username}.png?size=200`,
-            user_id: item.user_id || "",
-            score: item.score,
-            trend: item.trend,
-            trendValue: item.trendValue,
-            contributions: item.contributions,
-            ecosystems: item.ecosystems || [],
-          }));
+          const transformedData: LeaderData[] = data
+            .slice(0, PAGE_SIZE)
+            .map((item) => ({
+              rank: item.rank,
+              rank_tier: item.rank_tier,
+              rank_tier_name: item.rank_tier_name,
+              username: item.username,
+              avatar:
+                item.avatar || `https://github.com/${item.username}.png?size=200`,
+              user_id: item.user_id || "",
+              score: item.score,
+              trend: item.trend,
+              trendValue: item.trendValue,
+              contributions: item.contributions,
+              ecosystems: item.ecosystems || [],
+            }));
           setLeaderboardData(transformedData);
-          setHasMore(data.length === 10); // If we got 10 items, there might be more
+          // Podium always reflects the true overall top 3, not whichever page
+          // of the table is currently being viewed - only page 1's response
+          // ever contains ranks 1-3, so only it updates this.
+          if (page === 1) setTopThreeContributors(transformedData.slice(0, 3));
+          setMaxKnownPage((prev) => Math.max(prev, hasNextPage ? page + 1 : page));
+          setIsMaxPageFinal(!hasNextPage);
           setIsLoading(false);
         } catch (err) {
           console.error("Failed to fetch leaderboard:", err);
@@ -77,6 +96,15 @@ export function LeaderboardPage() {
     };
 
     fetchLeaderboard();
+  }, [leaderboardType, activeFilter, selectedEcosystem.value, page]);
+
+  // Reset pagination when switching leaderboard type, filter, or ecosystem -
+  // otherwise page 3 of contributors could carry over to a filtered result
+  // that only has 1 page.
+  useEffect(() => {
+    setPage(1);
+    setMaxKnownPage(1);
+    setIsMaxPageFinal(false);
   }, [leaderboardType, activeFilter, selectedEcosystem.value]);
 
   // Fetch projects leaderboard (top projects by contributors count)
@@ -85,6 +113,7 @@ export function LeaderboardPage() {
     let cancelled = false;
     const fetchProjects = async () => {
       setIsLoadingProjects(true);
+      setProjectsPage(1);
       try {
         const res = await getRecommendedProjects(50);
         const projects = res?.projects ?? [];
@@ -136,52 +165,6 @@ export function LeaderboardPage() {
     };
   }, [leaderboardType]);
 
-  // Load more leaderboard data
-  const loadMore = async () => {
-    if (isLoadingMore || !hasMore) return;
-
-    setIsLoadingMore(true);
-    try {
-      const nextOffset = offset + 10;
-      const data = await getLeaderboard(
-        10,
-        nextOffset,
-        selectedEcosystem.value !== "all" ? selectedEcosystem.value : undefined,
-      );
-
-      if (data.length === 0) {
-        setHasMore(false);
-        setIsLoadingMore(false);
-        return;
-      }
-
-      // Transform and append new data
-      const transformedData: LeaderData[] = data.map((item) => ({
-        rank: item.rank,
-        rank_tier: item.rank_tier,
-        rank_tier_name: item.rank_tier_name,
-        username: item.username,
-        avatar:
-          item.avatar || `https://github.com/${item.username}.png?size=200`,
-        user_id: item.user_id || "",
-        score: item.score,
-        trend: item.trend,
-        trendValue: item.trendValue,
-        contributions: item.contributions,
-        ecosystems: item.ecosystems || [],
-      }));
-
-      setLeaderboardData((prev) => [...prev, ...transformedData]);
-      setOffset(nextOffset);
-      setHasMore(data.length === 10); // If we got less than 10, no more data
-    } catch (err) {
-      console.error("Failed to load more leaderboard:", err);
-      setHasMore(false);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
-
   // Generate falling petals on mount
   useEffect(() => {
     const generatePetals = () => {
@@ -209,11 +192,11 @@ export function LeaderboardPage() {
 
   // Ensure we have at least 3 items for the podium (pad with empty data if needed)
   const contributorTopThree: LeaderData[] = [
-    ...leaderboardData.slice(0, 3),
-    ...Array(Math.max(0, 3 - leaderboardData.length))
+    ...topThreeContributors,
+    ...Array(Math.max(0, 3 - topThreeContributors.length))
       .fill(null)
       .map((_, i) => ({
-        rank: leaderboardData.length + i + 1,
+        rank: topThreeContributors.length + i + 1,
         username: "-",
         avatar: "👤",
         score: 0,
@@ -255,22 +238,25 @@ export function LeaderboardPage() {
 
       {/* Hero Header Section */}
       <LeaderboardHero leaderboardType={leaderboardType} isLoaded={isLoaded}>
-        {/* Top 3 Podium - Contributors */}
-        {leaderboardType === "contributors" && isLoading && (
+        {/* Top 3 Podium - Contributors. Reflects the true overall top 3
+            (topThreeContributors, only ever set from page 1) so it stays put
+            while the table below is paged - it only shows its own skeleton
+            on the very first load, not on every page change. */}
+        {leaderboardType === "contributors" && isLoading && topThreeContributors.length === 0 && (
           <ContributorsPodiumSkeleton />
         )}
         {leaderboardType === "contributors" &&
-          !isLoading &&
-          leaderboardData.length > 0 && (
+          !(isLoading && topThreeContributors.length === 0) &&
+          topThreeContributors.length > 0 && (
             <ContributorsPodium
               topThree={contributorTopThree}
               isLoaded={isLoaded}
-              actualCount={leaderboardData.length}
+              actualCount={topThreeContributors.length}
             />
           )}
         {leaderboardType === "contributors" &&
           !isLoading &&
-          leaderboardData.length === 0 && (
+          topThreeContributors.length === 0 && (
             <div
               className={`text-center py-8 transition-colors ${
                 theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
@@ -330,24 +316,12 @@ export function LeaderboardPage() {
                   window.location.href = `/dashboard?tab=profile&user=${identifier}`;
                 }}
               />
-              {hasMore && (
-                <div className="flex justify-center mt-6">
-                  <button
-                    onClick={loadMore}
-                    disabled={isLoadingMore}
-                    className={`px-6 py-3 rounded-[14px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[14px] shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
-                  >
-                    {isLoadingMore ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      "View All"
-                    )}
-                  </button>
-                </div>
-              )}
+              <Pagination
+                currentPage={page}
+                maxKnownPage={maxKnownPage}
+                isMaxPageFinal={isMaxPageFinal}
+                onPageChange={setPage}
+              />
             </>
           )}
         </>
@@ -359,11 +333,19 @@ export function LeaderboardPage() {
           {isLoadingProjects ? (
             <ContributorsTableSkeleton />
           ) : (
-            <ProjectsTable
-              data={projectsData}
-              activeFilter={activeFilter}
-              isLoaded={isLoaded}
-            />
+            <>
+              <ProjectsTable
+                data={projectsData.slice((projectsPage - 1) * PAGE_SIZE, projectsPage * PAGE_SIZE)}
+                activeFilter={activeFilter}
+                isLoaded={isLoaded}
+              />
+              <Pagination
+                currentPage={projectsPage}
+                maxKnownPage={Math.max(1, Math.ceil(projectsData.length / PAGE_SIZE))}
+                isMaxPageFinal
+                onPageChange={setProjectsPage}
+              />
+            </>
           )}
         </>
       )}
