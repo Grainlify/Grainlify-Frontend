@@ -1,5 +1,27 @@
 @custom-variant dark (&:is(.dark *));
 
+/* Chrome gives ::view-transition-old/new(root) their own default 0.25s
+   cross-fade. Left alone, that fade runs underneath the circle clip-path
+   useThemeToggleAnimation drives over 600ms: the old snapshot fades to
+   invisible well before the circle finishes growing, so the area outside
+   the circle briefly shows nothing instead of the old theme. Disabling the
+   default animation and stacking the new snapshot on top makes the circle
+   the only thing moving - old theme underneath, new theme revealed inside
+   the growing circle, full opacity throughout. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2147483646;
+}
+
 /* Native <button>/<select> elements don't get cursor: pointer by default in any
    browser (only <a href> does) — apply it site-wide to every clickable control. */
 button:not(:disabled),
