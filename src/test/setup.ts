@@ -49,6 +49,28 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   })
 }
 
+// jsdom does not implement IntersectionObserver. motion/react's whileInView
+// (used for scroll-reveal animations) crashes without it; the callback never
+// needs to fire in tests since assertions read text content, not CSS state.
+if (typeof window !== 'undefined' && typeof window.IntersectionObserver !== 'function') {
+  class IntersectionObserverMock {
+    observe = vi.fn()
+    unobserve = vi.fn()
+    disconnect = vi.fn()
+    takeRecords = vi.fn(() => [])
+  }
+  Object.defineProperty(window, 'IntersectionObserver', {
+    writable: true,
+    configurable: true,
+    value: IntersectionObserverMock,
+  })
+  Object.defineProperty(globalThis, 'IntersectionObserver', {
+    writable: true,
+    configurable: true,
+    value: IntersectionObserverMock,
+  })
+}
+
 afterEach(() => {
   cleanup()
   window.localStorage.clear()

@@ -5,6 +5,7 @@ import { useModeAnimation } from "react-theme-switch-animation";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useAuth } from "../../../shared/contexts/AuthContext";
 import grainlifyLogo from "../../../assets/grainlify_log.svg";
+import { HoverBorderGradient } from "./HoverBorderGradient";
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -83,6 +84,16 @@ export function Navbar() {
             >
               Testimonials
             </a>
+            <a
+              href="#faq"
+              className={`transition-colors font-medium ${
+                theme === "dark"
+                  ? "text-[#b8a898] hover:text-[#c9983a]"
+                  : "text-[#7a6b5a] hover:text-[#c9983a]"
+              }`}
+            >
+              FAQ
+            </a>
           </div>
 
           {/* CTA Buttons + Theme Toggle */}
@@ -131,12 +142,14 @@ export function Navbar() {
                 </button>
               </>
             ) : (
-              <Link
+              <HoverBorderGradient
+                as={Link}
                 to="/signin"
-                className="px-5 py-2.5 rounded-[12px] bg-gradient-to-r from-[#c9983a] to-[#d4af37] text-white font-medium hover:shadow-lg hover:shadow-[#c9983a]/50 transition-all"
+                containerClassName="rounded-[12px]"
+                className="px-5 py-2.5 rounded-[11px] text-sm font-medium"
               >
                 Get Started
-              </Link>
+              </HoverBorderGradient>
             )}
           </div>
 
@@ -199,6 +212,17 @@ export function Navbar() {
             >
               Testimonials
             </a>
+            <a
+              href="#faq"
+              className={`block transition-colors py-2 font-medium ${
+                theme === "dark"
+                  ? "text-[#b8a898] hover:text-[#c9983a]"
+                  : "text-[#7a6b5a] hover:text-[#c9983a]"
+              }`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              FAQ
+            </a>
             <div className="flex flex-col space-y-2 pt-2">
               {/* Theme Toggle Mobile */}
               <button
@@ -248,13 +272,15 @@ export function Navbar() {
                   </button>
                 </>
               ) : (
-                <Link
+                <HoverBorderGradient
+                  as={Link}
                   to="/signin"
-                  className="px-5 py-2.5 rounded-[12px] bg-gradient-to-r from-[#c9983a] to-[#d4af37] text-white font-medium hover:shadow-lg hover:shadow-[#c9983a]/50 transition-all text-center"
+                  containerClassName="rounded-[12px] w-full"
+                  className="w-full text-center font-medium"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Get Started
-                </Link>
+                </HoverBorderGradient>
               )}
             </div>
           </div>

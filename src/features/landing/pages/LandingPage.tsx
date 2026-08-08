@@ -1,5 +1,12 @@
+import type { ReactNode } from "react";
 import { Navbar } from "../components/Navbar";
 import { Hero } from "../components/Hero";
+import { ParallaxScroll, type ParallaxTile } from "../components/ParallaxScroll";
+import { BentoGrid, BentoGridItem } from "../components/BentoGrid";
+import { AnimatedTestimonials, type Testimonial } from "../components/AnimatedTestimonials";
+import { FAQAccordion } from "../components/FAQAccordion";
+import { Footer } from "../components/Footer";
+import { motion } from "motion/react";
 import {
   Code,
   GitBranch,
@@ -9,11 +16,10 @@ import {
   Users,
   TrendingUp,
   CheckCircle,
-  Star,
-  Quote,
 } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useLandingStats } from "../../../shared/hooks/useLandingStats";
+import { useLandingProjects } from "../../../shared/hooks/useLandingProjects";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -49,24 +55,115 @@ export function LandingPage() {
     >
       <Navbar />
       <Hero />
+      <ProjectsShowcase />
       <Features />
       <HowItWorks />
       <WhyChooseUs />
       <Testimonials />
+      <FAQ />
       <Footer />
     </div>
   );
 }
 
-function Features() {
-  const { theme } = useTheme();
+// Fades a section into view once as the user scrolls to it - applied
+// consistently across every section below for a cohesive, alive-feeling page.
+function Reveal({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.6, delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
+function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle: string }) {
+  const { theme } = useTheme();
+  return (
+    <Reveal className="text-center mb-16">
+      {eyebrow && (
+        <span className="inline-block text-sm font-semibold tracking-wide text-[#c9983a] mb-3 uppercase">
+          {eyebrow}
+        </span>
+      )}
+      <h2
+        className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
+          theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
+        }`}
+      >
+        {title}
+      </h2>
+      <p
+        className={`text-xl max-w-2xl mx-auto transition-colors ${
+          theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
+        }`}
+      >
+        {subtitle}
+      </p>
+    </Reveal>
+  );
+}
+
+function ProjectsShowcase() {
+  const { theme } = useTheme();
+  const { projects, isLoading } = useLandingProjects(24);
+
+  // Nothing genuine to show and nothing loading - collapse the section
+  // entirely rather than render an empty grid or an apologetic empty-state.
+  if (!isLoading && projects.length === 0) return null;
+
+  const tiles: ParallaxTile[] = projects.map((p) => ({ key: p.id, src: p.avatar, label: p.name }));
+
+  return (
+    <section id="projects" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto">
+        <SectionHeader
+          eyebrow="Live on Grainlify"
+          title="Real Projects. Real Contributors."
+          subtitle="Every tile below is a project you can start contributing to today - no filler, no stock photos."
+        />
+
+        {isLoading ? (
+          <div className="grid grid-cols-3 gap-3 sm:gap-5 md:gap-6 max-w-5xl mx-auto">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div
+                key={i}
+                className={`aspect-square rounded-[16px] sm:rounded-[20px] border animate-pulse ${
+                  theme === "dark" ? "bg-white/[0.06] border-white/10" : "bg-white/[0.12] border-white/20"
+                }`}
+                style={{ animationDelay: `${(i % 6) * 100}ms` }}
+              />
+            ))}
+          </div>
+        ) : (
+          <ParallaxScroll items={tiles} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function Features() {
   const features = [
     {
       icon: Code,
       title: "Smart Matching",
       description:
         "AI-powered algorithm matches contributors with projects that fit their skills and interests.",
+      className: "md:col-span-2",
     },
     {
       icon: GitBranch,
@@ -84,7 +181,8 @@ function Features() {
       icon: Shield,
       title: "Secure & Transparent",
       description:
-        "Built on blockchain technology ensuring secure, transparent transactions.",
+        "Built on Stellar for secure, auditable, near-instant USDC payouts.",
+      className: "md:col-span-2",
     },
     {
       icon: Zap,
@@ -101,60 +199,27 @@ function Features() {
   ];
 
   return (
-    <section
-      id="features"
-      className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6"
-    >
+    <section id="features" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2
-            className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-              theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-            }`}
-          >
-            Everything You Need to Succeed
-          </h2>
-          <p
-            className={`text-xl max-w-2xl mx-auto transition-colors ${
-              theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-            }`}
-          >
-            Powerful features designed to streamline your open-source journey
-          </p>
-        </div>
+        <SectionHeader
+          eyebrow="Platform"
+          title="Everything You Need to Succeed"
+          subtitle="Powerful features designed to streamline your open-source journey"
+        />
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className={`group backdrop-blur-[40px] border rounded-[24px] p-8 transition-all hover:scale-105 hover:border-[#c9983a]/30 hover:shadow-[0_12px_36px_rgba(201,152,58,0.15)] ${
-                theme === "dark"
-                  ? "bg-white/[0.08] border-white/15 hover:bg-white/[0.12]"
-                  : "bg-white/[0.15] border-white/25 hover:bg-white/[0.2]"
-              }`}
-            >
-              <div className="w-14 h-14 rounded-[14px] bg-gradient-to-br from-[#c9983a]/25 to-[#d4af37]/15 border border-[#c9983a]/30 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-[0_4px_12px_rgba(201,152,58,0.15)]">
-                <feature.icon className="w-7 h-7 text-[#c9983a]" />
-              </div>
-              <h3
-                className={`text-xl font-semibold mb-3 transition-colors ${
-                  theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-                }`}
-              >
-                {feature.title}
-              </h3>
-              <p
-                className={`transition-colors ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
+        <Reveal delay={0.1}>
+          <BentoGrid>
+            {features.map((feature) => (
+              <BentoGridItem
+                key={feature.title}
+                title={feature.title}
+                description={feature.description}
+                className={feature.className}
+                icon={<feature.icon className="w-6 h-6 text-[#c9983a]" />}
+              />
+            ))}
+          </BentoGrid>
+        </Reveal>
       </div>
     </section>
   );
@@ -186,45 +251,30 @@ function HowItWorks() {
       number: "04",
       title: "Earn Rewards",
       description:
-        "Receive grants and recognition for your valuable contributions.",
+        "Redeem points for USDC on Stellar once you clear the minimum threshold.",
     },
   ];
 
   return (
-    <section
-      id="how-it-works"
-      className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6"
-    >
+    <section id="how-it-works" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2
-            className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-              theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-            }`}
-          >
-            How It Works
-          </h2>
-          <p
-            className={`text-xl max-w-2xl mx-auto transition-colors ${
-              theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-            }`}
-          >
-            Get started in four simple steps
-          </p>
-        </div>
+        <SectionHeader
+          eyebrow="Process"
+          title="How It Works"
+          subtitle="Get started in four simple steps"
+        />
 
         {/* Steps */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {steps.map((step, index) => (
-            <div key={index} className="relative">
+            <Reveal key={step.number} delay={index * 0.1} className="relative">
               {/* Connector Line (desktop) */}
               {index < steps.length - 1 && (
                 <div className="hidden lg:block absolute top-16 left-full w-full h-0.5 bg-gradient-to-r from-[#c9983a]/50 to-transparent" />
               )}
 
               <div
-                className={`backdrop-blur-[40px] border rounded-[24px] p-8 transition-all hover:border-[#c9983a]/30 hover:shadow-[0_12px_36px_rgba(201,152,58,0.15)] ${
+                className={`h-full backdrop-blur-[40px] border rounded-[24px] p-8 transition-all hover:border-[#c9983a]/30 hover:shadow-[0_12px_36px_rgba(201,152,58,0.15)] hover:-translate-y-1 ${
                   theme === "dark"
                     ? "bg-white/[0.08] border-white/15 hover:bg-white/[0.12]"
                     : "bg-white/[0.15] border-white/25 hover:bg-white/[0.2]"
@@ -248,7 +298,7 @@ function HowItWorks() {
                   {step.description}
                 </p>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -266,18 +316,15 @@ function WhyChooseUs() {
     "Comprehensive skill development and mentorship",
     "Active community support and collaboration",
     "Real-time project tracking and analytics",
-    "Secure blockchain-based transactions",
+    "Secure Stellar-based USDC payouts",
   ];
 
   return (
-    <section
-      id="why-choose-us"
-      className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6"
-    >
+    <section id="why-choose-us" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left: Benefits */}
-          <div>
+          <Reveal>
             <h2
               className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
                 theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
@@ -295,8 +342,8 @@ function WhyChooseUs() {
             </p>
 
             <div className="space-y-4">
-              {benefits.map((benefit, index) => (
-                <div key={index} className="flex items-start space-x-4">
+              {benefits.map((benefit) => (
+                <div key={benefit} className="flex items-start space-x-4">
                   <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-[#c9983a] to-[#d4af37] flex items-center justify-center mt-1 shadow-[0_2px_8px_rgba(201,152,58,0.4)]">
                     <CheckCircle className="w-4 h-4 text-white" />
                   </div>
@@ -345,10 +392,10 @@ function WhyChooseUs() {
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
 
           {/* Right: Visual Element */}
-          <div className="relative">
+          <Reveal delay={0.15} className="relative">
             <div
               className={`backdrop-blur-[40px] border rounded-[28px] p-8 relative overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.08)] ${
                 theme === "dark"
@@ -374,9 +421,9 @@ function WhyChooseUs() {
                     label: "Projects Funded",
                     value: display.activeProjects,
                   },
-                ].map((item, index) => (
+                ].map((item) => (
                   <div
-                    key={index}
+                    key={item.label}
                     className={`flex items-center space-x-4 backdrop-blur-[25px] border rounded-[16px] p-4 transition-all hover:border-[#c9983a]/30 ${
                       theme === "dark"
                         ? "bg-white/[0.06] border-white/10 hover:bg-white/[0.1]"
@@ -406,283 +453,78 @@ function WhyChooseUs() {
                 ))}
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>
   );
 }
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    name: "Sarah Chen",
+    designation: "Full Stack Developer",
+    quote:
+      "Grainlify helped me find amazing projects that align with my interests. The grant system is transparent and fair!",
+  },
+  {
+    name: "Marcus Johnson",
+    designation: "Project Maintainer",
+    quote:
+      "As a maintainer, this platform has been incredible for finding talented contributors. Installing the GitHub App took minutes, and issues sync automatically.",
+  },
+  {
+    name: "Emily Rodriguez",
+    designation: "Open Source Contributor",
+    quote:
+      "The community here is amazing. I've learned so much and made great connections through Grainlify.",
+  },
+  {
+    name: "Chinedu Okafor",
+    designation: "Smart Contract Developer",
+    quote:
+      "First time getting paid in crypto for open-source work. KYC was a one-time step, and the USDC landed in my wallet on Stellar within minutes of approval.",
+  },
+  {
+    name: "Priya Nair",
+    designation: "Open Source Maintainer",
+    quote:
+      "We migrated three repositories to Grainlify in an afternoon. Contributors started showing up within the week.",
+  },
+];
 
 function Testimonials() {
-  const { theme } = useTheme();
-
-  const testimonials = [
-    {
-      name: "Sarah Chen",
-      role: "Full Stack Developer",
-      avatar:
-        "https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=400",
-      content:
-        "Grainlify helped me find amazing projects that align with my interests. The grant system is transparent and fair!",
-      rating: 5,
-    },
-    {
-      name: "Marcus Johnson",
-      role: "Project Maintainer",
-      avatar:
-        "https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=400",
-      content:
-        "As a maintainer, this platform has been incredible for finding talented contributors. Highly recommend!",
-      rating: 5,
-    },
-    {
-      name: "Emily Rodriguez",
-      role: "Open Source Contributor",
-      avatar:
-        "https://images.unsplash.com/photo-1655249481446-25d575f1c054?w=400",
-      content:
-        "The community here is amazing. I've learned so much and made great connections through Grainlify.",
-      rating: 5,
-    },
-  ];
-
   return (
-    <section
-      id="testimonials"
-      className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6"
-    >
+    <section id="testimonials" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2
-            className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-              theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-            }`}
-          >
-            What Builders Say
-          </h2>
-          <p
-            className={`text-xl max-w-2xl mx-auto transition-colors ${
-              theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-            }`}
-          >
-            Hear from our community of contributors and maintainers
-          </p>
-        </div>
+        <SectionHeader
+          eyebrow="Testimonials"
+          title="What Builders Say"
+          subtitle="Hear from our community of contributors and maintainers"
+        />
 
-        {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {testimonials.map((testimonial, index) => (
-            <div
-              key={index}
-              className={`backdrop-blur-[40px] border rounded-[24px] p-8 transition-all hover:border-[#c9983a]/30 hover:shadow-[0_12px_36px_rgba(201,152,58,0.15)] ${
-                theme === "dark"
-                  ? "bg-white/[0.08] border-white/15 hover:bg-white/[0.12]"
-                  : "bg-white/[0.15] border-white/25 hover:bg-white/[0.2]"
-              }`}
-            >
-              <Quote className="w-10 h-10 text-[#c9983a]/30 mb-6" />
-
-              {/* Rating */}
-              <div className="flex space-x-1 mb-6">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className="w-5 h-5 fill-[#c9983a] text-[#c9983a]"
-                  />
-                ))}
-              </div>
-
-              {/* Content */}
-              <p
-                className={`mb-6 transition-colors ${
-                  theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-                }`}
-              >
-                {testimonial.content}
-              </p>
-
-              {/* Author */}
-              <div className="flex items-center space-x-4">
-                <img
-                  src={testimonial.avatar}
-                  alt={testimonial.name}
-                  className="w-12 h-12 rounded-full object-cover border-2 border-[#c9983a]/30"
-                />
-                <div>
-                  <div
-                    className={`font-semibold transition-colors ${
-                      theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-                    }`}
-                  >
-                    {testimonial.name}
-                  </div>
-                  <div
-                    className={`text-sm transition-colors ${
-                      theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                    }`}
-                  >
-                    {testimonial.role}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <Reveal delay={0.1}>
+          <AnimatedTestimonials testimonials={TESTIMONIALS} autoplay />
+        </Reveal>
       </div>
     </section>
   );
 }
 
-function Footer() {
-  const { theme } = useTheme();
-
+function FAQ() {
   return (
-    <footer className="relative py-16 px-6 border-t border-white/20">
+    <section id="faq" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-          {/* Brand */}
-          <div className="col-span-1">
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c9983a] to-[#d4af37] shadow-[0_2px_8px_rgba(201,152,58,0.4)]" />
-              <span
-                className={`text-xl font-semibold transition-colors ${
-                  theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-                }`}
-              >
-                Grainlify
-              </span>
-            </div>
-            <p
-              className={`transition-colors ${
-                theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-              }`}
-            >
-              Connecting talent with opportunity in the open-source ecosystem.
-            </p>
-          </div>
+        <SectionHeader
+          eyebrow="FAQ"
+          title="Frequently Asked Questions"
+          subtitle="Everything you need to know about contributing and getting paid"
+        />
 
-          {/* Links */}
-          <div>
-            <h4
-              className={`font-semibold mb-4 transition-colors ${
-                theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-              }`}
-            >
-              Product
-            </h4>
-            <div className="space-y-2">
-              <a
-                href="#features"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Features
-              </a>
-              <a
-                href="#how-it-works"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                How it Works
-              </a>
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Pricing
-              </a>
-            </div>
-          </div>
-
-          <div>
-            <h4
-              className={`font-semibold mb-4 transition-colors ${
-                theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-              }`}
-            >
-              Company
-            </h4>
-            <div className="space-y-2">
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                About
-              </a>
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Blog
-              </a>
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Careers
-              </a>
-            </div>
-          </div>
-
-          <div>
-            <h4
-              className={`font-semibold mb-4 transition-colors ${
-                theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
-              }`}
-            >
-              Resources
-            </h4>
-            <div className="space-y-2">
-              <a
-                href="https://grainlify-docs.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Documentation
-              </a>
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Support
-              </a>
-              <a
-                href="#"
-                className={`block transition-colors hover:text-[#c9983a] ${
-                  theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-                }`}
-              >
-                Terms
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom */}
-        <div
-          className={`pt-8 border-t border-white/20 text-center transition-colors ${
-            theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
-          }`}
-        >
-          <p>&copy; 2024 Grainlify. All rights reserved.</p>
-        </div>
+        <Reveal delay={0.1}>
+          <FAQAccordion />
+        </Reveal>
       </div>
-    </footer>
+    </section>
   );
 }
