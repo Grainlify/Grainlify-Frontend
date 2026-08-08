@@ -106,7 +106,7 @@ Thumbs.db
 
 # Lock files (optional - some teams prefer to commit these)
 # Uncomment if you want to ignore lock files
-# package-lock.json
+package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
 
