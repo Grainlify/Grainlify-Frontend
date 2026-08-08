@@ -16,7 +16,7 @@ import { PaymentMethodsTab } from './PaymentMethodsTab'
 import { InvoicesTab } from './InvoicesTab'
 import { SkeletonLoader } from '../../../../shared/components/SkeletonLoader'
 import { useTheme } from '../../../../shared/contexts/ThemeContext'
-import { startKYCVerification, getKYCStatus } from '../../../../shared/api/client'
+import { startKYCVerification, getKYCStatus, type KycExtractedData } from '../../../../shared/api/client'
 import { useBillingProfiles } from '../../contexts/BillingProfilesContext'
 
 interface ProfileTypeOption {
@@ -268,7 +268,7 @@ export function BillingTab() {
 
       // If verified, update the profile with KYC data
       if (statusResponse.status === 'verified' && statusResponse.extracted) {
-        const extracted = statusResponse.extracted as any
+        const extracted = statusResponse.extracted as KycExtractedData
         updateProfileWithKYCData(extracted)
       }
     } catch (error) {
@@ -281,7 +281,7 @@ export function BillingTab() {
     }
   }
 
-  const updateProfileWithKYCData = (extracted: any) => {
+  const updateProfileWithKYCData = (extracted: KycExtractedData) => {
     if (!selectedProfile) return
 
     // Preserve the original profile name
