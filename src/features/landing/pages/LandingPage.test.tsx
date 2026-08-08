@@ -2,13 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { LandingPage } from './LandingPage'
-import { getLandingStats, getPublicProjects } from '../../../shared/api/client'
+import { getLandingStats } from '../../../shared/api/client'
 
-// LandingPage itself fetches nothing directly, but three of the sections it
-// renders each call a shared hook that hits the API: Hero and WhyChooseUs both
-// call useLandingStats() -> getLandingStats(), and ProjectsShowcase calls
-// useLandingProjects() -> getPublicProjects() (confirmed by reading
-// LandingPage.tsx, Hero.tsx, useLandingStats.ts and useLandingProjects.ts).
+// LandingPage itself fetches nothing directly, but two of the sections it
+// renders (Hero and WhyChooseUs) each call the shared useLandingStats() hook,
+// which in turn calls getLandingStats() - confirmed by reading LandingPage.tsx,
+// Hero.tsx, WhyChooseUs (inside LandingPage.tsx), and useLandingStats.ts.
 // LandingPage also renders Navbar, which calls useAuth() - that requires an
 // AuthProvider ancestor and AuthContext's checkAuth() reads getAuthToken()
 // unconditionally on mount, so this suite renders with `withAuth: true` and the
@@ -18,7 +17,6 @@ import { getLandingStats, getPublicProjects } from '../../../shared/api/client'
 // entered and getCurrentUser() is never called.
 vi.mock('../../../shared/api/client', () => ({
   getLandingStats: vi.fn(),
-  getPublicProjects: vi.fn(),
   getAuthToken: vi.fn(() => null),
   setAuthToken: vi.fn(),
   removeAuthToken: vi.fn(),
@@ -26,7 +24,6 @@ vi.mock('../../../shared/api/client', () => ({
 }))
 
 const mockedGetLandingStats = vi.mocked(getLandingStats)
-const mockedGetPublicProjects = vi.mocked(getPublicProjects)
 
 const STUB_STATS = {
   active_projects: 1,
@@ -34,34 +31,9 @@ const STUB_STATS = {
   grants_distributed_usd: 1,
 }
 
-const STUB_PROJECTS = {
-  projects: [
-    {
-      id: 'proj-1',
-      github_full_name: 'grainlify/example-repo',
-      language: 'TypeScript',
-      tags: [],
-      category: null,
-      stars_count: 10,
-      forks_count: 2,
-      contributors_count: 3,
-      open_issues_count: 1,
-      open_prs_count: 0,
-      ecosystem_name: null,
-      ecosystem_slug: null,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-    },
-  ],
-  total: 1,
-  limit: 24,
-  offset: 0,
-}
-
 describe('LandingPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockedGetPublicProjects.mockResolvedValue(STUB_PROJECTS)
   })
 
   it('renders the hero and main sections, replacing the placeholder dashes with the real fetched stats', async () => {
@@ -74,6 +46,7 @@ describe('LandingPage', () => {
     renderWithProviders(<LandingPage />, { withAuth: true })
 
     expect(screen.getByText(/Grainlify bridges the gap/i)).toBeInTheDocument()
+    expect(screen.getByText('Any Language. Any Stack.')).toBeInTheDocument()
     expect(screen.getByText('Everything You Need to Succeed')).toBeInTheDocument()
     expect(screen.getByText('How It Works')).toBeInTheDocument()
     expect(screen.getByText('Why Choose Grainlify?')).toBeInTheDocument()
@@ -92,26 +65,6 @@ describe('LandingPage', () => {
     expect(screen.getAllByText('342').length).toBeGreaterThan(0)
     expect(screen.getAllByText('15,890').length).toBeGreaterThan(0)
     expect(screen.queryAllByText('—').length).toBe(0)
-  })
-
-  it('renders live projects from getPublicProjects and hides the section when there are none', async () => {
-    mockedGetLandingStats.mockResolvedValue(STUB_STATS)
-
-    const { unmount } = renderWithProviders(<LandingPage />, { withAuth: true })
-
-    await waitFor(() => {
-      expect(screen.getByText('Real Projects. Real Contributors.')).toBeInTheDocument()
-    })
-    expect(await screen.findByAltText('grainlify/example-repo')).toBeInTheDocument()
-    unmount()
-
-    mockedGetPublicProjects.mockResolvedValue({ projects: [], total: 0, limit: 24, offset: 0 })
-    renderWithProviders(<LandingPage />, { withAuth: true })
-
-    await waitFor(() => {
-      expect(mockedGetPublicProjects).toHaveBeenCalled()
-    })
-    expect(screen.queryByText('Real Projects. Real Contributors.')).not.toBeInTheDocument()
   })
 
   it('renders Get Started links that point to /signin', async () => {

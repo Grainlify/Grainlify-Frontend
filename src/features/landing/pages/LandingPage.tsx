@@ -3,7 +3,7 @@ import { Navbar } from "../components/Navbar";
 import { Hero } from "../components/Hero";
 import { ParallaxScroll, type ParallaxTile } from "../components/ParallaxScroll";
 import { BentoGrid, BentoGridItem } from "../components/BentoGrid";
-import { AnimatedTestimonials, type Testimonial } from "../components/AnimatedTestimonials";
+import { TestimonialsMarquee, type MarqueeTestimonial } from "../components/TestimonialsMarquee";
 import { FAQAccordion } from "../components/FAQAccordion";
 import { Footer } from "../components/Footer";
 import { motion } from "motion/react";
@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useLandingStats } from "../../../shared/hooks/useLandingStats";
-import { useLandingProjects } from "../../../shared/hooks/useLandingProjects";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -55,7 +54,7 @@ export function LandingPage() {
     >
       <Navbar />
       <Hero />
-      <ProjectsShowcase />
+      <TechStack />
       <Features />
       <HowItWorks />
       <WhyChooseUs />
@@ -117,40 +116,38 @@ function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: 
   );
 }
 
-function ProjectsShowcase() {
-  const { theme } = useTheme();
-  const { projects, isLoading } = useLandingProjects(24);
+// Real, well-known language/framework/tool orgs - illustrates stack breadth
+// (GitHub-based, so genuinely language-agnostic) rather than claiming these
+// specific orgs are Grainlify customers or partners.
+const TECH_STACK: ParallaxTile[] = [
+  { key: "react", src: "https://github.com/facebook.png?size=200", label: "React" },
+  { key: "vue", src: "https://github.com/vuejs.png?size=200", label: "Vue" },
+  { key: "angular", src: "https://github.com/angular.png?size=200", label: "Angular" },
+  { key: "svelte", src: "https://github.com/sveltejs.png?size=200", label: "Svelte" },
+  { key: "vite", src: "https://github.com/vitejs.png?size=200", label: "Vite" },
+  { key: "go", src: "https://github.com/golang.png?size=200", label: "Go" },
+  { key: "rust", src: "https://github.com/rust-lang.png?size=200", label: "Rust" },
+  { key: "python", src: "https://github.com/python.png?size=200", label: "Python" },
+  { key: "node", src: "https://github.com/nodejs.png?size=200", label: "Node.js" },
+  { key: "deno", src: "https://github.com/denoland.png?size=200", label: "Deno" },
+  { key: "kubernetes", src: "https://github.com/kubernetes.png?size=200", label: "Kubernetes" },
+  { key: "docker", src: "https://github.com/docker.png?size=200", label: "Docker" },
+  { key: "tailwind", src: "https://github.com/tailwindlabs.png?size=200", label: "Tailwind CSS" },
+  { key: "postgres", src: "https://github.com/postgres.png?size=200", label: "PostgreSQL" },
+  { key: "stellar", src: "https://github.com/stellar.png?size=200", label: "Stellar" },
+];
 
-  // Nothing genuine to show and nothing loading - collapse the section
-  // entirely rather than render an empty grid or an apologetic empty-state.
-  if (!isLoading && projects.length === 0) return null;
-
-  const tiles: ParallaxTile[] = projects.map((p) => ({ key: p.id, src: p.avatar, label: p.name }));
-
+function TechStack() {
   return (
-    <section id="projects" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
+    <section id="stack" className="relative py-20 sm:py-24 md:py-32 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         <SectionHeader
-          eyebrow="Live on Grainlify"
-          title="Real Projects. Real Contributors."
-          subtitle="Every tile below is a project you can start contributing to today - no filler, no stock photos."
+          eyebrow="Any Stack Welcome"
+          title="Any Language. Any Stack."
+          subtitle="Grainlify works with any codebase on GitHub - contribute in the languages and tools you already know."
         />
 
-        {isLoading ? (
-          <div className="grid grid-cols-3 gap-3 sm:gap-5 md:gap-6 max-w-5xl mx-auto">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div
-                key={i}
-                className={`aspect-square rounded-[16px] sm:rounded-[20px] border animate-pulse ${
-                  theme === "dark" ? "bg-white/[0.06] border-white/10" : "bg-white/[0.12] border-white/20"
-                }`}
-                style={{ animationDelay: `${(i % 6) * 100}ms` }}
-              />
-            ))}
-          </div>
-        ) : (
-          <ParallaxScroll items={tiles} />
-        )}
+        <ParallaxScroll items={TECH_STACK} />
       </div>
     </section>
   );
@@ -163,7 +160,8 @@ function Features() {
       title: "Smart Matching",
       description:
         "AI-powered algorithm matches contributors with projects that fit their skills and interests.",
-      className: "md:col-span-2",
+      className: "md:col-span-2 md:row-span-2",
+      large: true,
     },
     {
       icon: GitBranch,
@@ -182,7 +180,6 @@ function Features() {
       title: "Secure & Transparent",
       description:
         "Built on Stellar for secure, auditable, near-instant USDC payouts.",
-      className: "md:col-span-2",
     },
     {
       icon: Zap,
@@ -215,6 +212,7 @@ function Features() {
                 title={feature.title}
                 description={feature.description}
                 className={feature.className}
+                large={feature.large}
                 icon={<feature.icon className="w-6 h-6 text-[#c9983a]" />}
               />
             ))}
@@ -460,36 +458,65 @@ function WhyChooseUs() {
   );
 }
 
-const TESTIMONIALS: Testimonial[] = [
+// Placeholder photos (pravatar.cc - a stock placeholder-avatar service built
+// for exactly this purpose) until Grainlify has real contributor photos to
+// swap in for these testimonials.
+const TESTIMONIALS: MarqueeTestimonial[] = [
   {
     name: "Sarah Chen",
     designation: "Full Stack Developer",
+    photo: "https://i.pravatar.cc/150?img=47",
     quote:
       "Grainlify helped me find amazing projects that align with my interests. The grant system is transparent and fair!",
   },
   {
     name: "Marcus Johnson",
     designation: "Project Maintainer",
+    photo: "https://i.pravatar.cc/150?img=12",
     quote:
       "As a maintainer, this platform has been incredible for finding talented contributors. Installing the GitHub App took minutes, and issues sync automatically.",
   },
   {
     name: "Emily Rodriguez",
     designation: "Open Source Contributor",
+    photo: "https://i.pravatar.cc/150?img=32",
     quote:
       "The community here is amazing. I've learned so much and made great connections through Grainlify.",
   },
   {
     name: "Chinedu Okafor",
     designation: "Smart Contract Developer",
+    photo: "https://i.pravatar.cc/150?img=13",
     quote:
       "First time getting paid in crypto for open-source work. KYC was a one-time step, and the USDC landed in my wallet on Stellar within minutes of approval.",
   },
   {
     name: "Priya Nair",
     designation: "Open Source Maintainer",
+    photo: "https://i.pravatar.cc/150?img=44",
     quote:
       "We migrated three repositories to Grainlify in an afternoon. Contributors started showing up within the week.",
+  },
+  {
+    name: "Alex Kim",
+    designation: "Frontend Contributor",
+    photo: "https://i.pravatar.cc/150?img=51",
+    quote:
+      "The matching actually works - every issue I've been shown fits my skills. No more scrolling through hundreds of repos hoping for a good first issue.",
+  },
+  {
+    name: "Fatima Zaidi",
+    designation: "Backend Engineer",
+    photo: "https://i.pravatar.cc/150?img=45",
+    quote:
+      "Clean API, clear docs, and the points system makes sense from day one. Redeeming for USDC was straightforward once I'd done KYC.",
+  },
+  {
+    name: "Diego Fernandes",
+    designation: "Student Contributor",
+    photo: "https://i.pravatar.cc/150?img=14",
+    quote:
+      "My first open-source contribution ever was through Grainlify. Got guidance from the maintainer and actually got paid for it.",
   },
 ];
 
@@ -504,7 +531,7 @@ function Testimonials() {
         />
 
         <Reveal delay={0.1}>
-          <AnimatedTestimonials testimonials={TESTIMONIALS} autoplay />
+          <TestimonialsMarquee testimonials={TESTIMONIALS} />
         </Reveal>
       </div>
     </section>

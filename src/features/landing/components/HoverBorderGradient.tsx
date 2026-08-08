@@ -22,6 +22,7 @@ interface HoverBorderGradientProps<T extends ElementType = "button"> {
   as?: T;
   containerClassName?: string;
   className?: string;
+  bgClassName?: string;
   duration?: number;
   clockwise?: boolean;
   children: ReactNode;
@@ -36,6 +37,7 @@ export function HoverBorderGradient<T extends ElementType = "button">({
   as,
   containerClassName,
   className,
+  bgClassName = "bg-[#1a1512]",
   duration = 1,
   clockwise = true,
   children,
@@ -68,7 +70,7 @@ export function HoverBorderGradient<T extends ElementType = "button">({
       )}
       {...props}
     >
-      <div className={cn("relative z-10 w-auto text-white bg-[#1a1512] px-6 sm:px-8 py-3 sm:py-4 rounded-[15px]", className)}>
+      <div className={cn("relative z-10 w-auto text-white px-6 sm:px-8 py-3 sm:py-4 rounded-[15px]", bgClassName, className)}>
         {children}
       </div>
       <motion.div
@@ -78,7 +80,7 @@ export function HoverBorderGradient<T extends ElementType = "button">({
         animate={{ background: hovered ? [MOVING_MAP[direction], HIGHLIGHT] : MOVING_MAP[direction] }}
         transition={{ ease: "linear", duration }}
       />
-      <div className="absolute z-[1] inset-[1.5px] rounded-[15px] bg-[#1a1512]" />
+      <div className={cn("absolute z-[1] inset-[1.5px] rounded-[15px]", bgClassName)} />
     </Tag>
   );
 }

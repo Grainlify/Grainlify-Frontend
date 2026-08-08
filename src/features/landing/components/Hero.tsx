@@ -5,6 +5,72 @@ import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useLandingStats } from "../../../shared/hooks/useLandingStats";
 import { HoverBorderGradient } from "./HoverBorderGradient";
 
+interface LightStrand {
+  top: string;
+  left: string;
+  width: number;
+  rotate: number;
+  nodes: number[];
+}
+
+// Diagonal "string light" strands - a faint gold line with a few glowing nodes
+// along it, each flickering on its own staggered timer. Adapted from
+// Aceternity UI's Hero Section With Flickering Lights, restyled as a scattered
+// ambient background instead of the original's single right-side panel, since
+// this hero centers its content rather than splitting it two-column.
+const LIGHT_STRANDS: LightStrand[] = [
+  { top: "18%", left: "58%", width: 260, rotate: -18, nodes: [0.1, 0.5, 0.9] },
+  { top: "12%", left: "8%", width: 200, rotate: 22, nodes: [0.2, 0.75] },
+  { top: "68%", left: "62%", width: 300, rotate: -12, nodes: [0.15, 0.5, 0.85] },
+  { top: "72%", left: "4%", width: 220, rotate: 16, nodes: [0.3, 0.8] },
+  { top: "38%", left: "82%", width: 180, rotate: -28, nodes: [0.25, 0.75] },
+];
+
+const FLICKER_DELAYS = [0, 0.6, 1.3, 2, 0.9, 1.7];
+
+function FlickeringLights({ isDark }: { isDark: boolean }) {
+  return (
+    <div aria-hidden="true" className="hidden md:block absolute inset-0 overflow-hidden">
+      {LIGHT_STRANDS.map((strand, sIdx) => (
+        <div
+          key={sIdx}
+          className="absolute"
+          style={{
+            top: strand.top,
+            left: strand.left,
+            width: strand.width,
+            transform: `rotate(${strand.rotate}deg)`,
+            transformOrigin: "left center",
+          }}
+        >
+          <div
+            className="h-px w-full"
+            style={{
+              background: `linear-gradient(to right, transparent, ${isDark ? "rgba(201,152,58,0.45)" : "rgba(166,124,46,0.35)"}, transparent)`,
+            }}
+          />
+          {strand.nodes.map((t, nIdx) => (
+            <span
+              key={nIdx}
+              className="animate-flicker absolute rounded-full"
+              style={{
+                left: `${t * 100}%`,
+                top: -4,
+                width: 8,
+                height: 8,
+                marginLeft: -4,
+                background: "radial-gradient(circle, #f5d78e 0%, #c9983a 60%, transparent 100%)",
+                boxShadow: "0 0 14px 4px rgba(201,152,58,0.55)",
+                animationDelay: `${FLICKER_DELAYS[(sIdx + nIdx) % FLICKER_DELAYS.length]}s`,
+              }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Hero() {
   const { theme } = useTheme();
   const { display } = useLandingStats();
@@ -27,6 +93,7 @@ export function Hero() {
           color: theme === "dark" ? "#e8dfd0" : "#2d2820",
         }}
       />
+      <FlickeringLights isDark={theme === "dark"} />
 
       {/* Content */}
       <div className="relative z-10 max-w-6xl mx-auto text-center">
@@ -93,6 +160,7 @@ export function Hero() {
             as={Link}
             to="/signin"
             containerClassName="rounded-[16px] w-full sm:w-auto"
+            bgClassName="bg-gradient-to-r from-[#c9983a] to-[#d4af37]"
             className="w-full sm:w-auto flex items-center justify-center gap-2 font-medium group"
           >
             <span>Get Started</span>

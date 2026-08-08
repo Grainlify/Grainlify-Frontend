@@ -146,6 +146,7 @@ export function Navbar() {
                 as={Link}
                 to="/signin"
                 containerClassName="rounded-[12px]"
+                bgClassName="bg-gradient-to-r from-[#c9983a] to-[#d4af37]"
                 className="px-5 py-2.5 rounded-[11px] text-sm font-medium"
               >
                 Get Started
@@ -276,6 +277,7 @@ export function Navbar() {
                   as={Link}
                   to="/signin"
                   containerClassName="rounded-[12px] w-full"
+                  bgClassName="bg-gradient-to-r from-[#c9983a] to-[#d4af37]"
                   className="w-full text-center font-medium"
                   onClick={() => setMobileMenuOpen(false)}
                 >
