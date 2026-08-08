@@ -12,6 +12,7 @@ import { NewProjectSetupModal } from '../components/NewProjectSetupModal';
 
 interface MaintainersPageProps {
   onNavigate: (page: string) => void;
+  initialTab?: TabType;
 }
 
 interface Project {
@@ -42,9 +43,9 @@ interface GroupedRepository {
   }>;
 }
 
-export function MaintainersPage({ onNavigate }: MaintainersPageProps) {
+export function MaintainersPage({ onNavigate, initialTab }: MaintainersPageProps) {
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab ?? 'Dashboard');
   const [isRepoDropdownOpen, setIsRepoDropdownOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [expandedOrgs, setExpandedOrgs] = useState<Set<string>>(new Set());

@@ -34,12 +34,6 @@ export function LeaderboardPage() {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const getProjectIcon = (githubFullName: string) => {
-    const [owner] = githubFullName.split("/");
-    // Use higher‑resolution owner avatar so leaderboard projects look crisp
-    return `https://github.com/${owner}.png?size=200`;
-  };
-
   // Fetch leaderboard data
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -95,26 +89,40 @@ export function LeaderboardPage() {
         const res = await getRecommendedProjects(50);
         const projects = res?.projects ?? [];
         if (cancelled) return;
-        const mapped: ProjectData[] = projects
-          .filter((p) => (p.github_full_name.split("/")[1] || "") !== ".github")
-          .map((p, idx) => {
-            const repoName = p.github_full_name.split("/")[1] || p.github_full_name;
-            const contributors = p.contributors_count ?? 0;
-            const openIssues = p.open_issues_count ?? 0;
+
+        // Rank by organization, not by individual repo - a maintainer with
+        // several repos would otherwise take up several leaderboard slots.
+        const byOwner = new Map<string, typeof projects>();
+        for (const p of projects) {
+          const [owner, repo] = p.github_full_name.split("/");
+          if (!owner || repo === ".github") continue;
+          const list = byOwner.get(owner) ?? [];
+          list.push(p);
+          byOwner.set(owner, list);
+        }
+
+        const mapped: ProjectData[] = Array.from(byOwner.entries())
+          .map(([owner, repos]) => {
+            const contributors = repos.reduce((sum, r) => sum + (r.contributors_count ?? 0), 0);
+            const openIssues = repos.reduce((sum, r) => sum + (r.open_issues_count ?? 0), 0);
             const activity =
               openIssues > 10 ? "Very High" : openIssues > 5 ? "High" : openIssues > 2 ? "Medium" : "Low";
+            const ecosystems = Array.from(
+              new Set(repos.map((r) => r.ecosystem_name).filter((e): e is string => Boolean(e))),
+            );
             return {
-              rank: idx + 1,
-              name: repoName,
-              logo: getProjectIcon(p.github_full_name),
+              name: owner,
+              logo: `https://github.com/${owner}.png?size=200`,
               score: contributors,
               trend: "same" as const,
               trendValue: 0,
               contributors,
-              ecosystems: p.ecosystem_name ? [p.ecosystem_name] : [],
+              ecosystems,
               activity,
             };
-          });
+          })
+          .sort((a, b) => b.score - a.score)
+          .map((org, idx) => ({ ...org, rank: idx + 1 }));
         setProjectsData(mapped);
       } catch (err) {
         if (!cancelled) setProjectsData([]);

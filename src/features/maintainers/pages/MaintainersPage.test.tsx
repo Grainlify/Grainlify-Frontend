@@ -92,6 +92,13 @@ describe('MaintainersPage', () => {
     expect(screen.queryByTestId('pull-requests-tab')).not.toBeInTheDocument()
   })
 
+  it('opens directly on the Issues tab when initialTab="Issues" is passed (e.g. from Discover\'s "View all issues")', async () => {
+    renderWithProviders(<MaintainersPage onNavigate={vi.fn()} initialTab="Issues" />)
+
+    expect(await screen.findByTestId('issues-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('dashboard-tab')).not.toBeInTheDocument()
+  })
+
   it("switches tabs so only the active tab's mocked child renders", async () => {
     const user = userEvent.setup()
     renderWithProviders(<MaintainersPage onNavigate={vi.fn()} />)

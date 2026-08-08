@@ -49,9 +49,9 @@ export function IssueCard({
   // Recommended Issue Variant
   if (variant === 'recommended') {
     return (
-      <div 
+      <div
         onClick={onClick}
-        className={`backdrop-blur-[30px] rounded-[16px] border p-5 transition-all cursor-pointer ${
+        className={`flex flex-col h-full backdrop-blur-[30px] rounded-[16px] border p-5 transition-all cursor-pointer ${
           isDark
             ? 'bg-white/[0.08] border-white/15 shadow-[0_4px_16px_rgba(0,0,0,0.24)] hover:bg-white/[0.12]'
             : 'bg-white/[0.15] border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:bg-white/[0.2]'
@@ -79,14 +79,14 @@ export function IssueCard({
             </span>
           )}
         </div>
-        {description && (
-          <p className={`text-[13px] mb-3 line-clamp-2 transition-colors ${
-            isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-          }`}>
-            {description}
-          </p>
-        )}
-        <div className={`flex items-center space-x-3 text-[12px] transition-colors ${
+        {/* Always reserve 2 lines of space here, even without a description,
+            so a short card doesn't pull its bottom row up above a neighbor's. */}
+        <p className={`text-[13px] mb-3 min-h-[2.5rem] line-clamp-2 transition-colors ${
+          isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+        }`}>
+          {description}
+        </p>
+        <div className={`flex items-center space-x-3 text-[12px] mt-auto pt-1 transition-colors ${
           isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
         }`}>
           {language && (

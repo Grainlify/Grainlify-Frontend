@@ -64,9 +64,10 @@ function makeApiIssue(
   }
 }
 
-// projectA's github_full_name maps to display name "widget-kit" (the part after the
-// slash) — DiscoverPage derives every card field (name, icon, stars, forks, tags,
-// ecosystem_name) from this shape, so these fixtures mirror the real API response.
+// projectA's github_full_name is "acme/widget-kit" - DiscoverPage cards are
+// grouped by org (the part before the slash), one card per org, so the card
+// displays "acme" (not "widget-kit") and derives its icon/stars/forks/tags/
+// ecosystem_name from whichever repo of that org is encountered first.
 const projectA = makeApiProject({
   id: 'proj-a',
   github_full_name: 'acme/widget-kit',
@@ -76,6 +77,16 @@ const projectA = makeApiProject({
   open_issues_count: 3,
   tags: ['TypeScript', 'CLI'],
   ecosystem_name: 'Ecosystem Alpha',
+})
+
+// Second repo under the SAME org as projectA - exercises the one-card-per-org
+// grouping (getRecommendedProjects is already sorted by contributors_count,
+// so projectA being listed first means it's the one whose fields "win").
+const projectAA = makeApiProject({
+  id: 'proj-aa',
+  github_full_name: 'acme/other-repo',
+  description: 'A second acme repo',
+  stars_count: 10,
 })
 
 const projectB = makeApiProject({
@@ -133,13 +144,13 @@ describe('DiscoverPage', () => {
     expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0)
 
     await waitFor(() => {
-      expect(screen.getByText('widget-kit')).toBeInTheDocument()
+      expect(screen.getByText('acme')).toBeInTheDocument()
     })
-    expect(screen.getByText('data-tool')).toBeInTheDocument()
+    expect(screen.getByText('globex')).toBeInTheDocument()
     expect(screen.getByText('Ecosystem Alpha')).toBeInTheDocument()
     expect(screen.getByText('1.2K')).toBeInTheDocument()
     expect(screen.getByText('Recommended Projects (2)')).toBeInTheDocument()
-    expect(mockedGetRecommendedProjects).toHaveBeenCalledWith(8)
+    expect(mockedGetRecommendedProjects).toHaveBeenCalledWith(50)
 
     await waitFor(() => {
       expect(screen.getByText('Fix crash on startup')).toBeInTheDocument()
@@ -197,17 +208,17 @@ describe('DiscoverPage', () => {
 
     renderWithProviders(<DiscoverPage />)
 
-    const avatarImg = await screen.findByAltText('widget-kit')
+    const avatarImg = await screen.findByAltText('acme')
     expect(avatarImg).toBeInTheDocument()
 
     fireEvent.error(avatarImg)
 
     await waitFor(() => {
-      expect(screen.queryByAltText('widget-kit')).not.toBeInTheDocument()
+      expect(screen.queryByAltText('acme')).not.toBeInTheDocument()
     })
-    // Initial-letter fallback: first character of the repo name, uppercased, on a
+    // Initial-letter fallback: first character of the org name, uppercased, on a
     // getOnBrandGradient-colored chip (DiscoverProjectCard.tsx).
-    expect(screen.getByText('W')).toBeInTheDocument()
+    expect(screen.getByText('A')).toBeInTheDocument()
 
     // Let the background issues fetch settle so no state update lands after the test.
     await waitFor(() => {
@@ -230,6 +241,38 @@ describe('DiscoverPage', () => {
     await waitFor(() => {
       expect(screen.getByText('No recommended projects found')).toBeInTheDocument()
     })
+  })
+
+  it('shows one card per org, not one per repo, when an org has multiple recommended repos', async () => {
+    mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA, projectAA, projectB] })
+    mockedGetPublicProjectIssues.mockResolvedValue({ issues: [] })
+
+    renderWithProviders(<DiscoverPage />)
+
+    await waitFor(() => expect(screen.getByText('Recommended Projects (2)')).toBeInTheDocument())
+    expect(screen.getByText('acme')).toBeInTheDocument()
+    expect(screen.getByText('globex')).toBeInTheDocument()
+    // The org card uses projectA's own fields (it's listed first) - confirms
+    // projectAA didn't silently overwrite or duplicate it.
+    expect(screen.getByText('A great widget kit for building things')).toBeInTheDocument()
+    expect(screen.queryByText('A second acme repo')).not.toBeInTheDocument()
+  })
+
+  it('shows a View all issues button that calls onViewAllIssues, and hides it when the prop is not provided', async () => {
+    mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
+    const onViewAllIssues = vi.fn()
+    const user = userEvent.setup()
+
+    const { unmount } = renderWithProviders(<DiscoverPage onViewAllIssues={onViewAllIssues} />)
+    await waitFor(() => expect(screen.getByText('No recommended projects found')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: /View all issues/i }))
+    expect(onViewAllIssues).toHaveBeenCalledTimes(1)
+    unmount()
+
+    renderWithProviders(<DiscoverPage />)
+    await waitFor(() => expect(screen.getByText('No recommended projects found')).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /View all issues/i })).not.toBeInTheDocument()
   })
 
   it('fires onGoToBilling and onGoToOpenSourceWeek when their call-to-action buttons are clicked', async () => {

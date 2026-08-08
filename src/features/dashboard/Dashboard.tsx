@@ -52,6 +52,7 @@ import { AdminPage } from "../admin/pages/AdminPage";
 import { SearchPage } from "./pages/SearchPage";
 import { RedeemPage } from "./pages/RedeemPage";
 import { SettingsTabType } from "../settings/types";
+import { TabType as MaintainersTabType } from "../maintainers/types";
 
 export function Dashboard() {
   const { logout, login } = useAuth();
@@ -124,6 +125,8 @@ export function Dashboard() {
   });
   const [settingsInitialTab, setSettingsInitialTab] =
     useState<SettingsTabType>("profile");
+  const [maintainersInitialTab, setMaintainersInitialTab] =
+    useState<MaintainersTabType>("Dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [deviceWidth, setDeviceWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : null
@@ -730,6 +733,10 @@ export function Dashboard() {
                       setCurrentPage("settings");
                     }}
                     onGoToOpenSourceWeek={() => setCurrentPage("osw")}
+                    onViewAllIssues={() => {
+                      setMaintainersInitialTab("Issues");
+                      setCurrentPage("maintainers");
+                    }}
                   />
                 )}
                 {currentPage === "browse" && (
@@ -779,7 +786,9 @@ export function Dashboard() {
                     />
                   )}
                 {currentPage === "contributors" && <ContributorsPage />}
-                {currentPage === "maintainers" && <MaintainersPage onNavigate={handleNavigation} />}
+                {currentPage === "maintainers" && (
+                  <MaintainersPage onNavigate={handleNavigation} initialTab={maintainersInitialTab} />
+                )}
                 {currentPage === "profile" && (
                   <ProfilePage
                     viewingUserId={viewingUserId}

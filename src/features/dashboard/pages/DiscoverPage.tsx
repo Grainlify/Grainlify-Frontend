@@ -167,6 +167,7 @@ type IssueType = {
 interface DiscoverPageProps {
   onGoToBilling?: () => void;
   onGoToOpenSourceWeek?: () => void;
+  onViewAllIssues?: () => void;
 }
 
 // Decorative icon chips that gently float around the hero on large screens.
@@ -181,6 +182,7 @@ const heroFloatingIcons = [
 export function DiscoverPage({
   onGoToBilling,
   onGoToOpenSourceWeek,
+  onViewAllIssues,
 }: DiscoverPageProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -211,7 +213,10 @@ export function DiscoverPage({
   useEffect(() => {
     const loadRecommendedProjects = async () => {
       await fetchProjects(async () => {
-        const response = await getRecommendedProjects(8);
+        // Fetch a larger pool than we display - grouping repos down to one
+        // card per org means a small fetch could otherwise collapse to just
+        // 1-2 cards when one org owns most of the top projects.
+        const response = await getRecommendedProjects(50);
         console.log("DiscoverPage: Recommended projects response", response);
 
         // Handle response - check if it exists and has projects array
@@ -239,18 +244,30 @@ export function DiscoverPage({
           return repoName !== ".github";
         });
 
-        const mappedProjects = filteredProjects.map((p) => {
-          const repoName = p.github_full_name.split('/')[1] || p.github_full_name;
+        // One card per org, not per repo - getRecommendedProjects is already
+        // sorted by contributors_count, so the first repo seen for a given
+        // owner is that org's best one; later repos from the same owner are
+        // just skipped rather than shown as separate cards.
+        const seenOwners = new Set<string>();
+        const oneRepoPerOrg = filteredProjects.filter((p) => {
+          const owner = p.github_full_name.split('/')[0];
+          if (seenOwners.has(owner)) return false;
+          seenOwners.add(owner);
+          return true;
+        });
+
+        const mappedProjects = oneRepoPerOrg.slice(0, 8).map((p) => {
+          const owner = p.github_full_name.split('/')[0];
           return {
             id: p.id,
-            name: repoName,
+            name: owner,
             icon: getProjectIcon(p.github_full_name),
             stars: formatNumber(p.stars_count || 0),
             forks: formatNumber(p.forks_count || 0),
             issues: p.open_issues_count || 0,
             description: truncateDescription(p.description) || "",
             tags: Array.isArray(p.tags) ? p.tags.slice(0, 2) : [],
-            color: getProjectColor(repoName),
+            color: getProjectColor(owner),
             ecosystem_name: p.ecosystem_name ?? null,
           };
         });
@@ -611,10 +628,23 @@ export function DiscoverPage({
           ? 'bg-white/[0.08] border-white/10'
           : 'bg-white/[0.12] border-white/20'
           }`}>
-        <div className="flex items-center space-x-3 mb-2">
-          <GitFork className="w-5 h-5 md:w-6 md:h-6 text-[#c9983a] drop-shadow-sm" />
-          <h3 className={`text-xl md:text-[24px] font-bold transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-            }`}>Recommended Issues</h3>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center space-x-3">
+            <GitFork className="w-5 h-5 md:w-6 md:h-6 text-[#c9983a] drop-shadow-sm" />
+            <h3 className={`text-xl md:text-[24px] font-bold transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+              }`}>Recommended Issues</h3>
+          </div>
+          {onViewAllIssues && (
+            <button
+              onClick={onViewAllIssues}
+              className={`shrink-0 inline-flex items-center gap-1 text-[13px] md:text-[14px] font-semibold transition-colors ${
+                isDark ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'
+              }`}
+            >
+              View all issues
+              <ArrowUpRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <p className={`text-[13px] md:text-[14px] mb-6 transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
           }`}>
@@ -670,7 +700,7 @@ export function DiscoverPage({
               <motion.div
                 key={issue.id}
                 variants={cardVariants}
-                className="motion-safe:hover:-translate-y-1 transition-transform active:scale-[0.98]"
+                className="h-full motion-safe:hover:-translate-y-1 transition-transform active:scale-[0.98]"
               >
                 <IssueCard
                   id={issue.id}

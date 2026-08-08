@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { LeaderboardPage } from './LeaderboardPage'
 import { getLeaderboard, getRecommendedProjects, getEcosystems } from '../../../shared/api/client'
@@ -69,6 +70,30 @@ const row3 = makeLeaderRow({
   trend: 'same',
   trendValue: 0,
 })
+
+type RecommendedProjectsResponse = Awaited<ReturnType<typeof getRecommendedProjects>>
+type ApiProject = RecommendedProjectsResponse['projects'][number]
+
+function makeApiProject(
+  overrides: Partial<ApiProject> & Pick<ApiProject, 'id' | 'github_full_name'>,
+): ApiProject {
+  return {
+    language: 'TypeScript',
+    tags: [],
+    category: null,
+    stars_count: 0,
+    forks_count: 0,
+    contributors_count: 0,
+    open_issues_count: 0,
+    open_prs_count: 0,
+    ecosystem_name: null,
+    ecosystem_slug: null,
+    description: '',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    ...overrides,
+  }
+}
 
 describe('LeaderboardPage', () => {
   beforeEach(() => {
@@ -145,6 +170,53 @@ describe('LeaderboardPage', () => {
     })
     expect(screen.getByText('#2')).toBeInTheDocument()
     expect(screen.getByText('#3')).toBeInTheDocument()
+  })
+
+  describe('Projects tab', () => {
+    it('ranks by organization, not by individual repo - multiple repos under one org become a single, aggregated entry', async () => {
+      mockedGetLeaderboard.mockResolvedValue([])
+      mockedGetRecommendedProjects.mockResolvedValue({
+        projects: [
+          makeApiProject({
+            id: 'p1',
+            github_full_name: 'acme/widget-kit',
+            contributors_count: 30,
+            open_issues_count: 2,
+            ecosystem_name: 'Web3',
+          }),
+          makeApiProject({
+            id: 'p2',
+            github_full_name: 'acme/other-tool',
+            contributors_count: 15,
+            open_issues_count: 1,
+            ecosystem_name: 'Web3',
+          }),
+          makeApiProject({
+            id: 'p3',
+            github_full_name: 'globex/data-tool',
+            contributors_count: 10,
+            open_issues_count: 0,
+          }),
+          // Excluded as a special GitHub meta-repo, same as the existing per-repo filter.
+          makeApiProject({ id: 'p4', github_full_name: 'acme/.github', contributors_count: 999 }),
+        ],
+      })
+      const user = userEvent.setup()
+
+      renderWithProviders(<LeaderboardPage />)
+      await user.click(screen.getByRole('button', { name: 'Projects' }))
+
+      await waitFor(() => expect(screen.getAllByText('acme').length).toBeGreaterThan(0))
+      expect(screen.getAllByText('globex').length).toBeGreaterThan(0)
+      // Repo names never appear - only the org.
+      expect(screen.queryByText('widget-kit')).not.toBeInTheDocument()
+      expect(screen.queryByText('other-tool')).not.toBeInTheDocument()
+
+      // acme's two repos are summed (30 + 15 = 45), ranking it above globex (10),
+      // and its .github meta-repo's contributor count is excluded entirely.
+      expect(screen.getAllByText('45').length).toBeGreaterThan(0)
+      expect(screen.queryByText('999')).not.toBeInTheDocument()
+    })
   })
 
   it('only shows the 1st place podium slot when just 1 contributor is returned', async () => {
