@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -26,6 +26,7 @@ import { useTheme } from "../../shared/contexts/ThemeContext";
 import { UserProfileDropdown } from "../../shared/components/UserProfileDropdown";
 import { NotificationsDropdown } from "../../shared/components/NotificationsDropdown";
 import { RoleSwitcher } from "../../shared/components/RoleSwitcher";
+import { ProductTour, type TourStep } from "../../shared/components/ProductTour";
 import {
   Modal,
   ModalFooter,
@@ -33,29 +34,35 @@ import {
   ModalInput,
 } from "../../shared/components/ui/Modal";
 import { bootstrapAdmin } from "../../shared/api/client";
-import { ContributorsPage } from "./pages/ContributorsPage";
-import { BrowsePage } from "./pages/BrowsePage";
-import { DiscoverPage } from "./pages/DiscoverPage";
-import { OpenSourceWeekPage } from "./pages/OpenSourceWeekPage";
-import { OpenSourceWeekDetailPage } from "./pages/OpenSourceWeekDetailPage";
-import { EcosystemsPage } from "./pages/EcosystemsPage";
-import { EcosystemDetailPage } from "./pages/EcosystemDetailPage";
-import { MaintainersPage } from "../maintainers/pages/MaintainersPage";
-import { ProfilePage } from "./pages/ProfilePage";
-import { DataPage } from "./pages/DataPage";
-import { ProjectDetailPage } from "./pages/ProjectDetailPage";
-import { IssueDetailPage } from "./pages/IssueDetailPage";
-import { LeaderboardPage } from "../leaderboard/pages/LeaderboardPage";
-import { BlogPage } from "../blog/pages/BlogPage";
-import { SettingsPage } from "../settings/pages/SettingsPage";
-import { AdminPage } from "../admin/pages/AdminPage";
-import { SearchPage } from "./pages/SearchPage";
-import { RedeemPage } from "./pages/RedeemPage";
 import { SettingsTabType } from "../settings/types";
 import { TabType as MaintainersTabType } from "../maintainers/types";
 
+// Every "page" here is a currentPage state swap, not a router path (see App.tsx),
+// so without lazy-loading, the entire dashboard - Discover, Browse, Admin, Settings,
+// Blog, every tab - shipped as one bundle regardless of which page a user actually
+// opened. Splitting each into its own chunk means only the active tab's code (plus
+// whatever it imports) downloads.
+const ContributorsPage = lazy(() => import("./pages/ContributorsPage").then((m) => ({ default: m.ContributorsPage })));
+const BrowsePage = lazy(() => import("./pages/BrowsePage").then((m) => ({ default: m.BrowsePage })));
+const DiscoverPage = lazy(() => import("./pages/DiscoverPage").then((m) => ({ default: m.DiscoverPage })));
+const OpenSourceWeekPage = lazy(() => import("./pages/OpenSourceWeekPage").then((m) => ({ default: m.OpenSourceWeekPage })));
+const OpenSourceWeekDetailPage = lazy(() => import("./pages/OpenSourceWeekDetailPage").then((m) => ({ default: m.OpenSourceWeekDetailPage })));
+const EcosystemsPage = lazy(() => import("./pages/EcosystemsPage").then((m) => ({ default: m.EcosystemsPage })));
+const EcosystemDetailPage = lazy(() => import("./pages/EcosystemDetailPage").then((m) => ({ default: m.EcosystemDetailPage })));
+const MaintainersPage = lazy(() => import("../maintainers/pages/MaintainersPage").then((m) => ({ default: m.MaintainersPage })));
+const ProfilePage = lazy(() => import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const DataPage = lazy(() => import("./pages/DataPage").then((m) => ({ default: m.DataPage })));
+const ProjectDetailPage = lazy(() => import("./pages/ProjectDetailPage").then((m) => ({ default: m.ProjectDetailPage })));
+const IssueDetailPage = lazy(() => import("./pages/IssueDetailPage").then((m) => ({ default: m.IssueDetailPage })));
+const LeaderboardPage = lazy(() => import("../leaderboard/pages/LeaderboardPage").then((m) => ({ default: m.LeaderboardPage })));
+const BlogPage = lazy(() => import("../blog/pages/BlogPage").then((m) => ({ default: m.BlogPage })));
+const SettingsPage = lazy(() => import("../settings/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const AdminPage = lazy(() => import("../admin/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
+const SearchPage = lazy(() => import("./pages/SearchPage").then((m) => ({ default: m.SearchPage })));
+const RedeemPage = lazy(() => import("./pages/RedeemPage").then((m) => ({ default: m.RedeemPage })));
+
 export function Dashboard() {
-  const { logout, login } = useAuth();
+  const { logout, login, user, userId } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const { ref: themeToggleRef, toggleWithAnimation: toggleSwitchTheme } =
@@ -365,6 +372,69 @@ export function Dashboard() {
   const isSmallDevice = deviceWidth && deviceWidth < 1024;
   const showMobileNav = mobileMenuOpen&& isSmallDevice;
 
+  // First-time product tour — shown once per account (localStorage-gated below),
+  // desktop-only (the fixed icon-rail sidebar it points at isn't present in the
+  // mobile hamburger layout).
+  const [showTour, setShowTour] = useState(false);
+
+  useEffect(() => {
+    if (!userId || isSmallDevice) return;
+    const key = `grainlify_tour_seen_${userId}`;
+    if (localStorage.getItem(key)) return;
+    // Marked "seen" the moment we decide to show it, not on completion — a
+    // mid-tour refresh shouldn't re-trigger it.
+    localStorage.setItem(key, "true");
+    const t = setTimeout(() => setShowTour(true), 900);
+    return () => clearTimeout(t);
+  }, [userId, isSmallDevice]);
+
+  const roleNavItem = navItems.find((item) => item.id === "maintainers" || item.id === "contributors");
+  const tourSteps: TourStep[] = [
+    {
+      targetId: "center",
+      title: `Welcome to Grainlify${user?.github?.login ? `, ${user.github.login}` : ""}!`,
+      description: "A quick look around so you know exactly how to earn on-chain rewards for open source work.",
+    },
+    {
+      targetId: "discover",
+      title: "Discover",
+      description: "Your personalized feed — projects and issues matched to your skills and interests.",
+    },
+    {
+      targetId: "browse",
+      title: "Browse",
+      description: "Explore every project on the platform yourself, organized by ecosystem.",
+    },
+    {
+      targetId: roleNavItem?.id ?? "contributors",
+      title: roleNavItem?.label ?? "Contributors",
+      description:
+        roleNavItem?.id === "maintainers"
+          ? "Manage your repositories, review issues, and track pull requests."
+          : "See other contributors and their activity across the platform.",
+    },
+    {
+      targetId: "leaderboard",
+      title: "Leaderboard",
+      description: "Track rankings by contributions and compete for the top spot.",
+    },
+    {
+      targetId: "redeem",
+      title: "Redeem",
+      description: "Convert the points you've earned into real on-chain rewards.",
+    },
+    {
+      targetId: "search",
+      title: "Quick search",
+      description: "Press ⌘K (or Ctrl+K) anytime to jump straight to a project, issue, or contributor.",
+    },
+    {
+      targetId: "center",
+      title: "You're all set",
+      description: "One more thing — add your billing profile and verify KYC in Settings so we can actually route your rewards. Enjoy Grainlify!",
+    },
+  ];
+
   return (
     <div
       className={`min-h-screen relative overflow-hidden transition-colors ${
@@ -428,6 +498,7 @@ export function Dashboard() {
                 return (
                   <button
                     key={item.id}
+                    data-tour-id={item.id}
                     onClick={() => handleNavigation(item.id)}
                     onMouseEnter={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
@@ -541,6 +612,7 @@ export function Dashboard() {
 
             {/* Search - Premium Pill Style */}
             <button
+              data-tour-id="search"
               onClick={() => {setCurrentPage("search");closeMobileNav();}}
               className={`relative h-[46px] lg:flex-1 rounded-[23px] overflow-visible backdrop-blur-[40px] shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] ml-[3px] transition-all hover:scale-[1.01] cursor-pointer ${
                 darkTheme ? "bg-[#2d2820]" : "bg-[#d4c5b0]"
@@ -691,6 +763,13 @@ export function Dashboard() {
 
           {/* Page Content */}
           <div className="pt-[68px]">
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center min-h-[50vh]">
+                  <div className="w-8 h-8 rounded-full border-2 border-[#c9983a]/30 border-t-[#c9983a] animate-spin" />
+                </div>
+              }
+            >
             {selectedIssue ? (
               <IssueDetailPage
                 issueId={selectedIssue.issueId}
@@ -872,6 +951,7 @@ export function Dashboard() {
                 )}
               </>
             )}
+            </Suspense>
           </div>
         </div>
       </main>
@@ -929,6 +1009,8 @@ export function Dashboard() {
           </ModalFooter>
         </form>
       </Modal>
+
+      {showTour && <ProductTour steps={tourSteps} onDone={() => setShowTour(false)} />}
     </div>
   );
 }

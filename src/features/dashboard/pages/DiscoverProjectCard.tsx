@@ -48,6 +48,8 @@ export function DiscoverProjectCard({
           <img
             src={project.icon}
             alt={project.name}
+            loading="lazy"
+            decoding="async"
             className="w-12 h-12 rounded-[12px] border border-white/20 flex-shrink-0"
             onError={() => setAvatarError(true)}
           />

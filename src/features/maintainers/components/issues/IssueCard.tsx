@@ -105,6 +105,8 @@ export function IssueCard({ issue, index, onClick }: IssueCardProps) {
         <img
           src={`https://github.com/${issue.user}.png?size=24`}
           alt={issue.user}
+          loading="lazy"
+          decoding="async"
           className="w-6 h-6 rounded-full border border-[#c9983a]/40"
           onError={(e) => {
             // Fallback to initials if image fails to load

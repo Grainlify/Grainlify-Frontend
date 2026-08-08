@@ -12,7 +12,7 @@ const BillingProfilesContext = createContext<BillingProfilesContextType | undefi
 
 const STORAGE_KEY = 'billing_profiles';
 
-function loadProfilesFromStorage(): BillingProfile[] {
+export function loadProfilesFromStorage(): BillingProfile[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {

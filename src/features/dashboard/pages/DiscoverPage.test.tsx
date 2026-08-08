@@ -3,23 +3,38 @@ import { screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { DiscoverPage } from './DiscoverPage'
-import { getRecommendedProjects, getPublicProjectIssues } from '../../../shared/api/client'
+import { getRecommendedProjects, getPublicProjectIssues, getUserProfile } from '../../../shared/api/client'
 
 // DiscoverPage fetches recommended projects (getRecommendedProjects) and, once those
 // resolve, recommended issues sourced from those projects (getPublicProjectIssues) —
-// both via useOptimisticData. Mock only what DiscoverPage itself imports from the
-// client; IssueDetailPage/ProjectDetailPage are imported for DiscoverPage's own
-// internal selectedIssue/selectedProjectId overlay (confirmed by reading the source —
-// DiscoverPage owns that state itself, it is not delegated to Dashboard), but since
-// none of these tests click into a card to open that overlay, their extra client
-// dependencies (getPublicProject, getMyProjects, etc.) never get invoked.
+// both via useOptimisticData. It also fetches getUserProfile for the hero's setup-nudge
+// (billing profile comes from localStorage instead, see loadProfilesFromStorage - real
+// code, not mocked, since jsdom's localStorage is enough on its own). Mock only what
+// DiscoverPage itself imports from the client; IssueDetailPage/ProjectDetailPage are
+// imported for DiscoverPage's own internal selectedIssue/selectedProjectId overlay
+// (confirmed by reading the source — DiscoverPage owns that state itself, it is not
+// delegated to Dashboard), but since none of these tests click into a card to open
+// that overlay, their extra client dependencies (getPublicProject, getMyProjects, etc.)
+// never get invoked.
+// getAuthToken/setAuthToken/removeAuthToken/getCurrentUser back AuthProvider
+// (withAuth: true below, needed since the hero greets the user by github
+// login/avatar via useAuth() — confirmed by reading AuthContext.tsx's full set of
+// client imports). getAuthToken must explicitly resolve to null: with no token,
+// checkAuth()'s `if (token)` branch is never entered, so getCurrentUser() itself
+// is never actually called in these tests.
 vi.mock('../../../shared/api/client', () => ({
   getRecommendedProjects: vi.fn(),
   getPublicProjectIssues: vi.fn(),
+  getUserProfile: vi.fn(),
+  getAuthToken: vi.fn(() => null),
+  setAuthToken: vi.fn(),
+  removeAuthToken: vi.fn(),
+  getCurrentUser: vi.fn(),
 }))
 
 const mockedGetRecommendedProjects = vi.mocked(getRecommendedProjects)
 const mockedGetPublicProjectIssues = vi.mocked(getPublicProjectIssues)
+const mockedGetUserProfile = vi.mocked(getUserProfile)
 
 type RecommendedProjectsResponse = Awaited<ReturnType<typeof getRecommendedProjects>>
 type ApiProject = RecommendedProjectsResponse['projects'][number]
@@ -102,6 +117,19 @@ const projectB = makeApiProject({
 describe('DiscoverPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    // Fresh-user default (nothing set up yet) — matches most scenarios below, which
+    // aren't testing the setup nudge itself. The "fires onGoToBilling..." test relies
+    // on this to get the "Continue setup" (not "Verify KYC") button label.
+    mockedGetUserProfile.mockResolvedValue({
+      contributions_count: 0,
+      projects_contributed_to_count: 0,
+      projects_led_count: 0,
+      rewards_count: 0,
+      languages: [],
+      ecosystems: [],
+      kyc_verified: false,
+      rank: { position: null, tier: 'unranked', tier_name: 'Unranked', tier_color: '#000' },
+    })
   })
 
   it('shows the loading skeleton, then real project and issue content once fetches resolve', async () => {
@@ -137,7 +165,7 @@ describe('DiscoverPage', () => {
       }
     })
 
-    const { container } = renderWithProviders(<DiscoverPage />)
+    const { container } = renderWithProviders(<DiscoverPage />, { withAuth: true })
 
     // Loading skeletons render before the fetches resolve.
     expect(screen.getByText(/Finding projects best suited/i)).toBeInTheDocument()
@@ -165,7 +193,7 @@ describe('DiscoverPage', () => {
   it('resolves the issues section instead of hanging when there are zero recommended projects', async () => {
     mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
 
-    renderWithProviders(<DiscoverPage />)
+    renderWithProviders(<DiscoverPage />, { withAuth: true })
 
     await waitFor(() => {
       expect(screen.getByText('No recommended projects found')).toBeInTheDocument()
@@ -184,7 +212,7 @@ describe('DiscoverPage', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     mockedGetRecommendedProjects.mockRejectedValue(new Error('network down'))
 
-    const { container } = renderWithProviders(<DiscoverPage />)
+    const { container } = renderWithProviders(<DiscoverPage />, { withAuth: true })
 
     expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0)
 
@@ -206,7 +234,7 @@ describe('DiscoverPage', () => {
     mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA] })
     mockedGetPublicProjectIssues.mockResolvedValue({ issues: [] })
 
-    renderWithProviders(<DiscoverPage />)
+    renderWithProviders(<DiscoverPage />, { withAuth: true })
 
     const avatarImg = await screen.findByAltText('acme')
     expect(avatarImg).toBeInTheDocument()
@@ -229,15 +257,15 @@ describe('DiscoverPage', () => {
   it('renders in both light and dark theme without crashing', async () => {
     mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
 
-    const { unmount } = renderWithProviders(<DiscoverPage />, { theme: 'light' })
-    expect(screen.getByText(/Get matched to your next/i)).toBeInTheDocument()
+    const { unmount } = renderWithProviders(<DiscoverPage />, { theme: 'light', withAuth: true })
+    expect(screen.getByText(/Here's what's matched to you today/i)).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByText('No recommended projects found')).toBeInTheDocument()
     })
     unmount()
 
-    renderWithProviders(<DiscoverPage />, { theme: 'dark' })
-    expect(screen.getByText(/Get matched to your next/i)).toBeInTheDocument()
+    renderWithProviders(<DiscoverPage />, { theme: 'dark', withAuth: true })
+    expect(screen.getByText(/Here's what's matched to you today/i)).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByText('No recommended projects found')).toBeInTheDocument()
     })
@@ -247,7 +275,7 @@ describe('DiscoverPage', () => {
     mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA, projectAA, projectB] })
     mockedGetPublicProjectIssues.mockResolvedValue({ issues: [] })
 
-    renderWithProviders(<DiscoverPage />)
+    renderWithProviders(<DiscoverPage />, { withAuth: true })
 
     await waitFor(() => expect(screen.getByText('Recommended Projects (2)')).toBeInTheDocument())
     expect(screen.getByText('acme')).toBeInTheDocument()
@@ -263,14 +291,14 @@ describe('DiscoverPage', () => {
     const onViewAllIssues = vi.fn()
     const user = userEvent.setup()
 
-    const { unmount } = renderWithProviders(<DiscoverPage onViewAllIssues={onViewAllIssues} />)
+    const { unmount } = renderWithProviders(<DiscoverPage onViewAllIssues={onViewAllIssues} />, { withAuth: true })
     await waitFor(() => expect(screen.getByText('No recommended projects found')).toBeInTheDocument())
 
     await user.click(screen.getByRole('button', { name: /View all issues/i }))
     expect(onViewAllIssues).toHaveBeenCalledTimes(1)
     unmount()
 
-    renderWithProviders(<DiscoverPage />)
+    renderWithProviders(<DiscoverPage />, { withAuth: true })
     await waitFor(() => expect(screen.getByText('No recommended projects found')).toBeInTheDocument())
     expect(screen.queryByRole('button', { name: /View all issues/i })).not.toBeInTheDocument()
   })
@@ -283,13 +311,14 @@ describe('DiscoverPage', () => {
 
     renderWithProviders(
       <DiscoverPage onGoToBilling={onGoToBilling} onGoToOpenSourceWeek={onGoToOpenSourceWeek} />,
+      { withAuth: true },
     )
 
     await waitFor(() => {
       expect(screen.getByText('No recommended projects found')).toBeInTheDocument()
     })
 
-    await user.click(screen.getByRole('button', { name: /Continue setup/i }))
+    await user.click(await screen.findByRole('button', { name: /Continue setup/i }))
     expect(onGoToBilling).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole('button', { name: /Let's go/i }))

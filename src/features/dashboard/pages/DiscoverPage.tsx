@@ -1,23 +1,21 @@
 import { useTheme } from "../../../shared/contexts/ThemeContext";
+import { useAuth } from "../../../shared/contexts/AuthContext";
 import {
   GitFork,
   ArrowUpRight,
   Target,
   Zap,
-  Github,
-  Star,
-  GitPullRequest,
-  Sparkles,
-  ChevronDown,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { IssueCard } from "../../../shared/components/ui/IssueCard";
 import { useState, useEffect } from "react";
 import { IssueDetailPage } from "./IssueDetailPage";
 import { ProjectDetailPage } from "./ProjectDetailPage";
+import { DiscoverHero } from "./DiscoverHero";
 import {
   getRecommendedProjects,
   getPublicProjectIssues,
+  getUserProfile,
 } from "../../../shared/api/client";
 import { SkeletonLoader } from "../../../shared/components/SkeletonLoader";
 import { useOptimisticData } from "../../../shared/hooks/useOptimisticData";
@@ -26,6 +24,7 @@ import {
   DiscoverProjectCard,
   type DiscoverProject,
 } from "./DiscoverProjectCard";
+import { loadProfilesFromStorage } from "../../settings/contexts/BillingProfilesContext";
 import {
   sectionContainerVariants,
   sectionVariants,
@@ -170,15 +169,6 @@ interface DiscoverPageProps {
   onViewAllIssues?: () => void;
 }
 
-// Decorative icon chips that gently float around the hero on large screens.
-// Positions deliberately avoid the centered text column (roughly the middle 60% width).
-const heroFloatingIcons = [
-  { icon: Github, className: "top-[14%] left-[6%]", duration: 5, delay: 0 },
-  { icon: Star, className: "top-[22%] right-[9%]", duration: 4.2, delay: 0.6 },
-  { icon: GitPullRequest, className: "bottom-[26%] left-[10%]", duration: 4.8, delay: 0.3 },
-  { icon: Sparkles, className: "bottom-[18%] right-[6%]", duration: 4.4, delay: 0.9 },
-];
-
 export function DiscoverPage({
   onGoToBilling,
   onGoToOpenSourceWeek,
@@ -186,6 +176,7 @@ export function DiscoverPage({
 }: DiscoverPageProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { user } = useAuth();
   const prefersReducedMotion = useReducedMotion();
   const [selectedIssue, setSelectedIssue] = useState<{
     issueId: string;
@@ -194,6 +185,34 @@ export function DiscoverPage({
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );
+
+  // Real onboarding status for the hero's setup nudge — billing profiles are
+  // stored client-side today (see BillingProfilesContext), KYC comes from the API.
+  // Starts "loading" so the nudge never flashes incomplete before either resolves.
+  const [isLoadingSetupStatus, setIsLoadingSetupStatus] = useState(true);
+  const [hasBillingProfile, setHasBillingProfile] = useState(false);
+  const [kycVerified, setKycVerified] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHasBillingProfile(loadProfilesFromStorage().length > 0);
+
+    getUserProfile()
+      .then((profile) => {
+        if (cancelled) return;
+        setKycVerified(Boolean(profile?.kyc_verified));
+      })
+      .catch((err) => {
+        console.warn("DiscoverPage: Failed to load KYC status", err);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingSetupStatus(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Use optimistic data hook for projects with 30-second cache
   const {
@@ -365,116 +384,18 @@ export function DiscoverPage({
       initial={prefersReducedMotion ? false : "hidden"}
       animate="visible"
     >
-      {/* Hero Section — fills (almost) the entire first screen, landing-page style */}
-      <motion.div
-        variants={sectionVariants}
-        className={`relative overflow-hidden backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] flex flex-col items-center justify-center text-center px-6 md:px-12 py-16 min-h-[70vh] md:min-h-[calc(100vh-96px)] transition-colors ${isDark
-          ? 'bg-white/[0.08] border-white/10'
-          : 'bg-white/[0.12] border-white/20'
-          }`}>
-        {/* Aurora blobs */}
-        <motion.div
-          className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-[#c9983a]/30 blur-[100px] pointer-events-none"
-          animate={prefersReducedMotion ? undefined : { x: [0, 40, -20, 0], y: [0, -30, 20, 0] }}
-          transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
+      {/* Welcome + setup nudge — compact by design: this is the first thing a user
+          sees after every login, not just the first ever, so it must not cost a
+          full screen every time. See DiscoverHero for the reasoning. */}
+      <motion.div variants={sectionVariants} className="space-y-4 md:space-y-6">
+        <DiscoverHero
+          login={user?.github?.login}
+          avatarUrl={user?.github?.avatar_url}
+          isLoadingStatus={isLoadingSetupStatus}
+          hasBillingProfile={hasBillingProfile}
+          kycVerified={kycVerified}
+          onGoToBilling={onGoToBilling}
         />
-        <motion.div
-          className="absolute -bottom-32 -right-16 w-[480px] h-[480px] rounded-full bg-[#a67c2e]/25 blur-[110px] pointer-events-none"
-          animate={prefersReducedMotion ? undefined : { x: [0, -30, 20, 0], y: [0, 30, -20, 0] }}
-          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-        />
-        <motion.div
-          className="absolute top-1/3 right-1/4 w-[280px] h-[280px] rounded-full bg-[#d4af37]/20 blur-[90px] pointer-events-none"
-          animate={prefersReducedMotion ? undefined : { x: [0, 20, -20, 0], y: [0, 20, -10, 0] }}
-          transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-        />
-
-        {/* Floating icon chips — large screens only, sit in the flanking whitespace */}
-        {heroFloatingIcons.map(({ icon: Icon, className, duration, delay }, idx) => (
-          <motion.div
-            key={idx}
-            className={`hidden lg:flex absolute w-12 h-12 rounded-full items-center justify-center border backdrop-blur-[20px] pointer-events-none ${className} ${isDark ? 'bg-white/[0.06] border-white/15' : 'bg-white/30 border-white/40'
-              }`}
-            animate={prefersReducedMotion ? undefined : { y: [0, -14, 0] }}
-            transition={{ duration, repeat: Infinity, ease: 'easeInOut', delay }}
-          >
-            <Icon className="w-5 h-5 text-[#c9983a]" />
-          </motion.div>
-        ))}
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center max-w-2xl">
-          <div className="w-14 h-14 mb-6 rounded-full flex items-center justify-center border bg-gradient-to-br from-[#c9983a]/25 to-[#a67c2e]/10 border-[#c9983a]/30">
-            <Target className="w-7 h-7 text-[#c9983a]" />
-          </div>
-
-          <h1 className={`text-4xl md:text-6xl font-bold mb-5 leading-[1.1] transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-            }`}>
-            Get matched to your next
-            <br />
-            <span className="text-[#c9983a]">open source contribution</span>
-          </h1>
-
-          <p className={`text-base md:text-lg mb-10 max-w-xl transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-            }`}>
-            Add your billing profile and verify your KYC so we can route rewards on-chain — we'll take it from there.
-          </p>
-
-          <button
-            onClick={onGoToBilling}
-            disabled={!onGoToBilling}
-            className={`px-8 py-4 md:px-10 md:py-5 rounded-[14px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-base md:text-[17px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.45)] transition-all inline-flex items-center justify-center gap-2 border border-white/10 ${!onGoToBilling ? 'opacity-70 cursor-default' : ''
-              }`}
-          >
-            <span>Continue setup</span>
-            <ArrowUpRight className="w-5 h-5 flex-shrink-0" />
-          </button>
-
-          {/* Step tracker — visualizes the "(1/3)" that used to be buried in the button label */}
-          <div className="flex items-center w-full max-w-md mt-12">
-            {[
-              { n: 1, label: 'Billing profile' },
-              { n: 2, label: 'Verify KYC' },
-              { n: 3, label: 'Get matched' },
-            ].map((step, idx, arr) => {
-              const isCurrent = step.n === 1;
-              return (
-                <div key={step.n} className={`flex items-center ${idx < arr.length - 1 ? 'flex-1' : ''}`}>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold border transition-colors ${isCurrent
-                      ? 'bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white border-transparent shadow-[0_2px_8px_rgba(201,152,58,0.4)]'
-                      : isDark
-                        ? 'bg-white/[0.06] border-white/15 text-[#8a7d6f]'
-                        : 'bg-white/30 border-white/40 text-[#a89685]'
-                      }`}>
-                      {step.n}
-                    </div>
-                    <span className={`hidden sm:inline text-[13px] font-medium whitespace-nowrap transition-colors ${isCurrent
-                      ? isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                      : isDark ? 'text-[#8a7d6f]' : 'text-[#a89685]'
-                      }`}>
-                      {step.label}
-                    </span>
-                  </div>
-                  {idx < arr.length - 1 && (
-                    <div className={`flex-1 h-px mx-3 transition-colors ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Scroll hint */}
-        <motion.div
-          className={`absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none ${isDark ? 'text-[#8a7d6f]' : 'text-[#a89685]'
-            }`}
-          animate={prefersReducedMotion ? undefined : { y: [0, 6, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <span className="text-[11px] font-medium tracking-wide uppercase">Scroll for more</span>
-          <ChevronDown className="w-4 h-4" />
-        </motion.div>
       </motion.div>
 
       {/* Embark on GrainHack — an elevated feature banner: a real moment, but not a second full hero */}

@@ -301,6 +301,8 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
                   <img
                     src={ecosystem.logo_url}
                     alt={`${ecosystem.name} logo`}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                     onError={(event) => {
                       (event.target as HTMLImageElement).style.display = 'none';

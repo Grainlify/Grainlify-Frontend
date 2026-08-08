@@ -42,6 +42,8 @@ export function OrganizationCard({ organization, onClick, variants }: Organizati
         <img
           src={organization.avatar}
           alt={organization.name}
+          loading="lazy"
+          decoding="async"
           className="w-16 h-16 rounded-[16px] border border-white/20 flex-shrink-0 mb-4"
           onError={() => setAvatarError(true)}
         />

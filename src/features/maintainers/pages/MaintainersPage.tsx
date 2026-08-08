@@ -282,9 +282,14 @@ export function MaintainersPage({ onNavigate, initialTab }: MaintainersPageProps
   };
 
   return (
-    <div className="space-y-6">
+    // Bounded to the viewport (minus the fixed header + <main>'s own margins — the
+    // only offsets that are reliably known here) so the tab content below can use
+    // flex-1 to claim exactly the remaining height instead of guessing its own
+    // viewport-relative constant, which previously under-filled the page and capped
+    // the Issues list to ~4 visible rows.
+    <div className="flex flex-col gap-6 h-[calc(100vh-84px)]">
       {/* Top Navigation Bar */}
-      <div className={`backdrop-blur-[40px] rounded-[20px] border p-2 relative z-10 transition-colors ${theme === 'dark'
+      <div className={`flex-shrink-0 backdrop-blur-[40px] rounded-[20px] border p-2 relative z-10 transition-colors ${theme === 'dark'
         ? 'bg-[#2d2820]/[0.4] border-white/10'
         : 'bg-white/[0.12] border-white/25'
         }`}>
@@ -525,27 +530,37 @@ export function MaintainersPage({ onNavigate, initialTab }: MaintainersPageProps
         </div>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'Dashboard' && (
-        <DashboardTab
-          selectedProjects={selectedProjects}
-          isLoadingProjects={isLoading}
-          onRefresh={refreshAll}
-          onNavigateToIssue={handleNavigateToIssue}
-        />
-      )}
+      {/* Tab Content — flex-1 claims all remaining height under the nav bar above;
+          min-h-0 lets IssuesTab's own h-full children size correctly inside a flex
+          child (without it, a flex item won't shrink below its content's natural
+          height, which breaks internal scrolling); overflow-y-auto is the escape
+          valve for Dashboard/Pull Requests, whose content can be taller than the
+          available space and isn't internally scrollable the way Issues is. */}
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-custom">
+        {activeTab === 'Dashboard' && (
+          <DashboardTab
+            selectedProjects={selectedProjects}
+            isLoadingProjects={isLoading}
+            onRefresh={refreshAll}
+            onNavigateToIssue={handleNavigateToIssue}
+          />
+        )}
 
-      {activeTab === 'Issues' && (
-        <IssuesTab
-          onNavigate={onNavigate}
-          selectedProjects={selectedProjects}
-          onRefresh={refreshAll}
-          initialSelectedIssueId={targetIssueId}
-          initialSelectedProjectId={targetProjectId}
-        />
-      )}
+        {activeTab === 'Issues' && (
+          <IssuesTab
+            onNavigate={onNavigate}
+            selectedProjects={selectedProjects}
+            isLoadingProjects={isLoading}
+            onRefresh={refreshAll}
+            initialSelectedIssueId={targetIssueId}
+            initialSelectedProjectId={targetProjectId}
+          />
+        )}
 
-      {activeTab === 'Pull Requests' && <PullRequestsTab selectedProjects={selectedProjects} onRefresh={refreshAll} />}
+        {activeTab === 'Pull Requests' && (
+          <PullRequestsTab selectedProjects={selectedProjects} isLoadingProjects={isLoading} onRefresh={refreshAll} />
+        )}
+      </div>
 
       {/* Install GitHub App Modal */}
       <InstallGitHubAppModal

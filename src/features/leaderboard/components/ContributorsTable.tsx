@@ -115,6 +115,8 @@ export function ContributorsTable({
                   <img
                     src={leader.avatar}
                     alt={leader.username}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       // Fallback to GitHub avatar if image fails to load

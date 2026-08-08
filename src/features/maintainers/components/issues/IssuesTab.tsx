@@ -25,6 +25,8 @@ interface IssuesTabProps {
   initialSelectedProjectId?: string;
   /** 'contributor' = issue detail from Dashboard (Browse): only Withdraw for own application. 'maintainer' = Maintainers Issues: Reject/Assign/Unassign */
   viewMode?: 'contributor' | 'maintainer';
+  /** True while the parent is still fetching the maintainer's project list — keeps the skeleton up instead of flashing "No issues found" before selectedProjects is populated. */
+  isLoadingProjects?: boolean;
 }
 
 interface CommentFromAPI {
@@ -53,7 +55,7 @@ interface IssueFromAPI {
   last_seen_at: string;
 }
 
-export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSelectedIssueId, initialSelectedProjectId, viewMode = 'maintainer' }: IssuesTabProps) {
+export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSelectedIssueId, initialSelectedProjectId, viewMode = 'maintainer', isLoadingProjects = false }: IssuesTabProps) {
   const { theme } = useTheme();
   const { userRole, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -158,12 +160,17 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
   // Fetch issues from selected projects
   useEffect(() => {
     loadIssues();
-  }, [selectedProjects]);
+  }, [selectedProjects, isLoadingProjects]);
 
   const loadIssues = async () => {
     setIsLoadingIssues(true);
     try {
       if (selectedProjects.length === 0) {
+        if (isLoadingProjects) {
+          // Parent hasn't finished fetching the maintainer's project list yet —
+          // stay on the skeleton instead of flashing "No issues found".
+          return;
+        }
         setIssues([]);
         setIsLoadingIssues(false);
         return;
@@ -674,7 +681,9 @@ Only applications submitted via the apply link above will be considered. Please 
   }, [initialSelectedProjectId]);
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-220px)]">
+    // h-full: fills the flex-1 tab-content region MaintainersPage now sizes for us,
+    // rather than re-guessing a viewport-relative constant here too.
+    <div className="flex gap-6 h-full">
       {/* Left Sidebar - Issues List */}
       <div className="w-[450px] flex-shrink-0 flex flex-col h-full space-y-4">
         {/* Search and Filter Row */}

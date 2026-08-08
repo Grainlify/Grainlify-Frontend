@@ -76,7 +76,7 @@ export function ProjectsTable({ data, activeFilter, isLoaded }: ProjectsTablePro
             <div className="col-span-5 flex items-center gap-3">
               <div className={`relative w-12 h-12 rounded-full bg-gradient-to-br ${getAvatarGradient(index)} flex items-center justify-center text-white font-bold text-[18px] shadow-md border-2 border-white/25 overflow-hidden group-hover:scale-125 group-hover:shadow-lg group-hover:rotate-12 transition-all duration-300`}>
                 {isLogoUrl(project.logo) ? (
-                  <img src={project.logo} alt="" className="w-full h-full object-cover" />
+                  <img src={project.logo} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 ) : (
                   project.logo
                 )}

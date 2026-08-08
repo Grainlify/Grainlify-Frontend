@@ -90,6 +90,8 @@ export function PRRow({ pr }: PRRowProps) {
           <img
             src={`https://github.com/${pr.author.name}.png?size=28`}
             alt={pr.author.name}
+            loading="lazy"
+            decoding="async"
             className="w-7 h-7 rounded-full border border-[#c9983a]/40"
             onError={(e) => {
               // Fallback to icon if image fails to load
@@ -143,6 +145,8 @@ export function PRRow({ pr }: PRRowProps) {
               <img
                 src={repoAvatarUrl}
                 alt={pr.repo}
+                loading="lazy"
+                decoding="async"
                 className="w-5 h-5 rounded-md border border-[#c9983a]/40"
                 onError={(e) => {
                   // Fallback to icon if image fails to load

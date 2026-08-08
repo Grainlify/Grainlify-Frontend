@@ -6,6 +6,11 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <link rel="icon" type="image/x-icon" href="/favicon.ico" />
       <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      <!-- Warms the connection to hosts every page hits almost immediately on load,
+           so the first API request / avatar image doesn't pay DNS+TCP+TLS cold. -->
+      <link rel="preconnect" href="%VITE_API_BASE_URL%" crossorigin />
+      <link rel="preconnect" href="https://github.com" />
+      <link rel="preconnect" href="https://images.unsplash.com" />
       <title>Grainlify</title>
     </head>
 

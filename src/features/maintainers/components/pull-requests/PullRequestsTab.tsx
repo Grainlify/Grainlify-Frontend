@@ -31,9 +31,11 @@ interface Project {
 interface PullRequestsTabProps {
   selectedProjects: Project[];
   onRefresh?: () => void;
+  /** True while the parent is still fetching the maintainer's project list — keeps the skeleton up instead of flashing an empty state before selectedProjects is populated. */
+  isLoadingProjects?: boolean;
 }
 
-export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh }: PullRequestsTabProps) {
+export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoadingProjects = false }: PullRequestsTabProps) {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<PRFilterType>('All states');
@@ -45,13 +47,18 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh }: Pul
   // Fetch PRs from selected projects
   useEffect(() => {
     loadPRs();
-  }, [selectedProjects]);
+  }, [selectedProjects, isLoadingProjects]);
 
   const loadPRs = async () => {
     setIsLoading(true);
     setError(null);
     try {
       if (selectedProjects.length === 0) {
+        if (isLoadingProjects) {
+          // Parent hasn't finished fetching the maintainer's project list yet —
+          // stay on the skeleton instead of flashing an empty state.
+          return;
+        }
         setPrs([]);
         setIsLoading(false);
         return;

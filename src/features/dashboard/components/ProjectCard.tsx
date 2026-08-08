@@ -49,6 +49,8 @@ export function ProjectCard({ project, onClick, variants }: ProjectCardProps) {
           <img
             src={project.icon}
             alt={project.name}
+            loading="lazy"
+            decoding="async"
             className="w-11 h-11 rounded-[12px] border border-white/20 flex-shrink-0"
             onError={() => setAvatarError(true)}
           />

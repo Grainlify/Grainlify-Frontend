@@ -43,19 +43,21 @@ describe('App routing', () => {
     expect(screen.getByTestId('landing-page')).toBeInTheDocument()
   })
 
-  it('renders SignInPage at /signin', () => {
+  it('renders SignInPage at /signin', async () => {
     renderAppAt('/signin')
-    expect(screen.getByTestId('signin-page')).toBeInTheDocument()
+    // SignInPage is lazy-loaded (see App.tsx), so it resolves behind a Suspense
+    // fallback rather than rendering synchronously.
+    expect(await screen.findByTestId('signin-page')).toBeInTheDocument()
   })
 
-  it('renders SignUpPage at /signup', () => {
+  it('renders SignUpPage at /signup', async () => {
     renderAppAt('/signup')
-    expect(screen.getByTestId('signup-page')).toBeInTheDocument()
+    expect(await screen.findByTestId('signup-page')).toBeInTheDocument()
   })
 
-  it('renders AuthCallbackPage at /auth/callback', () => {
+  it('renders AuthCallbackPage at /auth/callback', async () => {
     renderAppAt('/auth/callback')
-    expect(screen.getByTestId('auth-callback-page')).toBeInTheDocument()
+    expect(await screen.findByTestId('auth-callback-page')).toBeInTheDocument()
   })
 
   it('redirects unauthenticated access to /dashboard to /signin with a returnTo param', async () => {
@@ -68,12 +70,12 @@ describe('App routing', () => {
     expect(window.location.search).toBe(`?returnTo=${encodeURIComponent('/dashboard')}`)
   })
 
-  it('renders Dashboard for authenticated access to /dashboard', () => {
+  it('renders Dashboard for authenticated access to /dashboard', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false })
 
     renderAppAt('/dashboard')
 
-    expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
+    expect(await screen.findByTestId('dashboard-page')).toBeInTheDocument()
   })
 
   it('captures a "ref" query param from the landing URL into localStorage', () => {

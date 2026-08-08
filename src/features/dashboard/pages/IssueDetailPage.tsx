@@ -68,8 +68,11 @@ export function IssueDetailPage({ issueId, projectId, onClose }: IssueDetailPage
   }, [project, myProjects]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
+    // Same viewport budget as MaintainersPage (see its comment): 84px covers the
+    // fixed header's pt-[68px] spacer plus <main>'s own my-2 margins, which is all
+    // that's reliably known at this nesting depth.
+    <div className="flex flex-col gap-4 h-[calc(100vh-84px)]">
+      <div className="flex items-center gap-3 flex-shrink-0">
         <button
           onClick={onClose}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-[16px] backdrop-blur-[40px] border transition-all ${
@@ -81,38 +84,40 @@ export function IssueDetailPage({ issueId, projectId, onClose }: IssueDetailPage
         </button>
       </div>
 
-      {isLoading ? (
-        <div className="flex gap-6 h-[calc(100vh-220px)]">
-          <div className="w-[450px] flex-shrink-0 flex flex-col h-full space-y-4">
-            <SkeletonLoader className="h-12 w-full rounded-[16px]" />
-            <div className="space-y-3 flex-1 overflow-hidden">
-              {[...Array(6)].map((_, idx) => (
-                <IssueCardSkeleton key={idx} />
-              ))}
+      <div className="flex-1 min-h-0">
+        {isLoading ? (
+          <div className="flex gap-6 h-full">
+            <div className="w-[450px] flex-shrink-0 flex flex-col h-full space-y-4">
+              <SkeletonLoader className="h-12 w-full rounded-[16px]" />
+              <div className="space-y-3 flex-1 overflow-hidden">
+                {[...Array(6)].map((_, idx) => (
+                  <IssueCardSkeleton key={idx} />
+                ))}
+              </div>
+            </div>
+            <div
+              className={`flex-1 rounded-[24px] border overflow-hidden ${
+                isDark ? 'bg-[#2d2820]/[0.4] border-white/10' : 'bg-white/[0.12] border-white/20'
+              }`}
+            >
+              <div className="p-8 space-y-4">
+                <SkeletonLoader className="h-8 w-3/4 rounded-[10px]" />
+                <SkeletonLoader className="h-4 w-full rounded-[10px]" />
+                <SkeletonLoader className="h-4 w-full rounded-[10px]" />
+                <SkeletonLoader className="h-24 w-full rounded-[12px]" />
+              </div>
             </div>
           </div>
-          <div
-            className={`flex-1 rounded-[24px] border overflow-hidden ${
-              isDark ? 'bg-[#2d2820]/[0.4] border-white/10' : 'bg-white/[0.12] border-white/20'
-            }`}
-          >
-            <div className="p-8 space-y-4">
-              <SkeletonLoader className="h-8 w-3/4 rounded-[10px]" />
-              <SkeletonLoader className="h-4 w-full rounded-[10px]" />
-              <SkeletonLoader className="h-4 w-full rounded-[10px]" />
-              <SkeletonLoader className="h-24 w-full rounded-[12px]" />
-            </div>
-          </div>
-        </div>
-      ) : (
-        <IssuesTab
-          onNavigate={() => {}}
-          selectedProjects={selectedProjects}
-          initialSelectedIssueId={issueId}
-          initialSelectedProjectId={projectId}
-          viewMode="contributor"
-        />
-      )}
+        ) : (
+          <IssuesTab
+            onNavigate={() => {}}
+            selectedProjects={selectedProjects}
+            initialSelectedIssueId={issueId}
+            initialSelectedProjectId={projectId}
+            viewMode="contributor"
+          />
+        )}
+      </div>
     </div>
   );
 }

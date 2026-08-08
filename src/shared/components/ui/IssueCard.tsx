@@ -164,9 +164,11 @@ export function IssueCard({
       {/* Author */}
       {author && timeAgo && (
         <div className="flex items-center gap-2">
-          <img 
-            src={author.avatar} 
+          <img
+            src={author.avatar}
             alt={author.name}
+            loading="lazy"
+            decoding="async"
             className="w-5 h-5 rounded-full border border-[#c9983a]/30"
           />
           <span className={`text-[11px] font-semibold transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>

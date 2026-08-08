@@ -99,10 +99,12 @@ describe('Dashboard', () => {
     sessionStorage.clear()
   })
 
-  it('renders the dashboard shell with Discover active by default', () => {
+  it('renders the dashboard shell with Discover active by default', async () => {
     const { container } = renderWithProviders(<Dashboard />)
 
-    expect(screen.getByTestId('discover-page')).toBeInTheDocument()
+    // Page content (DiscoverPage) is lazy-loaded (see Dashboard.tsx), so it
+    // resolves behind a Suspense fallback rather than rendering synchronously.
+    expect(await screen.findByTestId('discover-page')).toBeInTheDocument()
     // Sidebar nav icon rail rendered for the default (contributor) role.
     expect(container.querySelector('[data-icon="Compass"]')).toBeInTheDocument()
     expect(container.querySelector('[data-icon="Grid3x3"]')).toBeInTheDocument()
@@ -111,19 +113,19 @@ describe('Dashboard', () => {
     expect(screen.getByText('Search projects, issues, contributors...')).toBeInTheDocument()
   })
 
-  it('renders the Browse page when the initial URL has ?tab=browse', () => {
+  it('renders the Browse page when the initial URL has ?tab=browse', async () => {
     window.history.pushState({}, '', '/dashboard?tab=browse')
 
     renderWithProviders(<Dashboard />)
 
-    expect(screen.getByTestId('browse-page')).toBeInTheDocument()
+    expect(await screen.findByTestId('browse-page')).toBeInTheDocument()
     expect(screen.queryByTestId('discover-page')).not.toBeInTheDocument()
   })
 
   it('clicking a nav item switches the active page and syncs ?tab= in the URL and localStorage', async () => {
     const user = userEvent.setup()
     const { container } = renderWithProviders(<Dashboard />)
-    expect(screen.getByTestId('discover-page')).toBeInTheDocument()
+    expect(await screen.findByTestId('discover-page')).toBeInTheDocument()
 
     const browseNavButton = container.querySelector('[data-icon="Grid3x3"]')?.closest('button')
     expect(browseNavButton).toBeTruthy()
@@ -140,7 +142,7 @@ describe('Dashboard', () => {
 
   it('opens Search on Cmd+K', async () => {
     renderWithProviders(<Dashboard />)
-    expect(screen.getByTestId('discover-page')).toBeInTheDocument()
+    expect(await screen.findByTestId('discover-page')).toBeInTheDocument()
 
     fireEvent.keyDown(window, { key: 'k', metaKey: true })
 
@@ -149,7 +151,7 @@ describe('Dashboard', () => {
 
   it('opens Search on Ctrl+K', async () => {
     renderWithProviders(<Dashboard />)
-    expect(screen.getByTestId('discover-page')).toBeInTheDocument()
+    expect(await screen.findByTestId('discover-page')).toBeInTheDocument()
 
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
 
