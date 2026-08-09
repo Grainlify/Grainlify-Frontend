@@ -9,7 +9,7 @@ import { I18nProvider } from '../../../shared/i18n'
 // ---------------------------------------------------------------------------
 
 vi.mock('../../../shared/contexts/ThemeContext', () => ({
-  useTheme: () => ({ theme: 'dark' }),
+  useTheme: () => ({ theme: 'dark', toggleTheme: vi.fn() }),
 }))
 
 vi.mock('../../../shared/contexts/AuthContext', () => ({
@@ -32,10 +32,10 @@ vi.mock('../../../shared/utils/logger', () => ({
   },
 }))
 
-vi.mock('react-theme-switch-animation', () => ({
-  useModeAnimation: () => ({
+vi.mock('../../../shared/hooks/useThemeToggleAnimation', () => ({
+  useThemeToggleAnimation: () => ({
     ref: { current: null },
-    toggleSwitchTheme: vi.fn(),
+    toggleWithAnimation: vi.fn(),
   }),
 }))
 

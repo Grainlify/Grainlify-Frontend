@@ -5,11 +5,11 @@ import { MemoryRouter } from 'react-router-dom'
 import { I18nProvider } from '../../../shared/i18n'
 
 // ─── mock dependencies ──────────────────────────────────────────────────────
-vi.mock('react-theme-switch-animation', () => ({
-  useModeAnimation: () => ({ ref: { current: null }, toggleSwitchTheme: vi.fn() }),
+vi.mock('../../../shared/hooks/useThemeToggleAnimation', () => ({
+  useThemeToggleAnimation: () => ({ ref: { current: null }, toggleWithAnimation: vi.fn() }),
 }))
 vi.mock('../../../shared/contexts/ThemeContext', () => ({
-  useTheme: () => ({ theme: 'light', setThemeFromAnimation: vi.fn() }),
+  useTheme: () => ({ theme: 'light', toggleTheme: vi.fn() }),
 }))
 vi.mock('../../../shared/contexts/AuthContext', () => ({ useAuth: vi.fn() }))
 
