@@ -18,10 +18,10 @@ import {
   X,
   Menu,
 } from 'lucide-react'
-import { useModeAnimation } from 'react-theme-switch-animation'
 import { useAuth } from '../../shared/contexts/AuthContext'
 import grainlifyLogo from '../../assets/grainlify_log.svg'
 import { useTheme } from '../../shared/contexts/ThemeContext'
+import { useThemeToggleAnimation } from '../../shared/hooks/useThemeToggleAnimation'
 import { UserProfileDropdown } from '../../shared/components/UserProfileDropdown'
 import { NotificationsDropdown } from '../../shared/components/NotificationsDropdown'
 import { RoleSwitcher } from '../../shared/components/RoleSwitcher'
@@ -49,11 +49,10 @@ import { SettingsTabType } from '../settings/types'
 
 export function Dashboard() {
   const { userRole, login } = useAuth()
-  const { theme, setThemeFromAnimation } = useTheme()
+  const { theme, toggleTheme } = useTheme()
   const location = useLocation()
-  const { ref: themeToggleRef, toggleSwitchTheme } = useModeAnimation({
-    isDarkMode: theme === 'dark',
-    onDarkModeChange: (isDark) => setThemeFromAnimation(isDark),
+  const { ref: themeToggleRef, toggleWithAnimation: toggleSwitchTheme } = useThemeToggleAnimation({
+    onToggle: toggleTheme,
   })
   // const [currentPage, setCurrentPage] = useState('discover');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() => {
