@@ -43,7 +43,7 @@
     "react-dnd-html5-backend": "16.0.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "7.81.0",
-    "react-intl": "^10.1.18",
+    "react-intl": "^10.1.20",
     "react-markdown": "^10.1.0",
     "react-popper": "2.3.0",
     "react-responsive-masonry": "2.7.2",
