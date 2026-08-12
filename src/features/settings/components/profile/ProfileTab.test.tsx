@@ -114,6 +114,52 @@ describe('ProfileTab', () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalled())
   })
 
+  it('shows a toast and resets the file input when avatar file type is invalid', async () => {
+    const user = userEvent.setup({ applyAccept: false })
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => undefined)
+
+    const { container } = renderWithProviders(<ProfileTab />)
+    await waitFor(() => expect(mockGetCurrentUser).toHaveBeenCalled())
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    const file = new File(['not an image'], 'avatar.txt', { type: 'text/plain' })
+    await user.upload(fileInput, file)
+
+    expect(toast.error).toHaveBeenCalledWith(
+      'Please select a valid image file (SVG, PNG, JPG, or GIF)'
+    )
+    expect(alertSpy).not.toHaveBeenCalled()
+    expect(fileInput.value).toBe('')
+
+    await user.upload(fileInput, file)
+
+    expect(toast.error).toHaveBeenCalledTimes(2)
+    alertSpy.mockRestore()
+  })
+
+  it('shows a toast and resets the file input when avatar file is too large', async () => {
+    const user = userEvent.setup()
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => undefined)
+
+    const { container } = renderWithProviders(<ProfileTab />)
+    await waitFor(() => expect(mockGetCurrentUser).toHaveBeenCalled())
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    const file = new File(['avatar'], 'avatar.png', { type: 'image/png' })
+    Object.defineProperty(file, 'size', { value: 5 * 1024 * 1024 + 1 })
+
+    await user.upload(fileInput, file)
+
+    expect(toast.error).toHaveBeenCalledWith('File size must be less than 5MB')
+    expect(alertSpy).not.toHaveBeenCalled()
+    expect(fileInput.value).toBe('')
+
+    await user.upload(fileInput, file)
+
+    expect(toast.error).toHaveBeenCalledTimes(2)
+    alertSpy.mockRestore()
+  })
+
   it('a failed save shows an error toast and does not lose the edits', async () => {
     mockUpdateProfile.mockRejectedValueOnce(new Error('network error'))
     const user = userEvent.setup()
