@@ -404,9 +404,20 @@ export const FOUNDING_CLAIMED_CARDS = [
 export const FOUNDING_CLAIMED_VIDEO = {
   name: 'x',
   fps: 30,
-  // 5.0s. Long enough that the hold reads as a hold, short enough that X
-  // loops it rather than treating it as a clip somebody has to sit through.
-  seconds: 5.0,
+  // 4.0s. Motion ends at 2.45s, so this sets the hold, and the hold is the
+  // only window in which the finished card can be read - the count is moving
+  // for the rest of it. Because the loop is seamless the tail runs straight
+  // into the opening hold, giving 2.05s contiguous on the complete card.
+  //
+  // Was 5.0s, which was the middle of the brief's 4-6s range rather than a
+  // number derived from anything: it left 2.55s of hold and made 51% of the
+  // file static. Shorter is better here for a reason that argues against the
+  // obvious instinct to give people time - the video loops, so a shorter loop
+  // re-runs the count more often, which is more motion in a scrolling feed.
+  //
+  // Not below ~3.5s: the reset then lands before the supporting lines have
+  // been read, and the card reads as a gimmick rather than as a number.
+  seconds: 4.0,
   phases: {
     // Poster-safe opening. The first frame is the finished card.
     holdOpen: 0.5,
