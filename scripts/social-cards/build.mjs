@@ -43,6 +43,8 @@ import {
   CAMPAIGN_CONTENT,
   CAMPAIGNS,
   CONTENT,
+  FOUNDING_CLAIMED_CARDS,
+  FOUNDING_CLAIMED_CONTENT,
   ROLES,
   SIZES,
 } from './content.mjs'
@@ -378,6 +380,67 @@ ${suffix}
 `
 }
 
+/**
+ * The founding-spots-claimed card.
+ *
+ * One text element for the whole "40 / 300", coloured with tspans rather than
+ * split into three elements. Three elements would need three x positions,
+ * which means hand-computing advance widths for a proportional font - the
+ * thing that goes wrong silently the first time a digit changes width. As one
+ * element the browser does the layout and the safe-area check measures the
+ * real box.
+ *
+ * No lockup. The brief asked for nothing beside the number, and on a card this
+ * size a mark plus wordmark in the corner is not neutral - it is a second
+ * focal point at the exact moment the number is trying to be the only one.
+ * grainlify.com in the footer carries the attribution instead.
+ */
+function buildFoundingClaimedSvg(c) {
+  const { width, height, margin } = c
+  const t = FOUNDING_CLAIMED_CONTENT
+  const hero = `${t.claimed}${t.separator}${t.total}`
+  const aria = `${hero}. ${t.headline}. ${t.support}`
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(aria)}">
+  <title>Grainlify — founding spots claimed (${c.platform})</title>
+${GENERATED_BY}
+  <style>
+    ${FONT_IMPORT}
+    text { font-family: ${FONT_STACK}; }
+    /* Tight tracking is what makes the count read as one object rather than
+       as separate characters that happen to be adjacent. */
+    .display  { font-size: ${c.display.size}px; font-weight: 700; letter-spacing: -0.045em; }
+    .headline { font-size: ${c.headline.size}px; font-weight: 600; letter-spacing: -0.015em; }
+    .support  { font-size: ${c.support.size}px; font-weight: 400; letter-spacing: 0; }
+    .footer   { font-size: ${c.footer.size}px; font-weight: 600; letter-spacing: 0.01em; }
+  </style>
+
+  <rect data-decorative="true" width="${width}" height="${height}" fill="${C.ground}"/>
+${textureMarkup(c)}
+
+  <g>
+    <text class="display" x="${margin}" y="${c.display.baseline}" fill="${C[c.display.role]}">${esc(t.claimed)}<tspan fill="${C[c.display.totalRole]}">${esc(t.separator + t.total)}</tspan></text>
+    <text class="headline" x="${margin}" y="${c.headline.baseline}" fill="${C[c.headline.role]}">${esc(t.headline)}</text>
+    <text class="support" x="${margin}" y="${c.support.baseline}" fill="${C[c.support.role]}">${esc(t.support)}</text>
+    <text class="footer" x="${width - margin}" y="${c.footer.baseline}" text-anchor="end" fill="${C[c.footer.role]}">${esc(t.footer)}</text>
+  </g>
+</svg>
+`
+}
+
+function foundingClaimedContrastPairs() {
+  return FOUNDING_CLAIMED_CARDS.flatMap((c) => {
+    const bg = worstBg(c)
+    return [
+      { what: `${c.name} claimed: "${FOUNDING_CLAIMED_CONTENT.claimed}"`, fg: C[c.display.role], bg, px: c.display.size, bold: true },
+      { what: `${c.name} claimed: "/ ${FOUNDING_CLAIMED_CONTENT.total}"`, fg: C[c.display.totalRole], bg, px: c.display.size, bold: true },
+      { what: `${c.name} claimed: headline`, fg: C[c.headline.role], bg, px: c.headline.size, bold: true },
+      { what: `${c.name} claimed: supporting line`, fg: C[c.support.role], bg, px: c.support.size, bold: false },
+      { what: `${c.name} claimed: footer`, fg: C[c.footer.role], bg, px: c.footer.size, bold: false },
+    ]
+  })
+}
+
 function campaignContrastPairs() {
   return CAMPAIGNS.flatMap((c) => {
     const bg = worstBg(c)
@@ -575,6 +638,7 @@ function avatarProblems(variant, boxes) {
 auditContrast(cardContrastPairs(), 'share cards')
 auditContrast(bannerContrastPairs(), 'banners')
 auditContrast(campaignContrastPairs(), 'campaign cards')
+auditContrast(foundingClaimedContrastPairs(), 'founding-claimed cards')
 auditContrast(
   AVATARS.variants.map((v) => ({
     what: `avatar ${v.name}: mark`,
@@ -664,6 +728,75 @@ for (const c of CAMPAIGNS) {
   console.log(
     `      thumbnail ${c.thumbnail.width}x${Math.round(c.height * thumbScale)}: ` +
       `"${display.label}" measures ${ink.inkPx}px of real ink ` +
+      `(em box would have claimed ${ink.boxPx}px) / ${c.thumbnail.minDisplayPx}px floor`,
+  )
+  written.push(svgPath, pngPath, thumbPath)
+}
+
+console.log(`\nRendering founding-claimed cards`)
+for (const c of FOUNDING_CLAIMED_CARDS) {
+  const svgPath = path.join(outDir, `grainlify-founding-claimed-${c.name}.svg`)
+  const pngPath = path.join(outDir, `grainlify-founding-claimed-${c.name}@2x.png`)
+  const thumbPath = path.join(outDir, `grainlify-founding-claimed-${c.name}-thumb.png`)
+  writeFileSync(svgPath, buildFoundingClaimedSvg(c))
+
+  const { boxes, usedInter } = await renderOne(browser, {
+    svgPath,
+    pngPath,
+    width: c.width,
+    height: c.height,
+  })
+
+  const safeRight = c.width - c.margin
+  const safeBottom = c.height - c.margin
+  for (const el of boxes) {
+    const label = `${c.name} claimed: "${el.label}"`
+    if (el.right > safeRight) problems.push(`${label} ends at ${el.right}px, past the ${safeRight}px safe edge`)
+    if (el.left < c.margin) problems.push(`${label} starts at ${el.left}px, inside the ${c.margin}px margin`)
+    if (el.bottom > safeBottom) problems.push(`${label} reaches ${el.bottom}px, below the ${safeBottom}px safe edge`)
+    if (el.top < c.margin) problems.push(`${label} starts at ${el.top}px, above the ${c.margin}px margin`)
+  }
+
+  // The number has to dominate, not merely fit. A hero spanning less than
+  // half the usable width is the banner v1 failure - correct content, floated
+  // in a field of nothing - and it is invisible in a check that only asks
+  // whether elements stay inside their margins.
+  const display = boxes.find((b) => b.cls === 'display')
+  const usable = c.width - c.margin * 2
+  const fill = (display.right - display.left) / usable
+  if (fill < 0.6) {
+    problems.push(
+      `${c.name} claimed: the count spans ${Math.round(fill * 100)}% of the usable width ` +
+        `(${display.right - display.left}/${usable}px); under 60% it floats rather than fills`,
+    )
+  }
+
+  const thumbScale = c.thumbnail.width / c.width
+  await renderOne(browser, {
+    svgPath,
+    pngPath: thumbPath,
+    width: c.width,
+    height: c.height,
+    scale: thumbScale,
+  })
+  const ink = await measureDisplayInk(c, boxes, thumbPath)
+  problems.push(...ink.problems)
+
+  console.log(
+    `  ${c.name.padEnd(9)} ${c.width}x${c.height} -> ${c.width * 2}x${c.height * 2}` +
+      `  font ${usedInter ? 'Inter' : 'FALLBACK'}`,
+  )
+  console.log(
+    `      count spans ${display.right - display.left}/${usable}px of usable width (${Math.round(fill * 100)}%)`,
+  )
+  console.log(
+    `      safe area: nearest edge ${Math.min(
+      ...boxes.map((b) => Math.min(b.left, b.top, c.width - b.right, c.height - b.bottom)),
+    )}px (margin ${c.margin}px, brief floor 60px)`,
+  )
+  console.log(
+    `      thumbnail ${c.thumbnail.width}x${Math.round(c.height * thumbScale)}: ` +
+      `"${FOUNDING_CLAIMED_CONTENT.claimed}" measures ${ink.inkPx}px of real ink ` +
       `(em box would have claimed ${ink.boxPx}px) / ${c.thumbnail.minDisplayPx}px floor`,
   )
   written.push(svgPath, pngPath, thumbPath)
