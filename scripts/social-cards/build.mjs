@@ -35,6 +35,7 @@ import { writeFileSync, mkdirSync, rmSync, statSync, readdirSync } from 'node:fs
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import ffmpegPath from 'ffmpeg-static'
+import ffprobeStatic from 'ffprobe-static'
 import sharp from 'sharp'
 import { chromium } from '@playwright/test'
 
@@ -557,7 +558,35 @@ async function renderFoundingVideo(browser, card, v, problems) {
     problems.push(`founding video: ${(bytes / 1024 / 1024).toFixed(2)}MB exceeds the ${v.encode.maxBytes / 1024 / 1024}MB ceiling`)
   }
 
-  return { frameDir, mp4Path, bytes, frameCount, sampled, widestRight, minEdge }
+  // No audio track at all - not a silent one.
+  //
+  // -an above is the intent; this is the verification, and they are not the
+  // same thing. An MP4 carrying an empty or silent audio stream can be
+  // treated as a video WITH sound, and X then shows it with a play button
+  // instead of autoplaying it. For a card whose entire job is to animate in a
+  // feed, that is the difference between working and not, and it is invisible
+  // in the file size, the duration and the picture.
+  //
+  // Asked as "list the audio streams" rather than "how many streams are
+  // there": a container with one video stream and one audio stream also has
+  // nb_streams=2, and a check on the total would pass a file with the exact
+  // defect this exists to catch if the video stream were ever dropped.
+  const audioStreams = execFileSync(ffprobeStatic.path, [
+    '-v', 'error',
+    '-select_streams', 'a',
+    '-show_entries', 'stream=index',
+    '-of', 'csv=p=0',
+    mp4Path,
+  ]).toString().trim()
+  const audioCount = audioStreams === '' ? 0 : audioStreams.split('\n').length
+  if (audioCount !== 0) {
+    problems.push(
+      `founding video: the MP4 carries ${audioCount} audio stream(s); it must carry none, ` +
+        `or X may show a play button instead of autoplaying`,
+    )
+  }
+
+  return { frameDir, mp4Path, bytes, frameCount, sampled, widestRight, minEdge, audioCount }
 }
 
 /**
@@ -1027,6 +1056,7 @@ console.log(`\nRendering founding-claimed video`)
   )
   console.log(`      safe area: nearest edge ${r.minEdge}px across all ${r.frameCount} frames (margin ${card.margin}px, brief floor 60px)`)
   console.log(`      loop seam: frame 0 and frame ${r.frameCount - 1} identical state`)
+  console.log(`      audio: ${r.audioCount} streams (ffprobe -select_streams a), autoplay-safe`)
   const worst = ink.rows.reduce((a, b) => (b.ink < a.ink ? b : a))
   console.log(
     `      thumbnail ${v.thumbnail.width}px: worst frame is #${worst.i} reading "${worst.value}" ` +
