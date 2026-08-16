@@ -408,3 +408,25 @@ body.modal-open aside {
    own. If you want motion here, animate something small and unblurred.
    --------------------------------------------------------------------------- */
 
+/* Clearance for the fixed support widget.
+ *
+ * SupportWidget renders one button for the whole app at `fixed bottom-5
+ * right-5`, 48px tall, so it occupies the bottom 68px of the viewport
+ * (20px inset + 48px) on every page. Anything a page draws in that band is
+ * covered, and a control drawn there when the page is already scrolled to its
+ * end cannot be reached at all.
+ *
+ * This was reported twice - a Save button, then the payout tab. Both times it
+ * was fixed on the page in the report, which is why there was a second time:
+ * it is not a property of a page, it is a property of every page that ends
+ * with an action row. The dashboard's content container reserves this much
+ * space below its last row, so scrolling to the bottom always leaves the
+ * final control above the widget.
+ *
+ * 68px of widget plus a 20px visual gap. e2e/widget-overlap.spec.ts asserts
+ * the result across every tab and subtab, so changing the widget's size or
+ * inset without changing this number fails there rather than in a report.
+ */
+:root {
+  --support-widget-clearance: 88px;
+}

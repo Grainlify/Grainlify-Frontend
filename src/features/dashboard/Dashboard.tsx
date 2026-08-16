@@ -915,7 +915,7 @@ export function Dashboard() {
           </div>
 
           {/* Page Content */}
-          <div className="pt-[68px]">
+          <div className="pt-[68px] pb-[var(--support-widget-clearance)]">
             <Suspense
               fallback={
                 <div className="flex items-center justify-center min-h-[50vh]">
