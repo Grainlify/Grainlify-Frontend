@@ -35,6 +35,24 @@ import type { Page } from '@playwright/test'
  * scrolled under it (reachable by scrolling up), and a transient toast. A
  * check that flags legitimate overlays is one that gets disabled.
  *
+ * WHY THIS CATCHES 3 PAGES AND NOT 5, and why that is not weaker coverage:
+ *
+ * Reintroducing a floating bottom-right button fails this on three pages. The
+ * earlier version of this suite - which asserted bounding-box overlap against
+ * one specific widget - found five. The smaller number is a different
+ * question, not less of the same one.
+ *
+ * Overlap asks "is anything drawn on top of this control". Reachability asks
+ * "can the user get at it". Two of the original five were Save buttons on
+ * pages long enough to scroll: covered at the very bottom of the page, clear
+ * again after scrolling a little. Annoying, and worth fixing by not putting a
+ * button in that corner - which is what happened - but not blocking anyone.
+ * The three that still fail are controls that stay covered wherever you
+ * scroll, which is the case where a person simply cannot complete the action.
+ *
+ * If a future change makes this suite look too permissive, the thing to change
+ * is the question it asks, deliberately - not to assume coverage was lost.
+ *
  * The sidebar rail is itself fixed, by design. It does not overlap content
  * because the page is offset by its width - which is the property being
  * checked, so it is not excluded here.
