@@ -422,3 +422,18 @@ body.modal-open aside {
 :root {
   --discover-card-height: 288px;
 }
+
+/* Fixed height for the repository cards in the Browse grid and the org page.
+ *
+ * Same problem as --discover-card-height: grid rows size to their tallest item
+ * and each row sizes independently, so one repo carrying nine topics wrapped
+ * to four label lines and made its whole row taller than the rows around it -
+ * 304px against 434-499px depending on viewport width.
+ *
+ * Tall enough for the icon row, title, a two-line description, the
+ * contributors/issues/PRs stats and one line of labels. ProjectCard caps the
+ * labels at two plus "+N" so content cannot push past this.
+ */
+:root {
+  --repo-card-height: 304px;
+}

@@ -104,3 +104,147 @@ test('the ecosystem page scrolls at a short viewport', async ({
   expect(after.y, 'the document did not move - content below the fold is unreachable')
     .toBeGreaterThan(before)
 })
+
+// Numbers must not be silently truncated.
+//
+// #1004 pinned the org header's left column to the rank badge's height and
+// made the title and stats rows share it. That squeezed the stat tiles to
+// 109px against 153px of content, and their overflow-hidden - which exists for
+// a decorative blur orb - clipped the number instead of spilling visibly.
+// Measured before the fix: 109 rendered, 153 needed.
+//
+// The assertion is about clipping rather than exact alignment on purpose. The
+// "the two sides must match exactly" requirement is what caused this: a
+// layout that truncates data is worse than one that is 44px out of alignment.
+// The badge stays a fixed square and centres; the column is min-height.
+test('no org stat tile clips its own content', async ({
+  page, setupMockAuth, setupMockBrowse, setupMockOrgProfile,
+}) => {
+  await setupMockAuth(); await setupMockBrowse(); await setupMockOrgProfile()
+  await page.addInitScript(() => {
+    window.localStorage.setItem('grainlify_tour_seen_user-1', 'true')
+    window.localStorage.setItem('patchwork_jwt', 'e2e-test-token')
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/dashboard?tab=org&org=grainlify')
+  await page.waitForTimeout(1500)
+
+  const tiles = await page.evaluate(() => {
+    const labels = ['Repositories', 'Stars', 'Contributors', 'Merged PRs']
+    return Array.from(document.querySelectorAll('div'))
+      .filter((d) => labels.includes(d.textContent?.trim() ?? ''))
+      .map((d) => d.parentElement)
+      .filter((el): el is HTMLElement => !!el)
+      .map((el) => ({
+        label: el.querySelector('div:nth-of-type(2)')?.textContent?.trim() ?? '?',
+        rendered: Math.round(el.getBoundingClientRect().height),
+        needed: el.scrollHeight,
+      }))
+  })
+
+  // A page that rendered no tiles would pass the loop below without testing
+  // anything.
+  expect(tiles.length, 'no stat tiles rendered - the check below would be vacuous')
+    .toBeGreaterThanOrEqual(4)
+
+  for (const t of tiles) {
+    expect(
+      t.rendered,
+      `a stat tile renders at ${t.rendered}px but needs ${t.needed}px, and it has ` +
+      `overflow-hidden - the number is being cut off`,
+    ).toBeGreaterThanOrEqual(t.needed)
+  }
+})
+
+// The badge is a fixed square, and stays one. It was a verbatim copy of
+// ProfilePage's markup that the flex row stretched into a tall rectangle;
+// RankBadgeCard replaced it precisely so its shape stops depending on whatever
+// sits beside it.
+test('the org rank badge is square', async ({
+  page, setupMockAuth, setupMockBrowse, setupMockOrgProfile,
+}) => {
+  await setupMockAuth(); await setupMockBrowse(); await setupMockOrgProfile()
+  await page.addInitScript(() => {
+    window.localStorage.setItem('grainlify_tour_seen_user-1', 'true')
+    window.localStorage.setItem('patchwork_jwt', 'e2e-test-token')
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/dashboard?tab=org&org=grainlify')
+  await page.waitForTimeout(1500)
+
+  const badge = await page.evaluate(() => {
+    const el = Array.from(document.querySelectorAll('div')).find((d) => {
+      const r = d.getBoundingClientRect()
+      return r.width > 250 && r.width < 350 && /CONQUEROR|BRONZE|SILVER|GOLD|Unranked|\dst|\dnd|\drd|\dth/i.test(d.textContent ?? '')
+    })
+    if (!el) return null
+    const r = el.getBoundingClientRect()
+    return { w: Math.round(r.width), h: Math.round(r.height) }
+  })
+
+  expect(badge, 'the rank badge was not found on the page').not.toBeNull()
+  expect(
+    Math.abs(badge!.w - badge!.h),
+    `the badge is ${badge!.w}x${badge!.h} - it is stretching to its neighbour instead of staying square`,
+  ).toBeLessThanOrEqual(2)
+})
+
+// Repository cards, same property and same cause as the Discover cards.
+//
+// A repo carrying nine topics wrapped to four label lines and made its whole
+// grid row taller than the rows around it. Measured before the fix: 304px
+// against 434px, 466px and 499px depending on viewport width - the narrower
+// the column, the worse it got.
+//
+// Written the way the Discover assertion finally worked: the mismatch was
+// reproduced with real measurements first, and the mock below is the setup
+// that produced it. Earlier attempts at that test passed with the fix removed
+// because they measured the grid wrapper, used a single row, or used repos the
+// page deduped away.
+test('every repository card is the same height, whatever it carries', async ({
+  page, setupMockAuth, setupMockBrowse, setupMockOrgProfile,
+}) => {
+  await setupMockAuth(); await setupMockBrowse(); await setupMockOrgProfile()
+  await page.addInitScript(() => {
+    window.localStorage.setItem('grainlify_tour_seen_user-1', 'true')
+    window.localStorage.setItem('patchwork_jwt', 'e2e-test-token')
+  })
+
+  const mk = (i: number, tags: string[]) => ({
+    id: `r${i}`, github_full_name: `org${i}/repo`, language: 'TypeScript',
+    tags, category: 'Backend', stars_count: i, forks_count: i,
+    contributors_count: i, open_issues_count: i, description: 'a repository',
+  })
+  await page.route((url) => url.pathname === '/projects', async (route) => {
+    await route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        projects: [
+          mk(1, []), mk(2, ['stellar']), mk(3, ['stellar']), mk(4, []), mk(5, []),
+          // The heavy one, deliberately in a later row: rows stretch their own
+          // items to equal height, so a single row cannot show this bug.
+          mk(6, ['blockchain-security', 'cybersecurity', 'osint', 'phishing-protection',
+                 'security', 'soroban', 'stellar', 'threat-intelligence', 'web3']),
+          mk(7, ['stellar']), mk(8, []), mk(9, ['stellar']), mk(10, []),
+        ],
+      }),
+    })
+  })
+
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/dashboard?tab=browse')
+  await page.waitForTimeout(900)
+  // Browse opens on Organizations; the repo grid is the other toggle.
+  const repos = page.getByRole('button', { name: /^Repositories$/i }).first()
+  if (await repos.count()) { await repos.click(); await page.waitForTimeout(900) }
+
+  const heights = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('[data-testid="project-card"]'))
+      .map((el) => Math.round(el.getBoundingClientRect().height)))
+
+  expect(heights.length, 'need several cards across at least two rows to see the bug')
+    .toBeGreaterThanOrEqual(6)
+  const unique = [...new Set(heights)]
+  expect(unique, `cards rendered at ${unique.join(', ')}px - a repo with more topics is taller than one with fewer`)
+    .toHaveLength(1)
+})
