@@ -2,31 +2,46 @@ import { test, expect } from './fixtures'
 import type { Page } from '@playwright/test'
 
 /**
- * The support widget is `position: fixed` at the bottom-right of every page
- * (App.tsx mounts one instance for the whole app). Anything the page draws
- * underneath it is covered.
+ * No fixed-position element may cover an interactive one.
  *
- * This has now been reported twice - first a Save button, then the payout
- * settings tab. Both times the fix was applied to the page in the report,
- * which is how the second one happened: the bug is not a property of a page,
- * it is a property of every page that puts a control in that corner.
+ * This began as a much larger suite that measured one specific widget against
+ * every page. That widget used to render at `fixed bottom-5 right-5` and was
+ * reported three times for sitting on top of whatever a page ended with - a
+ * Save button on four settings tabs, and the Accept button on terms, which
+ * could not be clicked at all.
+ *
+ * It has since been moved into the dashboard's icon rail and the public-route
+ * chrome, so most of that machinery measured a hazard that no longer exists.
+ * What remains is the general property, because the bug was never really about
+ * one widget: bottom-right is where applications put primary actions, and any
+ * future floating element would land in the same fight. A toast, a cookie
+ * banner, a chat bubble, the next "quick action" button.
  *
  * WHAT IS ASSERTED, and why it is this and not something stricter:
  *
- * A fixed overlay covers whatever scrolls under it, so "never intersects at
- * any scroll offset" is unsatisfiable and would fail on every page with a long
- * list. What makes a control genuinely unreachable is being under the widget
- * when the user cannot scroll any further - at the very bottom of the page,
- * or when it is itself fixed or sticky. That is the condition checked here.
+ * A fixed overlay covers whatever scrolls under it, so "nothing ever
+ * intersects at any scroll offset" is unsatisfiable on a page with a long
+ * list. The property that matters is REACHABILITY: can the user get the
+ * control out from under the overlay?
  *
- * Severity is reported alongside: an element whose CENTRE is occluded cannot
- * be clicked at all, which is worse than one merely clipped at a corner.
+ * So this runs in two phases. It scans at the bottom of the page for controls
+ * whose CENTRE - the point a click lands on - is covered by a fixed element,
+ * then scrolls each candidate to the middle of the viewport and checks again.
+ * Only something still covered when centred is genuinely unreachable.
+ *
+ * The second phase is not belt-and-braces, it is what makes the check correct.
+ * A first version stopped after phase one and reported two failures that were
+ * not bugs: the dashboard's top-anchored header covering a tab bar that had
+ * scrolled under it (reachable by scrolling up), and a transient toast. A
+ * check that flags legitimate overlays is one that gets disabled.
+ *
+ * The sidebar rail is itself fixed, by design. It does not overlap content
+ * because the page is offset by its width - which is the property being
+ * checked, so it is not excluded here.
  */
 
-const WIDGET = '[aria-label="Get help or report a problem"]'
-
-// Every tab Dashboard renders, and every settings subtab. Enumerated rather
-// than sampled: sampling is what produced a fix for one page.
+// Enumerated rather than sampled: sampling is what produced a fix for one page,
+// three times over.
 const DASHBOARD_TABS = [
   'discover', 'browse', 'leaderboard', 'contributors', 'maintainers',
   'ecosystems', 'osw', 'blog', 'search', 'profile', 'data', 'org',
@@ -35,10 +50,10 @@ const DASHBOARD_TABS = [
 const SETTINGS_SUBTABS = ['profile', 'notifications', 'referrals', 'rewards', 'payout', 'billing', 'terms']
 
 // minInteractive is the number of interactive elements below which the page
-// has plainly not rendered. Without it this suite passes on a blank page: the
-// first version of it reported 26 green while 25 of the pages had white-
-// screened on a mock that answered the wrong shape, and a page with nothing on
-// it cannot collide with anything.
+// has plainly not rendered. Without it this suite passes on a blank page: an
+// earlier version reported 26 green while 25 of the pages had white-screened
+// on a mock that answered the wrong shape, and a page with nothing on it
+// cannot be overlapped by anything.
 const PAGES: { name: string; url: string; minInteractive: number }[] = [
   { name: 'landing', url: '/', minInteractive: 20 },
   { name: 'signin', url: '/signin', minInteractive: 2 },
@@ -49,25 +64,25 @@ const PAGES: { name: string; url: string; minInteractive: number }[] = [
   })),
 ]
 
-interface Collision {
+interface Blocked {
   label: string
   tag: string
   rect: { x: number; y: number; w: number; h: number }
-  coveredFraction: number
-  centreOccluded: boolean
+  coveredBy: string
 }
 
-interface Scan {
-  interactiveCount: number
-  widget: { x: number; y: number; w: number; h: number } | null
-  collisions: Collision[]
-}
-
-async function scanForCollisions(page: Page): Promise<Scan> {
-  return page.evaluate((widgetSelector) => {
-    const widgetEl = document.querySelector(widgetSelector) as HTMLElement | null
-    if (!widgetEl) return { interactiveCount: 0, widget: null, collisions: [] }
-    const w = widgetEl.getBoundingClientRect()
+async function findBlockedControls(page: Page): Promise<{ interactiveCount: number; blocked: Blocked[] }> {
+  return page.evaluate(() => {
+    // Phase two: a control is only unreachable if it is STILL covered once
+    // scrolled to the middle of the viewport, away from top- and
+    // bottom-anchored chrome.
+    const stillCoveredWhenCentred = (el: Element, fixedOf: (n: Element | null) => Element | null) => {
+      el.scrollIntoView({ block: 'center', inline: 'center' })
+      const r = el.getBoundingClientRect()
+      const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+      if (!at || el.contains(at) || at === el) return null
+      return fixedOf(at)
+    }
 
     const SELECTOR = [
       'button', 'a[href]', 'input:not([type=hidden])', 'select', 'textarea',
@@ -83,98 +98,92 @@ async function scanForCollisions(page: Page): Promise<Scan> {
       return r.width > 0 && r.height > 0
     }
 
-    const inWidget = (el: Element | null) => {
-      for (let n: Element | null = el; n; n = n.parentElement) if (n === widgetEl) return true
-      return false
+    // The nearest fixed ancestor, or null. An element inside a fixed container
+    // is part of that overlay rather than a victim of it.
+    const fixedAncestor = (el: Element | null): Element | null => {
+      for (let n: Element | null = el; n && n !== document.body; n = n.parentElement) {
+        if (getComputedStyle(n).position === 'fixed') return n
+      }
+      return null
     }
 
-    const all = Array.from(document.querySelectorAll(SELECTOR)).filter(isVisible).filter((el) => !inWidget(el))
-    const collisions = []
+    const describe = (el: Element) =>
+      `<${el.tagName.toLowerCase()}>` +
+      (el.getAttribute('aria-label') ? ` "${el.getAttribute('aria-label')}"` : '') +
+      (el.className && typeof el.className === 'string' ? ` .${el.className.split(/\s+/).slice(0, 3).join('.')}` : '')
+
+    const all = Array.from(document.querySelectorAll(SELECTOR)).filter(isVisible)
+    const blocked: Blocked[] = []
 
     for (const el of all) {
+      if (fixedAncestor(el)) continue // part of an overlay, not covered by one
+
       const r = el.getBoundingClientRect()
-      // Only what is on screen: an element scrolled out of view is not
-      // covered by anything.
       if (r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth) continue
 
-      const overlapW = Math.min(r.right, w.right) - Math.max(r.left, w.left)
-      const overlapH = Math.min(r.bottom, w.bottom) - Math.max(r.top, w.top)
-      if (overlapW <= 0 || overlapH <= 0) continue
-
-      const area = r.width * r.height
+      // The point a click actually lands on. If what sits there belongs to a
+      // fixed overlay, the control cannot be clicked.
       const cx = r.left + r.width / 2
       const cy = r.top + r.height / 2
       const atCentre = document.elementFromPoint(cx, cy)
+      if (!atCentre || el.contains(atCentre) || atCentre === el) continue
 
-      collisions.push({
+      if (!fixedAncestor(atCentre)) continue
+
+      // Candidate only. Confirm it cannot be reached by scrolling.
+      const overlay = stillCoveredWhenCentred(el, fixedAncestor)
+      if (!overlay) continue
+
+      blocked.push({
         label: (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 60) || '(no label)',
         tag: el.tagName.toLowerCase(),
         rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) },
-        coveredFraction: area > 0 ? (overlapW * overlapH) / area : 0,
-        centreOccluded: inWidget(atCentre),
+        coveredBy: describe(overlay),
       })
     }
 
-    return {
-      interactiveCount: all.length,
-      widget: { x: Math.round(w.left), y: Math.round(w.top), w: Math.round(w.width), h: Math.round(w.height) },
-      collisions,
-    }
-  }, WIDGET)
+    return { interactiveCount: all.length, blocked }
+  })
 }
 
 async function settle(page: Page) {
   await page.waitForTimeout(400)
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-  // Lists that lazy-render on scroll need a second settle.
   await page.waitForTimeout(600)
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await page.waitForTimeout(300)
 }
 
-test.describe('support widget does not cover interactive elements', () => {
+test.describe('no fixed element covers an interactive one', () => {
   for (const p of PAGES) {
     test(`${p.name}`, async ({ page, setupMockAuth, setupMockBrowse, setupMockOrgProfile }) => {
       await setupMockAuth()
       await setupMockBrowse()
       await setupMockOrgProfile()
       await page.addInitScript(() => {
-        // The first-visit tour traps focus and covers the page; every test
-        // here would otherwise be measuring the tour.
         window.localStorage.setItem('grainlify_tour_seen_user-1', 'true')
-        // Without a token the API client never calls /me, the dashboard
-        // renders a redirect instead of a page, and every assertion below
-        // becomes vacuous - the first version of this test "passed" on 25
-        // pages that had not rendered.
         window.localStorage.setItem('patchwork_jwt', 'e2e-test-token')
       })
 
       await page.goto(p.url)
       await settle(page)
 
-      const scan = await scanForCollisions(page)
-      expect(scan.widget, 'the support widget was not on the page at all').not.toBeNull()
+      const { interactiveCount, blocked } = await findBlockedControls(page)
 
-      // A page that rendered nothing cannot collide with anything, and would
-      // pass this test while proving nothing.
       expect(
-        scan.interactiveCount,
-        `${p.url} rendered only ${scan.interactiveCount} interactive elements - it has not loaded, ` +
-          `so the collision check below would pass without testing anything`,
+        interactiveCount,
+        `${p.url} rendered only ${interactiveCount} interactive elements - it has not loaded, ` +
+          `so the check below would pass without testing anything`,
       ).toBeGreaterThanOrEqual(p.minInteractive)
 
-      const blocked = scan.collisions
       if (blocked.length > 0) {
-        const lines = blocked
-          .sort((a, b) => b.coveredFraction - a.coveredFraction)
-          .map((c) =>
-            `  ${c.centreOccluded ? 'UNCLICKABLE' : 'clipped    '} <${c.tag}> "${c.label}" ` +
-            `at ${c.rect.x},${c.rect.y} ${c.rect.w}x${c.rect.h} — ${(c.coveredFraction * 100).toFixed(0)}% covered`,
-          )
+        const lines = blocked.map(
+          (b) => `  <${b.tag}> "${b.label}" at ${b.rect.x},${b.rect.y} ${b.rect.w}x${b.rect.h}\n` +
+                 `      covered by ${b.coveredBy}`,
+        )
         throw new Error(
-          `${blocked.length} interactive element(s) under the support widget on ${p.url}\n` +
-          `widget occupies ${scan.widget!.w}x${scan.widget!.h} at ${scan.widget!.x},${scan.widget!.y}\n` +
-          lines.join('\n'),
+          `${blocked.length} interactive element(s) cannot be clicked on ${p.url} - ` +
+          `a fixed-position element sits over their centre:\n${lines.join('\n')}`,
         )
       }
     })
