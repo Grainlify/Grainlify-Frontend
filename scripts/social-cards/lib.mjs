@@ -250,3 +250,80 @@ export function reportProblems(problems, advice) {
   console.error(`\n${advice}`)
   return true
 }
+
+/**
+ * Resolves any CSS colour to sRGB using the browser's own parser.
+ *
+ * The hex path in `contrast()` is correct for this project's tokens - brand.css
+ * is eighteen hex values with no oklch - but a check that only works while
+ * that stays true is a check with a hidden precondition. Tailwind v4 emits
+ * oklch(), and a regex reading those numbers as sRGB produced a confident,
+ * completely wrong ratio elsewhere in this codebase: 11.03 for a pair that
+ * actually measured 2.43, and 1.04 for one that measured 4.71. It flattered
+ * one theme and condemned the other, and either number could have sent
+ * somebody to fix the wrong thing.
+ *
+ * Painting the colour onto a 1x1 canvas and reading it back makes the browser
+ * do the conversion, so the input format stops mattering.
+ */
+export async function canvasResolve(page, cssColours) {
+  return page.evaluate((list) => {
+    const c = document.createElement('canvas')
+    c.width = c.height = 1
+    const x = c.getContext('2d')
+    return list.map((css) => {
+      // Reset between reads: an unparseable value leaves fillStyle at its
+      // previous setting rather than erroring, which would silently report the
+      // last colour twice.
+      x.fillStyle = '#000000'
+      x.fillStyle = css
+      x.clearRect(0, 0, 1, 1)
+      x.fillRect(0, 0, 1, 1)
+      const [r, g, b] = x.getImageData(0, 0, 1, 1).data
+      return { css, rgb: [r, g, b] }
+    })
+  }, cssColours)
+}
+
+const lumRGB = ([r, g, b]) =>
+  [r, g, b]
+    .map((v) => v / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    .reduce((acc, v, i) => acc + [0.2126, 0.7152, 0.0722][i] * v, 0)
+
+export const contrastRGB = (a, b) => {
+  const [hi, lo] = [lumRGB(a), lumRGB(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/**
+ * The contrast gate, resolving every colour through the browser first.
+ *
+ * Same reporting and same fail-the-build behaviour as auditContrast; it
+ * differs only in refusing to parse colour strings itself.
+ */
+export async function auditContrastResolved(page, pairs, label) {
+  const uniq = [...new Set(pairs.flatMap((p) => [p.fg, p.bg]))]
+  const resolved = new Map((await canvasResolve(page, uniq)).map((r) => [r.css, r.rgb]))
+
+  const rows = pairs.map((p) => {
+    const required = p.graphic ? 3 : p.px >= 24 || (p.px >= 18.66 && p.bold) ? 3 : 4.5
+    const fg = resolved.get(p.fg)
+    const bg = resolved.get(p.bg)
+    const ratio = contrastRGB(fg, bg)
+    return { ...p, required, ratio, pass: ratio >= required, fgRGB: fg, bgRGB: bg }
+  })
+
+  console.log(`\nContrast — ${label} (WCAG AA, canvas-resolved)`)
+  for (const r of rows) {
+    console.log(
+      `  ${r.pass ? 'PASS' : 'FAIL'}  ${r.ratio.toFixed(2).padStart(5)} : 1  (needs ${r.required})` +
+        `  rgb(${r.fgRGB}) on rgb(${r.bgRGB})  ${r.what}`,
+    )
+  }
+  const failures = rows.filter((r) => !r.pass)
+  if (failures.length) {
+    throw new Error(`${failures.length} pair(s) fail WCAG AA in ${label}. Assets not written.`)
+  }
+  console.log(`  ${rows.length} pairs, 0 failures.`)
+}

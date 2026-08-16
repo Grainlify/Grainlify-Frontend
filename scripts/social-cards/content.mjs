@@ -377,3 +377,53 @@ export const FOUNDING_CLAIMED_CARDS = [
     thumbnail: { width: 300, minDisplayPx: 34 },
   },
 ]
+
+/**
+ * The founding-spots-claimed loop.
+ *
+ * Same layout object as the static card, plus timing. The frames and the card
+ * come from one builder, so the video's last frame and the still are the same
+ * image by construction rather than by being kept in step.
+ *
+ * # Where the discontinuity goes
+ *
+ * A looping video whose count rises from 0 to 40 has exactly one
+ * discontinuity per loop - the number cannot climb forever, so somewhere it
+ * must drop back. The only real choice is where to put it.
+ *
+ * Putting it at the loop seam gives a first frame of "0 / 300", and X shows
+ * the first frame as the still before autoplay: a poster claiming nobody has
+ * claimed a spot. Putting it inside the video, after a short hold on the
+ * finished state, gives a first frame that is already correct AND a seam
+ * where the last frame equals the first. The reset then reads as the counter
+ * starting its run, which is what a counter does.
+ *
+ * So the order is: hold finished -> reset and count -> settle -> hold
+ * finished. Frame one and frame last are identical.
+ */
+export const FOUNDING_CLAIMED_VIDEO = {
+  name: 'x',
+  fps: 30,
+  // 5.0s. Long enough that the hold reads as a hold, short enough that X
+  // loops it rather than treating it as a clip somebody has to sit through.
+  seconds: 5.0,
+  phases: {
+    // Poster-safe opening. The first frame is the finished card.
+    holdOpen: 0.5,
+    // The count itself. Ease-out: fast at the start, arriving rather than
+    // stopping. A linear count reads like a spreadsheet recalculating.
+    count: 1.5,
+    // The supporting lines settle in after the number has arrived, so nothing
+    // competes with it while it is moving.
+    settle: 0.45,
+  },
+  // 300px is roughly a desktop timeline thumbnail. Every sampled frame is
+  // checked, not just the last: a count that is legible at 40 and mush at 7
+  // is illegible for the part of the loop the eye is actually tracking.
+  thumbnail: { width: 300, minDisplayPx: 30, sampleEvery: 5 },
+  encode: {
+    crf: 20,
+    preset: 'slow',
+    maxBytes: 5 * 1024 * 1024,
+  },
+}

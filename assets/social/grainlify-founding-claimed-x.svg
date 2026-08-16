@@ -25,9 +25,9 @@
   <rect data-decorative="true" width="1600" height="900" fill="url(#dots)"/>
 
   <g>
-    <text class="display" x="96" y="500" fill="#ffc926">40<tspan fill="#b8a898"> / 300</tspan></text>
-    <text class="headline" x="96" y="606" fill="#e8dfd0">Founding spots claimed</text>
-    <text class="support" x="96" y="790" fill="#b8a898">Weighted draw. No first-come races.</text>
-    <text class="footer" x="1504" y="790" text-anchor="end" fill="#ffc926">grainlify.com</text>
+    <text class="display" x="96" y="500" fill="#ffc926"><tspan class="count">40</tspan><tspan fill="#b8a898"> / 300</tspan></text>
+    <text class="headline" x="96" y="606" fill="#e8dfd0" opacity="1">Founding spots claimed</text>
+    <text class="support" x="96" y="790" fill="#b8a898" opacity="1">Weighted draw. No first-come races.</text>
+    <text class="footer" x="1504" y="790" text-anchor="end" fill="#ffc926" opacity="1">grainlify.com</text>
   </g>
 </svg>
