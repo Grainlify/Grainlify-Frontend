@@ -22,8 +22,9 @@ import {
   ClipboardCheck,
   LifeBuoy,
 } from "lucide-react";
-import { useSupport, SUPPORT_TRIGGER_LABEL } from "../../shared/components/supportContext";
+import { SUPPORT_TRIGGER_LABEL } from "../../shared/components/supportContext";
 import { RailButton } from "./components/RailButton";
+import { SupportPage } from "../support/pages/SupportPage";
 import { useThemeToggleAnimation } from "../../shared/hooks/useThemeToggleAnimation";
 import { useAuth } from "../../shared/contexts/AuthContext";
 import grainlifyLogo from "../../assets/grainlify_log.svg";
@@ -136,7 +137,6 @@ export function Dashboard() {
     top: number;
     left: number;
   } | null>(null);
-  const { open: openSupport } = useSupport();
   const [activeRole, setActiveRole] = useState<
     "contributor" | "maintainer" | "admin"
   >("contributor");
@@ -655,18 +655,17 @@ export function Dashboard() {
                 />
               ))}
 
-              {/* Support, rendered by the same component as every other rail
-                  item so it cannot drift from them. It is in the rail rather
-                  than floating bottom-right because that corner is where pages
-                  put their primary action - it covered a Save button on four
-                  settings tabs and the Accept button on terms, reported three
-                  times. */}
+              {/* Support is a route, not an overlay - it is in the rail
+                  alongside the others and behaves like them, including its
+                  active state. The modal still exists for /signin and /signup,
+                  where there is no dashboard to navigate to and the person who
+                  cannot sign in is the one most likely to need help. */}
               <RailButton
                 icon={LifeBuoy}
                 label="Get help"
                 ariaLabel={SUPPORT_TRIGGER_LABEL}
-                isActive={false}
-                onClick={() => openSupport()}
+                isActive={currentPage === "support"}
+                onClick={() => handleNavigation("support")}
                 onHover={setHoveredNavItem}
                 darkTheme={darkTheme}
               />
@@ -1070,6 +1069,7 @@ export function Dashboard() {
                   ))}
                 {currentPage === "leaderboard" && <LeaderboardPage />}
                 {currentPage === "blog" && <BlogPage />}
+                {currentPage === "support" && <SupportPage />}
                 {currentPage === "settings" && (
                   <SettingsPage />
                 )}
