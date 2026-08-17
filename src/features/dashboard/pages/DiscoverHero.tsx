@@ -81,7 +81,7 @@ export function DiscoverHero({
               )}
             </h1>
             <p className={`text-[13px] md:text-[15px] mt-0.5 transition-colors ${isDark ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>
-              Here's what's matched to you today.
+              Here's what's most active today.
             </p>
           </div>
         </div>

@@ -517,7 +517,12 @@ export function DiscoverPage({
         {isLoadingProjects && (
           <p className={`text-[13px] md:text-[14px] mb-6 transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
             }`}>
-            Finding projects best suited to your interests and expertise
+            {/* Says what the query does. It is ORDER BY contributors_count
+                DESC, stars DESC, created_at DESC, LIMIT 8 - the same eight
+                projects for every user, with no input from their profile.
+                The previous copy promised matching on interests and
+                expertise, which nothing implements. */}
+            Finding the most active projects on Grainlify
           </p>
         )}
 
@@ -564,7 +569,12 @@ export function DiscoverPage({
             <EmptyState
               icon={Target}
               title="No recommended projects found"
-              description="Finish setting up your profile so we can match you with projects."
+              /* Not "finish setting up your profile so we can match you".
+                 Nothing matches on a profile: the query is ORDER BY
+                 contributors_count DESC, stars DESC, LIMIT 8, identical for
+                 every user. That copy made an empty feed read as the
+                 contributor's fault for a feature that does not exist. */
+              description="No projects are available to show right now."
             />
           </div>
         ) : (
@@ -626,7 +636,7 @@ export function DiscoverPage({
         </div>
         <p className={`text-[13px] md:text-[14px] mb-6 transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
           }`}>
-          Issues that match your interests and expertise
+          Open issues from the most active projects
         </p>
 
         {isLoadingIssues ? (
