@@ -1011,6 +1011,23 @@ export type SocialFollowPlatform = (typeof SOCIAL_FOLLOW_PLATFORMS)[number];
 /** One submission covering both platforms. There is deliberately no
  *  per-platform status: a half-approved state is what the atomic model
  *  removes, so representing one here would put it straight back. */
+/** The caller's own position in the Founding Contributor Pool.
+ *
+ *  `member` false means no position has been allocated yet, which is not an
+ *  error and not a failure to load - the difference matters, because a blank
+ *  where a position belongs reads as "you have none".
+ */
+export interface FoundingMe {
+  member: boolean;
+  wave?: "founding" | "wave_two" | "open";
+  multiplier?: number;
+  sequence_number?: number;
+  shares?: unknown;
+}
+
+export const getFoundingMe = () =>
+  apiRequest<FoundingMe>("/founding/me", { requiresAuth: true });
+
 export interface SocialFollowStatus {
   platforms: string[];
   submitted: boolean;
