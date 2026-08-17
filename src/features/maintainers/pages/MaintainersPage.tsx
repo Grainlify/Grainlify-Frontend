@@ -20,9 +20,13 @@ interface MaintainersPageProps {
    * This page's project list is already scoped to ones the viewer owns
    * (getMyProjects() below), but IssuesTab's Assign/Reject/Unassign should
    * still only appear while actually in maintainer/admin mode - this page
-   * is reachable (via Discover's "View all issues") without ever switching
-   * into that mode, and until this prop was threaded through, IssuesTab
-   * defaulted to full maintainer view regardless. */
+   * is reachable without ever switching into that mode, and until this prop
+   * was threaded through, IssuesTab defaulted to full maintainer view
+   * regardless.
+   *
+   * Discover's button no longer routes here - sending contributors to
+   * maintainer chrome and an empty list was the original bug. It now expands
+   * in place and is labelled "Show more issues" to match. */
   viewMode?: 'contributor' | 'maintainer';
 }
 

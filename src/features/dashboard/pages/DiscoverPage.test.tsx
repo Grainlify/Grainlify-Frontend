@@ -330,20 +330,20 @@ describe('DiscoverPage', () => {
     expect(screen.queryByText('A second acme repo')).not.toBeInTheDocument()
   })
 
-  it('hides the View all issues button when there are no recommended issues', async () => {
+  it('hides the Show more issues button when there are no recommended issues', async () => {
     mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
 
     renderWithProviders(<DiscoverPage />, { withAuth: true })
     await waitFor(() => expect(screen.getByText('No recommended projects found')).toBeInTheDocument())
-    expect(screen.queryByRole('button', { name: /View all issues/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Show more issues/i })).not.toBeInTheDocument()
   })
 
-  // Regression coverage: "View all issues" used to navigate to
+  // Regression coverage: this control used to navigate to
   // MaintainersPage's Issues tab (see Dashboard.tsx's old onViewAllIssues
   // wiring) - a contributor who doesn't own any repos landed on an
   // owner-only "Add a repository" empty state, losing the personalized
   // issues they came from. It must instead expand this same list in place.
-  it('expands the recommended issues list in place when "View all issues" is clicked, instead of navigating away', async () => {
+  it('expands the recommended issues list in place when "Show more issues" is clicked, instead of navigating away', async () => {
     mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA, projectB, projectC] })
     // github_issue_id must be unique ACROSS projects here, not just within
     // one - it becomes the React key for every rendered IssueCard
@@ -366,14 +366,14 @@ describe('DiscoverPage', () => {
       expect(screen.getAllByText(/^(proj-a|proj-b|proj-c) issue \d$/)).toHaveLength(6)
     })
 
-    await user.click(screen.getByRole('button', { name: /View all issues/i }))
+    await user.click(screen.getByRole('button', { name: /Show more issues/i }))
 
     // Expanded view: up to 5 issues/project x 3 projects = 15, well under
     // the higher cap - and the button disappears once fully expanded.
     await waitFor(() => {
       expect(screen.getAllByText(/^(proj-a|proj-b|proj-c) issue \d$/)).toHaveLength(15)
     })
-    expect(screen.queryByRole('button', { name: /View all issues/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Show more issues/i })).not.toBeInTheDocument()
   })
 
   // Regression test for a real infinite-loop bug (found and fixed
@@ -388,7 +388,7 @@ describe('DiscoverPage', () => {
   // condition is met once, even while the effect keeps looping in the
   // background afterward - this test instead explicitly checks the call
   // count has stabilized, not just that the right content appeared once.
-  it('does not keep re-fetching after "View all issues" settles (no infinite loop)', async () => {
+  it('does not keep re-fetching after "Show more issues" settles (no infinite loop)', async () => {
     mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA, projectB, projectC] })
     const projectOffsets: Record<string, number> = { 'proj-a': 100, 'proj-b': 200, 'proj-c': 300 }
     mockedGetPublicProjectIssues.mockImplementation(async (projectId: string) => ({
@@ -404,7 +404,7 @@ describe('DiscoverPage', () => {
       expect(screen.getAllByText(/^(proj-a|proj-b|proj-c) issue \d$/)).toHaveLength(6)
     })
 
-    await user.click(screen.getByRole('button', { name: /View all issues/i }))
+    await user.click(screen.getByRole('button', { name: /Show more issues/i }))
     await waitFor(() => {
       expect(screen.getAllByText(/^(proj-a|proj-b|proj-c) issue \d$/)).toHaveLength(15)
     })
