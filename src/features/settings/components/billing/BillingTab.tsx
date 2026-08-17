@@ -627,10 +627,18 @@ export function BillingTab() {
               </div>
             </div>
 
-            {/* Verify KYC Button - Only show for missing-verification status (not in_review, rejected, or verified) */}
+            {/* Verify KYC button.
+                Hidden for in_review (a decision is pending, and re-attempting
+                creates a duplicate session rather than resolving anything) and
+                for verified (already done).
+
+                It used to be hidden for 'rejected' too, while the message
+                beside it said "please try again" — so the copy named a control
+                that had been removed, and the only route left was a support
+                ticket. The backend now accepts a retry from 'rejected'
+                (canStartNewKYCSession), so the button is shown and works. */}
             {selectedProfile.status === 'missing-verification' &&
               kycStatus !== 'in_review' &&
-              kycStatus !== 'rejected' &&
               kycStatus !== 'verified' && (
                 <div className="mt-8 flex items-center gap-4">
                   <button
@@ -657,6 +665,8 @@ export function BillingTab() {
                             ? 'Under Review...' 
                             : 'Awaiting Completion...'}
                       </>
+                    ) : kycStatus === 'rejected' ? (
+                      'Try verification again'
                     ) : (
                       'Verify KYC'
                     )}
@@ -693,7 +703,26 @@ export function BillingTab() {
                 }`}>
                 <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
                   }`}>
-                  Your KYC verification was rejected. Please try again or contact support for assistance.
+                  Your identity verification wasn't approved. You can start a new
+                  check straight away using the button above.
+                </p>
+                {/* Concrete and generic, in that order. These are the things
+                    that actually went wrong for the contributors who were
+                    refused — a photograph of a screen rather than the document
+                    itself was the most common — but they are written as
+                    ordinary advice. We deliberately do not surface the
+                    verification provider's own warning text. */}
+                <p className={`mt-3 text-[14px] transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                  }`}>
+                  Most refusals come down to the photo of the document. Use the
+                  original physical document rather than a photo of a screen or a
+                  photocopy, get all four corners in the frame, and check the
+                  light isn't glaring off it.
+                </p>
+                <p className={`mt-3 text-[14px] transition-colors ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
+                  }`}>
+                  If a second attempt isn't approved either, get in touch through
+                  the Get help button and we'll go through it with you.
                 </p>
               </div>
             )}
