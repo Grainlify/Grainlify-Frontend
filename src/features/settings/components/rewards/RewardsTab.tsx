@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
+import { FoundingPosition } from './FoundingPosition';
 import { siX } from 'simple-icons';
 import { Linkedin, Loader2, Gift, CheckCircle2, Clock, XCircle, Upload, ExternalLink, ShieldOff, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import {
   getSocialFollowStatus,
+  getFoundingMe,
   submitSocialFollowProof,
   SOCIAL_FOLLOW_PLATFORMS,
   type SocialFollowStatus,
+  type FoundingMe,
   type SocialFollowPlatform,
 } from '../../../../shared/api/client';
 
@@ -185,6 +188,11 @@ function readAsDataURL(file: File): Promise<string> {
 export function RewardsTab() {
   const { theme } = useTheme();
   const [socialFollow, setSocialFollow] = useState<SocialFollowStatus | null>(null);
+  // undefined = not fetched yet, null = the request failed, object = answered.
+  // Three states rather than two, because "we could not load your position"
+  // and "you have no position" are different facts and a blank reads as the
+  // second.
+  const [position, setPosition] = useState<FoundingMe | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Files are held here until both are present. Nothing is sent until then,
@@ -192,7 +200,22 @@ export function RewardsTab() {
   // the API's - there is no way to submit one platform on its own.
   const [picked, setPicked] = useState<Partial<Record<SocialFollowPlatform, File>>>({});
 
-  const load = () => getSocialFollowStatus().then(setSocialFollow);
+  // Both facts, resolved together. Position must never render before
+  // eligibility: a panel that says "Founding member ×1.5" for even a moment
+  // before the eligibility line arrives confirms exactly the false belief this
+  // is here to correct. A failed position load is caught to null and does not
+  // fail the whole tab, since the follow proof form still works without it.
+  const load = () =>
+    Promise.all([
+      getSocialFollowStatus(),
+      getFoundingMe().catch((error) => {
+        console.error('Failed to load founding position:', error);
+        return null;
+      }),
+    ]).then(([follow, founding]) => {
+      setSocialFollow(follow);
+      setPosition(founding);
+    });
 
   useEffect(() => {
     let cancelled = false;
@@ -253,6 +276,13 @@ export function RewardsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Position first, and above the proof form on purpose: for somebody who
+          holds a position without an approved proof, the fix is the next thing
+          they see rather than something they have to go looking for. */}
+      {position !== undefined && (
+        <FoundingPosition position={position} follow={socialFollow} theme={theme} />
+      )}
+
       <Card theme={theme}>
         <div className="flex items-start gap-3 mb-6">
           <div className="w-10 h-10 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#d4af37] flex items-center justify-center shrink-0 shadow-[0_2px_8px_rgba(201,152,58,0.4)]">
