@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   Target,
   Zap,
+  ChevronDown,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { IssueCard } from "../../../shared/components/ui/IssueCard";
@@ -273,10 +274,14 @@ export function DiscoverPage({
     fetchData: fetchIssues,
   } = useOptimisticData<IssueType[]>([], { cacheDuration: 30000 });
 
-  // "View all issues" expands this same in-place list instead of navigating
+  // "Show more issues" expands this same in-place list instead of navigating
   // anywhere - it used to route to MaintainersPage's Issues tab (owner-only
   // chrome, an empty project/issue list for anyone who doesn't own a repo),
   // which was a real bug for every contributor. See loadRecommendedIssues.
+  //
+  // It was labelled "View all issues" until the label was corrected: the
+  // behaviour is fine, the promise was not. A contributor issues browse is
+  // scoped separately.
   const [showAllIssues, setShowAllIssues] = useState(false);
 
   // Fetch recommended projects
@@ -364,7 +369,7 @@ export function DiscoverPage({
         return;
       }
 
-      // "View all issues" fetches a bigger pool in place, rather than
+      // "Show more issues" fetches a bigger pool in place, rather than
       // navigating anywhere - see showAllIssues above. forceRefresh=true
       // when expanding: useOptimisticData's cache is a single time-windowed
       // slot with no awareness of these caps, so within its 30s window a
@@ -639,8 +644,17 @@ export function DiscoverPage({
                 isDark ? 'text-[#c9983a] hover:text-[#e8c77f]' : 'text-[#a67c2e] hover:text-[#c9983a]'
               }`}
             >
-              View all issues
-              <ArrowUpRight className="w-4 h-4" />
+              {/* "Show more issues", not "View all issues".
+                  This control does not navigate: it refetches a bigger pool
+                  (5 per project instead of 2, 40 total instead of 6) and
+                  expands the list in place. That is a reasonable thing for a
+                  control to do; promising a screen the product does not have
+                  is not. There is no contributor issues list anywhere - repo
+                  profiles render issues inline, Browse is repos and orgs, and
+                  the only standalone list is maintainer-gated, which is what
+                  this button used to route to. */}
+              Show more issues
+              <ChevronDown className="w-4 h-4" />
             </button>
           )}
         </div>
