@@ -88,6 +88,9 @@ vi.mock('../admin/pages/AdminPage', () => ({
 vi.mock('../admin/components/SocialFollowReview', () => ({
   SocialFollowReview: () => null,
 }))
+vi.mock('../admin/components/KYCReview', () => ({
+  KYCReview: () => null,
+}))
 vi.mock('../admin/components/RedemptionsReview', () => ({
   RedemptionsReview: () => null,
 }))

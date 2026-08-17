@@ -36,6 +36,9 @@ vi.mock('sonner', () => ({
 vi.mock('../components/SocialFollowReview', () => ({
   SocialFollowReview: () => null,
 }))
+vi.mock('../components/KYCReview', () => ({
+  KYCReview: () => null,
+}))
 vi.mock('../components/RedemptionsReview', () => ({
   RedemptionsReview: () => null,
 }))

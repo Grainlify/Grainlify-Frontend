@@ -6,6 +6,7 @@ import { Modal, ModalFooter, ModalButton, ModalInput, ModalSelect } from '../../
 import { DatePicker } from '../../../shared/components/ui/DatePicker';
 import { createEcosystem, getAdminEcosystems, getAdminEcosystem, deleteEcosystem, updateEcosystem, createOpenSourceWeekEvent, getAdminOpenSourceWeekEvents, deleteOpenSourceWeekEvent } from '../../../shared/api/client';
 import { SocialFollowReview } from '../components/SocialFollowReview';
+import { KYCReview } from '../components/KYCReview';
 import { RedemptionsReview } from '../components/RedemptionsReview';
 
 interface EcosystemLink {
@@ -961,6 +962,22 @@ export function AdminPage() {
             }`}>Approve or reject follow proofs. Approving grants eligibility for the Founding Contributor Pool.</p>
         </div>
         <SocialFollowReview />
+      </div>
+
+      {/* Identity verification. Sits with the other review queues rather than
+          on its own page: it is the same job - somebody is waiting on a
+          decision only a human can make. */}
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+        ? 'bg-white/[0.08] border-white/10'
+        : 'bg-white/[0.15] border-white/20'
+        }`}>
+        <div className="mb-6">
+          <h2 className={`text-[24px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}>Verification Review</h2>
+          <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}>Contributors waiting on an identity decision. Sending feedback tells them what to fix and lets them verify again.</p>
+        </div>
+        <KYCReview />
       </div>
 
       <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'

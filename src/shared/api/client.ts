@@ -1142,6 +1142,90 @@ export const getAdminSocialFollowSubmissions = (
 
 /** A rejection reason offered in the picker. Fetched rather than hardcoded, so
  *  the codes and their wording live in exactly one place. */
+// --- Admin: KYC review -------------------------------------------------
+
+/** One contributor waiting on a verification decision.
+ *
+ *  Carries nothing from the verification provider: no document image, no
+ *  decision blob, no warning text. The admin reads the provider console for
+ *  the detail; this is what is needed to identify the person, see how long
+ *  they have waited, and choose a reason.
+ */
+export interface KYCPendingReview {
+  user_id: string;
+  github_login: string;
+  avatar_url: string;
+  /** "in_review" (waiting on a decision) or "rejected" (decided, may still
+   *  need telling why). */
+  kyc_status: string;
+  waiting_since: string;
+  /** A second or third reset is a different decision from a first. */
+  previous_resets: number;
+  /** Suggestions only — the admin chooses. Empty when nothing maps, notably
+   *  for a refusal whose only warnings are fraud signals, which are
+   *  deliberately never mapped to anything the contributor could be told. */
+  suggested_reason_codes: string[];
+}
+
+export interface KYCReasonCode {
+  code: string;
+  label: string;
+  /** Exactly what the contributor will read. Shown before choosing, so nobody
+   *  picks a reason without seeing the message it sends. Empty for "other",
+   *  which carries no message of its own. */
+  message: string;
+  needs_note: boolean;
+}
+
+export const getKYCPendingReviews = () =>
+  apiRequest<{ pending: KYCPendingReview[] }>("/admin/kyc/pending", {
+    requiresAuth: true,
+  });
+
+export const getKYCReasonCodes = () =>
+  apiRequest<{ reason_codes: KYCReasonCode[] }>("/admin/kyc/reason-codes", {
+    requiresAuth: true,
+  });
+
+export const resetKYCWithReason = (
+  userId: string,
+  body: { reason_code: string; note: string; reason: string }
+) =>
+  apiRequest<{
+    ok: boolean;
+    previous_status: string;
+    status: string;
+    reason_code: string;
+    /** What the contributor was actually told, returned rather than
+     *  reconstructed so the two cannot drift. */
+    message_sent: string;
+    notified: boolean;
+  }>(`/admin/kyc/${userId}/reset`, {
+    requiresAuth: true,
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export interface KYCResetHistoryEntry {
+  previous_status: string | null;
+  reason: string | null;
+  reason_code: string | null;
+  reason_label?: string;
+  note: string | null;
+  message_sent?: string;
+  created_at: string;
+  actor_github_login: string;
+  /** Whether the contributor was actually told. Its absence is how three
+   *  hand-run resets went unnoticed. */
+  notified: boolean;
+  notify_error: string | null;
+}
+
+export const getKYCResetHistory = (userId: string) =>
+  apiRequest<{ resets: KYCResetHistoryEntry[] }>(`/admin/kyc/${userId}/resets`, {
+    requiresAuth: true,
+  });
+
 export interface SocialFollowReasonCode {
   code: string;
   label: string;
