@@ -60,13 +60,19 @@ export function Hero() {
             theme === "dark" ? "text-[#e8dfd0]" : "text-[#2d2820]"
           }`}
         >
-          Assignment by
+          {/* Scoped before the claim, deliberately.
+              This read "Assignment by weighted draw / Rewards decided after
+              the work", which describes GrainHack as though it were the
+              platform. Outside a funded event the maintainer chooses, and
+              nothing has been paid on any chain - so a reader who stopped at
+              line one had been told two things that are not true of ordinary
+              issues. Scoping first means the short read is still correct. */}
           <span className="bg-gradient-to-r from-[#c9983a] to-[#d4af37] bg-clip-text text-transparent">
-            {" "}
-            weighted draw
-          </span>
+            Funded issues
+          </span>{" "}
+          aren&apos;t first-come
           <br />
-          Rewards decided after the work
+          A weighted draw decides who gets them
         </motion.h1>
 
         {/* Description */}

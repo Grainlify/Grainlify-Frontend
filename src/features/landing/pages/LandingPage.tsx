@@ -123,11 +123,30 @@ function Features() {
       icon: Code,
       // No AI matches anyone. Assignment is a weighted draw computed by the
       // backend; the AI stages sit behind ai_judging_enabled, which is false.
-      title: "Assignment by Weighted Draw",
+      //
+      // GrainHack is named in the title because the draw governs FUNDED
+      // issues only. Outside an event the maintainer reviews applications and
+      // chooses, which is correct - there is no money on those issues, so
+      // there is nothing to make unfarmable. The mechanism description is
+      // left alone: it is accurate about GrainHack.
+      title: "GrainHack: Assignment by Weighted Draw",
       description:
         "Applications open for a fixed window, then one applicant is drawn. Weight comes from fit for that specific issue - not from how fast you applied.",
       className: "md:col-span-2 md:row-span-2",
       large: true,
+    },
+    {
+      icon: Award,
+      // Moved here from the hero, where it read "Rewards decided after the
+      // work" - present tense, as though rewards were flowing. Nothing has
+      // been paid on any chain, no funded event has run, and there is no
+      // issue-level funding in the schema at all. This describes HOW rewards
+      // are decided, which is true and is the distinctive half of the pitch,
+      // without claiming it is happening today.
+      title: "Rewards Decided After the Work",
+      description:
+        "Rewards aren't promised up front or split by headcount. Once work is merged and judged, the pool is shared out against what was actually delivered.",
+      className: "md:col-span-1",
     },
     {
       icon: GitBranch,

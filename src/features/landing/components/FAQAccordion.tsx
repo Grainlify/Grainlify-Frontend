@@ -36,7 +36,7 @@ const FAQS: FAQItem[] = [
   {
     question: "How is an issue assigned?",
     answer:
-      "By a weighted draw, not first-come. Applications open for a fixed window, and when it closes one applicant is drawn. Weight comes from fit for that specific issue, plus a bonus for contributors who have never been assigned one. Your follower count, star count, total pull requests and merge rate are deliberately not counted - they are farmable, and they push newcomers down.",
+      "It depends on whether the issue is funded. In a GrainHack event, by a weighted draw, not first-come: applications open for a fixed window, and when it closes one applicant is drawn. Weight comes from fit for that specific issue, plus a bonus for contributors who have never been assigned one. Your follower count, star count, total pull requests and merge rate are deliberately not counted - they are farmable, and they push newcomers down. Outside a GrainHack event there is no prize pool on the issue, so the project maintainer reviews the applications and chooses who gets it.",
   },
   {
     question: "Is Grainlify free to use?",
