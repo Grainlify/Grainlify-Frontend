@@ -25,6 +25,8 @@ vi.mock('sonner', () => ({
 
 vi.mock('lucide-react', () => ({
   Loader2: () => null,
+  Copy: () => null,
+  Check: () => null,
   AlertCircle: () => null,
   Clock: () => null,
   RotateCcw: () => null,
@@ -56,6 +58,7 @@ function pendingRow(over: Record<string, unknown> = {}) {
     kyc_status: 'rejected',
     waiting_since: new Date(Date.now() - 3 * 3_600_000).toISOString(),
     previous_resets: 0,
+    kyc_session_id: 'sess-11111111-2222-3333-4444-555555555555',
     suggested_reason_codes: ['document_is_a_screen_photo'],
     ...over,
   }
@@ -203,5 +206,50 @@ describe('KYCReview', () => {
     const btn = await screen.findByRole('button', { name: /Send feedback/i })
     await waitFor(() => expect(btn).toBeDisabled())
     expect(toastError).toHaveBeenCalled()
+  })
+})
+
+describe('KYCReview: matching a row to a provider session', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    mockGetReasonCodes.mockResolvedValue({ reason_codes: REASONS })
+  })
+
+  // Without this, a reviewer matches a queue row to a session in the provider
+  // console by GitHub username - which the console does not index by.
+  it('shows the session id on the row, with a copy control', async () => {
+    mockGetPending.mockResolvedValue({ pending: [pendingRow()] })
+    const user = userEvent.setup()
+    // After setup(), deliberately: userEvent installs its own clipboard stub,
+    // so a spy defined before it is replaced and never called. jsdom also
+    // exposes navigator.clipboard as getter-only, hence defineProperty.
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    renderWithProviders(<KYCReview />)
+
+    expect(await screen.findByText('sess-11111111-2222-3333-4444-555555555555')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /copy session id for teethaking/i }))
+    expect(writeText).toHaveBeenCalledWith('sess-11111111-2222-3333-4444-555555555555')
+  })
+
+  it('says "no live session" rather than showing a blank when it has been reset', async () => {
+    mockGetPending.mockResolvedValue({ pending: [pendingRow({ kyc_session_id: '' })] })
+    renderWithProviders(<KYCReview />)
+    expect(await screen.findByText(/no live session/i)).toBeInTheDocument()
+  })
+
+  // The two systems do not talk. A reviewer who resets here without declining
+  // in Didit leaves a session sitting in the provider's own queue.
+  it('warns that a reset does not reach Didit, before the reset is sent', async () => {
+    mockGetPending.mockResolvedValue({ pending: [pendingRow()] })
+    const user = userEvent.setup()
+    renderWithProviders(<KYCReview />)
+
+    await user.click(await screen.findByRole('button', { name: /Send feedback/i }))
+    expect(await screen.findByText(/does not reach Didit/i)).toBeInTheDocument()
+    expect(screen.getByText(/Decline the session there first/i)).toBeInTheDocument()
   })
 })

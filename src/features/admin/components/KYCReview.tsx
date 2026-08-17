@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, AlertCircle, Clock, RotateCcw } from 'lucide-react';
+import { Loader2, AlertCircle, Clock, RotateCcw, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { Modal, ModalFooter, ModalButton, ModalInput } from '../../../shared/components/ui/Modal';
@@ -43,6 +43,7 @@ export function KYCReview() {
   const [note, setNote] = useState('');
   const [internalReason, setInternalReason] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const strong = dark ? 'text-[#f5efe5]' : 'text-[#2d2820]';
   const muted = dark ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
@@ -112,6 +113,19 @@ export function KYCReview() {
     }
   };
 
+  // Copy rather than select-and-drag: the id is a UUID being moved between two
+  // screens dozens of times in a review session, and a mis-copied character
+  // matches the wrong session or none.
+  const copySessionId = async (row: KYCPendingReview) => {
+    try {
+      await navigator.clipboard.writeText(row.kyc_session_id);
+      setCopiedId(row.user_id);
+      setTimeout(() => setCopiedId((c) => (c === row.user_id ? null : c)), 1500);
+    } catch {
+      toast.error('Could not copy. Select the id and copy it manually.');
+    }
+  };
+
   const waitingFor = (iso: string) => {
     const ms = Date.now() - new Date(iso).getTime();
     if (Number.isNaN(ms)) return 'unknown';
@@ -161,6 +175,28 @@ export function KYCReview() {
             <div className={`text-[14px] font-semibold truncate ${strong}`}>
               {row.github_login || 'unknown contributor'}
             </div>
+            {/* The session id, on the row rather than behind an expand: it is
+                the first thing needed when matching this person to a session
+                in the provider console, and a reviewer works through the queue
+                with that console open beside this one. */}
+            {row.kyc_session_id ? (
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <code className={`text-[11px] font-mono truncate ${muted}`}>{row.kyc_session_id}</code>
+                <button
+                  onClick={() => copySessionId(row)}
+                  aria-label={`Copy session id for ${row.github_login || 'this contributor'}`}
+                  className={`p-1 rounded-[6px] flex-shrink-0 ${dark ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
+                >
+                  {copiedId === row.user_id ? (
+                    <Check className={`w-3 h-3 ${dark ? 'text-[#4ade80]' : 'text-[#16a34a]'}`} />
+                  ) : (
+                    <Copy className={`w-3 h-3 ${muted}`} />
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className={`text-[11px] mb-0.5 ${muted}`}>no live session</div>
+            )}
             <div className={`flex items-center gap-3 text-[12px] ${muted}`}>
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" /> waiting {waitingFor(row.waiting_since)}
@@ -207,6 +243,25 @@ export function KYCReview() {
         <p className={`text-[13px] ${muted}`}>
           They will be able to verify again immediately, and will see this in their
           notifications on Grainlify.
+        </p>
+        {/* Stated because the two systems do not talk. Resetting here detaches
+            the session on our side; it does not reach the provider, and their
+            session stays exactly as it was. A reviewer who resets without
+            declining there leaves a session sitting in the provider's own
+            queue - which is also why nothing here deletes it: the decision
+            record is theirs to keep. */}
+        <p
+          className={`mt-3 p-3 rounded-[12px] text-[13px] ${
+            dark ? 'bg-[#c9983a]/[0.10] text-[#d4c5b0]' : 'bg-[#c9983a]/[0.12] text-[#4a3d2a]'
+          }`}
+        >
+          This does not reach Didit. Decline the session there first — resetting here only
+          detaches it on our side.
+          {deciding?.kyc_session_id ? (
+            <>
+              {' '}Session <code className="font-mono text-[12px]">{deciding.kyc_session_id}</code>.
+            </>
+          ) : null}
         </p>
 
         <fieldset className="mt-4">
