@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { SUPPORT_TRIGGER_LABEL } from "../../shared/components/supportContext";
 import { RailButton } from "./components/RailButton";
+import { MaintainerViewRequired } from "./components/MaintainerViewRequired";
 import { SupportPage } from "../support/pages/SupportPage";
 import { useThemeToggleAnimation } from "../../shared/hooks/useThemeToggleAnimation";
 import { useAuth } from "../../shared/contexts/AuthContext";
@@ -137,9 +138,23 @@ export function Dashboard() {
     top: number;
     left: number;
   } | null>(null);
+  // Read from ?view= so it survives a reload, exactly as currentPage reads
+  // ?tab=.
+  //
+  // This was plain useState("contributor") with no persistence, while
+  // currentPage DID persist - so a reload put every maintainer back in
+  // contributor mode while leaving them on ?tab=maintainers. The pill said
+  // CONTRIBUTOR, the maintainer dashboard rendered, and the rail entry that
+  // leads there was gone. It also meant a maintainer's route to their own
+  // application queue disappeared on every page load, which is the likeliest
+  // reason 15 active maintainers have resolved one application between them.
   const [activeRole, setActiveRole] = useState<
     "contributor" | "maintainer" | "admin"
-  >("contributor");
+  >(() => {
+    if (typeof window === "undefined") return "contributor";
+    const v = new URLSearchParams(window.location.search).get("view");
+    return v === "maintainer" || v === "admin" ? v : "contributor";
+  });
   // Initialize viewing user from URL so profile page gets correct user on first render (avoids race with own profile fetch)
   const [viewingUserId, setViewingUserId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -301,6 +316,10 @@ export function Dashboard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     params.set("tab", currentPage);
+    // Kept alongside tab so the pair cannot desynchronise on reload: a URL
+    // carrying tab=maintainers without a matching view= is the bug this fixes.
+    if (activeRole === "contributor") params.delete("view");
+    else params.set("view", activeRole);
     if (currentPage === "profile" && (viewingUserId || viewingUserLogin)) {
       params.set("user", viewingUserId || viewingUserLogin || "");
     } else if (currentPage === "profile") {
@@ -326,7 +345,7 @@ export function Dashboard() {
     else params.delete("issue");
     setSearchParams(params, { replace: isFirstUrlSync.current });
     isFirstUrlSync.current = false;
-  }, [currentPage, selectedProjectId, selectedIssue, viewingUserId, viewingUserLogin, viewingOrgLogin, projectBackTarget, setSearchParams]);
+  }, [currentPage, activeRole, selectedProjectId, selectedIssue, viewingUserId, viewingUserLogin, viewingOrgLogin, projectBackTarget, setSearchParams]);
 
   // Forget the viewed org once the user has navigated away from its page -
   // viewingOrgLogin has no meaning outside currentPage === "org".
@@ -1023,12 +1042,23 @@ export function Dashboard() {
                     />
                   )}
                 {currentPage === "contributors" && <ContributorsPage />}
-                {currentPage === "maintainers" && (
-                  <MaintainersPage
-                    onNavigate={handleNavigation}
-                    viewMode={activeRole === "maintainer" || activeRole === "admin" ? "maintainer" : "contributor"}
-                  />
-                )}
+                {/* Gated on activeRole, not only on currentPage.
+                    The rail entry was already gated, but the PAGE was not - so
+                    landing on ?tab=maintainers by any route (a reload, a link,
+                    a notification) rendered the whole maintainer dashboard
+                    while the pill read CONTRIBUTOR. Hiding the way in is not
+                    the same as gating the destination. */}
+                {currentPage === "maintainers" &&
+                  (activeRole === "maintainer" || activeRole === "admin") && (
+                    <MaintainersPage
+                      onNavigate={handleNavigation}
+                      viewMode="maintainer"
+                    />
+                  )}
+                {currentPage === "maintainers" &&
+                  activeRole === "contributor" && (
+                    <MaintainerViewRequired onSwitch={() => setActiveRole("maintainer")} />
+                  )}
                 {currentPage === "profile" && (
                   <ProfilePage
                     viewingUserId={viewingUserId}
