@@ -971,8 +971,9 @@ export const getKYCStatus = () =>
     status: string | null;
     session_id?: string;
     verified_at?: string;
-    rejection_reason?: string;
-    data?: any;
+    /** Parsed, structured fields from the completed verification (name,
+     *  address, document number). Populated into the billing profile on
+     *  success. */
     extracted?: any;
   }>("/auth/kyc/status", { requiresAuth: true });
 
