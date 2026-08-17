@@ -553,7 +553,7 @@ export function Dashboard() {
     {
       targetId: "discover",
       title: "Discover",
-      description: "Your personalized feed — projects and issues matched to your skills and interests.",
+      description: "The most active projects on Grainlify, and open issues from them.",
     },
     {
       targetId: "browse",

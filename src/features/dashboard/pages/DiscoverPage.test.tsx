@@ -212,7 +212,7 @@ describe('DiscoverPage', () => {
     const { container } = renderWithProviders(<DiscoverPage />, { withAuth: true })
 
     // Loading skeletons render before the fetches resolve.
-    expect(screen.getByText(/Finding projects best suited/i)).toBeInTheDocument()
+    expect(screen.getByText(/Finding the most active projects/i)).toBeInTheDocument()
     expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0)
 
     await waitFor(() => {
@@ -267,7 +267,7 @@ describe('DiscoverPage', () => {
       expect(screen.getByText('No recommended issues found')).toBeInTheDocument()
     })
 
-    expect(screen.queryByText(/Finding projects best suited/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Finding the most active projects/i)).not.toBeInTheDocument()
     expect(container.querySelectorAll('.animate-shimmer').length).toBe(0)
 
     consoleErrorSpy.mockRestore()
@@ -302,14 +302,14 @@ describe('DiscoverPage', () => {
     mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
 
     const { unmount } = renderWithProviders(<DiscoverPage />, { theme: 'light', withAuth: true })
-    expect(screen.getByText(/Here's what's matched to you today/i)).toBeInTheDocument()
+    expect(screen.getByText(/Here's what's most active today/i)).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByText('No recommended projects found')).toBeInTheDocument()
     })
     unmount()
 
     renderWithProviders(<DiscoverPage />, { theme: 'dark', withAuth: true })
-    expect(screen.getByText(/Here's what's matched to you today/i)).toBeInTheDocument()
+    expect(screen.getByText(/Here's what's most active today/i)).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByText('No recommended projects found')).toBeInTheDocument()
     })
