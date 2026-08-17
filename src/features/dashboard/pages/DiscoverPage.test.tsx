@@ -12,10 +12,10 @@ import { getRecommendedProjects, getPublicProjectIssues, getUserProfile } from '
 // code, not mocked, since jsdom's localStorage is enough on its own). Mock only what
 // DiscoverPage itself imports from the client; IssueDetailPage/ProjectDetailPage are
 // imported for DiscoverPage's own internal selectedIssue/selectedProjectId overlay
-// (confirmed by reading the source — DiscoverPage owns that state itself, it is not
-// delegated to Dashboard), but since none of these tests click into a card to open
-// that overlay, their extra client dependencies (getPublicProject, getMyProjects, etc.)
-// never get invoked.
+// ProjectDetailPage backs DiscoverPage's remaining project overlay. IssueDetailPage
+// is no longer rendered by this page at all - issue selection was lifted to Dashboard
+// so there is a single shared detail view - but the stub stays so the test asserting
+// this page does NOT render one has something that would have been visible if it did.
 // getAuthToken/setAuthToken/removeAuthToken/getCurrentUser back AuthProvider
 // (withAuth: true below, needed since the hero greets the user by github
 // login/avatar via useAuth() — confirmed by reading AuthContext.tsx's full set of
@@ -444,14 +444,55 @@ describe('DiscoverPage', () => {
   })
 
   describe('overlay URL persistence', () => {
-    it('opens the issue overlay named by ?dIssue=/?dProject= after a reload', async () => {
+    // Rewritten, not deleted: the premise it asserted is gone on purpose.
+    //
+    // This page used to own a SECOND issue overlay behind ?dIssue=/?dProject=,
+    // parallel to the one Dashboard drives from ?issue=/?project= for Browse,
+    // Ecosystems, OSW, Search and Profile. The same issue opened from Discover
+    // and from a repo page were different screens with different URLs, and only
+    // one of them was the shared one.
+    //
+    // Discover now reports the click upward and Dashboard owns the selection,
+    // so what needs asserting is that it does NOT open anything itself.
+    // Shared links keep working. Anyone who copied a Discover issue URL before
+    // the overlay moved has one in a chat somewhere; nothing server-side ever
+    // generated them, so they cannot be found and fixed. Removing the read
+    // without this turned a working shared link into a page that silently
+    // opens nothing - worse than the inconsistency being fixed.
+    it('translates a legacy ?dIssue= link into the shared selection', async () => {
+      const onOpenIssue = vi.fn()
       mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
 
-      renderWithProviders(<DiscoverPage />, { route: '/dashboard?tab=discover&dIssue=issue-1&dProject=proj-a', withAuth: true })
+      renderWithProviders(<DiscoverPage onOpenIssue={onOpenIssue} />, {
+        route: '/dashboard?tab=discover&dIssue=issue-1&dProject=proj-a',
+        withAuth: true,
+      })
 
-      const overlay = await screen.findByTestId('issue-detail-page')
-      expect(overlay.getAttribute('data-issue-id')).toBe('issue-1')
-      expect(overlay.getAttribute('data-project-id')).toBe('proj-a')
+      await waitFor(() =>
+        expect(
+          onOpenIssue,
+          'a legacy ?dIssue= link opened nothing; those URLs are already shared and cannot be recalled',
+        ).toHaveBeenCalledWith('issue-1', 'proj-a'),
+      )
+    })
+
+    it('does not open its own issue overlay for ?dIssue= any more', async () => {
+      mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
+
+      // ?dIssue= alone, with no ?dProject=: this isolates issue selection.
+      // The project overlay is still this page's own and still URL-backed, so
+      // including ?dProject= here would open that instead and prove nothing
+      // about issues.
+      renderWithProviders(<DiscoverPage />, { route: '/dashboard?tab=discover&dIssue=issue-1', withAuth: true })
+
+      // Wait for the page to settle, so an overlay would have rendered by now
+      // if this page still owned one.
+      await waitFor(() => expect(mockedGetRecommendedProjects).toHaveBeenCalled())
+      expect(
+        screen.queryByTestId('issue-detail-page'),
+        'DiscoverPage rendered its own issue detail view; selection belongs to Dashboard so ' +
+          'there is one detail screen and one URL for it',
+      ).not.toBeInTheDocument()
     })
 
     it('opens the project overlay named by ?dProject= (with no ?dIssue=) after a reload', async () => {
@@ -463,6 +504,40 @@ describe('DiscoverPage', () => {
       expect(overlay.getAttribute('data-project-id')).toBe('proj-b')
     })
 
+  })
+
+  describe('issue selection belongs to Dashboard', () => {
+    // The property that actually moved. Removing this page's overlay is only
+    // half of it: if the click still wrote ?dIssue= and nobody rendered it,
+    // clicking an issue would do nothing at all. This asserts the click is
+    // reported upward, which is what makes the shared detail view open.
+    it('reports an issue click upward instead of opening its own view', async () => {
+      const user = userEvent.setup()
+      const onOpenIssue = vi.fn()
+
+      mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA] })
+      mockedGetPublicProjectIssues.mockResolvedValue({
+        issues: [
+          makeApiIssue({
+            github_issue_id: 101,
+            title: 'Fix crash on startup',
+            description: 'Steps to reproduce the crash',
+            labels: ['bug'],
+          }),
+        ],
+      })
+
+      renderWithProviders(<DiscoverPage onOpenIssue={onOpenIssue} />, { withAuth: true })
+
+      await user.click(await screen.findByText('Fix crash on startup'))
+
+      expect(
+        onOpenIssue,
+        'clicking a recommended issue did not report upward; Dashboard owns the selection, so ' +
+          'without this the shared IssueDetailPage never opens and the click does nothing',
+      ).toHaveBeenCalled()
+      expect(screen.queryByTestId('issue-detail-page')).not.toBeInTheDocument()
+    })
   })
 
   describe('org card navigation', () => {

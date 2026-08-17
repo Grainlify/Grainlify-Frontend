@@ -10,7 +10,6 @@ import { motion, useReducedMotion } from "motion/react";
 import { IssueCard } from "../../../shared/components/ui/IssueCard";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { IssueDetailPage } from "./IssueDetailPage";
 import { ProjectDetailPage } from "./ProjectDetailPage";
 import { DiscoverHero } from "./DiscoverHero";
 import {
@@ -176,32 +175,61 @@ type IssueType = {
 interface DiscoverPageProps {
   onGoToBilling?: () => void;
   onGoToOpenSourceWeek?: () => void;
-  /** Dashboard's `activeRole` (the CONTRIBUTOR/MAINTAINER/ADMIN nav pill) -
-   * forwarded to this page's own IssueDetailPage overlay so maintainer
-   * actions there require actually being in maintainer/admin mode, not just
-   * owning the project. */
-  activeRole?: 'contributor' | 'maintainer' | 'admin';
+  /** Open an issue in the shared detail view.
+   *
+   * This page used to render its own IssueDetailPage overlay behind its own
+   * ?dIssue=/?dProject= parameters, parallel to the one Dashboard drives from
+   * ?issue=/?project= for Browse, Ecosystems, OSW, Search and Profile. Two
+   * copies of the same screen with two different URLs: an issue opened from
+   * Discover and the same issue opened from a repo page were different states,
+   * and only one of them was the shared one.
+   *
+   * Discover now reports the click and Dashboard owns the selection, so there
+   * is one detail view and one URL for it. */
+  onOpenIssue?: (issueId: string, projectId?: string) => void;
 }
 
 export function DiscoverPage({
   onGoToBilling,
   onGoToOpenSourceWeek,
-  activeRole,
+  onOpenIssue,
 }: DiscoverPageProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
   const prefersReducedMotion = useReducedMotion();
   const [searchParams, setSearchParams] = useSearchParams();
-  // Derived directly from ?dIssue=/?dProject= (not local state) so this
-  // overlay - previously invisible to the URL entirely - survives a reload
-  // and stays correct on browser back/forward. Distinct param names from
-  // Dashboard's own ?issue=/?project= (that one drives a *different* global
-  // overlay, triggered from Browse/Ecosystems/OSW/Search/Profile).
-  const dIssueId = searchParams.get('dIssue');
+  // Issue selection is NOT held here. Opening an issue is reported upward and
+  // Dashboard drives the shared IssueDetailPage from ?issue=/?project=, the
+  // same state Browse, Ecosystems, OSW, Search and Profile use. This page used
+  // to keep a second copy behind ?dIssue=/?dProject=, which made "the issue
+  // detail page" two different screens depending on where you clicked from.
+  //
+  // The project overlay below is still local, and still URL-backed.
   const dProjectId = searchParams.get('dProject');
-  const selectedIssue = dIssueId ? { issueId: dIssueId, projectId: dProjectId || undefined } : null;
-  const selectedProjectId = !dIssueId ? dProjectId : null;
+  const selectedProjectId = dProjectId;
+
+  // Legacy ?dIssue= links keep working.
+  //
+  // This page used to own issue selection behind ?dIssue=, so anyone who
+  // copied a Discover issue URL has one in a chat somewhere. Nothing
+  // server-side ever generated them - no notification, email or Telegram
+  // message - so the exposure is only links people shared themselves, but
+  // those are exactly the ones nobody can go back and fix.
+  //
+  // Translate rather than support: report it upward like a click, and strip
+  // the parameter so the URL self-heals into the shared ?issue= form. Without
+  // this, removing the overlay turned a working shared link into a page that
+  // silently opens nothing.
+  useEffect(() => {
+    const legacyIssueId = searchParams.get('dIssue');
+    if (!legacyIssueId) return;
+    onOpenIssue?.(legacyIssueId, searchParams.get('dProject') || undefined);
+    const next = new URLSearchParams(searchParams);
+    next.delete('dIssue');
+    next.delete('dProject');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, onOpenIssue, setSearchParams]);
 
   // Real onboarding status for the hero's setup nudge — billing profiles are
   // stored client-side today (see BillingProfilesContext), KYC comes from the API.
@@ -397,24 +425,6 @@ export function DiscoverPage({
     // on rendered output.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects, isLoadingProjects, showAllIssues]);
-
-  // If an issue is selected, show the detail page instead
-  if (selectedIssue) {
-    return (
-      <IssueDetailPage
-        issueId={selectedIssue.issueId}
-        projectId={selectedIssue.projectId}
-        userRole={userRole}
-        activeRole={activeRole}
-        onClose={() => {
-          const next = new URLSearchParams(searchParams);
-          next.delete('dIssue');
-          next.delete('dProject');
-          setSearchParams(next);
-        }}
-      />
-    );
-  }
 
   // If a project is selected, show the detail page instead
   if (selectedProjectId) {
@@ -697,12 +707,7 @@ export function DiscoverPage({
                   language={issue.language}
                   variant="recommended"
                   primaryTag={issue.primaryTag}
-                  onClick={() => {
-                    const next = new URLSearchParams(searchParams);
-                    next.set('dIssue', issue.id);
-                    next.set('dProject', issue.projectId);
-                    setSearchParams(next);
-                  }}
+                  onClick={() => onOpenIssue?.(issue.id, issue.projectId)}
                 />
               </motion.div>
             ))}
