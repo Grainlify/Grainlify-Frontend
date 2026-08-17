@@ -949,7 +949,14 @@ export function Dashboard() {
               <>
                 {currentPage === "discover" && (
                   <DiscoverPage
-                    activeRole={activeRole}
+                    // Discover reports the click; this owns the selection, so
+                    // there is one IssueDetailPage and one URL for it rather
+                    // than a second copy behind ?dIssue=. activeRole is no
+                    // longer forwarded because the overlay it was for lived
+                    // on that page - the shared one below already has it.
+                    onOpenIssue={(issueId, projectId) =>
+                      setSelectedIssue({ issueId, projectId })
+                    }
                     onGoToBilling={() => {
                       // SettingsPage/MaintainersPage now own their sub-tab via
                       // their own ?subtab= read (see those files) - writing it
