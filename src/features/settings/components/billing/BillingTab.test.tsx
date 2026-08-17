@@ -128,6 +128,78 @@ describe('BillingTab', () => {
     ).not.toBeInTheDocument()
   })
 
+  // The dead end, reported from production.
+  //
+  // A refused contributor saw "Verification Rejected" and the message "Please
+  // try again or contact support" — while the retry button was explicitly
+  // hidden for exactly that status. The copy named a control that had been
+  // removed, so the only route the product left open was the support ticket it
+  // told them to file, which is precisely what happened.
+  //
+  // Two properties, because showing the button and making it work are separate
+  // things (see VERIFICATION-TRAPS.md §6): it renders, AND clicking it starts a
+  // verification.
+  it('lets a refused contributor start a new verification', async () => {
+    seedProfiles([{ id: 1, name: 'Test Profile', type: 'individual', status: 'missing-verification' }])
+    mockGetKYCStatus.mockResolvedValue({ status: 'rejected' })
+    mockStartKYCVerification.mockResolvedValue({ session_id: 's2', url: 'https://kyc.example/retry' })
+
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window)
+    vi.spyOn(window, 'setInterval').mockImplementation(
+      () => 0 as unknown as ReturnType<typeof window.setInterval>
+    )
+
+    const user = userEvent.setup()
+    renderBillingTab()
+
+    await user.click(await screen.findByText('Test Profile'))
+    await waitFor(() => expect(mockGetKYCStatus).toHaveBeenCalledTimes(1))
+
+    // 1. The control exists.
+    const retry = await screen.findByRole('button', { name: 'Try verification again' })
+
+    // 2. And it does something. A button that renders and no-ops is the same
+    //    dead end wearing a different face.
+    await user.click(retry)
+    await waitFor(() => expect(mockStartKYCVerification).toHaveBeenCalledTimes(1))
+    expect(openSpy).toHaveBeenCalledWith('https://kyc.example/retry', '_blank', 'width=800,height=600')
+  })
+
+  it('does not tell a refused contributor to do something the page cannot do', async () => {
+    seedProfiles([{ id: 1, name: 'Test Profile', type: 'individual', status: 'missing-verification' }])
+    mockGetKYCStatus.mockResolvedValue({ status: 'rejected' })
+
+    const user = userEvent.setup()
+    renderBillingTab()
+    await user.click(await screen.findByText('Test Profile'))
+    await waitFor(() => expect(mockGetKYCStatus).toHaveBeenCalledTimes(1))
+
+    // The old sentence, which pointed at a control that was not on the page.
+    expect(
+      screen.queryByText(/Your KYC verification was rejected\. Please try again or contact support/i)
+    ).not.toBeInTheDocument()
+    // Replaced by something that names what to do and what usually goes wrong.
+    expect(screen.getByText(/wasn't approved/i)).toBeInTheDocument()
+    expect(screen.getByText(/photo of a screen or a\s+photocopy/i)).toBeInTheDocument()
+  })
+
+  // The other half of the fix, and the one that is easy to break by
+  // over-widening. A session in review is waiting on a decision; letting the
+  // contributor start another produces a duplicate that lands in the same
+  // queue, turning "stuck and visible" into "churning and invisible".
+  it('still hides the retry button while a verification is in review', async () => {
+    seedProfiles([{ id: 1, name: 'Test Profile', type: 'individual', status: 'missing-verification' }])
+    mockGetKYCStatus.mockResolvedValue({ status: 'in_review' })
+
+    const user = userEvent.setup()
+    renderBillingTab()
+    await user.click(await screen.findByText('Test Profile'))
+    await waitFor(() => expect(mockGetKYCStatus).toHaveBeenCalledTimes(1))
+
+    expect(screen.queryByRole('button', { name: /Verify KYC|Try verification again/ })).not.toBeInTheDocument()
+    expect(screen.getByText(/currently under review/i)).toBeInTheDocument()
+  })
+
   it('offers to resume, not an error, when a verification session already exists', async () => {
     // Regression, reported from production. The backend answers 409 with the
     // URL of the session the user already has; apiRequest used to flatten the
