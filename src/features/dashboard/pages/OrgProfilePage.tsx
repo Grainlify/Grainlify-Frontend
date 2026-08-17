@@ -314,20 +314,28 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
           glow/shine, ~56px rank number, decorative dots), not a compact
           tile, since this should read as the same "epic" badge a user gets
           on their own profile. */}
-      {/* The left column is pinned to the badge's height so the two sides
-          line up exactly, rather than the badge stretching to match whatever
-          the rows happen to add up to - which is what produced the tall
-          rectangle. The rows share that height between them, so neither the
-          title row nor the stats row can push the pair out of alignment.
+      {/* The badge's height is a FLOOR for the left column, not a cap.
+          #1004 pinned the column to exactly RANK_CARD_SIZE and made the two
+          rows share it, which squeezed the stat tiles to 109px against 153px
+          of content - and their overflow-hidden, which exists for the
+          decorative blur orb, clipped the number rather than spilling
+          visibly. A layout that silently truncates data is worse than one
+          that is 44px out of alignment.
+
+          So the column is min-h: it still matches the badge when the content
+          is short, and grows instead of clipping when it is not. The tiles
+          size to their content, which is what every other stat display in the
+          app does. The badge centres against the column rather than
+          stretching - it is a fixed square by design.
 
           lg only: stacked on narrow screens there is nothing to align to. */}
       <div
         className="flex flex-col lg:flex-row gap-4 lg:items-stretch"
         style={{ ['--rank-card-size' as string]: `${RANK_CARD_SIZE}px` }}
       >
-        <div className="flex flex-col gap-4 flex-1 min-w-0 lg:h-[var(--rank-card-size)]">
+        <div className="flex flex-col gap-4 flex-1 min-w-0 lg:min-h-[var(--rank-card-size)]">
           {/* Header (first row), with an ambient Spotlight glow behind it */}
-          <div className={`relative overflow-hidden lg:flex-1 lg:min-h-0 ${cardClass}`}>
+          <div className={`relative overflow-hidden ${cardClass}`}>
             <Spotlight />
             <div className="relative flex flex-col sm:flex-row sm:items-center gap-6">
               <div className="flex items-center gap-5 flex-1 min-w-0">
@@ -377,7 +385,7 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
           </div>
 
           {/* Stats (second row) - one row, not split into sub-rows */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 lg:flex-1 lg:min-h-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {statTiles.map(({ icon: Icon, label, value }) => (
               <div
                 key={label}
@@ -409,7 +417,7 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
             rectangle instead of the square badge people see on their own
             profile. RankBadgeCard is a fixed RANK_CARD_SIZE square and owns
             its own loading and unranked states. */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 lg:self-center">
           <RankBadgeCard
             isLoading={isLoadingSummary}
             position={summary?.rank_position}

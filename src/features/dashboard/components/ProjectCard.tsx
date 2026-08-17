@@ -38,11 +38,19 @@ export function ProjectCard({ project, onClick, variants }: ProjectCardProps) {
   // Hover-only, outside any glass: the highlight follows the cursor via CSS
   // custom properties rather than React state, so moving the mouse over a grid
   // of these re-renders nothing. See SpotlightCard.
+  // At most two chips are drawn; the rest collapse into "+N". Two keeps the
+  // row on one line at the narrowest column this grid produces.
+  const MAX_VISIBLE_TAGS = 2;
+  const visibleTags = project.tags.slice(0, MAX_VISIBLE_TAGS);
+  const hiddenTags = project.tags.slice(MAX_VISIBLE_TAGS);
+  const hiddenTagCount = hiddenTags.length;
+
   return (
     <SpotlightCard className="rounded-[16px] h-full">
     <motion.div
       variants={variants}
-      className={`flex flex-col h-full rounded-[16px] border p-5 transition-all cursor-pointer motion-safe:hover:-translate-y-1 active:scale-[0.98] ${
+      data-testid="project-card"
+      className={`flex flex-col h-[var(--repo-card-height)] rounded-[16px] border p-5 transition-all cursor-pointer motion-safe:hover:-translate-y-1 active:scale-[0.98] ${
         isDark
           ? 'bg-white/[0.08] border-white/15 shadow-[0_4px_16px_rgba(0,0,0,0.24)] hover:bg-white/[0.12] hover:shadow-[0_8px_24px_rgba(201,152,58,0.15)]'
           : 'bg-white/[0.15] border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:bg-white/[0.2] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)]'
@@ -117,11 +125,21 @@ export function ProjectCard({ project, onClick, variants }: ProjectCardProps) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5 mt-auto">
-        {project.tags.map((tag, idx) => (
+      {/* One line of labels, never more.
+          A repo carrying nine topics wrapped to four lines and made its whole
+          grid row taller than the rows around it - measured at 304px against
+          434-499px depending on width. Grid rows size to their tallest item
+          and each row sizes independently, so this is a card-level problem and
+          the card is where it is fixed; every grid showing one inherits it.
+
+          The overflow becomes "+N" rather than disappearing, so a repo with
+          more topics reads as having more. The full list is in the title. */}
+      <div className="flex flex-nowrap items-center gap-1.5 mt-auto overflow-hidden">
+        {visibleTags.map((tag) => (
           <span
-            key={idx}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold shadow-[0_2px_8px_rgba(201,152,58,0.15)] ${
+            key={tag}
+            title={tag}
+            className={`shrink-0 max-w-[9rem] truncate px-2.5 py-1 rounded-full text-[11px] font-semibold shadow-[0_2px_8px_rgba(201,152,58,0.15)] ${
               isDark
                 ? 'bg-[#c9983a]/20 border border-[#c9983a]/40 text-[#f5c563]'
                 : 'bg-[#c9983a]/20 border border-[#c9983a]/35 text-[#8b6f3a]'
@@ -130,6 +148,18 @@ export function ProjectCard({ project, onClick, variants }: ProjectCardProps) {
             {tag}
           </span>
         ))}
+        {hiddenTagCount > 0 && (
+          <span
+            title={hiddenTags.join(', ')}
+            className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+              isDark
+                ? 'bg-white/[0.06] border border-white/20 text-[#b8a898]'
+                : 'bg-white/40 border border-white/30 text-[#6b5c4a]'
+            }`}
+          >
+            +{hiddenTagCount}
+          </span>
+        )}
       </div>
     </motion.div>
     </SpotlightCard>
