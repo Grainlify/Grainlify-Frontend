@@ -13,6 +13,7 @@ vi.mock('../../../../shared/api/client', () => ({
 const BASE_PREFERENCES = [
   { type: 'issue_assigned', in_app: true, email: true },
   { type: 'issue_application_rejected', in_app: true, email: true },
+  { type: 'issue_application_received', in_app: true, email: true },
   { type: 'pr_merged', in_app: true, email: true },
   { type: 'reward_received', in_app: true, email: true },
   { type: 'issue_application_submitted', in_app: true, email: true },
@@ -98,5 +99,32 @@ describe('NotificationsTab', () => {
     await waitFor(() => expect(mockGetPreferences).toHaveBeenCalled())
     // Falls through to the (now-empty) preferences UI rather than crashing.
     expect(await screen.findByText('Notification Preferences')).toBeInTheDocument()
+  })
+})
+
+describe('NotificationsTab: types the label map does not know', () => {
+  // The map is a second copy of the backend's Type constants. When they drift,
+  // this screen used to drop the unknown type silently: the user received the
+  // notification and had no control to turn it off, and nothing said so.
+  it('renders a control for a type the map has never heard of', async () => {
+    mockGetPreferences.mockResolvedValue({
+      preferences: [
+        { type: 'issue_assigned', in_app: true, email: true },
+        { type: 'some_future_backend_type', in_app: true, email: false },
+      ],
+    })
+    renderWithProviders(<NotificationsTab />)
+
+    // Humanised rather than raw, and present rather than absent.
+    expect(await screen.findByText('Some future backend type')).toBeInTheDocument()
+  })
+
+  it('shows the applicant a control for the application-received notification', async () => {
+    mockGetPreferences.mockResolvedValue({
+      preferences: [{ type: 'issue_application_received', in_app: true, email: true }],
+    })
+    renderWithProviders(<NotificationsTab />)
+
+    expect(await screen.findByText('Application received')).toBeInTheDocument()
   })
 })

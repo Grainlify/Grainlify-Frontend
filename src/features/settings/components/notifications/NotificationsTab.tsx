@@ -28,6 +28,11 @@ const NOTIFICATION_TYPE_INFO: Record<string, NotificationTypeInfo> = {
     title: 'Application not accepted',
     description: "When a maintainer doesn't accept your application to an issue.",
   },
+  issue_application_received: {
+    section: 'Contributor',
+    title: 'Application received',
+    description: 'When your application to an issue is recorded and is waiting on the maintainer.',
+  },
   pr_merged: {
     section: 'Contributor',
     title: 'Pull request merged',
@@ -65,7 +70,29 @@ const NOTIFICATION_TYPE_INFO: Record<string, NotificationTypeInfo> = {
   },
 };
 
-const SECTION_ORDER = ['Contributor', 'Maintainer'];
+const SECTION_ORDER = ['Contributor', 'Maintainer', 'Other'];
+
+/** A label for a type this map does not know about.
+ *
+ *  The map is a second copy of the backend's Type constants, and the two have
+ *  to be kept in step by hand. When they drift, the failure used to be silent:
+ *  this screen renders `Object.entries(NOTIFICATION_TYPE_INFO)`, so a type the
+ *  backend had added and this file had not simply did not appear — the user
+ *  received the notification and had no way to turn it off, and nothing
+ *  anywhere said so.
+ *
+ *  A generic row is worse-looking than a written one and far better than an
+ *  absent one: the control exists, and the ugly label is a visible prompt to
+ *  come and write a real entry. */
+function infoFor(type: string): NotificationTypeInfo {
+  const known = NOTIFICATION_TYPE_INFO[type];
+  if (known) return known;
+  return {
+    section: 'Other',
+    title: type.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()),
+    description: '',
+  };
+}
 
 type PreferenceMap = Record<string, { in_app: boolean; email: boolean }>;
 
@@ -143,10 +170,17 @@ export function NotificationsTab() {
     }
   };
 
+  // The union of the types this file knows about and the types the API
+  // actually returned, so a backend addition surfaces rather than vanishing.
+  const allTypes = Array.from(
+    new Set([...Object.keys(NOTIFICATION_TYPE_INFO), ...Object.keys(preferences)])
+  );
   const sections = SECTION_ORDER.map((section) => ({
     section,
-    types: Object.entries(NOTIFICATION_TYPE_INFO).filter(([, info]) => info.section === section),
-  }));
+    types: allTypes
+      .map((type) => [type, infoFor(type)] as [string, NotificationTypeInfo])
+      .filter(([, info]) => info.section === section),
+  })).filter(({ types }) => types.length > 0);
 
   if (isLoading) {
     return (
