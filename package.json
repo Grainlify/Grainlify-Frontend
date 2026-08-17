@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "social-cards": "node scripts/social-cards/build.mjs",
-    "verify-deployed": "node scripts/verify-deployed.mjs"
+    "verify-deployed": "node scripts/verify-deployed.mjs",
+    "verify-deployed:origin": "node scripts/verify-deployed.mjs --origin"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
