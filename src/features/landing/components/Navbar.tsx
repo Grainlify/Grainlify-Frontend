@@ -24,7 +24,17 @@ export function Navbar() {
           : "bg-white/[0.12] border-white/25"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+      {/* 72px on desktop: the row itself is 56px, so this is 8px either side.
+          It was sm:py-4, giving 89px - 36% padding, which read as a heavy bar
+          with the content sitting under it. Going below 72 would mean shrinking
+          the CTA buttons that set the 56px row height, which is not worth the
+          churn for 17px. Mobile stays at py-3 (57px), which measured fine.
+
+          Only LandingPage renders this. SignIn and SignUp have their own
+          inline header and do not import it, so this is a single-surface
+          change - worth stating because a shared component sized for one
+          surface has caught us twice. */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-2">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
