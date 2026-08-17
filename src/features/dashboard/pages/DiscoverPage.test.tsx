@@ -454,6 +454,28 @@ describe('DiscoverPage', () => {
     //
     // Discover now reports the click upward and Dashboard owns the selection,
     // so what needs asserting is that it does NOT open anything itself.
+    // Shared links keep working. Anyone who copied a Discover issue URL before
+    // the overlay moved has one in a chat somewhere; nothing server-side ever
+    // generated them, so they cannot be found and fixed. Removing the read
+    // without this turned a working shared link into a page that silently
+    // opens nothing - worse than the inconsistency being fixed.
+    it('translates a legacy ?dIssue= link into the shared selection', async () => {
+      const onOpenIssue = vi.fn()
+      mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
+
+      renderWithProviders(<DiscoverPage onOpenIssue={onOpenIssue} />, {
+        route: '/dashboard?tab=discover&dIssue=issue-1&dProject=proj-a',
+        withAuth: true,
+      })
+
+      await waitFor(() =>
+        expect(
+          onOpenIssue,
+          'a legacy ?dIssue= link opened nothing; those URLs are already shared and cannot be recalled',
+        ).toHaveBeenCalledWith('issue-1', 'proj-a'),
+      )
+    })
+
     it('does not open its own issue overlay for ?dIssue= any more', async () => {
       mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
 

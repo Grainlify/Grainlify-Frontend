@@ -209,6 +209,28 @@ export function DiscoverPage({
   const dProjectId = searchParams.get('dProject');
   const selectedProjectId = dProjectId;
 
+  // Legacy ?dIssue= links keep working.
+  //
+  // This page used to own issue selection behind ?dIssue=, so anyone who
+  // copied a Discover issue URL has one in a chat somewhere. Nothing
+  // server-side ever generated them - no notification, email or Telegram
+  // message - so the exposure is only links people shared themselves, but
+  // those are exactly the ones nobody can go back and fix.
+  //
+  // Translate rather than support: report it upward like a click, and strip
+  // the parameter so the URL self-heals into the shared ?issue= form. Without
+  // this, removing the overlay turned a working shared link into a page that
+  // silently opens nothing.
+  useEffect(() => {
+    const legacyIssueId = searchParams.get('dIssue');
+    if (!legacyIssueId) return;
+    onOpenIssue?.(legacyIssueId, searchParams.get('dProject') || undefined);
+    const next = new URLSearchParams(searchParams);
+    next.delete('dIssue');
+    next.delete('dProject');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, onOpenIssue, setSearchParams]);
+
   // Real onboarding status for the hero's setup nudge — billing profiles are
   // stored client-side today (see BillingProfilesContext), KYC comes from the API.
   // Starts "loading" so the nudge never flashes incomplete before either resolves.
