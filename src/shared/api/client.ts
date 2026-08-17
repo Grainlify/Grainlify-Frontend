@@ -1178,6 +1178,12 @@ export interface KYCPendingReview {
   waiting_since: string;
   /** A second or third reset is a different decision from a first. */
   previous_resets: number;
+  /** The verification provider's session identifier — the only field from
+   *  their side this endpoint carries, and an identifier rather than data.
+   *  Empty after a reset, which nulls it. Without it a reviewer has to match a
+   *  queue row to a session in the provider console by GitHub username, which
+   *  the console does not index by. */
+  kyc_session_id: string;
   /** Suggestions only — the admin chooses. Empty when nothing maps, notably
    *  for a refusal whose only warnings are fraud signals, which are
    *  deliberately never mapped to anything the contributor could be told. */
