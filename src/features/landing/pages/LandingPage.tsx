@@ -10,6 +10,7 @@ import {
   Code,
   GitBranch,
   Award,
+  Scale,
   Shield,
   Zap,
   Users,
@@ -136,7 +137,7 @@ function Features() {
       large: true,
     },
     {
-      icon: Award,
+      icon: Scale,
       // Moved here from the hero, where it read "Rewards decided after the
       // work" - present tense, as though rewards were flowing. Nothing has
       // been paid on any chain, no funded event has run, and there is no

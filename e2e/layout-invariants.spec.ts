@@ -248,3 +248,67 @@ test('every repository card is the same height, whatever it carries', async ({
   expect(unique, `cards rendered at ${unique.join(', ')}px - a repo with more topics is taller than one with fewer`)
     .toHaveLength(1)
 })
+
+// Landing directly on ?tab=maintainers as a contributor.
+//
+// This is the reload path, not the toggle path. The toggle already worked: the
+// rail entry was gated on activeRole. The PAGE was not, and activeRole was
+// plain useState with no persistence while currentPage read ?tab= - so every
+// reload put a maintainer back in contributor mode on a URL that still said
+// tab=maintainers, and the full maintainer dashboard rendered under a pill
+// reading CONTRIBUTOR.
+//
+// It also meant a maintainer's route to their own application queue vanished
+// on every page load, which is the likeliest reason 15 active maintainers have
+// resolved one application between them.
+test('landing on ?tab=maintainers as a contributor does not render the maintainer dashboard', async ({
+  page, setupMockAuth, setupMockBrowse, setupMockOrgProfile,
+}) => {
+  await setupMockAuth(); await setupMockBrowse(); await setupMockOrgProfile()
+  await page.addInitScript(() => {
+    window.localStorage.setItem('grainlify_tour_seen_user-1', 'true')
+    window.localStorage.setItem('patchwork_jwt', 'e2e-test-token')
+  })
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/dashboard?tab=maintainers')
+  await page.waitForTimeout(1500)
+
+  const body = (await page.textContent('body')) ?? ''
+
+  // The fallback is shown, and it offers the remedy.
+  expect(
+    body,
+    'no maintainer-view fallback rendered; a blank area cannot be told apart from a crash',
+  ).toContain('viewing as a contributor')
+
+  // And the maintainer surface itself is absent. "Select repositories" is the
+  // maintainer dashboard's own control, so it is the honest marker for it.
+  expect(
+    body,
+    'the maintainer dashboard rendered while the view was contributor - gating the rail entry ' +
+    'is not the same as gating the page',
+  ).not.toContain('Select repositories')
+})
+
+// The other half: the view survives a reload, so the queue stays reachable.
+test('maintainer view persists across a reload', async ({
+  page, setupMockAuth, setupMockBrowse, setupMockOrgProfile,
+}) => {
+  await setupMockAuth(); await setupMockBrowse(); await setupMockOrgProfile()
+  await page.addInitScript(() => {
+    window.localStorage.setItem('grainlify_tour_seen_user-1', 'true')
+    window.localStorage.setItem('patchwork_jwt', 'e2e-test-token')
+  })
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/dashboard?tab=maintainers&view=maintainer')
+  await page.waitForTimeout(1200)
+  await page.reload()
+  await page.waitForTimeout(1200)
+
+  expect(
+    await page.textContent('body'),
+    'the view reset to contributor on reload - this is what made a maintainer lose their own queue every page load',
+  ).not.toContain('viewing as a contributor')
+})
