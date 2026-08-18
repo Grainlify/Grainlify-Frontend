@@ -3,6 +3,16 @@ import { screen, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { SupportPage } from './SupportPage'
 
+// These tests are the SIGNED-IN view: the report history only exists for
+// somebody with an account. useAuth is mocked rather than mounting the real
+// AuthProvider, which fires its own getCurrentUser() against the same fetch
+// stub these tests use for the history response.
+const mockUseAuth = vi.fn(() => ({ isAuthenticated: true }))
+vi.mock('../../../shared/contexts/AuthContext', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  useAuth: () => mockUseAuth(),
+}))
+
 // The two things 665 passing tests did not catch: a rail button that renders
 // wrong, and a handler that opens a modal instead of navigating. Neither is
 // asserted here - they belong to the rail - but the page itself is, including
@@ -101,5 +111,52 @@ describe('SupportPage', () => {
 
     await waitFor(() => expect(screen.getByText(/the form above still works/i)).toBeInTheDocument())
     expect(screen.getByRole('radiogroup', { name: /what's this about/i })).toBeInTheDocument()
+  })
+})
+
+// The route is public, and that is the whole point: somebody who cannot sign
+// in is the person most likely to need it. Six of the ten support reports we
+// have ever received came from the landing page and /signin, every one
+// anonymous.
+describe('SupportPage, anonymous', () => {
+  beforeEach(() => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false } as never)
+    localStorage.clear()
+  })
+  afterEach(() => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true } as never)
+    vi.unstubAllGlobals()
+  })
+
+  it('shows the form without asking anyone to sign in', async () => {
+    const fetchMock = vi.fn(async () => reply({}, false, 401))
+    vi.stubGlobal('fetch', fetchMock)
+    renderWithProviders(<SupportPage />)
+
+    expect(await screen.findByRole('radiogroup', { name: /what's this about/i })).toBeInTheDocument()
+  })
+
+  it('never fetches a history it cannot have', async () => {
+    const fetchMock = vi.fn(async (..._args: unknown[]) => reply({}, false, 401))
+    vi.stubGlobal('fetch', fetchMock)
+    renderWithProviders(<SupportPage />)
+    await screen.findByRole('radiogroup', { name: /what's this about/i })
+
+    // A 401 here would render "Could not load your past reports" at somebody
+    // with no account and no past reports - an error describing a failure that
+    // did not happen.
+    const calledHistory = fetchMock.mock.calls.some((c: unknown[]) => String(c[0]).includes('support-requests/mine'))
+    expect(calledHistory).toBe(false)
+  })
+
+  it('says where an anonymous report goes instead of showing an empty history', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => reply({}, false, 401)))
+    renderWithProviders(<SupportPage />)
+
+    expect(await screen.findByText(/after you send this/i)).toBeInTheDocument()
+    expect(screen.getByText(/support ID on screen/i)).toBeInTheDocument()
+    // And must not claim anything about a history it cannot see.
+    expect(screen.queryByText(/haven.t sent anything yet/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/could not load your past reports/i)).not.toBeInTheDocument()
   })
 })

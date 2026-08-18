@@ -3,6 +3,7 @@ import { BookOpen, Clock, ExternalLink, LifeBuoy } from 'lucide-react';
 import { SupportForm } from '../../../shared/components/SupportForm';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { getMySupportRequests, type MySupportRequest } from '../../../shared/api/client';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 
 /**
  * Support as a page rather than an overlay.
@@ -59,6 +60,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 export function SupportPage() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  // This page is reachable anonymously at /support, which is the whole point:
+  // somebody locked out by a failed sign-in is the person most likely to need
+  // it. History is the one part that needs an account.
+  const { isAuthenticated } = useAuth();
 
   const [history, setHistory] = useState<MySupportRequest[]>([]);
   const [total, setTotal] = useState(0);
@@ -66,6 +71,14 @@ export function SupportPage() {
   const [historyError, setHistoryError] = useState<string | null>(null);
 
   const loadHistory = async () => {
+    // Never fetched anonymously. getMySupportRequests requires a token, so
+    // calling it would 401 and render "Could not load your past reports" at
+    // somebody who has no account and no past reports - an error message
+    // describing a failure that did not happen.
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await getMySupportRequests();
@@ -84,7 +97,8 @@ export function SupportPage() {
 
   useEffect(() => {
     void loadHistory();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   const card = `backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-colors ${
     isDark ? 'bg-[#2d2820]/[0.4] border-white/10' : 'bg-white/[0.12] border-white/20'
@@ -105,6 +119,24 @@ export function SupportPage() {
         <SupportForm onDone={() => void loadHistory()} onSubmitted={() => void loadHistory()} />
       </div>
 
+      {/* History is for people with an account. Hidden rather than shown empty
+          for anonymous visitors: "You haven't sent anything yet" is a claim
+          about a history we cannot see, and an anonymous report genuinely has
+          no home to appear in. Saying where it goes instead is the honest
+          version. */}
+      {!isAuthenticated ? (
+        <div className={`${card} p-6 md:p-8`}>
+          <div className="flex items-center gap-3 mb-1">
+            <Clock className={`w-5 h-5 ${isDark ? 'text-[#e8c77f]' : 'text-[#a2792c]'}`} />
+            <h2 className={`text-[16px] font-bold ${heading}`}>After you send this</h2>
+          </div>
+          <p className={`text-[13px] ${muted}`}>
+            You'll get a support ID on screen — keep it, it's how we find your report.
+            Sending doesn't need an account, but signing in later lets you see everything
+            you've sent in one place.
+          </p>
+        </div>
+      ) : (
       <div className={`${card} p-6 md:p-8`}>
         <div className="flex items-center gap-3 mb-1">
           <Clock className={`w-5 h-5 ${isDark ? 'text-[#e8c77f]' : 'text-[#a2792c]'}`} />
@@ -165,6 +197,7 @@ export function SupportPage() {
           </ul>
         )}
       </div>
+      )}
 
       <div className={`${card} p-6 md:p-8`}>
         <div className="flex items-center gap-3 mb-4">

@@ -29,6 +29,12 @@ const PRODUCT_LINKS: FooterLink[] = [
 const COMMUNITY_LINKS: FooterLink[] = [
   { label: "Documentation", href: "https://docs.grainlify.com", external: true },
   { label: "GitHub", href: "https://github.com/Grainlify", external: true },
+  // The route out for somebody who cannot sign in, and the reason the "Get
+  // help" trigger could be taken out of the navbar rather than simply
+  // deleted. Six of the ten support reports we have ever received came from
+  // this page and /signin, every one anonymous; removing the path without
+  // replacing it would have closed the only door those people used.
+  { label: "Get help", href: "/support" },
 ];
 
 const SOCIAL_LINKS: { label: string; href: string; icon: ReactNode }[] = [
@@ -176,6 +182,18 @@ function FooterLinkItem({ link, isDark }: { link: FooterLink; isDark: boolean })
       <a href={link.href} target="_blank" rel="noopener noreferrer" className={className}>
         {content}
       </a>
+    );
+  }
+
+  // A real route gets a Link; a hash anchor stays an <a>. Every internal
+  // entry here used to be an anchor on this same page, so <a> was right for
+  // all of them - /support is the first that navigates, and an <a> would
+  // reload the whole app to reach it.
+  if (link.href.startsWith('/')) {
+    return (
+      <Link to={link.href} className={className}>
+        {content}
+      </Link>
     );
   }
 

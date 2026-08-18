@@ -1,6 +1,7 @@
 import { useEffect, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/contexts/AuthContext";
+import { SupportRoutePage } from "../features/support/pages/SupportRoutePage";
 import { ThemeProvider, useTheme } from "../shared/contexts/ThemeContext";
 import { LandingPage } from "../features/landing";
 import Toast from "../shared/components/Toast";
@@ -65,6 +66,13 @@ export default function App() {
                 <Route path="/signin" element={<SignInPage />} />
                 <Route path="/signup" element={<SignUpPage />} />
                 <Route path="/auth/callback" element={<AuthCallbackPage />} />
+                {/* Public on purpose, and outside ProtectedRoute. The backend
+                    accepts anonymous support reports precisely because
+                    somebody who cannot sign in is the person most likely to
+                    need one; putting the page behind the guard would have
+                    redirected exactly them to the sign-in they could not
+                    complete. */}
+                <Route path="/support" element={<SupportRoutePage />} />
                 <Route
                   path="/dashboard"
                   element={
