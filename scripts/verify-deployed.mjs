@@ -152,6 +152,53 @@ async function checkBackendDeploy(expected) {
     body.commit === expected ? `${body.commit.slice(0, 8)}` : `live ${body.commit.slice(0, 8)} vs expected ${expected.slice(0, 8)} - the change is NOT live`)
 }
 
+/** Condition 4: HSTS, read from the live response rather than from vercel.json.
+ *
+ *  A header declared in vercel.json and a header served by the edge are two
+ *  different claims. Vercel sends its own Strict-Transport-Security by default,
+ *  so a custom rule can land as a SECOND header rather than replacing the first
+ *  - and when two are present a browser honours whichever arrived first. That
+ *  would leave includeSubDomains committed to the repository and absent in
+ *  effect, which is the exact failure this project keeps meeting: the config is
+ *  in git, the behaviour is not.
+ *
+ *  So this asserts there is exactly one header, and then what it says.
+ */
+async function checkHSTS() {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
+  let res
+  try {
+    res = await fetch(FRONTEND_URL, { signal: ctrl.signal, cache: 'no-store' })
+  } catch (e) {
+    return say(false, 'frontend: HSTS header readable',
+      e.name === 'AbortError' ? `timed out after ${TIMEOUT_MS}ms` : String(e.message || e))
+  } finally {
+    clearTimeout(timer)
+  }
+
+  const hsts = res.headers.get('strict-transport-security')
+  if (!hsts) return say(false, 'frontend: sends Strict-Transport-Security', 'header absent')
+
+  // Node joins repeated headers with ", ". Two max-age directives therefore
+  // means two headers arrived, and the browser took the first - not
+  // necessarily the one intended.
+  const ages = hsts.match(/max-age=/gi) ?? []
+  if (ages.length > 1) {
+    return say(false, 'frontend: sends exactly one HSTS header',
+      `${ages.length} present ("${hsts}") - a browser honours the first, so the intended directives may not apply`)
+  }
+
+  const age = Number(hsts.match(/max-age=(\d+)/i)?.[1] ?? 0)
+  const sub = /includeSubDomains/i.test(hsts)
+  // preload is deliberately NOT asserted: it is a one-way door, slow to undo,
+  // and not wanted here.
+  say(sub && age >= 31536000, 'frontend: HSTS covers subdomains for at least a year',
+    sub && age >= 31536000
+      ? `"${hsts}"`
+      : `"${hsts}" - ${!sub ? 'includeSubDomains missing' : `max-age ${age} is under a year`}`)
+}
+
 console.log(`\nverify-deployed${FROM_ORIGIN ? ' (origin mode: comparing origin/' + BRANCH + ' to production)' : ''}\n`)
 
 const fe = checkRepo('frontend', process.cwd())
@@ -159,6 +206,7 @@ const be = checkRepo('backend ', BACKEND_REPO)
 
 if (fe?.head) await checkFrontendDeploy(fe.head)
 if (be?.head) await checkBackendDeploy(be.head)
+await checkHSTS()
 
 console.log('')
 if (failed) {
