@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { SupportLink } from '../../../shared/components/SupportLink';
 import { Menu, X, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
@@ -146,7 +145,6 @@ export function Navbar() {
             {/* Support lives in the nav on public routes, for the same reason
                 it lives in the rail on the dashboard: the old floating button
                 sat bottom-right, on top of whatever a page ended with. */}
-            <SupportLink className="hidden md:inline-flex" />
           </div>
 
           {/* Mobile Menu Button */}

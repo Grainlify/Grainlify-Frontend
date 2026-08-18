@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { SupportLink } from '../../../shared/components/SupportLink';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ArrowLeft, Github } from 'lucide-react';
 import { getGitHubLoginUrl } from '../../../shared/api/client';
@@ -138,7 +137,12 @@ export function SignInPage() {
               support, so this route keeps a way to report it. In the flow,
               not pinned to a corner. */}
           <p className="text-center mt-4">
-            <SupportLink />
+            <Link
+              to="/support"
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#c9983a] hover:text-[#d4af37] transition-colors"
+            >
+              Get help
+            </Link>
           </p>
         </div>
       </div>
