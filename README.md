@@ -27,6 +27,38 @@ This is a code bundle for Glassmorphism Landing Page. The original project is av
 
 Run `pnpm run dev` to start the development server.
 
+## Deployments and environments
+
+`VITE_API_BASE_URL` is a **build-time** value: Vite inlines it into the bundle,
+so it is compiled into the artifact rather than read at runtime. Changing it
+requires a rebuild, and a wrong value ships silently — the app loads perfectly
+and simply talks to the wrong backend.
+
+That is not hypothetical. Production held `https://api.grainlify.0xo.in` after
+the migration to `grainlify.com`, invisible to every search of every repository,
+until the old hostname was retired and sign-in stopped. The check that finds it
+is to read the deployed bundle rather than the source:
+
+```sh
+curl -s https://grainlify.com/ | grep -o '/assets/index-[^"]*\.js' \
+  | xargs -I{} curl -s "https://grainlify.com{}" | grep -o 'https://api\.[a-z.]*'
+```
+
+### Preview deployments are deliberately non-functional
+
+`VITE_API_BASE_URL` is set for **Production only**. Preview builds fall back to
+`http://localhost:8080` and every API call fails.
+
+This is a decision, not an oversight. There is no staging backend — Railway runs
+a single `production` environment — so the only value that would make previews
+work is the production API. A preview build talking to production reads and
+writes real user data: a preview of the founding gate could assign somebody a
+permanent wave, a preview of the KYC review card could reset a real
+contributor's verification.
+
+**Broken and harmless beats functional and unisolated.** Previews become usable
+when a staging backend exists, and not before.
+
 ## Testing
 
 ```bash
