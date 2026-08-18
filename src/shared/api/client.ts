@@ -1184,6 +1184,14 @@ export interface KYCPendingReview {
    *  queue row to a session in the provider console by GitHub username, which
    *  the console does not index by. */
   kyc_session_id: string;
+  /** The provider's own short session counter (3, 12, 41…). This is the match
+   *  key: their verification table displays it, so a reviewer pairs a queue
+   *  row with a session on the number alone.
+   *
+   *  It is why nothing personal is here. Matching looked like it needed the
+   *  legal name — the console lists people by name — until it turned out the
+   *  number was already being stored and never used. */
+  session_number: string;
   /** Suggestions only — the admin chooses. Empty when nothing maps, notably
    *  for a refusal whose only warnings are fraud signals, which are
    *  deliberately never mapped to anything the contributor could be told. */

@@ -175,10 +175,26 @@ export function KYCReview() {
             <div className={`text-[14px] font-semibold truncate ${strong}`}>
               {row.github_login || 'unknown contributor'}
             </div>
-            {/* The session id, on the row rather than behind an expand: it is
-                the first thing needed when matching this person to a session
-                in the provider console, and a reviewer works through the queue
-                with that console open beside this one. */}
+            {/* The session number, which is what the Didit console's
+                verification table shows - a reviewer matches this row to a
+                session on the number alone.
+                
+                Nothing personal appears here, and it nearly did: matching
+                looked like it needed the legal name until the number turned
+                out to be already stored and unused. When matching seems to
+                need a personal attribute, look for an identifier first. */}
+            {row.session_number && (
+              <div className={`text-[13px] ${muted}`}>
+                Didit session{' '}
+                <span className={dark ? 'text-[#c9983a]' : 'text-[#a67c2e]'}>#{row.session_number}</span>
+              </div>
+            )}
+            {/* The session id, kept alongside the number: the number is the
+                everyday match key, and this is the unambiguous one when a
+                number is ambiguous or a reviewer needs certainty. Copy rather
+                than select-and-drag - it is a UUID moved between two screens
+                dozens of times in a session, and a mis-copied character
+                matches the wrong session or none. */}
             {row.kyc_session_id ? (
               <div className="flex items-center gap-1.5 mb-0.5">
                 <code className={`text-[11px] font-mono truncate ${muted}`}>{row.kyc_session_id}</code>

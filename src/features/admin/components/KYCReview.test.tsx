@@ -59,6 +59,7 @@ function pendingRow(over: Record<string, unknown> = {}) {
     waiting_since: new Date(Date.now() - 3 * 3_600_000).toISOString(),
     previous_resets: 0,
     kyc_session_id: 'sess-11111111-2222-3333-4444-555555555555',
+    session_number: '41',
     suggested_reason_codes: ['document_is_a_screen_photo'],
     ...over,
   }
@@ -251,5 +252,55 @@ describe('KYCReview: matching a row to a provider session', () => {
     await user.click(await screen.findByRole('button', { name: /Send feedback/i }))
     expect(await screen.findByText(/does not reach Didit/i)).toBeInTheDocument()
     expect(screen.getByText(/Decline the session there first/i)).toBeInTheDocument()
+  })
+})
+
+describe('KYCReview: matching a row to a person in the provider console', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    mockGetReasonCodes.mockResolvedValue({ reason_codes: REASONS })
+  })
+
+  // Didit's console lists people by legal name and has no documented search by
+  // session id, so the id alone identifies a session that cannot be looked up.
+  it('shows the session number, which is the console match key', async () => {
+    mockGetPending.mockResolvedValue({ pending: [pendingRow()] })
+    renderWithProviders(<KYCReview />)
+
+    expect(await screen.findByText(/#41/)).toBeInTheDocument()
+    // And the session id is still there for when a number is ambiguous.
+    expect(screen.getByText('sess-11111111-2222-3333-4444-555555555555')).toBeInTheDocument()
+  })
+
+  // The exception stops at the name. Anything here is already on the
+  // reviewer's other screen, and a hard match calls for a better identifier
+  // rather than more of somebody's identity.
+  it('shows nothing personal, even if the API starts sending it', async () => {
+    mockGetPending.mockResolvedValue({
+      pending: [
+        {
+          ...pendingRow(),
+          // Not in the type; simulating an API that widened underneath us.
+          legal_name: 'Fixture Person',
+          document_number: 'DOC-MUST-NOT-APPEAR',
+          date_of_birth: '1990-01-01',
+          nationality: 'Testland',
+          address: '1 Test Street',
+        } as never,
+      ],
+    })
+    renderWithProviders(<KYCReview />)
+    await screen.findByText('teethaking')
+
+    const body = document.body.textContent ?? ''
+    for (const forbidden of ['Fixture Person', 'DOC-MUST-NOT-APPEAR', '1990-01-01', 'Testland', '1 Test Street']) {
+      expect(body).not.toContain(forbidden)
+    }
+  })
+
+  it('renders without a session number rather than showing an empty line', async () => {
+    mockGetPending.mockResolvedValue({ pending: [pendingRow({ session_number: '' })] })
+    renderWithProviders(<KYCReview />)
+    expect(await screen.findByText('teethaking')).toBeInTheDocument()
   })
 })
