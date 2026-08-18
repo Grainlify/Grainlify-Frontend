@@ -1184,6 +1184,15 @@ export interface KYCPendingReview {
    *  queue row to a session in the provider console by GitHub username, which
    *  the console does not index by. */
   kyc_session_id: string;
+  /** The legal name from the verification, for matching this row against the
+   *  provider console — which lists people by name and offers no search by
+   *  session id. The ONE piece of personal data this endpoint returns, and it
+   *  stops here: no document number, date of birth, nationality or address.
+   *  Admin-only. */
+  legal_name: string;
+  /** The provider's own short session counter. Not personal data, and better
+   *  than the name if their table shows it. */
+  session_number: string;
   /** Suggestions only — the admin chooses. Empty when nothing maps, notably
    *  for a refusal whose only warnings are fraud signals, which are
    *  deliberately never mapped to anything the contributor could be told. */

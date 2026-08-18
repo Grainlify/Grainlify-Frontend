@@ -175,6 +175,23 @@ export function KYCReview() {
             <div className={`text-[14px] font-semibold truncate ${strong}`}>
               {row.github_login || 'unknown contributor'}
             </div>
+            {/* The legal name, for matching this row against the Didit console,
+                which lists people by name and has no search by session id.
+                Deliberately the only personal detail shown, and it stops here -
+                no document number, date of birth, nationality or address. Every
+                one of those is already on the reviewer's other screen, and if
+                matching is hard the answer is a better identifier (the session
+                number beside it) rather than more of somebody's identity. */}
+            {row.legal_name && (
+              <div className={`text-[13px] truncate ${muted}`}>
+                {row.legal_name}
+                {row.session_number && (
+                  <span className={dark ? 'text-[#c9983a]' : 'text-[#a67c2e]'}>
+                    {' · #'}{row.session_number}
+                  </span>
+                )}
+              </div>
+            )}
             {/* The session id, on the row rather than behind an expand: it is
                 the first thing needed when matching this person to a session
                 in the provider console, and a reviewer works through the queue
