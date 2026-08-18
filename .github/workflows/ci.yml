@@ -1,15 +1,22 @@
 name: CI
 
-# Scoped to this working branch, not main - production is deployed by hand
-# from this exact branch today. Gating automation on an eventual main merge
-# (undated, non-trivial given the structural divergence between branches)
-# would mean indefinitely more manual deploys. Revisit this trigger if/when
-# this branch merges into main.
+# Triggered on main, the branch that deploys.
+#
+# This was previously scoped to design/discover-page-redesign, which had two
+# consequences. Pushes to a feature branch deployed PRODUCTION, and nothing
+# tested main at all. It also let an assertion go stale unnoticed: the
+# smoke test required the deployed bundle to contain api.grainlify.0xo.in,
+# which was true every time this ran (last: 2026-08-15) and stopped being
+# true on 2026-08-18 when VITE_API_BASE_URL moved to api.grainlify.com. No
+# run happened in between, so nothing caught it.
+#
+# Verified green on main before flipping, on Node 22 as pinned below:
+# typecheck, build and 712 tests across 87 files all pass.
 on:
   push:
-    branches: [design/discover-page-redesign]
+    branches: [main]
   pull_request:
-    branches: [design/discover-page-redesign]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -67,6 +74,12 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # vite.config.ts reads this first, then VERCEL_GIT_COMMIT_SHA, then
+      # falls back to "unknown". VERCEL_GIT_COMMIT_SHA is set by Vercel's own
+      # git integration, which is not what builds here - the CLI does. Without
+      # this the deployed page would report its commit as "unknown" and
+      # verify-deployed.mjs would correctly refuse to confirm anything.
+      VITE_BUILD_COMMIT: ${{ github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
