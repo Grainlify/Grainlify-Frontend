@@ -126,7 +126,7 @@ jobs:
           html=""
           success=false
           for i in $(seq 1 12); do
-            html=$(curl -sf -m 15 https://grainlify.0xo.in/ || true)
+            html=$(curl -sf -m 15 https://grainlify.com/ || true)
             bundle_path=$(echo "$html" | grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' | head -1)
             if ! echo "$html" | grep -q "<title>Grainlify</title>" || [ -z "$bundle_path" ]; then
               echo "Attempt $i: homepage not ready yet"
@@ -134,7 +134,7 @@ jobs:
               continue
             fi
 
-            bundle=$(curl -sf -m 15 "https://grainlify.0xo.in$bundle_path" || true)
+            bundle=$(curl -sf -m 15 "https://grainlify.com$bundle_path" || true)
             if [ -z "$bundle" ]; then
               echo "Attempt $i: homepage named $bundle_path but it wasn't fetchable yet (stale HTML vs. already-rotated asset routing) - retrying"
               sleep 5
@@ -145,7 +145,7 @@ jobs:
               echo "::error::Production bundle contains the literal string [SENSITIVE] - a Vercel env var is misconfigured as Sensitive and isn't resolving for CLI-driven builds. See VITE_API_BASE_URL in the Vercel dashboard (must be Non-sensitive)."
               exit 1
             fi
-            if ! echo "$bundle" | grep -qE "https://api\.grainlify\.0xo\.in"; then
+            if ! echo "$bundle" | grep -qE "https://api\.grainlify\.com"; then
               echo "Attempt $i: fetched $bundle_path but it's missing the expected API URL - retrying in case this was a stale/inconsistent response"
               sleep 5
               continue
