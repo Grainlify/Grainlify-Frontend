@@ -68,6 +68,7 @@ const SettingsPage = lazy(() => import("../settings/pages/SettingsPage").then((m
 const AdminPage = lazy(() => import("../admin/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
 const GrainHackAdminPage = lazy(() => import("../grainhack/pages/GrainHackAdminPage").then((m) => ({ default: m.GrainHackAdminPage })));
 const MyGrainHackPage = lazy(() => import("../grainhack/pages/MyGrainHackPage").then((m) => ({ default: m.MyGrainHackPage })));
+const NotificationsPage = lazy(() => import("../notifications/pages/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
 const SearchPage = lazy(() => import("./pages/SearchPage").then((m) => ({ default: m.SearchPage })));
 
 /** The Redeem page was removed with the points programme. Anything still
@@ -1128,6 +1129,12 @@ export function Dashboard() {
                   />
                 )}
                 {currentPage === "my-grainhack" && <MyGrainHackPage />}
+                {/* A dashboard page, not a sibling route. Every signed-in
+                    surface here is a ?tab= on /dashboard - stated in the
+                    backend's own link builder - and building this as its own
+                    route cost it the sidebar and nav, so it read as a different
+                    place rather than a deeper part of the same one. */}
+                {currentPage === "notifications" && <NotificationsPage />}
                 {currentPage === "grainhack" && userRole === "admin" && <GrainHackAdminPage />}
                 {currentPage === "grainhack" && userRole !== "admin" && (
                   <AdminAccessRequired

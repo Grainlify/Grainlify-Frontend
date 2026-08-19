@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import {
@@ -124,22 +123,11 @@ export function NotificationsPage() {
   const unread = items.filter((n) => !n.read_at).length;
 
   return (
-    <div
-      className={`min-h-screen px-4 sm:px-6 py-10 transition-colors ${
-        dark
-          ? 'bg-gradient-to-br from-[#1a1512] via-[#231c17] to-[#2d241d]'
-          : 'bg-gradient-to-br from-[#e8dfd0] via-[#d4c5b0] to-[#c9b89a]'
-      }`}
-    >
-      <div className="max-w-3xl mx-auto">
-        <Link
-          to="/dashboard"
-          className={`inline-flex items-center gap-2 mb-6 text-[14px] font-medium transition-colors ${muted} hover:${strong}`}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to dashboard
-        </Link>
-
+    // No page shell and no background: Dashboard supplies both, and painting a
+    // second one is what made this read as a different place. No back link
+    // either - the sidebar is right there.
+    <div className="max-w-3xl">
+      <div>
         <div className="flex items-baseline justify-between mb-5">
           <h1 className={`text-[24px] font-bold ${strong}`}>Notifications</h1>
           {unread > 0 && (
@@ -169,16 +157,14 @@ export function NotificationsPage() {
                 type="button"
                 onClick={() => markRead(n)}
                 aria-label={n.read_at ? `${n.title} (read)` : `Mark "${n.title}" as read`}
-                className={`w-full text-left rounded-[16px] border p-4 transition-colors ${
-                  dark ? 'border-white/10' : 'border-white/30'
-                } ${
+                className={`w-full text-left rounded-[16px] border p-5 transition-colors ${
                   n.read_at
                     ? dark
-                      ? 'bg-white/[0.03]'
-                      : 'bg-white/[0.20]'
+                      ? 'bg-white/[0.04] border-white/10'
+                      : 'bg-white/[0.25] border-white/30'
                     : dark
-                      ? 'bg-[#c9983a]/[0.08]'
-                      : 'bg-[#c9983a]/[0.10]'
+                      ? 'bg-[#c9983a]/[0.08] border-[#c9983a]/30'
+                      : 'bg-[#c9983a]/[0.10] border-[#c9983a]/35'
                 }`}
               >
                 <div className="flex items-start gap-2">
@@ -192,6 +178,11 @@ export function NotificationsPage() {
                       // paragraph break somebody typed is part of what they meant.
                       <p className={`text-[14px] mt-1 whitespace-pre-line ${muted}`}>{n.body}</p>
                     )}
+                    {/* Absolute, deliberately. A relative "2 minutes ago"
+                        needs a timer to stay honest, and a page left open
+                        renders a stale one indefinitely - the same reason the
+                        application-window countdown is kept coarse. Absolute is
+                        unambiguous and needs nothing running. */}
                     <p className={`text-[12px] mt-2 ${muted}`}>
                       {new Date(n.created_at).toLocaleString()}
                     </p>

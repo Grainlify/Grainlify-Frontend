@@ -2,7 +2,6 @@ import { useEffect, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/contexts/AuthContext";
 import { SupportRoutePage } from "../features/support/pages/SupportRoutePage";
-import { NotificationsPage } from "../features/notifications/pages/NotificationsPage";
 import { ThemeProvider, useTheme } from "../shared/contexts/ThemeContext";
 import { LandingPage } from "../features/landing";
 import Toast from "../shared/components/Toast";
@@ -74,17 +73,14 @@ export default function App() {
                     redirected exactly them to the sign-in they could not
                     complete. */}
                 <Route path="/support" element={<SupportRoutePage />} />
-                {/* Personal, so inside ProtectedRoute - unlike /support, which
-                    exists precisely for people without an account. A real route
-                    because the dropdown cannot show a message at length, and a
-                    KYC feedback body is the message. */}
+                {/* An alias, not a surface. Signed-in surfaces are ?tab= on
+                    /dashboard - the convention the backend's link builder
+                    states - so this exists only so a typed or pasted
+                    /notifications still lands somewhere. The app's own links
+                    point at the canonical URL and never take this hop. */}
                 <Route
                   path="/notifications"
-                  element={
-                    <ProtectedRoute>
-                      <NotificationsPage />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/dashboard?tab=notifications" replace />}
                 />
                 <Route
                   path="/dashboard"

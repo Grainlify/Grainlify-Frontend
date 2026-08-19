@@ -286,8 +286,10 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
         )}
                 {/* The dropdown shows ten and clips nothing; the page shows all of
               them and is where a long message is actually read. */}
+          {/* The canonical URL, not the /notifications alias. An internal link
+              should not take a redirect hop to reach its own surface. */}
           <Link
-            to="/notifications"
+            to="/dashboard?tab=notifications"
             onClick={() => setIsOpen(false)}
             className={`block px-4 py-3 text-[13px] font-semibold text-center border-t ${
               darkTheme ? "border-white/10 text-[#c9983a]" : "border-black/10 text-[#a67c2e]"
