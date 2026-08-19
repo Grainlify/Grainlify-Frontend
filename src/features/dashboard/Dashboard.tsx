@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Suspense, lazy } from "react";
+import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
@@ -1110,7 +1111,16 @@ export function Dashboard() {
                 {currentPage === "settings" && (
                   <SettingsPage />
                 )}
-                {currentPage === "admin" && userRole === "admin" && <AdminPage />}
+                {/* Boundaried because a render throw here unmounts the entire
+                    tree - navbar included - and a blank page is
+                    indistinguishable from a dead site. An admin needs to know
+                    the site is alive and what failed, because they are usually
+                    the person who can act on it. */}
+                {currentPage === "admin" && userRole === "admin" && (
+                  <ErrorBoundary surface="The admin tab">
+                    <AdminPage />
+                  </ErrorBoundary>
+                )}
                 {currentPage === "admin" && userRole !== "admin" && (
                   <AdminAccessRequired
                     surface="the admin dashboard"
