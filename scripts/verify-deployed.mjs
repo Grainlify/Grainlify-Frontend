@@ -199,6 +199,54 @@ async function checkHSTS() {
       : `"${hsts}" - ${!sub ? 'includeSubDomains missing' : `max-age ${age} is under a year`}`)
 }
 
+/** Condition 5: the scheme-upgrade policy, read off the live response.
+ *
+ *  Checked on a document route AND an asset route. The Vercel `headers` rule
+ *  uses source "/(.*)", which is easy to believe covers everything and worth
+ *  confirming, since a rule that silently applied only to the document would
+ *  still look correct in vercel.json.
+ *
+ *  Only the scheme-upgrade directive is asserted. This is deliberately not a
+ *  restrictive CSP - no source lists - because those break legitimate
+ *  resources, and the problem being solved is narrow: content rendered from
+ *  upstream data we do not control (issue bodies, and READMEs fetched live
+ *  from GitHub at request time, which no database sweep can audit) can carry
+ *  an http:// URL.
+ */
+async function checkCSP() {
+  // Discover a real asset URL rather than guessing one: the hashed filename
+  // changes every build, and asserting a header on a 404 would pass for the
+  // wrong reason.
+  const { text: indexHtml } = await fetchText(FRONTEND_URL)
+  const assetPath = indexHtml?.match(/\/assets\/[A-Za-z0-9._-]+\.js/)?.[0]
+  if (!assetPath) {
+    say(false, 'frontend: found an asset URL to check headers on',
+      'no /assets/*.js reference in index.html - cannot confirm the rule reaches assets')
+  }
+  for (const path of ['/', assetPath].filter(Boolean)) {
+    const url = FRONTEND_URL + path
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
+    let res
+    try {
+      res = await fetch(url, { signal: ctrl.signal, cache: 'no-store' })
+    } catch (e) {
+      say(false, `frontend: CSP readable at ${path}`, String(e.message || e))
+      continue
+    } finally {
+      clearTimeout(timer)
+    }
+    const csp = res.headers.get('content-security-policy')
+    if (!csp) {
+      say(false, `frontend: sends Content-Security-Policy at ${path}`, 'header absent')
+      continue
+    }
+    say(/upgrade-insecure-requests/i.test(csp),
+      `frontend: CSP upgrades insecure requests at ${path}`,
+      /upgrade-insecure-requests/i.test(csp) ? `"${csp}"` : `"${csp}" - upgrade-insecure-requests missing`)
+  }
+}
+
 console.log(`\nverify-deployed${FROM_ORIGIN ? ' (origin mode: comparing origin/' + BRANCH + ' to production)' : ''}\n`)
 
 const fe = checkRepo('frontend', process.cwd())
@@ -207,6 +255,7 @@ const be = checkRepo('backend ', BACKEND_REPO)
 if (fe?.head) await checkFrontendDeploy(fe.head)
 if (be?.head) await checkBackendDeploy(be.head)
 await checkHSTS()
+await checkCSP()
 
 console.log('')
 if (failed) {
