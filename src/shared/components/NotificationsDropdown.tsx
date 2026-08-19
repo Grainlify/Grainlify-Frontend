@@ -111,6 +111,10 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
     <DropdownMenu onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
+          // The bell had no accessible name: a screen reader announced it as
+          // "button" with no indication of what it opens, and nothing could
+          // select it by role and name.
+          aria-label="Notifications"
           className={`h-[46px] w-[46px] rounded-full relative items-center justify-center backdrop-blur-[40px] transition-all hover:scale-105 shadow-[0px_6px_6.5px_-1px_rgba(0,0,0,0.36),0px_0px_4.2px_0px_rgba(0,0,0,0.69)] ${
             darkTheme ? "bg-[#2d2820] " : "bg-[#d4c5b0] "
           }
@@ -216,11 +220,23 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
                     <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#c9983a] flex-shrink-0" />
                   )}
                   <div className={`flex-1 min-w-0 ${n.read_at ? "ml-3.5" : ""}`}>
-                    <p className={`text-[13px] font-semibold truncate ${darkTheme ? "text-[#e8dfd0]" : "text-[#2d2820]"}`}>
+                    <p className={`text-[13px] font-semibold ${darkTheme ? "text-[#e8dfd0]" : "text-[#2d2820]"}`}>
                       {n.title}
                     </p>
+                    {/* Neither clamped nor truncated. The body of a KYC feedback
+                        notification IS the message - the sentence telling somebody
+                        what to fix - and line-clamp-2 cut it off with an ellipsis.
+                        There was nowhere else to read it: clicking navigates to
+                        billing settings, which never renders the body, so the full
+                        text was unreachable anywhere in the product. The container
+                        already scrolls (max-h-[360px] overflow-y-auto), so a long
+                        message costs height rather than meaning.
+
+                        whitespace-pre-line because these messages are written by a
+                        human in a textarea and a paragraph break they typed is part
+                        of what they meant. */}
                     {n.body && (
-                      <p className={`text-[12px] mt-0.5 line-clamp-2 ${darkTheme ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>
+                      <p className={`text-[12px] mt-0.5 whitespace-pre-line ${darkTheme ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>
                         {n.body}
                       </p>
                     )}
