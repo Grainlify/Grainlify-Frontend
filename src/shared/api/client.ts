@@ -966,6 +966,70 @@ export const startKYCVerification = () =>
     method: "POST",
   });
 
+/** The payout address a contributor will be paid to, per chain.
+ *
+ *  Separate from `walletAddress` in the settings types, which is a free-text
+ *  field somebody typed and nothing ever verified. This one exists only after a
+ *  signature from the key that controls it, which is the difference between an
+ *  address we can pay and a string somebody entered.
+ */
+export interface PayoutAddress {
+  chain_id: string;
+  address: string;
+  verified_at: string;
+}
+
+/** What the wallet must sign. `message` and `nonce` are passed to the wallet
+ *  verbatim: the server recomposes the AIP-62 wrapper itself
+ *  (`APTOS\nmessage: ...\nnonce: ...`) and verifies against that, so changing
+ *  either string here produces a signature over something the server will not
+ *  reconstruct. */
+export interface PayoutAddressChallenge {
+  nonce: string;
+  message: string;
+  expires_at: string;
+}
+
+/** Returns null when no address is registered, which is the ordinary state for
+ *  everyone until they register one - not an error worth surfacing. */
+export const getPayoutAddress = async (chainId: string): Promise<PayoutAddress | null> => {
+  try {
+    return await apiRequest<PayoutAddress>(
+      `/me/payout-address?chain_id=${encodeURIComponent(chainId)}`,
+      { requiresAuth: true },
+    );
+  } catch (e) {
+    if (e instanceof Error && /no_payout_address|404/.test(e.message)) return null;
+    throw e;
+  }
+};
+
+export const createPayoutAddressChallenge = (chainId: string, address: string) =>
+  apiRequest<PayoutAddressChallenge>('/me/payout-address/challenge', {
+    method: 'POST',
+    requiresAuth: true,
+    body: JSON.stringify({ chain_id: chainId, address }),
+  });
+
+export const registerPayoutAddress = (input: {
+  chainId: string;
+  address: string;
+  publicKey: string;
+  signature: string;
+  nonce: string;
+}) =>
+  apiRequest<PayoutAddress>('/me/payout-address', {
+    method: 'POST',
+    requiresAuth: true,
+    body: JSON.stringify({
+      chain_id: input.chainId,
+      address: input.address,
+      public_key: input.publicKey,
+      signature: input.signature,
+      nonce: input.nonce,
+    }),
+  });
+
 export const getKYCStatus = () =>
   apiRequest<{
     status: string | null;

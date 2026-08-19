@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PayoutAddressCard } from './PayoutAddressCard';
 import { Info } from 'lucide-react';
 import { SkeletonLoader } from '../../../../shared/components/SkeletonLoader';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
@@ -66,6 +67,10 @@ const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   return (
     <div className="space-y-6">
+      {/* The address a payout is sent to. First, because nothing else in this
+          tab matters if we have nowhere to pay. */}
+      <PayoutAddressCard />
+
       {errorMessage && (
               <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg mb-4">
                       {errorMessage}
