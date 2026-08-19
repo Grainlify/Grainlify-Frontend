@@ -2,6 +2,7 @@ import { useEffect, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/contexts/AuthContext";
 import { SupportRoutePage } from "../features/support/pages/SupportRoutePage";
+import { NotificationsPage } from "../features/notifications/pages/NotificationsPage";
 import { ThemeProvider, useTheme } from "../shared/contexts/ThemeContext";
 import { LandingPage } from "../features/landing";
 import Toast from "../shared/components/Toast";
@@ -73,6 +74,18 @@ export default function App() {
                     redirected exactly them to the sign-in they could not
                     complete. */}
                 <Route path="/support" element={<SupportRoutePage />} />
+                {/* Personal, so inside ProtectedRoute - unlike /support, which
+                    exists precisely for people without an account. A real route
+                    because the dropdown cannot show a message at length, and a
+                    KYC feedback body is the message. */}
+                <Route
+                  path="/notifications"
+                  element={
+                    <ProtectedRoute>
+                      <NotificationsPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/dashboard"
                   element={
