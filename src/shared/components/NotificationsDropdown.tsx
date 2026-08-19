@@ -1,7 +1,8 @@
 import { Bell } from "lucide-react";
+import { toast } from "sonner";
 import { useTheme } from "../contexts/ThemeContext";
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,9 +83,16 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
         prev.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x))
       );
       setNotificationCount((prev) => Math.max(0, prev - 1));
-      markNotificationRead(n.id).catch((error) =>
-        console.error("Failed to mark notification read:", error)
-      );
+      // Reverted on failure. Swallowing this left the UI reporting read on its
+      // own authority while the server still had it unread - a write that fails
+      // silently under an interface claiming success.
+      markNotificationRead(n.id).catch(() => {
+        setNotifications((prev) =>
+          prev.map((x) => (x.id === n.id ? { ...x, read_at: null } : x))
+        );
+        setNotificationCount((prev) => prev + 1);
+        toast.error("Couldn't mark that as read. It's still unread.");
+      });
     }
     if (n.link_path) {
       navigate(n.link_path);
@@ -276,7 +284,18 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
             </p>
           </div>
         )}
-      </DropdownMenuContent>
+                {/* The dropdown shows ten and clips nothing; the page shows all of
+              them and is where a long message is actually read. */}
+          <Link
+            to="/notifications"
+            onClick={() => setIsOpen(false)}
+            className={`block px-4 py-3 text-[13px] font-semibold text-center border-t ${
+              darkTheme ? "border-white/10 text-[#c9983a]" : "border-black/10 text-[#a67c2e]"
+            }`}
+          >
+            See all notifications
+          </Link>
+</DropdownMenuContent>
     </DropdownMenu>
   );
 }
