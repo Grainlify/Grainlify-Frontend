@@ -288,6 +288,33 @@ export function Dashboard() {
     }
   }, [location.search]);
 
+  // The general case: any ?tab= in the URL selects that page.
+  //
+  // Without this, ?tab= was read ONLY by currentPage's useState initialiser, so
+  // it worked on a fresh load or a reload and did nothing after mount. Two
+  // effects below special-cased profile and org; every other tab had no path
+  // from the URL back into state.
+  //
+  // The visible failure: an in-app <Link to="/dashboard?tab=X"> changed the URL,
+  // nothing re-rendered, and the sync effect further down promptly rewrote the
+  // address bar back to the tab that was already open. "See all notifications"
+  // went to ?tab=discover. So did every repaired notification link followed from
+  // inside the dashboard - which is most of them, since the bell lives here.
+  //
+  // Functional update returning prev when equal, so this and the currentPage ->
+  // URL effect below settle instead of ping-ponging: that effect writes the URL
+  // from state, this one reads state from the URL, and if either wrote
+  // unconditionally they would re-trigger each other forever.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab") || params.get("page");
+    if (!tabParam) return;
+    // The retired tab has its own rewrite effect; letting this one set it would
+    // race that and briefly show a page that no longer exists.
+    if (tabParam === RETIRED_REDEEM_TAB) return;
+    setCurrentPage((prev) => (prev === tabParam ? prev : tabParam));
+  }, [location.search]);
+
   // Check URL params for viewing an org's page (tab=org&org=X) - mirrors the
   // profile effect above; org logins have no id/login ambiguity to resolve.
   useEffect(() => {
