@@ -1192,10 +1192,18 @@ export interface KYCPendingReview {
    *  legal name — the console lists people by name — until it turned out the
    *  number was already being stored and never used. */
   session_number: string;
-  /** Suggestions only — the admin chooses. Empty when nothing maps, notably
-   *  for a refusal whose only warnings are fraud signals, which are
-   *  deliberately never mapped to anything the contributor could be told. */
-  suggested_reason_codes: string[];
+  /** Suggestions only — the admin chooses.
+   *
+   *  **Nullable, and that is not a nicety.** The server computes this with a
+   *  `var out []string` that stays nil whenever nothing maps — notably for a
+   *  refusal whose only warnings are fraud signals, which are deliberately
+   *  never mapped to anything the contributor could be told. Go marshals a nil
+   *  slice as `null`, not `[]`.
+   *
+   *  This was typed `string[]`, which made every call site look safe and took
+   *  the admin tab down with an unhandled throw the first time a real row had
+   *  no suggestions. Treat it as possibly absent at each use. */
+  suggested_reason_codes: string[] | null;
 }
 
 export interface KYCReasonCode {

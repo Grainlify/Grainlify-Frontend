@@ -80,7 +80,12 @@ export function KYCReview() {
     // when there are several: choosing between two suggestions is the
     // judgement this screen exists to ask for, and a pre-ticked radio is an
     // answer nobody gave.
-    setReasonCode(row.suggested_reason_codes.length === 1 ? row.suggested_reason_codes[0] : '');
+    // Defended rather than trusted. The API sends null here, not [], because Go
+    // marshals a nil slice as null and SuggestKYCReasons returns nil whenever
+    // nothing maps - which is every refusal whose only warnings are fraud
+    // signals. The TypeScript type said string[] and was simply wrong.
+    const suggestions = row.suggested_reason_codes ?? [];
+    setReasonCode(suggestions.length === 1 ? suggestions[0] : '');
     setNote('');
     setInternalReason('');
   };
@@ -284,7 +289,7 @@ export function KYCReview() {
           <legend className={`block text-[13px] font-medium mb-2 ${strong}`}>
             What should they fix?
           </legend>
-          {deciding && deciding.suggested_reason_codes.length === 0 && (
+          {deciding && (deciding.suggested_reason_codes ?? []).length === 0 && (
             // Said plainly rather than left as an empty picker. The commonest
             // cause is a refusal whose only warnings are fraud signals, which
             // are never mapped to anything a contributor could be told.
@@ -294,7 +299,9 @@ export function KYCReview() {
           )}
           <div className="flex flex-col gap-1.5">
             {reasonCodes.map((r) => {
-              const suggested = deciding?.suggested_reason_codes.includes(r.code);
+              // ?. guards `deciding`, not the array behind it - which is the
+              // distinction that made this a blank page rather than an empty list.
+              const suggested = (deciding?.suggested_reason_codes ?? []).includes(r.code);
               return (
                 <label
                   key={r.code}
