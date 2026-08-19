@@ -9,6 +9,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "../../app/components/ui/dropdown-menu";
+import { NotificationRow } from "../notifications/NotificationRow";
+import { CONTROLS_THRESHOLD, notificationsPagePath } from "../notifications/lib";
 import {
   getNotificationCount,
   getNotifications,
@@ -22,17 +24,28 @@ interface NotificationsDropdownProp {
   closeMobileNav: () => void;
 }
 
-function timeAgo(iso: string): string {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+const DROPDOWN_SIZE = 10;
 
+/** The bell, and the ten newest notifications.
+ *
+ *  # Its job, and what follows from it
+ *
+ *  Two questions only: "is there anything?" and "take me to it". Everything
+ *  here is one of those, and the page is where a notification is actually read.
+ *
+ *  # Why a row goes to the PAGE rather than to link_path
+ *
+ *  "Take me to it" means the notification, not the action. That distinction is
+ *  what makes the three-line clamp below safe: clamping the body while the row
+ *  clicked through to link_path would reproduce the original bug one layer
+ *  over — text you cannot finish, and a click that takes you somewhere the rest
+ *  is never shown. link_path survives as an explicit labelled link inside the
+ *  row, exactly as on the page.
+ *
+ *  The anchor always resolves. This lists the newest ten and the page loads the
+ *  newest twenty-five, both ORDER BY created_at DESC, so anything clickable
+ *  here is inside the page's first load.
+ */
 export function NotificationsDropdown({ showMobileNav, closeMobileNav }: NotificationsDropdownProp) {
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -41,6 +54,10 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  /** Size of the unfiltered list — see NotificationsPage for why the control
+   *  is gated on this rather than on what is currently displayed. */
+  const [baselineCount, setBaselineCount] = useState(0);
 
   const refreshCount = useCallback(async () => {
     try {
@@ -61,9 +78,12 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
     if (!isOpen) return;
     let cancelled = false;
     setIsLoading(true);
-    getNotifications({ limit: 10 })
+    getNotifications({ limit: DROPDOWN_SIZE, unreadOnly })
       .then((data) => {
-        if (!cancelled) setNotifications(data.notifications);
+        if (cancelled) return;
+        const batch = data.notifications ?? [];
+        setNotifications(batch);
+        if (!unreadOnly) setBaselineCount(batch.length);
       })
       .catch((error) => {
         console.error("Failed to fetch notifications:", error);
@@ -75,9 +95,10 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
     return () => {
       cancelled = true;
     };
-  }, [isOpen]);
+  }, [isOpen, unreadOnly]);
 
-  const handleNotificationClick = async (n: AppNotification) => {
+  /** Marks read, then goes to the notification on the page. */
+  const handleNotificationClick = (n: AppNotification) => {
     if (!n.read_at) {
       setNotifications((prev) =>
         prev.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x))
@@ -94,19 +115,22 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
         toast.error("Couldn't mark that as read. It's still unread.");
       });
     }
-    if (n.link_path) {
-      navigate(n.link_path);
-      closeMobileNav();
-    }
+    setIsOpen(false);
+    closeMobileNav();
+    navigate(notificationsPagePath(n.id));
   };
 
   const handleMarkAllRead = async () => {
+    const previous = notifications;
+    const previousCount = notificationCount;
     setNotifications((prev) => prev.map((x) => ({ ...x, read_at: x.read_at || new Date().toISOString() })));
     setNotificationCount(0);
     try {
       await markAllNotificationsRead();
-    } catch (error) {
-      console.error("Failed to mark all notifications read:", error);
+    } catch {
+      setNotifications(previous);
+      setNotificationCount(previousCount);
+      toast.error("Couldn't mark everything as read.");
     }
   };
 
@@ -115,8 +139,29 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
     return count > 99 ? "99+" : count.toString();
   };
 
+  const showToggle = baselineCount > CONTROLS_THRESHOLD;
+
+  const segment = (label: string, active: boolean, onClick: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`px-3 py-1 rounded-[9px] text-[12px] font-semibold transition-all ${
+        active
+          ? darkTheme
+            ? "bg-[#a17932] text-white"
+            : "bg-[#b8872f] text-white"
+          : darkTheme
+            ? "text-[#d4d4d4] hover:text-[#f5f5f5]"
+            : "text-[#6b5d4d] hover:text-[#2d2820]"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <DropdownMenu onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
           // The bell had no accessible name: a screen reader announced it as
@@ -167,137 +212,116 @@ export function NotificationsDropdown({ showMobileNav, closeMobileNav }: Notific
       <DropdownMenuContent
         align="end"
         sideOffset={8}
-        className={`w-80 rounded-[18px] backdrop-blur-[40px] border shadow-[0_8px_32px_rgba(0,0,0,0.12),0_0_20px_rgba(201,152,58,0.15)] overflow-hidden p-0 ${
+        // 384px rather than 320: the toggle needs the room, and at 320 a body
+        // wrapped into a ribbon. Desktop only - the trigger is hidden lg:flex.
+        className={`w-96 rounded-[18px] backdrop-blur-[40px] border shadow-[0_8px_32px_rgba(0,0,0,0.12),0_0_20px_rgba(201,152,58,0.15)] overflow-hidden p-0 ${
           darkTheme
             ? "bg-white/[0.08] border-white/15"
             : "bg-white/[0.15] border-white/25"
         }`}
       >
-        {/* Header */}
+        {/* Header. The 38px bell medallion that used to sit here was a
+            restatement of the button you just clicked; the count is what the
+            header is actually for. */}
         <DropdownMenuLabel
-          className={`px-4 py-4 border-b flex items-center justify-between ${
+          className={`px-3.5 py-2.5 border-b flex items-center justify-between gap-3 ${
             darkTheme ? "border-white/10" : "border-white/20"
           }`}
         >
-          <div className="flex items-center space-x-3">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                darkTheme ? "bg-white/[0.12]" : "bg-white/[0.2]"
-              }`}
-            >
-              <Bell
-                className={`w-5 h-5 ${darkTheme ? "text-[#c9983a]" : "text-[#c9983a]"}`}
-              />
-            </div>
-            <div className="flex-1">
-              <p
-                className={`font-semibold text-sm ${
-                  darkTheme ? "text-[#e8dfd0]" : "text-[#2d2820]"
-                }`}
-              >
-                Notifications
-              </p>
-            </div>
+          <div className="flex items-baseline gap-2">
+            <p className={`font-semibold text-[13.5px] ${darkTheme ? "text-[#e8dfd0]" : "text-[#2d2820]"}`}>
+              Notifications
+            </p>
+            {notificationCount > 0 && (
+              <span className="px-2 py-[3px] rounded-full bg-[#c9983a] text-white text-[11px] font-bold leading-none tabular-nums">
+                {formatCount(notificationCount)}
+              </span>
+            )}
           </div>
           {notifications.some((n) => !n.read_at) && (
             <button
               onClick={handleMarkAllRead}
-              className={`text-[11px] font-medium ${darkTheme ? "text-[#c9983a] hover:text-[#f5c563]" : "text-[#a2792c] hover:text-[#8b6f3a]"}`}
+              className={`text-[11.5px] font-semibold ${darkTheme ? "text-[#c9983a] hover:text-[#f5c563]" : "text-[#a2792c] hover:text-[#8b6f3a]"}`}
             >
               Mark all read
             </button>
           )}
         </DropdownMenuLabel>
 
+        {/* Same rule as the page: below the threshold this is a control for a
+            list you can already see whole. */}
+        {showToggle && (
+          <div className={`px-3.5 py-2 border-b ${darkTheme ? "border-white/10" : "border-white/20"}`}>
+            <div
+              className={`inline-flex items-center p-[3px] rounded-[12px] border ${
+                darkTheme ? "bg-white/[0.06] border-white/15" : "bg-white/[0.2] border-white/30"
+              }`}
+            >
+              {segment("All", !unreadOnly, () => setUnreadOnly(false))}
+              {segment("Unread", unreadOnly, () => setUnreadOnly(true))}
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="px-4 py-8 text-center">
             <p className={`text-xs ${darkTheme ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>Loading...</p>
           </div>
         ) : notifications.length > 0 ? (
-          <div className="max-h-[360px] overflow-y-auto">
+          <ul className="max-h-[360px] overflow-y-auto">
             {notifications.map((n) => (
-              <button
+              <NotificationRow
                 key={n.id}
-                onClick={() => handleNotificationClick(n)}
-                className={`w-full text-left px-4 py-3 border-b transition-colors ${
-                  darkTheme ? "border-white/[0.06] hover:bg-white/[0.06]" : "border-black/[0.04] hover:bg-black/[0.03]"
-                } ${!n.read_at ? (darkTheme ? "bg-[#c9983a]/[0.06]" : "bg-[#c9983a]/[0.08]") : ""}`}
-              >
-                <div className="flex items-start gap-2">
-                  {!n.read_at && (
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#c9983a] flex-shrink-0" />
-                  )}
-                  <div className={`flex-1 min-w-0 ${n.read_at ? "ml-3.5" : ""}`}>
-                    <p className={`text-[13px] font-semibold ${darkTheme ? "text-[#e8dfd0]" : "text-[#2d2820]"}`}>
-                      {n.title}
-                    </p>
-                    {/* Neither clamped nor truncated. The body of a KYC feedback
-                        notification IS the message - the sentence telling somebody
-                        what to fix - and line-clamp-2 cut it off with an ellipsis.
-                        There was nowhere else to read it: clicking navigates to
-                        billing settings, which never renders the body, so the full
-                        text was unreachable anywhere in the product. The container
-                        already scrolls (max-h-[360px] overflow-y-auto), so a long
-                        message costs height rather than meaning.
-
-                        whitespace-pre-line because these messages are written by a
-                        human in a textarea and a paragraph break they typed is part
-                        of what they meant. */}
-                    {n.body && (
-                      <p className={`text-[12px] mt-0.5 whitespace-pre-line ${darkTheme ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>
-                        {n.body}
-                      </p>
-                    )}
-                    <p className={`text-[11px] mt-1 ${darkTheme ? "text-[#8a7a6a]" : "text-[#9a8a7a]"}`}>
-                      {timeAgo(n.created_at)}
-                    </p>
-                  </div>
-                </div>
-              </button>
+                n={n}
+                variant="dropdown"
+                dark={darkTheme}
+                onActivate={handleNotificationClick}
+                onLinkNavigate={() => {
+                  setIsOpen(false);
+                  closeMobileNav();
+                }}
+              />
             ))}
-          </div>
+          </ul>
         ) : (
           <div
-            className={`px-4 py-12 flex flex-col items-center justify-center ${
+            className={`px-4 py-10 flex flex-col items-center justify-center ${
               darkTheme ? "text-[#b8a898]" : "text-[#7a6b5a]"
             }`}
           >
             <div
-              className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
-                darkTheme ? "bg-white/[0.08]" : "bg-white/[0.15]"
-              }`}
+              className={`w-14 h-14 rounded-full flex items-center justify-center mb-3.5 border border-[#c9983a]/25 bg-gradient-to-br from-[#c9983a]/20 to-[#a67c2e]/10`}
             >
-              <Bell
-                className={`w-8 h-8 ${darkTheme ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}
-              />
+              <Bell className="w-6 h-6 text-[#c9983a]" />
             </div>
             <p
-              className={`text-sm font-medium mb-1 ${
+              className={`text-sm font-semibold mb-1 ${
                 darkTheme ? "text-[#e8dfd0]" : "text-[#2d2820]"
               }`}
             >
-              No notifications yet
+              {unreadOnly ? "You're all caught up" : "No notifications yet"}
             </p>
-            <p className="text-xs text-center max-w-[200px]">
-              You'll see updates about your contributions, rewards, and project
-              activity here.
+            <p className="text-xs text-center max-w-[220px]">
+              {unreadOnly
+                ? "Nothing unread. Switch to All to see your earlier notifications."
+                : "You'll see updates about your applications, merged pull requests and rewards here."}
             </p>
           </div>
         )}
-                {/* The dropdown shows ten and clips nothing; the page shows all of
-              them and is where a long message is actually read. */}
-          {/* The canonical URL, not the /notifications alias. An internal link
-              should not take a redirect hop to reach its own surface. */}
-          <Link
-            to="/dashboard?tab=notifications"
-            onClick={() => setIsOpen(false)}
-            className={`block px-4 py-3 text-[13px] font-semibold text-center border-t ${
-              darkTheme ? "border-white/10 text-[#c9983a]" : "border-black/10 text-[#a67c2e]"
-            }`}
-          >
-            See all notifications
-          </Link>
-</DropdownMenuContent>
+
+        {/* Attached to the list rather than floating under it. The canonical
+            URL, not the /notifications alias - an internal link should not take
+            a redirect hop to reach its own surface. */}
+        <Link
+          to={notificationsPagePath()}
+          onClick={() => setIsOpen(false)}
+          className={`block px-4 py-2.5 text-[12.5px] font-semibold text-center border-t ${
+            darkTheme ? "border-white/10 text-[#c9983a]" : "border-black/10 text-[#a67c2e]"
+          }`}
+        >
+          See all notifications
+        </Link>
+      </DropdownMenuContent>
     </DropdownMenu>
   );
 }
