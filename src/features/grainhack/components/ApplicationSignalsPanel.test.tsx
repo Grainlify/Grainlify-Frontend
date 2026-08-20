@@ -37,6 +37,35 @@ describe('ApplicationSignalsPanel', () => {
     expect(screen.getByText('Not available in this slice.')).toBeInTheDocument() // not computed
   })
 
+  // The loading branch had no test at all, so replacing the spinner with a
+  // skeleton left the suite green while saying nothing about the change -
+  // exactly the shape VERIFICATION-TRAPS.md calls "a test that keeps passing
+  // for a different reason", except here there was no test to keep passing.
+  //
+  // Asserting the ROW COUNT rather than just presence is the point. A spinner
+  // and a skeleton both satisfy "something rendered while loading"; only the
+  // count distinguishes a placeholder that promises this list's shape from one
+  // that promises a shape in general. If SIGNAL_LABELS gains a key and the
+  // skeleton stops matching it, this fails.
+  it('renders a skeleton row per signal while loading, not a bare spinner', async () => {
+    let resolve!: (v: unknown) => void
+    mockGetHackathonApplicationSignals.mockReturnValue(new Promise((r) => { resolve = r }))
+
+    const { container } = renderWithProviders(<ApplicationSignalsPanel applicationId="app-1" />)
+
+    const busy = screen.getByLabelText('Loading signals')
+    expect(busy).toHaveAttribute('aria-busy', 'true')
+    expect(container.querySelector('.animate-spin')).toBeNull()
+
+    // Seven signals in SIGNAL_LABELS, two skeleton bars each (label + value).
+    const grid = busy.querySelector('.grid')
+    expect(grid?.children).toHaveLength(Object.keys(FULL_SIGNALS).length)
+
+    resolve(FULL_SIGNALS)
+    expect(await screen.findByText('42')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Loading signals')).toBeNull()
+  })
+
   it('shows an error message when the signals call fails', async () => {
     mockGetHackathonApplicationSignals.mockRejectedValue(new Error('github_rate_limited'))
 

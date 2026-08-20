@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 import {
   getHackathonApplicationSignals,
   type HackathonApplicationSignal,
@@ -56,10 +57,35 @@ export function ApplicationSignalsPanel({ applicationId }: ApplicationSignalsPan
   }, [applicationId]);
 
   if (isLoading) {
+    // A skeleton rather than a spinner, because this is one of the few places
+    // where the shape is not merely predictable but FIXED: the success render
+    // below maps Object.keys(SIGNAL_LABELS) into a two-column grid, and that
+    // object is a static literal in this file. Seven rows, same seven, every
+    // time - no count is guessed and no layout is approximated.
+    //
+    // The label widths are derived from the real labels for the same reason.
+    // A row of identical bars would be a placeholder for A list; these are a
+    // placeholder for THIS list, so the text does not visibly re-flow when it
+    // arrives. It is the difference between promising a shape and promising
+    // roughly a shape.
     return (
-      <div className="flex items-center gap-2 py-4 text-[13px]">
-        <Loader2 className={`w-4 h-4 animate-spin ${isDark ? 'text-[#c9983a]' : 'text-[#a2792c]'}`} />
-        <span className={isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}>Loading signals...</span>
+      <div aria-busy="true" aria-label="Loading signals">
+        <div className="flex items-center justify-between mb-2">
+          <SkeletonLoader variant="text" width="132px" height="12px" />
+          <SkeletonLoader variant="circle" width="26px" height="26px" />
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+          {(Object.keys(SIGNAL_LABELS) as (keyof HackathonApplicationSignals)[]).map((key) => (
+            <div key={key} className="flex items-center justify-between gap-2 py-[3px]">
+              <SkeletonLoader
+                variant="text"
+                width={`${Math.min(SIGNAL_LABELS[key].length * 6.2, 168)}px`}
+                height="11px"
+              />
+              <SkeletonLoader variant="text" width="42px" height="11px" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
