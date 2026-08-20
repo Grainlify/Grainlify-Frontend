@@ -7,6 +7,7 @@ import { LandingPage } from "../features/landing";
 import Toast from "../shared/components/Toast";
 import { SupportProvider } from "../shared/components/SupportWidget";
 import { captureReferralCodeFromURL } from "../shared/api/client";
+import { RootErrorBoundary } from "../shared/components/RootErrorBoundary";
 
 // Code-split from the landing page's bundle: an anonymous visitor hitting "/"
 // previously downloaded the entire authenticated app (Dashboard + all its pages)
@@ -55,6 +56,11 @@ export default function App() {
   }, []);
 
   return (
+    // Outside BrowserRouter and ThemeProvider on purpose. A boundary that
+    // depends on the tree it protects is not a boundary: if ThemeProvider is
+    // what threw, a fallback calling useTheme() throws again and produces the
+    // blank page it exists to prevent.
+    <RootErrorBoundary>
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
@@ -98,5 +104,6 @@ export default function App() {
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
+    </RootErrorBoundary>
   );
 }
