@@ -78,7 +78,7 @@ const RETIRED_REDEEM_TAB = "redeem";
 const REDEEM_REPLACEMENT_TAB = "settings";
 
 export function Dashboard() {
-  const { logout, login, user, userId, userRole } = useAuth();
+  const { logout, login, user, userId, userRole, isLoading: isAuthLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const { ref: themeToggleRef, toggleWithAnimation: toggleSwitchTheme } =
@@ -1216,7 +1216,20 @@ export function Dashboard() {
                     <AdminPage />
                   </ErrorBoundary>
                 )}
-                {currentPage === "admin" && userRole !== "admin" && (
+                {/* isAuthLoading, not just userRole.
+                    AuthContext starts isLoading=true with userRole still
+                    unset, so for the first paint after a reload `userRole
+                    !== "admin"` is true for EVERYBODY - including admins.
+                    Without this an admin loading /admin is told they need to
+                    authenticate, and the real page replaces it a moment
+                    later. Being shown an access-denied screen you did not
+                    earn is worse than a blank moment: it reads as having lost
+                    access rather than as not having loaded yet.
+
+                    Only the denial is gated. The admin branch above stays
+                    conditioned on the resolved role alone, so a loading state
+                    can never render the admin page speculatively. */}
+                {currentPage === "admin" && !isAuthLoading && userRole !== "admin" && (
                   <AdminAccessRequired
                     surface="the admin dashboard"
                     onAuthenticate={openAdminAuthModal}
