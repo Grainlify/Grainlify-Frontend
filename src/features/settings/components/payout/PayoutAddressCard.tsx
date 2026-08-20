@@ -60,6 +60,9 @@ export function PayoutAddressCard({ chainId = 'aptos-testnet' }: { chainId?: str
     void load();
   }, [load]);
 
+  // Enough of each end to recognise, without a 66-character string in a toast.
+  const shortAddress = (a: string) => (a.length > 16 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a);
+
   const register = async () => {
     setBusy(true);
     setMismatch(null);
@@ -78,7 +81,17 @@ export function PayoutAddressCard({ chainId = 'aptos-testnet' }: { chainId?: str
         nonce: challenge.nonce,
       });
       setExisting(saved);
-      toast.success('Payout address verified.');
+      // Naming the displaced address rather than only confirming the new one.
+      // Changing where your money goes is the kind of act somebody should see
+      // stated back to them - and if it was not what they meant, this is the
+      // moment they can still say so.
+      if (saved.replaced) {
+        toast.success(
+          `Payout address verified. ${shortAddress(saved.replaced.address)} is no longer your payout address.`,
+        );
+      } else {
+        toast.success('Payout address verified.');
+      }
     } catch (e) {
       handleRegisterError(e, setMismatch);
     } finally {
@@ -191,6 +204,11 @@ export function handleRegisterError(
   }
 
   const known: [RegExp, string][] = [
+    // Ours, not the server's. The backend would reject a multi-key account
+    // correctly, but as unsupported_scheme or an address mismatch - which
+    // reads to a contributor as their wallet being broken.
+    [/Multi-key Aptos accounts are not supported/,
+      'This wallet is a multi-key account, which we cannot verify yet. Connect a standard single-key Petra account and try again.'],
     [/address_unchanged/, 'That address is already registered for this chain.'],
     [/nonce_expired|expired/, 'The signing request expired. Try again — it only lasts ten minutes.'],
     [/nonce_used|already_used/, 'That signing request was already used. Start again.'],

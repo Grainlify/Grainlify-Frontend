@@ -1011,6 +1011,16 @@ export const createPayoutAddressChallenge = (chainId: string, address: string) =
     body: JSON.stringify({ chain_id: chainId, address }),
   });
 
+/** The registration response, which carries one field the plain lookup does not.
+ *
+ *  `replaced` is null on a first registration and names the displaced address
+ *  otherwise. It exists because replacing a payout address is a consequential
+ *  act and the response should say what it displaced - dropping it on the floor
+ *  means somebody changes where their money goes and is told only "verified". */
+export interface RegisteredPayoutAddress extends PayoutAddress {
+  replaced: { address: string; superseded_at: string } | null;
+}
+
 export const registerPayoutAddress = (input: {
   chainId: string;
   address: string;
@@ -1018,7 +1028,7 @@ export const registerPayoutAddress = (input: {
   signature: string;
   nonce: string;
 }) =>
-  apiRequest<PayoutAddress>('/me/payout-address', {
+  apiRequest<RegisteredPayoutAddress>('/me/payout-address', {
     method: 'POST',
     requiresAuth: true,
     body: JSON.stringify({

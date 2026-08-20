@@ -49,6 +49,27 @@ export class NoWalletError extends Error {
   }
 }
 
+/** A multi-key account, which this flow does not support.
+ *
+ *  Refused here rather than left to the server, even though the server refuses
+ *  it correctly. Sending the first of several signatures verifies only if that
+ *  signature happens to belong to the connected account's single key; otherwise
+ *  the backend answers `unsupported_scheme` or `signature_address_mismatch`.
+ *
+ *  That is a correct rejection that SOUNDS like a bug. A contributor reads
+ *  "that signature came from a different address" about the address they are
+ *  looking at, and concludes their wallet is broken. A refusal we wrote can say
+ *  what is actually true - the account shape is unsupported - and it is the one
+ *  Petra path the harness never exercised, so it is the one most likely to be
+ *  met cold.
+ */
+export class MultiKeyUnsupportedError extends Error {
+  constructor() {
+    super('Multi-key Aptos accounts are not supported');
+    this.name = 'MultiKeyUnsupportedError';
+  }
+}
+
 export function petraProvider(): PetraProvider | null {
   if (typeof window === 'undefined') return null;
   return window.petra ?? window.aptos ?? null;
@@ -76,10 +97,21 @@ export async function connectPetra(): Promise<PetraAccount> {
 export async function signChallenge(message: string, nonce: string): Promise<PetraSignature> {
   const p = petraProvider();
   if (!p) throw new NoWalletError();
+  // No optional flags. Petra adds a line to the signed envelope for each of
+  // address, application and chainId, and the server rebuilds the envelope from
+  // the message and nonce it issued - it cannot rebuild a line it did not ask
+  // for. Passing one produces a valid signature over bytes the server will
+  // never reconstruct.
   const res = await p.signMessage({ message, nonce });
-  // Some builds return an array of signatures for multi-key accounts. A single
-  // key is the only shape the backend verifies today, so take the first and let
-  // the server reject anything it cannot check rather than guessing here.
-  const signature = Array.isArray(res.signature) ? res.signature[0] : res.signature;
+
+  // A multi-key account returns several signatures. Taking the first is only
+  // correct when it belongs to the connected account's single key, so refuse
+  // rather than send one and hope - see MultiKeyUnsupportedError.
+  const raw = res.signature;
+  if (Array.isArray(raw)) {
+    if (raw.length > 1) throw new MultiKeyUnsupportedError();
+    if (raw.length === 0) throw new Error('The wallet returned no signature.');
+  }
+  const signature = Array.isArray(raw) ? raw[0] : raw;
   return { signature, fullMessage: res.fullMessage };
 }
