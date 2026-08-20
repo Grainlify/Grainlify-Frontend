@@ -53,9 +53,9 @@ export class ErrorBoundary extends Component<Props, State> {
           {this.props.surface} couldn't be displayed
         </p>
         <p className="text-[14px] mt-1.5 text-[#7a6b5a] dark:text-[#b8a898]">
-          The rest of the site is fine — this section failed to render. **No action
-          you took has been undone**, but if you were in the middle of something,
-          check whether it completed before trying again.
+          The rest of the site is fine — this section failed to render.{' '}
+          <strong className="font-semibold">No action you took has been undone</strong>, but if you
+          were in the middle of something, check whether it completed before trying again.
         </p>
         <pre className="mt-3 text-[12px] font-mono whitespace-pre-wrap break-all text-[#7a6b5a] dark:text-[#b8a898]">
           {this.state.error.message}
