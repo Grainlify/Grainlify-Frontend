@@ -221,7 +221,7 @@ export function NotificationsPage() {
     // 768px column pinned ~630px of dead space to the right of every row, which
     // is what made the page read as unfinished. 640px keeps the body near a
     // 70-character measure.
-    <div className="max-w-[640px] mx-auto">
+    <div className="max-w-[840px] mx-auto">
       <div className="flex items-baseline justify-between gap-4 mb-4">
         <div className="flex items-baseline gap-2.5">
           <h1 className={`text-[22px] font-bold tracking-tight ${strong}`}>Notifications</h1>

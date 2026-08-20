@@ -9,7 +9,6 @@ The Settings page has been refactored into a clean, modular, feature-based archi
 /src/features/settings/
 ├── components/
 │   ├── shared/                 # Shared components
-│   │   ├── SkeletonLoader.tsx
 │   │   └── ToggleSwitch.tsx
 │   ├── profile/               # Tab 1: Profile components
 │   │   └── ProfileTab.tsx
@@ -83,10 +82,14 @@ The Settings page has been refactored into a clean, modular, feature-based archi
 - Clean white/transparent inactive state
 - Duration-300 transitions
 
-### SkeletonLoader
-- Shimmer animation effect
-- Customizable className for flexible sizing
-- Used for loading states
+### SkeletonLoader — not here
+Settings once had its own `shared/SkeletonLoader.tsx`. It had **zero importers**:
+every skeleton in this feature, including `payout/PayoutTab.tsx`, already
+imported `shared/components/SkeletonLoader`, which is theme-aware and supports
+`variant`/`width`/`height` where the local copy was a hardcoded dark-only div.
+It was deleted rather than migrated, because there was nothing to migrate.
+
+Import the shared one. Do not add a second.
 
 ## Key Design Patterns
 
