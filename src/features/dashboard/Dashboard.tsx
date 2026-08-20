@@ -315,6 +315,65 @@ export function Dashboard() {
     setCurrentPage((prev) => (prev === tabParam ? prev : tabParam));
   }, [location.search]);
 
+  // The other four parameters, on the same trigger, for the same reason.
+  //
+  // ?tab= was synced in #1033 and project, issue, view and from were left
+  // reading the URL only in their useState initializers - identical behaviour,
+  // identical failure, just not the one that had been reported. Following each
+  // notification type rather than inspecting its stored path is what surfaced
+  // it: the five that work carry only tab and subtab, and every one that
+  // carries project or issue did not arrive.
+  //
+  // Absence CLEARS here, unlike the tab reader above. A link to
+  // ?tab=browse&project=X means "show this project", and leaving a previously
+  // opened issue on screen would be the wrong answer to it.
+  //
+  // That is safe without any check for "did the writer below produce this?",
+  // and the first version of this effect carried one. It came out because
+  // nothing could be built that it changed the outcome of - three attempts,
+  // including two navigations dispatched together to widen the stale-state
+  // window as far as it goes. The reason is structural rather than lucky: the
+  // writer derives the query string entirely from this state, and this reader
+  // reads it back into the same state through functional updates that return
+  // prev when equal. Reading the writer's own output is therefore a no-op by
+  // construction. Machinery that cannot be shown to matter is a liability in
+  // this file more than most.
+  useEffect(() => {
+    // Reads the ROUTER's location, not window.location.
+    //
+    // The initializers above all read window.location directly, and under
+    // BrowserRouter the two are the same string - react-router navigates via
+    // history.pushState, which updates window.location synchronously. They
+    // differ only under MemoryRouter, where window.location is whatever the
+    // test last pushed and the router holds the real route.
+    //
+    // The router wins here because it is what changes on an in-app navigation,
+    // which is the entire failure being fixed. Two sources for one fact is
+    // worth collapsing - the ten initializers should move to this one too -
+    // but that is its own change.
+    const params = new URLSearchParams(location.search);
+
+    const view = params.get("view");
+    const role = view === "maintainer" || view === "admin" ? view : "contributor";
+    setActiveRole((prev) => (prev === role ? prev : role));
+
+    const project = params.get("project");
+    setSelectedProjectId((prev) => (prev === project ? prev : project));
+
+    const from = params.get("from");
+    setProjectBackTarget((prev) => (prev === from ? prev : from));
+
+    const issueId = params.get("issue");
+    setSelectedIssue((prev) => {
+      if (!issueId) return prev === null ? prev : null;
+      const projectId = project || undefined;
+      if (prev && prev.issueId === issueId && prev.projectId === projectId) return prev;
+      return { issueId, projectId };
+    });
+    // Functional updates returning prev when equal, so this and the writer
+    // settle instead of re-triggering each other forever.
+  }, [location.search]);
+
   // Check URL params for viewing an org's page (tab=org&org=X) - mirrors the
   // profile effect above; org logins have no id/login ambiguity to resolve.
   useEffect(() => {
@@ -333,9 +392,17 @@ export function Dashboard() {
   // Note: a former "deep link" effect that special-cased tab=browse&project=&issue=
   // URLs used to live here. It's now redundant - selectedIssue's own useState
   // initializer above reads ?issue=/?project= unconditionally (any tab), and
-  // currentPage's own initializer independently reads ?tab= from the same URL,
-  // so any deep link that sets all three params is already handled by each
-  // piece of state resolving itself on mount - no extra coordination effect needed.
+  // Each piece of state reads its own parameter from the URL in its useState
+  // initializer, which resolves any deep link ON MOUNT. That was once written
+  // here as "no extra coordination effect needed", and the words "on mount"
+  // are doing all the work in that sentence: an in-app <Link> does not remount
+  // Dashboard, so nothing re-reads anything, and the writer below then strips
+  // the parameters back out because state says they are absent.
+  //
+  // #1033 fixed that for ?tab= and left project, issue, view and from behaving
+  // exactly the same way - which is why 3 of 8 notification types still landed
+  // on the wrong screen after the links themselves had been repaired. The
+  // reader below completes it.
 
   // *******************************
   // Keep URL in sync with tab, profile user, and (when viewing an issue) project

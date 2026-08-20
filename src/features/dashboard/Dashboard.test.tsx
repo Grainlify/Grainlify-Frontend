@@ -226,9 +226,15 @@ describe('Dashboard', () => {
     it('lands someone who deep-linked to an issue on that issue, not on Discover', async () => {
       // The case the brief calls out: click a link to a specific issue, get
       // bounced to sign-in, come back. The replayed URL opens the issue overlay.
-      window.history.pushState({}, '', '/dashboard?tab=browse&project=proj-1&issue=issue-1')
+      // BOTH sources, deliberately. Dashboard's useState initializers read
+      // window.location while its URL reader reads the router's location;
+      // under BrowserRouter those are always the same string, and setting only
+      // one here builds a state production cannot reach - which is what made
+      // this test fail against a correct reader.
+      const url = '/dashboard?tab=browse&project=proj-1&issue=issue-1'
+      window.history.pushState({}, '', url)
 
-      renderWithProviders(<Dashboard />)
+      renderWithProviders(<Dashboard />, { route: url })
 
       expect(await screen.findByTestId('issue-detail-page')).toBeInTheDocument()
       expect(screen.queryByTestId('discover-page')).not.toBeInTheDocument()
