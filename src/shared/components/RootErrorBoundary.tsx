@@ -1,4 +1,5 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
+import { claimReload, isChunkLoadError, reloadAlreadyUsed } from './chunkReload';
 
 /** The last boundary. Catches anything the app throws that nothing else did.
  *
@@ -41,6 +42,9 @@ interface Props {
 interface State {
   error: Error | null;
   info: string | null;
+  /** A reload is in flight; say so rather than showing an error we are about
+   *  to navigate away from. */
+  reloading: boolean;
 }
 
 function prefersDark(): boolean {
@@ -56,7 +60,7 @@ function prefersDark(): boolean {
 }
 
 export class RootErrorBoundary extends Component<Props, State> {
-  state: State = { error: null, info: null };
+  state: State = { error: null, info: null, reloading: false };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
@@ -65,11 +69,27 @@ export class RootErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[app] render failed', error, info.componentStack);
     this.setState({ info: info.componentStack ?? null });
+
+    // A lazy chunk that stopped existing is the one failure here that a reload
+    // fixes completely, so take it - once. claimReload records the flag before
+    // authorising anything and refuses when it cannot, which is what keeps a
+    // reason a reload cannot fix from becoming a reload loop.
+    if (isChunkLoadError(error) && claimReload()) {
+      this.setState({ reloading: true });
+      window.location.reload();
+    }
   }
 
   render() {
-    const { error } = this.state;
+    const { error, reloading } = this.state;
     if (!error) return this.props.children;
+
+    const staleChunk = isChunkLoadError(error);
+    // Distinguishes "we have not tried yet" from "we tried and it happened
+    // again", which are different situations and deserve different sentences.
+    // Telling somebody to reload when a reload is exactly what just failed is
+    // how a person concludes the site is broken and stops.
+    const retried = staleChunk && reloadAlreadyUsed();
 
     const dark = prefersDark();
     const ink = dark ? '#f5efe5' : '#2d2820';
@@ -124,12 +144,27 @@ export class RootErrorBoundary extends Component<Props, State> {
           </div>
 
           <h1 style={{ margin: 0, fontSize: '21px', fontWeight: 700, letterSpacing: '-0.02em' }}>
-            This page stopped rendering
+            {reloading
+              ? 'Updating to the latest version…'
+              : retried
+                ? "That didn't fix it"
+                : 'This page stopped rendering'}
           </h1>
           <p style={{ margin: '10px 0 0', fontSize: '15px', lineHeight: 1.6, color: muted }}>
-            Grainlify is still running and your account is fine — this is the page failing, not the
-            service. Nothing you had already saved has been lost. Reloading fixes most of these,
-            and always fixes the one caused by a new version shipping while your tab was open.
+            {reloading ? (
+              <>A new version shipped while this tab was open, so part of the old one is no longer
+              available. Reloading now — nothing you had saved is affected.</>
+            ) : retried ? (
+              <>Grainlify is still running and your account is fine. This tab already reloaded once
+              and hit the same problem, so it is not a stale version — something is stopping part of
+              the page from loading. Your connection or a network in between is the usual cause.
+              Nothing you had saved has been lost.</>
+            ) : (
+              <>Grainlify is still running and your account is fine — this is the page failing, not
+              the service. Nothing you had already saved has been lost. Reloading fixes most of
+              these, and always fixes the one caused by a new version shipping while your tab was
+              open.</>
+            )}
           </p>
 
           <p style={{ margin: '20px 0 6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.11em', textTransform: 'uppercase', color: muted }}>
