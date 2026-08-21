@@ -177,6 +177,41 @@ function ClaimRow({ claim, dark }: { claim: PayoutClaim; dark: boolean }) {
         )}
       </div>
 
+      {/* Permanence sits BELOW the button, not above it: it informs rather
+          than blocks. Somebody who has decided to claim should not have to read
+          past a warning to do it, and somebody who has not decided yet is still
+          reading.
+
+          It does not promise the link can be removed afterwards. It cannot be -
+          the transaction is on a ledger nobody can edit - and silence there
+          would mislead by omission, which is worse than the sentence. */}
+      <p className={`text-[12px] mt-4 ${muted}`}>
+        Claiming publishes a transaction from your wallet to the payout contract.
+        That transaction is public and permanent — anyone can see that this address
+        claimed from Grainlify.
+      </p>
+
+      {/* ── REMOVE WHEN Grainlify-Backend#536 SHIPS ────────────────────────────
+          True today and false the day a fee payer is deployed.
+
+          Milestone 1's sponsored claim was real, but its fee payer was a local
+          script reading a key from a gitignored config - nothing deployed
+          builds, signs or submits a transaction, so the claimant pays. When #536
+          lands, DELETE this paragraph; do not edit it into "we cover the network
+          cost", because that sentence has its own home in the claim flow spec
+          and its own removal condition there.
+
+          The condition is written beside the copy on purpose. A sentence that is
+          true now and false later needs its expiry attached to it, or it
+          outlives the state it describes - which is how the fee promise in
+          WALLET-SUPPORT.md came to be read as current.
+          ─────────────────────────────────────────────────────────────────── */}
+      <p className={`text-[12px] mt-2 ${muted}`}>
+        You'll pay a small network fee in APT from this wallet. The first claim
+        costs a little more than later ones, because it sets your wallet up to hold
+        USDC.
+      </p>
+
       <p className={`text-[11px] mt-3 ${muted}`}>
         Paid from {shortAddress(claim.escrow_address)} · settlement {claim.settlement_id.slice(0, 8)}
       </p>

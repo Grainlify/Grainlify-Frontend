@@ -127,6 +127,38 @@ describe('ClaimsCard', () => {
     expect(screen.queryByRole('link', { name: /published payout/i })).toBeNull()
   })
 
+  // The permanence sentence, and the two things it must not do: promise the
+  // link can be removed, or sit above the button where it reads as a barrier.
+  it('says the claim is public and permanent, without promising it can be undone', async () => {
+    mockGetClaims.mockResolvedValue({ claims: [CLAIM] })
+    const { container } = renderWithProviders(<ClaimsCard />)
+
+    await screen.findByRole('button', { name: /Claim/i })
+    expect(screen.getByText(/public and permanent/i)).toBeInTheDocument()
+    expect(screen.getByText(/anyone can see that this address claimed/i)).toBeInTheDocument()
+    // No suggestion it is reversible or removable. It is on a ledger nobody can
+    // edit, and implying otherwise would be a promise we cannot keep.
+    expect(container.textContent).not.toMatch(/you can (remove|delete|undo)|we can remove/i)
+  })
+
+  // TEMPORARY, paired with Grainlify-Backend#536. When a fee payer ships this
+  // test is deleted along with the copy - it exists so the sentence cannot be
+  // quietly dropped while claimants are still paying, and so deleting it is a
+  // deliberate act rather than a tidy-up.
+  it('tells the claimant they pay the network fee, while that is true', async () => {
+    mockGetClaims.mockResolvedValue({ claims: [CLAIM] })
+    renderWithProviders(<ClaimsCard />)
+
+    await screen.findByRole('button', { name: /Claim/i })
+    expect(screen.getByText(/small network fee in APT from this wallet/i)).toBeInTheDocument()
+    // The first-claim difference is the actionable half: it is why somebody's
+    // first attempt needs more APT than the number they were quoted elsewhere.
+    expect(screen.getByText(/first claim costs a little more/i)).toBeInTheDocument()
+    // And it must not claim the opposite, which is what the flow spec says and
+    // what is not true yet.
+    expect(screen.queryByText(/we cover the network/i)).toBeNull()
+  })
+
   it('renders nothing when there is nothing published', async () => {
     mockGetClaims.mockResolvedValue({ claims: [] })
     const { container } = renderWithProviders(<ClaimsCard />)

@@ -151,11 +151,25 @@ export function PayoutAddressCard({ chainId = 'aptos-testnet' }: { chainId?: str
             Payouts for this chain go here. Registering a different address replaces
             this one; nothing already claimed is affected.
           </p>
+          {/* Deliberately not "permanent" or "irreversible" about REGISTERING.
+              Registering writes a row we can change, and a different address can
+              be registered any time - the irreversibility attaches to a payout
+              once it is published, not to this form. Saying otherwise would be
+              disprovable on this screen, by the sentence directly above. */}
+          <p className={`text-[13px] mt-2 ${muted}`}>
+            Choose a wallet you'll still have later. A payout is locked to whichever
+            address was registered when it was published, and can't be moved
+            afterwards — so this is the wallet you'll claim from, possibly months
+            from now.
+          </p>
         </>
       ) : (
         <p className={`text-[14px] ${muted}`}>
-          Connect your wallet and sign one message. It costs no gas and moves no
-          funds — the signature only proves you control the address.
+          {/* "Signing" scopes this to the act being described. Unscoped, it sat
+              immediately before a flow whose next step DOES cost gas, and was
+              true where it stood while being read as covering both. */}
+          Connect your wallet and sign one message. Signing costs no gas and moves
+          no funds — it only proves you control the address.
         </p>
       )}
 
