@@ -1040,6 +1040,41 @@ export const registerPayoutAddress = (input: {
     }),
   });
 
+/** Whether this person still needs to act, answerable before any settlement
+ *  exists.
+ *
+ *  `may_be_owed` comes from entitlement state - founding membership - not from
+ *  settlements, so it is true from the day somebody becomes eligible. That is
+ *  the whole reason addresses are collected early: one collected the week
+ *  before a settlement costs nothing, and one collected the week after costs
+ *  somebody their payout.
+ *
+ *  No amount anywhere, including on exclusions. A per-person figure must not
+ *  reach a UI, and an exclusion amount is the sharpest case of it - money the
+ *  person will not receive, with no path to honour it. */
+export interface PayoutReadiness {
+  chain_id: string;
+  may_be_owed: boolean;
+  basis: string;
+  has_verified_address: boolean;
+  action_required: boolean;
+  /** Computed server-side with exclusion winning over everything: a member who
+   *  has an address AND an exclusion reads 'excluded_from_published', not
+   *  'ready'. Do not re-derive this from the booleans above. */
+  state: 'not_applicable' | 'register_now' | 'ready' | 'excluded_from_published';
+  excluded_from: Array<{
+    settlement_id: string;
+    excluded_reason: 'no_address' | 'no_github_account';
+    remedy: 'contact_support';
+  }>;
+}
+
+export const getPayoutReadiness = (chainId: string) =>
+  apiRequest<PayoutReadiness>(
+    `/me/payout-readiness?chain_id=${encodeURIComponent(chainId)}`,
+    { requiresAuth: true },
+  );
+
 export const getKYCStatus = () =>
   apiRequest<{
     status: string | null;
