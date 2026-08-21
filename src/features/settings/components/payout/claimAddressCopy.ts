@@ -57,15 +57,30 @@ export function shortAddress(a: string): string {
   return a.length > 20 ? `${a.slice(0, 10)}…${a.slice(-8)}` : a;
 }
 
-/** "3 July 2026".
+/** "3 July 2026". Exported, and both payout screens must use it.
  *
  *  date-fns rather than toLocaleDateString, whose output depends on the
- *  browser's locale - already filed twice on this codebase (#883, #798). A
- *  payout date that reads 03/07 to one person and 07/03 to another is worse
- *  here than elsewhere: it is the fact somebody uses to work out WHICH wallet
- *  this was.
+ *  browser's locale - filed across the codebase as #1046. A payout date that
+ *  reads 03/07 to one person and 07/03 to another is worse here than
+ *  elsewhere: it is the fact somebody uses to work out WHICH wallet a payout
+ *  is frozen to.
+ *
+ *  # Why this is exported rather than duplicated
+ *
+ *  The registration screen and the claim screen name the SAME field -
+ *  contributor_addresses.verified_at. The registration screen used to render it
+ *  with toLocaleDateString() while this one used date-fns, so the two disagreed
+ *  about one value, and the identification this copy exists to enable stopped
+ *  working at exactly the moment it mattered: comparing "the address you
+ *  registered on 3 July" against a registration screen reading 07/03/2026.
+ *
+ *  One function, called by both. Two call sites that happen to agree is not the
+ *  same as a shape that cannot disagree.
+ *
+ *  Returns null rather than a placeholder when the value cannot be parsed. A
+ *  wrong date is worse than no date here.
  */
-function registeredOn(iso: string | null): string | null {
+export function formatRegistrationDate(iso: string | null): string | null {
   if (!iso) return null;
   try {
     return format(parseISO(iso), 'd MMMM yyyy');
@@ -93,7 +108,7 @@ export function describeClaimAddress(s: ClaimAddressSituation): ClaimAddressCopy
     };
   }
 
-  const on = registeredOn(s.registeredAt);
+  const on = formatRegistrationDate(s.registeredAt);
   // The date is omitted rather than faked when it is absent. It is the strongest
   // cue for working out which wallet this was, so a wrong or empty one is worse
   // than a sentence without it - and the field that carries it is still landing.

@@ -35,17 +35,27 @@ beforeEach(() => vi.resetAllMocks())
 describe('ClaimsCard', () => {
   it('renders the server-formatted amount verbatim and never a parsed one', async () => {
     mockGetClaims.mockResolvedValue({ claims: [CLAIM] })
-    renderWithProviders(<ClaimsCard />)
+    const { container } = renderWithProviders(<ClaimsCard />)
 
     // "0.250000", not "0.25". amount_minor is a string so nobody parses it into
     // a float64; amount is pre-formatted so the client never divides. Rendering
     // a trimmed value would mean somebody had done arithmetic on money.
-    // Twice, deliberately: the heading and the button label. Asserting "at
-    // least one" rather than "exactly one" so adding a third mention is not a
-    // test failure, while a TRIMMED value still is.
+    // Mechanism: the untrimmed value reaches the screen at all.
     expect((await screen.findAllByText(/0\.250000/)).length).toBeGreaterThan(0)
-    expect(screen.queryByText(/^0\.25$/)).toBeNull()
-    expect(screen.queryByText(/^0\.25 USDC$/)).toBeNull()
+
+    // Inverse, and the half that matters. "At least one element shows
+    // 0.250000" passes when the heading is right and the BUTTON reads 0.25 -
+    // the exact disagreement worth catching, on the element people press.
+    //
+    // So: every decimal number anywhere on this card must be the server's
+    // value. Nothing else here renders one - addresses are hex, leaf_index is
+    // an integer, the settlement id is sliced - so any other match is
+    // arithmetic somebody did on money.
+    const decimals = container.textContent?.match(/\d+\.\d+/g) ?? []
+    expect(decimals.length).toBeGreaterThan(0)
+    for (const d of decimals) {
+      expect(d).toBe('0.250000')
+    }
   })
 
   // The specified fail-open. An absent or failed chain read is not evidence of

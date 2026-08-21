@@ -8,6 +8,7 @@ import {
   type PayoutAddress,
 } from '../../../../shared/api/client';
 import { connectPetra, signChallenge, isPetraInstalled, NoWalletError } from '../../../../shared/wallet/petra';
+import { formatRegistrationDate } from './claimAddressCopy';
 
 /** Where a contributor tells us the address to pay.
  *
@@ -139,7 +140,12 @@ export function PayoutAddressCard({ chainId = 'aptos-testnet' }: { chainId?: str
         <>
           <p className={`text-[13px] font-mono break-all ${strong}`}>{existing.address}</p>
           <p className={`text-[13px] mt-1 ${muted}`}>
-            Verified {new Date(existing.verified_at).toLocaleDateString()} · {existing.chain_id}
+            {/* The SAME formatter the claim screen uses. This field is what
+                somebody compares against "the address you registered on 3 July"
+                to work out which wallet a payout is frozen to, so the two
+                screens rendering it differently breaks the identification the
+                claim copy exists to enable. */}
+            Verified {formatRegistrationDate(existing.verified_at) ?? 'recently'} · {existing.chain_id}
           </p>
           <p className={`text-[13px] mt-2 ${muted}`}>
             Payouts for this chain go here. Registering a different address replaces
