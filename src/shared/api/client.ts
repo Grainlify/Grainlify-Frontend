@@ -1040,6 +1040,88 @@ export const registerPayoutAddress = (input: {
     }),
   });
 
+/** Whether this person still needs to act, answerable before any settlement
+ *  exists.
+ *
+ *  `may_be_owed` comes from entitlement state - founding membership - not from
+ *  settlements, so it is true from the day somebody becomes eligible. That is
+ *  the whole reason addresses are collected early: one collected the week
+ *  before a settlement costs nothing, and one collected the week after costs
+ *  somebody their payout.
+ *
+ *  No amount anywhere, including on exclusions. A per-person figure must not
+ *  reach a UI, and an exclusion amount is the sharpest case of it - money the
+ *  person will not receive, with no path to honour it. */
+export interface PayoutReadiness {
+  chain_id: string;
+  may_be_owed: boolean;
+  basis: string;
+  has_verified_address: boolean;
+  action_required: boolean;
+  /** Computed server-side with exclusion winning over everything: a member who
+   *  has an address AND an exclusion reads 'excluded_from_published', not
+   *  'ready'. Do not re-derive this from the booleans above. */
+  state: 'not_applicable' | 'register_now' | 'ready' | 'excluded_from_published';
+  excluded_from: Array<{
+    settlement_id: string;
+    excluded_reason: 'no_address' | 'no_github_account';
+    remedy: 'contact_support';
+  }>;
+}
+
+export const getPayoutReadiness = (chainId: string) =>
+  apiRequest<PayoutReadiness>(
+    `/me/payout-readiness?chain_id=${encodeURIComponent(chainId)}`,
+    { requiresAuth: true },
+  );
+
+/** One published, claimable entitlement.
+ *
+ *  Field names mirror the server exactly, including `address_status`'s three
+ *  values. A client enum that differed by a word would be a translation
+ *  somebody has to remember, in the one place where forgetting it tells a
+ *  person their money is going somewhere it is not. */
+export interface PayoutClaim {
+  settlement_id: string;
+  chain_id: string;
+  pool: string;
+  escrow_address: string;
+  /** Served, never hardcoded. A frontend with a baked-in module address is a
+   *  frontend that pays into the wrong contract after a redeploy. */
+  contract_address: string;
+  /** A network label ("testnet"), not a node URL. */
+  network: string;
+  /** Contains a single %s where the transaction hash goes. */
+  explorer_url_template: string;
+  asset: { symbol: string; decimals: number };
+  /** A STRING, and it must stay one. JSON numbers are float64 in most clients
+   *  and minor units are exact integers, so parsing this to a number rounds
+   *  somebody's payout in the browser. Render `amount`; never compute from
+   *  this. */
+  amount_minor: string;
+  /** Pre-formatted by the server precisely so the client never divides. */
+  amount: string;
+  claim_address: string;
+  /** Registration date of the FROZEN address. Null until the row predates the
+   *  field. Unreachable any other way: GET /me/payout-address filters on
+   *  superseded_at IS NULL. */
+  claim_address_verified_at: string | null;
+  address_status: 'current' | 'superseded' | 'no_live_address';
+  current_address: string | null;
+  identity_hash: string;
+  leaf_hash: string;
+  leaf_index: number;
+  proof: string[];
+  root: string;
+  published_tx: string;
+}
+
+export const getClaims = () =>
+  apiRequest<{ claims: PayoutClaim[] }>('/me/claims', { requiresAuth: true });
+
+export const getClaim = (settlementId: string) =>
+  apiRequest<PayoutClaim>(`/me/claims/${encodeURIComponent(settlementId)}`, { requiresAuth: true });
+
 export const getKYCStatus = () =>
   apiRequest<{
     status: string | null;
