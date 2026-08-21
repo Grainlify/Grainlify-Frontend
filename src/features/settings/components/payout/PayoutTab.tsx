@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PayoutAddressCard } from './PayoutAddressCard';
 import { PayoutReadinessCard } from './PayoutReadinessCard';
+import { ClaimsCard } from './ClaimsCard';
 import { Info } from 'lucide-react';
 import { SkeletonLoader } from '../../../../shared/components/SkeletonLoader';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
@@ -70,6 +71,7 @@ const [errorMessage, setErrorMessage] = useState<string | null>(null);
     <div className="space-y-6">
       {/* The address a payout is sent to. First, because nothing else in this
           tab matters if we have nowhere to pay. */}
+      <ClaimsCard />
       <PayoutReadinessCard />
       <PayoutAddressCard />
 

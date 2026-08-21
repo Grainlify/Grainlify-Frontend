@@ -1075,6 +1075,53 @@ export const getPayoutReadiness = (chainId: string) =>
     { requiresAuth: true },
   );
 
+/** One published, claimable entitlement.
+ *
+ *  Field names mirror the server exactly, including `address_status`'s three
+ *  values. A client enum that differed by a word would be a translation
+ *  somebody has to remember, in the one place where forgetting it tells a
+ *  person their money is going somewhere it is not. */
+export interface PayoutClaim {
+  settlement_id: string;
+  chain_id: string;
+  pool: string;
+  escrow_address: string;
+  /** Served, never hardcoded. A frontend with a baked-in module address is a
+   *  frontend that pays into the wrong contract after a redeploy. */
+  contract_address: string;
+  /** A network label ("testnet"), not a node URL. */
+  network: string;
+  /** Contains a single %s where the transaction hash goes. */
+  explorer_url_template: string;
+  asset: { symbol: string; decimals: number };
+  /** A STRING, and it must stay one. JSON numbers are float64 in most clients
+   *  and minor units are exact integers, so parsing this to a number rounds
+   *  somebody's payout in the browser. Render `amount`; never compute from
+   *  this. */
+  amount_minor: string;
+  /** Pre-formatted by the server precisely so the client never divides. */
+  amount: string;
+  claim_address: string;
+  /** Registration date of the FROZEN address. Null until the row predates the
+   *  field. Unreachable any other way: GET /me/payout-address filters on
+   *  superseded_at IS NULL. */
+  claim_address_verified_at: string | null;
+  address_status: 'current' | 'superseded' | 'no_live_address';
+  current_address: string | null;
+  identity_hash: string;
+  leaf_hash: string;
+  leaf_index: number;
+  proof: string[];
+  root: string;
+  published_tx: string;
+}
+
+export const getClaims = () =>
+  apiRequest<{ claims: PayoutClaim[] }>('/me/claims', { requiresAuth: true });
+
+export const getClaim = (settlementId: string) =>
+  apiRequest<PayoutClaim>(`/me/claims/${encodeURIComponent(settlementId)}`, { requiresAuth: true });
+
 export const getKYCStatus = () =>
   apiRequest<{
     status: string | null;
