@@ -9,6 +9,7 @@ import {
 } from '../../../../shared/api/client';
 import { connectPetra, signChallenge, isPetraInstalled, NoWalletError } from '../../../../shared/wallet/petra';
 import { formatRegistrationDate } from './claimAddressCopy';
+import { PayoutContactField } from './PayoutContactField';
 
 /** Where a contributor tells us the address to pay.
  *
@@ -162,6 +163,11 @@ export function PayoutAddressCard({ chainId = 'aptos-testnet' }: { chainId?: str
             afterwards — so this is the wallet you'll claim from, possibly months
             from now.
           </p>
+          {/* Only once an address exists. The ask makes sense after the
+              consequential act, not instead of it - somebody who has not
+              registered yet is being asked how to reach them about a payout
+              they have not set themselves up to receive. */}
+          <PayoutContactField />
         </>
       ) : (
         <p className={`text-[14px] ${muted}`}>

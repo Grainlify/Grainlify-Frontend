@@ -1122,6 +1122,29 @@ export const getClaims = () =>
 export const getClaim = (settlementId: string) =>
   apiRequest<PayoutClaim>(`/me/claims/${encodeURIComponent(settlementId)}`, { requiresAuth: true });
 
+/** Where to reach somebody about a payout, if they chose to tell us.
+ *
+ *  Deliberately NOT the general-purpose address. `users.email` is what a reader
+ *  reaches for when they want "the user's email"; this column exists to tell
+ *  somebody about a payout and nothing else, and the backend asserts it has one
+ *  reader.
+ *
+ *  Empty string means none stored - not an error, and the ordinary state for
+ *  anyone who declined. */
+export const getPayoutContact = () =>
+  apiRequest<{ email: string }>('/me/payout-contact', { requiresAuth: true });
+
+/** Saves, or clears when passed an empty string.
+ *
+ *  One call for both, because removal has to be as reachable as saving. A
+ *  separate delete endpoint is the shape whose clear half ends up unbuilt. */
+export const setPayoutContact = (email: string) =>
+  apiRequest<{ email: string }>('/me/payout-contact', {
+    method: 'PUT',
+    requiresAuth: true,
+    body: JSON.stringify({ email }),
+  });
+
 export const getKYCStatus = () =>
   apiRequest<{
     status: string | null;
