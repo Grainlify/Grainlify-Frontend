@@ -151,18 +151,12 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
       }
       setIsLoading(true);
       try {
-        console.log('ProjectDetailPage: Fetching project data for ID:', projectId);
         const [p, i, pr] = await Promise.all([
           getPublicProject(projectId),
           getPublicProjectIssues(projectId),
           getPublicProjectPRs(projectId),
         ]);
         if (cancelled) return;
-        console.log('ProjectDetailPage: Data fetched successfully', {
-          project: p,
-          issuesCount: i?.issues?.length || 0,
-          prsCount: pr?.prs?.length || 0,
-        });
         setProject(p);
         setIssues(i?.issues || []);
         setPRs(pr?.prs || []);

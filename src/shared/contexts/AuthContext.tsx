@@ -32,21 +32,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     const token = getAuthToken();
-    console.log('AuthContext - Checking authentication on mount');
-    console.log('AuthContext - Token found:', token ? 'Yes' : 'No');
 
     if (token) {
       try {
-        console.log('AuthContext - Fetching user profile...');
         const userData = await getCurrentUser();
         setUser(userData);
         setUserRole(userData.role as UserRole);
         setUserId(userData.id);
-        console.log('AuthContext - User authenticated:', {
-          role: userData.role,
-          id: userData.id,
-          githubLogin: userData.github?.login
-        });
       } catch (error) {
         // Token is invalid, remove it
         console.error('AuthContext - Auth check failed:', error);
@@ -56,13 +48,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserId(null);
       }
     } else {
-      console.log('AuthContext - No token found, user not authenticated');
       setUser(null);
       setUserRole(null);
       setUserId(null);
     }
     setIsLoading(false);
-    console.log('AuthContext - Loading complete');
   };
 
   // Check for existing token on mount
@@ -105,22 +95,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (token: string) => {
-    console.log('AuthContext - login() called with token');
     setAuthToken(token);
-    console.log('AuthContext - Token saved to localStorage');
 
     try {
-      console.log('AuthContext - Fetching user profile after login...');
       const userData = await getCurrentUser();
       setUser(userData);
       setUserRole(userData.role as UserRole);
       setUserId(userData.id);
-      console.log('AuthContext - Login successful:', {
-        role: userData.role,
-        id: userData.id,
-        isAuthenticated: true,
-        githubLogin: userData.github?.login
-      });
     } catch (error) {
       console.error('AuthContext - Login failed:', error);
       removeAuthToken();

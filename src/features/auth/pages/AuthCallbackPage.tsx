@@ -18,10 +18,8 @@ export function AuthCallbackPage() {
       const returnTo = sessionStorage.getItem('authReturnTo');
       sessionStorage.removeItem('authReturnTo');
       if (returnTo && returnTo.startsWith('/dashboard')) {
-        console.log('User is authenticated, redirecting to', returnTo);
         navigate(returnTo, { replace: true });
       } else {
-        console.log('User is authenticated, redirecting to dashboard...');
         navigate('/dashboard', { replace: true });
       }
     }
@@ -40,12 +38,8 @@ export function AuthCallbackPage() {
         // Get the token from URL parameters
         const params = new URLSearchParams(window.location.search);
         const token = params.get('token');
-        const github = params.get('github');
         const errorParam = params.get('error');
 
-        console.log('OAuth Callback - Token:', token ? 'Present' : 'Missing');
-        console.log('OAuth Callback - GitHub Username:', github);
-        console.log('OAuth Callback - Error:', errorParam);
 
         if (errorParam) {
           console.error('OAuth Error:', errorParam);
@@ -69,14 +63,12 @@ export function AuthCallbackPage() {
         }
 
         // Login with the token
-        console.log('Attempting login with token...');
         await login(token);
         // The signup has landed, so the stored referral code has done its
         // job. Left in place, a second account created in this browser would
         // credit the same referrer again - a farming path, and referrals now
         // pay shares.
         clearStoredReferralCode();
-        console.log('Login successful! Auth state should update shortly...');
         setIsProcessing(false);
         // The redirect will happen via the useEffect watching isAuthenticated
       } catch (err) {
