@@ -39,7 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         console.log('AuthContext - Fetching user profile...');
         const userData = await getCurrentUser();
-        console.log('AuthContext - User profile:', userData);
         setUser(userData);
         setUserRole(userData.role as UserRole);
         setUserId(userData.id);
@@ -113,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('AuthContext - Fetching user profile after login...');
       const userData = await getCurrentUser();
-      console.log('AuthContext - User profile received:', userData);
       setUser(userData);
       setUserRole(userData.role as UserRole);
       setUserId(userData.id);
