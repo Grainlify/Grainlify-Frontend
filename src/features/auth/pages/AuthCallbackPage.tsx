@@ -43,7 +43,6 @@ export function AuthCallbackPage() {
         const github = params.get('github');
         const errorParam = params.get('error');
 
-        console.log('OAuth Callback - URL:', window.location.href);
         console.log('OAuth Callback - Token:', token ? 'Present' : 'Missing');
         console.log('OAuth Callback - GitHub Username:', github);
         console.log('OAuth Callback - Error:', errorParam);

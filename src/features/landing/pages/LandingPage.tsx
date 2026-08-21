@@ -34,7 +34,6 @@ export function LandingPage() {
     const github = params.get("github");
 
     console.log("LandingPage - Checking for token in URL");
-    console.log("LandingPage - Current URL:", window.location.href);
     console.log("LandingPage - Token found:", token ? "Yes" : "No");
     console.log("LandingPage - GitHub username:", github);
 
