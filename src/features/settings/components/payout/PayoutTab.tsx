@@ -51,7 +51,6 @@ const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSave = () => {
     // TODO: Implement save to backend
-    console.log('Saving payout preferences:', projectMappings);
   };
 
   const getProjectInitial = (fullName: string) => {

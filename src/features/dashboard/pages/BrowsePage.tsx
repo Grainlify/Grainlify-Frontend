@@ -275,7 +275,6 @@ export function BrowsePage({ onProjectClick, onOrgClick }: BrowsePageProps) {
 
           const response = await getPublicProjects(params);
 
-          console.log('BrowsePage: API response received', { response });
 
           // Handle response - check if it's valid
           let projectsArray: any[] = [];
@@ -315,7 +314,6 @@ export function BrowsePage({ onProjectClick, onOrgClick }: BrowsePageProps) {
               };
             });
 
-          console.log('BrowsePage: Mapped projects', { count: mappedProjects.length });
           return mappedProjects;
         } catch (err) {
           console.error('BrowsePage: Failed to fetch projects:', err);

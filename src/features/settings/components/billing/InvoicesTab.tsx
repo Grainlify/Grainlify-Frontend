@@ -37,7 +37,6 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
 
   const handleDownloadInvoice = (invoice: Invoice) => {
     // In a real app, this would trigger a PDF download
-    console.log('Downloading invoice:', invoice.invoiceNumber);
     // Simulate download
     const link = document.createElement('a');
     link.href = '#'; // In real app, this would be the PDF URL

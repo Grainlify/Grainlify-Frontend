@@ -10,7 +10,6 @@ interface EcosystemsPageProps {
 }
 
 export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
-  console.log('=== EcosystemsPage (features/dashboard) FUNCTION CALLED ===');
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -25,15 +24,9 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
 
   // Fetch ecosystems function
   const fetchEcosystems = async () => {
-    console.log('fetchEcosystems function called');
     setIsLoading(true);
     try {
-      console.log('Fetching ecosystems from API...');
       const response = await getEcosystems();
-      console.log('Ecosystems API response:', response);
-      console.log('Response type:', typeof response);
-      console.log('Response.ecosystems:', response?.ecosystems);
-      console.log('Is array?', Array.isArray(response?.ecosystems));
       
       // Handle different response structures
       let ecosystemsArray: any[] = [];
@@ -41,19 +34,15 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
       if (response && Array.isArray(response)) {
         // Response is directly an array
         ecosystemsArray = response;
-        console.log('Response is direct array');
       } else if (response && response.ecosystems && Array.isArray(response.ecosystems)) {
         // Response has ecosystems property
         ecosystemsArray = response.ecosystems;
-        console.log('Response has ecosystems property');
       } else if (response && typeof response === 'object') {
         // Try to find any array property
         const keys = Object.keys(response);
-        console.log('Response keys:', keys);
         for (const key of keys) {
           if (Array.isArray((response as any)[key])) {
             ecosystemsArray = (response as any)[key];
-            console.log(`Found array in key: ${key}`);
             break;
           }
         }
@@ -93,7 +82,6 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
           languages: [] // Can be populated later if needed
         };
       });
-      console.log('Transformed ecosystems:', transformed);
       setEcosystems(transformed);
     } catch (error) {
       console.error('Failed to fetch ecosystems:', error);
@@ -106,13 +94,10 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
 
   // Fetch ecosystems on mount and when updated
   useEffect(() => {
-    console.log('EcosystemsPage useEffect running');
-    console.log('Calling fetchEcosystems...');
     fetchEcosystems();
     
     // Listen for ecosystem updates
     const handleUpdate = () => {
-      console.log('Ecosystems updated event received');
       fetchEcosystems();
     };
     window.addEventListener('ecosystems-updated', handleUpdate);
@@ -125,7 +110,6 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle form submission here
-    console.log('Form data:', formData);
     setShowAddModal(false);
     // Reset form
     setFormData({
@@ -148,7 +132,6 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
   const handleRequestSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle request submission
-    console.log('Request data:', requestData);
     setShowRequestModal(false);
     // Reset form
     setRequestData({
@@ -284,7 +267,6 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {filteredEcosystems.map((ecosystem) => {
-            console.log('Rendering ecosystem:', ecosystem);
             return (
           <div
             key={ecosystem.id}

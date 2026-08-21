@@ -19,7 +19,6 @@ export function FilterDropdown({ label, options, value, onChange, placeholder }:
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
 
-  console.log('FilterDropdown render:', { label, isOpen, value, optionsCount: options.length });
 
   // Update dropdown position when opened
   useEffect(() => {
@@ -30,7 +29,6 @@ export function FilterDropdown({ label, options, value, onChange, placeholder }:
         left: rect.left,
         width: rect.width,
       };
-      console.log('Setting dropdown position:', position);
       setDropdownPosition(position);
     }
   }, [isOpen]);
@@ -61,20 +59,17 @@ export function FilterDropdown({ label, options, value, onChange, placeholder }:
   );
 
   const handleSelect = (option: string) => {
-    console.log('Option selected:', option);
     onChange(option);
     setIsOpen(false);
     setSearchQuery('');
   };
 
   const handleButtonClick = () => {
-    console.log('Button clicked, toggling isOpen from', isOpen, 'to', !isOpen);
     setIsOpen(!isOpen);
   };
 
   const displayValue = value === 'all' ? label : value;
 
-  console.log('Rendering dropdown portal:', { isOpen, dropdownPosition });
 
   return (
     <>
