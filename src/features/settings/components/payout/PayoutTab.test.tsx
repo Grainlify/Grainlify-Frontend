@@ -1,106 +1,41 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderWithProviders, screen, waitFor } from '../../../../test/renderWithProviders'
-import { BillingProfilesProvider } from '../../contexts/BillingProfilesContext'
+import { describe, it, expect, vi } from 'vitest'
+import { renderWithProviders, screen } from '../../../../test/renderWithProviders'
+
+vi.mock('./ClaimsCard', () => ({ ClaimsCard: () => <div>claims-card</div> }))
+vi.mock('./PayoutReadinessCard', () => ({ PayoutReadinessCard: () => <div>readiness-card</div> }))
+vi.mock('./PayoutAddressCard', () => ({ PayoutAddressCard: () => <div>address-card</div> }))
+
 import { PayoutTab } from './PayoutTab'
 
-const mockGetProjectsContributed = vi.fn()
-vi.mock('../../../../shared/api/client', () => ({
-  getProjectsContributed: (...args: unknown[]) => mockGetProjectsContributed(...args),
-}))
-
-vi.mock('lucide-react', () => ({
-  Info: () => null,
-}))
-
-function renderPayoutTab(options?: Parameters<typeof renderWithProviders>[1]) {
-  return renderWithProviders(
-    <BillingProfilesProvider>
-      <PayoutTab />
-    </BillingProfilesProvider>,
-    options
-  )
-}
-
-// getProjectsContributed() is the one real backend call this tab makes; the
-// billing-profile-to-project mapping itself is local-only state (handleSave
-// just console.logs a TODO, per the source), so it isn't exercised here.
-const PROJECTS = [
-  {
-    id: 'p1',
-    github_full_name: 'acme/widgets',
-    status: 'active',
-    ecosystem_name: 'Stellar',
-    language: 'TypeScript',
-  },
-  {
-    id: 'p2',
-    github_full_name: 'acme/gears',
-    status: 'active',
-  },
-]
-
 describe('PayoutTab', () => {
-  beforeEach(() => {
-    vi.resetAllMocks()
+  it('renders the three payout cards', () => {
+    renderWithProviders(<PayoutTab />)
+    expect(screen.getByText('claims-card')).toBeInTheDocument()
+    expect(screen.getByText('readiness-card')).toBeInTheDocument()
+    expect(screen.getByText('address-card')).toBeInTheDocument()
   })
 
-  it('shows a loading state while getProjectsContributed is pending', async () => {
-    let resolveFetch: (value: typeof PROJECTS) => void = () => {}
-    mockGetProjectsContributed.mockReturnValue(
-      new Promise((resolve) => {
-        resolveFetch = resolve
-      })
-    )
-
-    renderPayoutTab()
-    // The real header copy only renders once loading finishes; a skeleton stands in for it.
-    expect(screen.queryByText('Payout preferences')).not.toBeInTheDocument()
-
-    resolveFetch(PROJECTS)
-    expect(await screen.findByText('Payout preferences')).toBeInTheDocument()
-  })
-
-  it('renders fetched projects without crashing', async () => {
-    mockGetProjectsContributed.mockResolvedValue(PROJECTS)
-    renderPayoutTab()
-
-    await waitFor(() => expect(mockGetProjectsContributed).toHaveBeenCalledTimes(1))
-    expect(await screen.findByText('widgets')).toBeInTheDocument()
-    expect(screen.getByText('gears')).toBeInTheDocument()
-    expect(screen.getByText('Stellar')).toBeInTheDocument()
-  })
-
-  it('shows an empty state when there are no contributed projects', async () => {
-    mockGetProjectsContributed.mockResolvedValue([])
-    renderPayoutTab()
-
-    expect(await screen.findByText('No projects found')).toBeInTheDocument()
-  })
-
-  it('does not crash and shows an inline error when the fetch fails', async () => {
-    mockGetProjectsContributed.mockRejectedValueOnce(new Error('network error'))
-    renderPayoutTab()
-
-    expect(
-      await screen.findByText('Failed to load projects. Please try again later.')
-    ).toBeInTheDocument()
-    expect(screen.getByText('No projects found')).toBeInTheDocument()
-  })
-
-  it('only offers verified billing profiles (from BillingProfilesContext) in the dropdown', async () => {
-    localStorage.setItem(
-      'billing_profiles',
-      JSON.stringify([
-        { id: 1, name: 'My Verified Profile', type: 'individual', status: 'verified' },
-        { id: 2, name: 'Unverified Profile', type: 'individual', status: 'missing-verification' },
-      ])
-    )
-    mockGetProjectsContributed.mockResolvedValue(PROJECTS)
-    renderPayoutTab()
-
-    await screen.findByText('widgets')
-    // Both project rows render their own <select>, so the profile option appears once per row.
-    expect(screen.getAllByRole('option', { name: 'My Verified Profile' }).length).toBe(PROJECTS.length)
-    expect(screen.queryAllByRole('option', { name: 'Unverified Profile' })).toHaveLength(0)
+  // The regression this file exists for.
+  //
+  // A "Payout preferences" card used to sit below these three: a per-project
+  // billing-profile dropdown and a Save button whose handler was one
+  // console.log behind a TODO. It shipped in the initial commit and survived
+  // six months, and the previous version of THIS FILE is the reason it lasted:
+  // it carried a comment reading "handleSave just console.logs a TODO, per the
+  // source, so it isn't exercised here", then tested the card's five rendering
+  // paths and none of its behaviour.
+  //
+  // The non-implementation was known, written down, and in the repository. It
+  // was recorded as a reason to narrow a test rather than as a defect, which is
+  // precisely how it avoided ever being reported. A scoping note reads as
+  // considered; a bug report gets fixed.
+  //
+  // So this asserts the absence, not the presence. Any control offering to
+  // save something on the payout screen must be backed by a request, and the
+  // cheapest way to state that is to fail if a Save button comes back without
+  // one.
+  it('offers no save control, because nothing here has anything to save', () => {
+    renderWithProviders(<PayoutTab />)
+    expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
   })
 })
