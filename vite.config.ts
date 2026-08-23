@@ -30,6 +30,29 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  // console.log, .debug and .info are dropped from production builds.
+  //
+  // Not drop: ['console'], which would take console.error and console.warn
+  // with it. Those 77 sites are clean and useful - they log Errors, component
+  // stacks and public response shapes - and losing them would be a real cost
+  // paid to fix a different problem.
+  //
+  // WHY A BUILD SETTING RATHER THAN A CONVENTION. A session JWT was printed
+  // to the console at every sign-in for months, on a line directly above one
+  // that carefully masked the same token as 'Present'/'Missing'. The author
+  // knew it was sensitive. The full URL just did not read as "the token"
+  // while it was being written. A rule does not reach someone who already
+  // understood the rule.
+  //
+  // THIS PROTECTION IS A PROPERTY OF MINIFIED BUILDS. `pure` lets the
+  // minifier drop these calls; it does not remove them itself. Set
+  // build.minify: false - as somebody debugging a build issue reasonably
+  // might - and every log comes back, in an artefact that can still be
+  // deployed. Dev is unminified too, which is the half we want: local
+  // logging keeps working.
+  esbuild: {
+    pure: ['console.log', 'console.debug', 'console.info'],
+  },
   resolve: {
     alias: {
       // Ensure a single React instance is used everywhere
