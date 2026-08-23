@@ -292,7 +292,6 @@ export function DiscoverPage({
         // card per org means a small fetch could otherwise collapse to just
         // 1-2 cards when one org owns most of the top projects.
         const response = await getRecommendedProjects(50);
-        console.log("DiscoverPage: Recommended projects response", response);
 
         // Handle response - check if it exists and has projects array
         if (!response) {
@@ -347,7 +346,6 @@ export function DiscoverPage({
           };
         });
 
-        console.log("DiscoverPage: Mapped projects", mappedProjects);
         return mappedProjects;
       });
     };

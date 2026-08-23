@@ -31,14 +31,9 @@ export function LandingPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
-    const github = params.get("github");
 
-    console.log("LandingPage - Checking for token in URL");
-    console.log("LandingPage - Token found:", token ? "Yes" : "No");
-    console.log("LandingPage - GitHub username:", github);
 
     if (token) {
-      console.log("LandingPage - Redirecting to /auth/callback with token");
       // If there's a token in the URL, redirect to the proper callback handler
       navigate(`/auth/callback?token=${token}`, { replace: true });
     }
