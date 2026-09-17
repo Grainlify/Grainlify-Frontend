@@ -17,13 +17,19 @@ import {
 import { formatRegistrationDate } from './claimAddressCopy';
 import { classifyBaseFailure, type BaseFailure } from './baseAddressFailure';
 
-/** Which chain_configs row this card registers against.
+/** Which chain_configs row this card registers against, or null when unset.
  *
- *  Both 'base' and 'base-sepolia' are enabled rows on the backend. The card is
- *  pointed at one of them by deploy config rather than guessing, and defaults
- *  to the testnet, the same stage the Aptos card defaults to. */
-export const BASE_PAYOUT_CHAIN_ID: string =
-  import.meta.env.VITE_BASE_PAYOUT_CHAIN_ID || 'base-sepolia';
+ *  No default, deliberately. Both 'base' and 'base-sepolia' are enabled rows on
+ *  the backend, so a default would register everyone on one of them silently.
+ *  If that is the testnet and payouts run on mainnet, the payout run finds no
+ *  verified address for anybody and excludes the whole field, which the admin
+ *  screen then shows as though nobody had registered. Unset renders the card
+ *  as unavailable, with the reason, instead.
+ *
+ *  The server cannot answer this for us yet: both rows are enabled and nothing
+ *  in chain_configs marks one as the chain payouts use. */
+const configuredChain = String(import.meta.env.VITE_BASE_PAYOUT_CHAIN_ID ?? '').trim();
+export const BASE_PAYOUT_CHAIN_ID: string | null = configuredChain === '' ? null : configuredChain;
 
 type Phase =
   | { kind: 'idle' }
@@ -32,7 +38,14 @@ type Phase =
   | { kind: 'signing'; address: string; message: string }
   | { kind: 'verifying'; address: string }
   | { kind: 'closed' }
-  | { kind: 'failed'; failure: BaseFailure; address?: string };
+  | {
+      kind: 'failed';
+      failure: BaseFailure;
+      address?: string;
+      /** The registration request had been sent when this failed. An
+       *  unclassified failure after that point may or may not have saved. */
+      sent: boolean;
+    };
 
 type Tone = 'neutral' | 'gold' | 'amber' | 'red' | 'green';
 
@@ -48,7 +61,7 @@ const shortAddress = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.sli
  *  Static on purpose: this is a dashboard surface, so no spinners or
  *  transitions. In-flight states say what they are waiting for instead.
  */
-export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: string }) {
+export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: string | null }) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
 
@@ -74,6 +87,7 @@ export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: 
   };
 
   const load = useCallback(async () => {
+    if (chainId === null) return;
     setLoading(true);
     setLoadFailed(false);
     try {
@@ -97,17 +111,21 @@ export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: 
   const busy = phase.kind === 'connecting' || phase.kind === 'signing' || phase.kind === 'verifying';
 
   const register = async (wallet: EvmWallet) => {
+    const chain = chainId;
+    if (chain === null) return;
     setPhase({ kind: 'connecting' });
     let address: string | undefined;
+    let sent = false;
     try {
       address = await connectEvmWallet(wallet);
-      const challenge = await createPayoutAddressChallenge(chainId, address);
+      const challenge = await createPayoutAddressChallenge(chain, address);
       setPhase({ kind: 'signing', address, message: challenge.message });
       // The server's message, byte for byte. See signEvmChallenge.
       const signature = await signEvmChallenge(wallet, challenge.message, address);
       setPhase({ kind: 'verifying', address });
+      sent = true;
       const saved = await registerPayoutAddress({
-        chainId,
+        chainId: chain,
         address,
         publicKey: '',
         signature,
@@ -122,7 +140,7 @@ export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: 
       );
     } catch (e) {
       const failure = classifyBaseFailure(e);
-      setPhase(failure.kind === 'closed' ? { kind: 'closed' } : { kind: 'failed', failure, address });
+      setPhase(failure.kind === 'closed' ? { kind: 'closed' } : { kind: 'failed', failure, address, sent });
     }
   };
 
@@ -236,6 +254,20 @@ export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: 
 
   // ---- states ------------------------------------------------------------
 
+  if (chainId === null) {
+    return shell(
+      <>
+        {header(pill('neutral', 'Unavailable'))}
+        <p className={`text-[13px] leading-[1.5] ${c.muted}`}>
+          Registering a Base payout address isn't available on this site yet: it hasn't been set up with the Base network
+          payouts use. That's a setup problem on our side, and there's nothing you need to do.
+        </p>
+        <p className={`font-mono text-[11px] ${c.muted}`}>Setup: VITE_BASE_PAYOUT_CHAIN_ID is not set</p>
+      </>,
+      'unconfigured',
+    );
+  }
+
   if (loading) {
     return shell(<p className={`text-[14px] ${c.muted}`}>Checking your Base payout address…</p>, 'loading');
   }
@@ -265,7 +297,14 @@ export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: 
   }
 
   const failure = phase.kind === 'failed' ? phase.failure : null;
+  // An unclassified failure after the registration request went out: the
+  // address may or may not have been saved, and the card must not say either.
+  const indeterminate = phase.kind === 'failed' && phase.failure.kind === 'unknown' && phase.sent;
   const replacing = existing !== null;
+  const checkAgain = async () => {
+    await load();
+    setPhase({ kind: 'idle' });
+  };
   const reset = () => setPhase({ kind: 'idle' });
   const start = () => setPhase({ kind: 'picking' });
   const noWallet = wallets.length === 0;
@@ -273,7 +312,8 @@ export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: 
   const verifiedPill = pill('green', 'Verified', true);
 
   let pillNode: ReactNode;
-  if (existing) pillNode = verifiedPill;
+  if (indeterminate) pillNode = pill('neutral', 'Status unknown');
+  else if (existing) pillNode = verifiedPill;
   else if (phase.kind === 'connecting' || phase.kind === 'signing') pillNode = pill('gold', 'Waiting for your wallet');
   else if (phase.kind === 'verifying') pillNode = pill('gold', 'Checking signature');
   else if (failure?.kind === 'signature_invalid' || failure?.kind === 'address_rejected') pillNode = pill('amber', 'Action needed');
@@ -305,7 +345,9 @@ export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: 
         </button>
       </div>
       <p className={`text-[13px] ${c.muted}`}>
-        {failure && failure.kind !== 'unchanged'
+        {indeterminate
+          ? 'Your payout address before this attempt'
+          : failure && failure.kind !== 'unchanged'
           ? 'Still your payout address'
           : `Verified ${formatRegistrationDate(existing.verified_at) ?? 'recently'} · ${existing.chain_id} · checked by signature`}
       </p>
@@ -362,7 +404,15 @@ export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: 
           {body("Nothing was saved. That signature can't be reused, so start again and sign once more.")}
         </>, testId);
       default:
-        return callout('gold', <span>{lead(replacing ? replacedLead : "Couldn't verify that address.")} Nothing was saved. Start again.</span>, testId);
+        // Only the stage is known here, not the outcome. Before the
+        // registration request went out, nothing can have been saved; after
+        // it, the save may or may not have landed, so the card says that.
+        return indeterminate
+          ? callout('gold', <>
+              {lead("Something went wrong, and we can't tell whether your address was saved.")}
+              {body('Check again to see what your Base payout address is now, before trying anything else.')}
+            </>, testId)
+          : callout('gold', <span>{lead('Something went wrong before your address was sent.')} Nothing was saved. Start again.</span>, testId);
     }
   })();
 
@@ -382,6 +432,7 @@ export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: 
       case 'another_account':
         return secondary('Use a different address', start);
       default:
+        if (indeterminate) return primary('Check again', () => void checkAgain());
         return replacing ? secondary('Try a different address again', start) : primary('Start again', start);
     }
   })();
@@ -438,7 +489,7 @@ export function BaseAddressCard({ chainId = BASE_PAYOUT_CHAIN_ID }: { chainId?: 
 
   const noWalletNode = callout('gold', <span><span className="font-bold">No Ethereum wallet found in this browser.</span> Install one, then reload this page.</span>, 'base-no-wallet');
 
-  let state: string = phase.kind === 'failed' ? `failed-${phase.failure.kind}` : phase.kind;
+  let state: string = phase.kind === 'failed' ? `failed-${phase.failure.kind}${indeterminate ? '-after-send' : ''}` : phase.kind;
   let content: ReactNode;
 
   if (phase.kind === 'picking') {

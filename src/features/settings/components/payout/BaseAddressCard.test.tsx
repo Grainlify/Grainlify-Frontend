@@ -275,10 +275,51 @@ describe('BaseAddressCard', () => {
     expect(card()).toHaveTextContent("Nothing was saved. That signature can't be reused, so start again and sign once more.")
   })
 
-  it('an unclassified failure still says nothing was saved', async () => {
-    await failWith(new Error('kaboom'))
-    expect(card().dataset.state).toBe('failed-unknown')
-    expect(card()).toHaveTextContent('Nothing was saved.')
+  // The fallback is for failures nobody classified, so it must not claim an
+  // outcome. After the registration request went out, the save may or may not
+  // have landed.
+  it('an unclassified failure after the request was sent says the outcome is unknown', async () => {
+    await failWith(new Error('Network error: Unable to connect to the server.'))
+    expect(card().dataset.state).toBe('failed-unknown-after-send')
+    expect(pillText()).toBe('Status unknown')
+    const msg = screen.getByTestId('base-failure-unknown')
+    expect(msg).toHaveTextContent("Something went wrong, and we can't tell whether your address was saved.")
+    expect(msg).not.toHaveTextContent(/nothing was saved/i)
+
+    // "Check again" re-reads the address instead of inviting a second attempt.
+    h.getPayoutAddress.mockResolvedValue({ ...EXISTING })
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }))
+    await waitFor(() => expect(card().dataset.state).toBe('verified'))
+    expect(h.getPayoutAddress).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not keep claiming Verified when a replacement ended in an unknown outcome', async () => {
+    await failWith(new ApiError('boom', 502, undefined), EXISTING)
+    expect(pillText()).toBe('Status unknown')
+    expect(card()).toHaveTextContent('Your payout address before this attempt')
+    expect(card()).not.toHaveTextContent('Still your payout address')
+  })
+
+  it('an unclassified failure before anything was sent can say nothing was saved', async () => {
+    h.connectEvmWallet.mockResolvedValue(ADDR)
+    h.createPayoutAddressChallenge.mockRejectedValue(new Error('Network error'))
+    await renderCard()
+    await pickFirstWallet()
+    await waitFor(() => expect(card().dataset.state).toBe('failed-unknown'))
+    expect(card()).toHaveTextContent('Something went wrong before your address was sent. Nothing was saved.')
+    expect(h.registerPayoutAddress).not.toHaveBeenCalled()
+  })
+
+  // No default chain: both Base rows are enabled server-side, so a default
+  // would register everybody on one of them without anyone noticing.
+  it('refuses to render a registration flow when no chain is configured', async () => {
+    renderWithProviders(<BaseAddressCard chainId={null} />)
+    expect(card().dataset.state).toBe('unconfigured')
+    expect(pillText()).toBe('Unavailable')
+    expect(card()).toHaveTextContent("Registering a Base payout address isn't available on this site yet")
+    expect(card()).toHaveTextContent('VITE_BASE_PAYOUT_CHAIN_ID is not set')
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(h.getPayoutAddress).not.toHaveBeenCalled()
   })
 
   it('renders in the dark theme with the dark tokens', async () => {
