@@ -4,15 +4,17 @@ import { renderWithProviders, screen } from '../../../../test/renderWithProvider
 vi.mock('./ClaimsCard', () => ({ ClaimsCard: () => <div>claims-card</div> }))
 vi.mock('./PayoutReadinessCard', () => ({ PayoutReadinessCard: () => <div>readiness-card</div> }))
 vi.mock('./PayoutAddressCard', () => ({ PayoutAddressCard: () => <div>address-card</div> }))
+vi.mock('./BaseAddressCard', () => ({ BaseAddressCard: () => <div>base-address-card</div> }))
 
 import { PayoutTab } from './PayoutTab'
 
 describe('PayoutTab', () => {
-  it('renders the three payout cards', () => {
+  it('renders the four payout cards', () => {
     renderWithProviders(<PayoutTab />)
     expect(screen.getByText('claims-card')).toBeInTheDocument()
     expect(screen.getByText('readiness-card')).toBeInTheDocument()
     expect(screen.getByText('address-card')).toBeInTheDocument()
+    expect(screen.getByText('base-address-card')).toBeInTheDocument()
   })
 
   // The regression this file exists for.

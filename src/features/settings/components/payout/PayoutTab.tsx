@@ -1,4 +1,5 @@
 import { PayoutAddressCard } from './PayoutAddressCard';
+import { BaseAddressCard } from './BaseAddressCard';
 import { PayoutReadinessCard } from './PayoutReadinessCard';
 import { ClaimsCard } from './ClaimsCard';
 
@@ -30,6 +31,9 @@ export function PayoutTab() {
       <ClaimsCard />
       <PayoutReadinessCard />
       <PayoutAddressCard />
+      {/* Base pays straight to the address, so it is a separate card rather
+          than a chain switch on the Aptos one. */}
+      <BaseAddressCard />
     </div>
   );
 }
