@@ -2751,3 +2751,145 @@ export const getMySupportRequests = () =>
   apiRequest<{ support_requests: MySupportRequest[]; total: number }>("/support-requests/mine", {
     requiresAuth: true,
   });
+
+/** GET /admin/hackathons/:id/keeperhub/run - one event's KeeperHub payout run.
+ *
+ *  Mirrors keeperhubrail.RunView (Grainlify-Backend internal/keeperhubrail/view.go).
+ *  Amounts are strings of integer minor units and are never summed across
+ *  statuses: the response carries per-status figures only, and no paid or
+ *  remaining total, because a leg in 'unknown' may or may not have paid. */
+export type KeeperHubLegStatus = 'pending' | 'dispatched' | 'confirmed' | 'failed' | 'unknown';
+
+export interface KeeperHubRunView {
+  run: {
+    id: string;
+    hackathon_id: string;
+    pool: string;
+    pool_minor: string;
+    chain_id: string;
+    evm_chain_id: number;
+    state: 'planned' | 'dispatching' | 'complete' | 'failed' | string;
+    payout_run_id: string;
+    released_by: string | null;
+    created_at: string;
+    updated_at: string;
+    network: string | null;
+    asset_symbol: string | null;
+    asset_decimals: number | null;
+    explorer_url_template: string | null;
+  };
+  derived_from_legs: {
+    note: string;
+    leg_count: number;
+    by_status: Record<string, { count: number; amount_minor: string }>;
+  };
+  resume: {
+    allowed: boolean;
+    /** Empty when allowed; otherwise the name release would refuse with. */
+    reason: string;
+    detail: string;
+    sendable_leg_ids: string[];
+    sendable_amount_minor: string | null;
+    blocking_leg_ids: string[];
+    assumes: string;
+  };
+  legs: Array<{
+    id: string;
+    user_id: string;
+    github_login: string | null;
+    address: string;
+    amount_minor: string;
+    status: KeeperHubLegStatus;
+    blocks_resume: boolean;
+    block_reason: 'may_have_paid' | 'awaiting_result' | null;
+    resendable: boolean;
+    tx_hash: string | null;
+    explorer_url: string | null;
+    execution_id: string | null;
+    last_attempt_id: string | null;
+    last_error: string | null;
+    dispatched_at: string | null;
+    confirmed_at: string | null;
+    resolution_note: string | null;
+    resolved_by: string | null;
+  }>;
+  attempts: Array<{
+    ordinal: number;
+    id: string;
+    state: 'sending' | 'sent' | 'unacknowledged' | 'rejected' | 'reconciled' | 'mismatch' | string;
+    execution_id: string | null;
+    idempotency_key: string | null;
+    error: string | null;
+    actor_user_id: string | null;
+    created_at: string;
+    reconciled_at: string | null;
+    leg_count: number;
+    legs: Array<{ position: number; leg_id: string }>;
+  }>;
+  exclusions: Array<{
+    user_id: string;
+    github_login: string | null;
+    amount_minor: string;
+    reason: 'no_github_account' | 'kyc_unresolved' | 'no_address' | string;
+  }>;
+  /** The sending wallet as configured on the server now (not recorded per
+   *  attempt). `address` is null when the server has none configured. */
+  payout_wallet: { address: string | null; note: string };
+}
+
+export type KeeperHubLeg = KeeperHubRunView['legs'][number];
+
+/** Resolves to null when the event has no run for the pool (404 not_found). */
+export const getKeeperHubRun = async (hackathonId: string, pool = 'contributor'): Promise<KeeperHubRunView | null> => {
+  try {
+    return await apiRequest<KeeperHubRunView>(
+      `/admin/hackathons/${encodeURIComponent(hackathonId)}/keeperhub/run?pool=${encodeURIComponent(pool)}`,
+      { requiresAuth: true },
+    );
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404 && e.data?.error === 'not_found') return null;
+    throw e;
+  }
+};
+
+/** 202: KeeperHub ACCEPTED the run. Nobody is paid until results are read. */
+export const releaseKeeperHubRun = (
+  hackathonId: string,
+  input: { payoutRunId: string; chainId: string; pool: string },
+) =>
+  apiRequest<{ release: { attempt_id: string; execution_id: string; dispatched_leg_ids: string[]; ack_status: string }; note: string }>(
+    `/admin/hackathons/${encodeURIComponent(hackathonId)}/keeperhub/release`,
+    {
+      requiresAuth: true,
+      method: 'POST',
+      body: JSON.stringify({
+        payout_run_id: input.payoutRunId,
+        chain_id: input.chainId,
+        pool: input.pool,
+        confirm: true,
+      }),
+    },
+  );
+
+/** Reads an attempt's results back. `intake.outcomes` is not typed here on
+ *  purpose: the backend serialises it without JSON tags, so callers re-read
+ *  the run instead. */
+export const readKeeperHubResults = (hackathonId: string, attemptId: string) =>
+  apiRequest<{ intake: { finished: boolean; already_reconciled: boolean }; blocking?: boolean; detail?: string }>(
+    `/admin/hackathons/${encodeURIComponent(hackathonId)}/keeperhub/attempts/${encodeURIComponent(attemptId)}/intake`,
+    { requiresAuth: true, method: 'POST' },
+  );
+
+export const resolveKeeperHubLeg = (
+  hackathonId: string,
+  legId: string,
+  input: { status: 'confirmed' | 'failed'; txHash: string; note: string },
+) =>
+  apiRequest<{ leg_id: string; status: string }>(
+    `/admin/hackathons/${encodeURIComponent(hackathonId)}/keeperhub/legs/${encodeURIComponent(legId)}/resolve`,
+    {
+      requiresAuth: true,
+      method: 'POST',
+      body: JSON.stringify({ status: input.status, tx_hash: input.txHash, note: input.note }),
+    },
+  );
