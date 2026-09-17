@@ -403,9 +403,9 @@ export function KeeperHubPayoutPanel({ hackathonId }: { hackathonId: string }) {
         data-status={leg.status}
         className={`flex flex-col gap-3 rounded-[16px] p-4 ${unknown ? t.legAlert : t.leg}`}
       >
-        <div className="grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2 sm:grid-cols-[150px_minmax(0,1.4fr)_minmax(0,1fr)_150px] sm:items-center sm:gap-4">
+        <div className="grid grid-cols-[auto_1fr] items-start gap-x-2 gap-y-2 sm:grid-cols-[150px_minmax(0,1.4fr)_minmax(0,1fr)_150px] sm:items-center sm:gap-4">
           <StatusPill t={t} status={leg.status} />
-          <span className={`justify-self-end whitespace-nowrap text-[14px] font-semibold tabular-nums sm:order-last ${t.strong}`}>{money(leg.amount_minor)}</span>
+          <span className={`justify-self-end whitespace-nowrap text-[13px] font-semibold tabular-nums sm:order-last sm:text-[14px] ${t.strong}`}>{money(leg.amount_minor)}</span>
           <div className="col-span-2 flex min-w-0 flex-col gap-0.5 sm:col-span-1">
             <span className={`text-[14px] font-semibold ${leg.github_login ? t.strong : `italic ${t.muted}`}`}>{legName(leg)}</span>
             <span className={`flex items-center gap-1.5 ${t.muted}`}>
@@ -454,6 +454,7 @@ export function KeeperHubPayoutPanel({ hackathonId }: { hackathonId: string }) {
                 t={t}
                 leg={leg}
                 attemptOrdinal={ordinal}
+                payoutWallet={view.payout_wallet?.address ?? null}
                 explorerName={run.explorer_url_template ? explorerLabel(run.explorer_url_template.replace('%s', '0x')) : 'the explorer'}
                 onCancel={() => setResolvingLeg(null)}
                 onSubmit={async (input) => {
@@ -746,6 +747,7 @@ function ResolveForm({
   t,
   leg,
   attemptOrdinal,
+  payoutWallet,
   explorerName,
   onCancel,
   onSubmit,
@@ -753,6 +755,7 @@ function ResolveForm({
   t: Tokens;
   leg: KeeperHubLeg;
   attemptOrdinal: number | undefined;
+  payoutWallet: string | null;
   explorerName: string;
   onCancel: () => void;
   onSubmit: (input: { status: 'confirmed' | 'failed'; txHash: string; note: string }) => Promise<void>;
@@ -801,8 +804,17 @@ function ResolveForm({
       }}
     >
       <p className={`text-[14px] font-bold ${t.strong}`}>What did you find on {explorerName}?</p>
-      <p className={`text-[13px] ${t.muted}`}>
-        Look for a USDC transfer from the payout wallet to <span className="font-mono">{shortAddress(leg.address)}</span>
+      <p className={`text-[13px] leading-[1.6] ${t.muted}`} data-testid="keeperhub-resolve-where">
+        Look for a USDC transfer from the payout wallet{' '}
+        {payoutWallet ? (
+          <span className="inline-flex items-center gap-0.5 align-middle">
+            <span className={`break-all font-mono ${t.strong}`}>{payoutWallet}</span>
+            <CopyButton t={t} value={payoutWallet} label="Copy payout wallet address" />
+          </span>
+        ) : (
+          <span className="italic">(its address isn&apos;t configured on this server)</span>
+        )}{' '}
+        to <span className={`font-mono ${t.strong}`}>{shortAddress(leg.address)}</span>
         {attemptOrdinal !== undefined ? ` after attempt ${attemptOrdinal} was sent.` : '.'}
       </p>
       <fieldset className="grid grid-cols-1 gap-2 sm:grid-cols-2">

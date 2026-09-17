@@ -2832,6 +2832,9 @@ export interface KeeperHubRunView {
     amount_minor: string;
     reason: 'no_github_account' | 'kyc_unresolved' | 'no_address' | string;
   }>;
+  /** The sending wallet as configured on the server now (not recorded per
+   *  attempt). `address` is null when the server has none configured. */
+  payout_wallet: { address: string | null; note: string };
 }
 
 export type KeeperHubLeg = KeeperHubRunView['legs'][number];

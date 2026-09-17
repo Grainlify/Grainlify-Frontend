@@ -96,6 +96,11 @@ function view(legs: KeeperHubLeg[], resume: Partial<KeeperHubRunView['resume']>,
       },
     ],
     exclusions: [{ user_id: 'u-d', github_login: 'sample-d', amount_minor: '250000', reason: 'no_address' }],
+    // The real run's org wallet.
+    payout_wallet: {
+      address: '0xE6e5e247ce27A43F724675DD679DC7a4a1896CA6',
+      note: 'The sending wallet configured on this server now, not a value recorded with each attempt.',
+    },
     ...over,
   }
 }

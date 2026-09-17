@@ -112,6 +112,9 @@ describe('KeeperHubPayoutPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Resolve this leg' }))
     const form = screen.getByTestId('keeperhub-resolve-form')
+    expect(screen.getByTestId('keeperhub-resolve-where')).toHaveTextContent(
+      'Look for a USDC transfer from the payout wallet 0xE6e5e247ce27A43F724675DD679DC7a4a1896CA6 to 0x0fF6…0fEE after attempt 1 was sent.',
+    )
     const record = within(form).getByRole('button', { name: 'Record resolution' })
     expect(record).toBeDisabled()
 
@@ -123,6 +126,16 @@ describe('KeeperHubPayoutPanel', () => {
     expect(record).toBeEnabled()
     fireEvent.click(record)
     await waitFor(() => expect(h.resolveKeeperHubLeg).toHaveBeenCalledWith('h-1', 'b', { status: 'confirmed', txHash: '0xabc', note: 'Transfer in block 1' }))
+  })
+
+  it('says the payout wallet is not configured rather than leaving a gap', async () => {
+    const v = blocked()
+    v.payout_wallet = { address: null, note: '' }
+    await renderWith(v)
+    fireEvent.click(screen.getByRole('button', { name: 'Resolve this leg' }))
+    expect(screen.getByTestId('keeperhub-resolve-where')).toHaveTextContent(
+      "from the payout wallet (its address isn't configured on this server) to 0x0fF6…0fEE",
+    )
   })
 
   it('resolving as not paid needs no transaction hash', async () => {
