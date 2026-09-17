@@ -312,3 +312,36 @@ test('maintainer view persists across a reload', async ({
     'the view reset to contributor on reload - this is what made a maintainer lose their own queue every page load',
   ).not.toContain('viewing as a contributor')
 })
+
+// The fixed header and the page under it are one column. The header used to be
+// right-anchored with width calc(100vw - 97px), so its left edge sat 8px right
+// of <main> at every width; and page content started at 76px while the header
+// ends at 80px below lg, so the first card slid under it on phones.
+for (const [width, height] of [[390, 844], [1440, 900]] as const) {
+  test(`the header lines up with the page and clears it at ${width}px`, async ({
+    page, setupMockAuth, setupMockBrowse, setupMockOrgProfile,
+  }) => {
+    await setupMockAuth(); await setupMockBrowse(); await setupMockOrgProfile()
+    await page.addInitScript(() => {
+      window.localStorage.setItem('grainlify_tour_seen_user-1', 'true')
+      window.localStorage.setItem('patchwork_jwt', 'e2e-test-token')
+    })
+    await page.setViewportSize({ width, height })
+    await page.goto('/dashboard?tab=settings&subtab=profile')
+    await page.waitForTimeout(1200)
+
+    const box = await page.evaluate(() => {
+      const header = document.querySelector('[data-tour-id="search"]')?.parentElement
+      const main = document.querySelector('main')
+      // The settings tab bar: the first thing on the page, below the header.
+      const profileTab = [...document.querySelectorAll('main button')].find((b) => b.textContent?.trim() === 'Profile')
+      const tabs = profileTab?.closest('div.space-y-6')?.firstElementChild
+      const r = (el: Element | null | undefined) => (el ? el.getBoundingClientRect() : null)
+      return { header: r(header), main: r(main), tabs: r(tabs) }
+    })
+    expect(box.header && box.main && box.tabs, 'layout landmarks not found').toBeTruthy()
+    expect(Math.abs(box.header!.left - box.main!.left), 'header left edge vs page').toBeLessThanOrEqual(0.5)
+    expect(Math.abs(box.header!.right - box.main!.right), 'header right edge vs page').toBeLessThanOrEqual(0.5)
+    expect(box.tabs!.top, 'first content starts under the fixed header').toBeGreaterThanOrEqual(box.header!.bottom)
+  })
+}

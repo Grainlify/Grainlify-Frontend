@@ -822,16 +822,17 @@ export function Dashboard() {
         <div className="max-w-[1400px] mx-auto">
           {/* Premium Pill-Style Header - Greatest of All Time */}
           <div
-            className={`fixed top-2 right-2 left-auto z-[9999] flex items-center gap-1 md:gap-2 lg:gap-3 lg:h-[52px] py-3 rounded-[26px] backdrop-blur-[90px] border ml-[81px] transition-all duration-300 ${
+            className={`fixed top-2 right-2 left-[81px] z-[9999] flex items-center gap-1 md:gap-2 lg:gap-3 lg:h-[52px] py-3 rounded-[26px] backdrop-blur-[90px] border transition-all duration-300 ${
               darkTheme
                 ? "bg-[#2d2820]/[0.4] border-white/10 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25),inset_0px_0px_9px_0px_rgba(201,152,58,0.1)]"
                 : "bg-white/[0.35] border-white shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25),inset_0px_0px_9px_0px_rgba(255,255,255,0.5)]"
             }
           ${showMobileNav? "h-screen flex-col":"" } 
           `}
-            style={{
-              width: `calc(100vw - 81px - 8px - 8px)`,
-            }}
+            // Pinned by both edges to the same box as <main> (ml-[81px] mr-2).
+            // It used to be right-anchored with width calc(100vw - 97px), which
+            // put its left edge at 89px, 8px right of the content below it at
+            // every width, and counted a desktop scrollbar as page width.
           >
           
           {/* opened mobile nav view header  */}
@@ -1015,7 +1016,10 @@ export function Dashboard() {
           </div>
 
           {/* Page Content */}
-          <div className="pt-[68px]">
+          {/* Clears the fixed header plus a 16px gap. Below lg the header is
+              72px tall (py-3 around 46px controls), not the 52px it is at lg,
+              so 68px left the first card 4px underneath it on phones. */}
+          <div className="pt-[88px] lg:pt-[68px]">
             <Suspense
               fallback={
                 <div className="flex items-center justify-center min-h-[50vh]">
