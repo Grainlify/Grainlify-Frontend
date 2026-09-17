@@ -9,6 +9,7 @@ import { VerdictsReview } from './VerdictsReview';
 import { AppealsReview } from './AppealsReview';
 import { HackathonConfigSettings } from './HackathonConfigSettings';
 import { AuditLog } from './AuditLog';
+import { KeeperHubPayoutPanel } from './keeperhub/KeeperHubPayoutPanel';
 import {
   getAdminHackathon,
   transitionHackathon,
@@ -163,6 +164,8 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
         <h3 className={`text-[16px] font-bold mb-4 ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>Appeals</h3>
         <AppealsReview hackathonId={hackathonId} />
       </div>
+
+      <KeeperHubPayoutPanel hackathonId={hackathonId} />
 
       <div
         className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 transition-colors ${
