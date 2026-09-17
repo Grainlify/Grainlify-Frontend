@@ -320,3 +320,121 @@ export const AVATARS = {
     { name: 'dark-on-gold', ground: 'goldSurface', mark: 'onGold' },
   ],
 }
+
+/**
+ * The founding-spots-claimed card.
+ *
+ * A separate asset from the early-access campaign card, not a variant of it.
+ * That card sells the programme ("300 founding spots"); this one reports its
+ * state ("40 / 300"), and the two want opposite compositions - the first leads
+ * with an invitation, the second with a count.
+ *
+ * The card carries the whole message. X suppresses link-bearing posts from
+ * small accounts, so the image is what gets seen, at thumbnail size, before
+ * anyone reads a caption. Everything here follows from that: four elements,
+ * a number that dominates, and nothing competing with it - no lockup, no
+ * feature list, no sentence that only works at full size.
+ */
+export const FOUNDING_CLAIMED_CONTENT = {
+  // Split so the claimed count can be set apart from the total. They are one
+  // object typographically - one text element, one tracking - but the eye
+  // should land on "40" first, which is the fact that changed.
+  claimed: '40',
+  separator: ' / ',
+  total: '300',
+  headline: 'Founding spots claimed',
+  support: 'Weighted draw. No first-come races.',
+  footer: 'grainlify.com',
+}
+
+export const FOUNDING_CLAIMED_CARDS = [
+  {
+    name: 'x',
+    platform: 'X',
+    // 16:9. X crops a square to this ratio and takes the middle, so authoring
+    // at the target ratio is what stops the crop choosing the composition.
+    width: 1600,
+    height: 900,
+    // 96, not the 60px floor the brief sets. The floor is where clipping
+    // starts across clients; sitting on it leaves nothing for the ones that
+    // crop hardest. The safe-area check enforces this larger number, so the
+    // reported clearance is the real one rather than the minimum.
+    margin: 96,
+    // Sized to span the usable width rather than to a round number. The
+    // failure this avoids is the one banner v1 had: a small mark centred in a
+    // large empty field, which reads as a placeholder at any size.
+    // 344, arrived at by measurement rather than by eye. 380 rendered 1462px
+    // of em box against 1408px of usable width - 104% - and the safe-area
+    // check failed it at 1558px past a 1504px edge. The margin is not padding
+    // to be borrowed from when the type wants to be bigger.
+    display: { size: 344, baseline: 500, role: 'gold', totalRole: 'support' },
+    headline: { size: 66, baseline: 606, role: 'cream' },
+    support: { size: 30, baseline: 790, role: 'support' },
+    footer: { size: 30, baseline: 790, role: 'gold' },
+    texture: { spacing: 56, radius: 2.5, opacity: 0.06 },
+    // 300px is roughly a timeline thumbnail on a desktop feed. The floor is
+    // the height of real painted ink, not the em box - see measureDisplayInk.
+    thumbnail: { width: 300, minDisplayPx: 34 },
+  },
+]
+
+/**
+ * The founding-spots-claimed loop.
+ *
+ * Same layout object as the static card, plus timing. The frames and the card
+ * come from one builder, so the video's last frame and the still are the same
+ * image by construction rather than by being kept in step.
+ *
+ * # Where the discontinuity goes
+ *
+ * A looping video whose count rises from 0 to 40 has exactly one
+ * discontinuity per loop - the number cannot climb forever, so somewhere it
+ * must drop back. The only real choice is where to put it.
+ *
+ * Putting it at the loop seam gives a first frame of "0 / 300", and X shows
+ * the first frame as the still before autoplay: a poster claiming nobody has
+ * claimed a spot. Putting it inside the video, after a short hold on the
+ * finished state, gives a first frame that is already correct AND a seam
+ * where the last frame equals the first. The reset then reads as the counter
+ * starting its run, which is what a counter does.
+ *
+ * So the order is: hold finished -> reset and count -> settle -> hold
+ * finished. Frame one and frame last are identical.
+ */
+export const FOUNDING_CLAIMED_VIDEO = {
+  name: 'x',
+  fps: 30,
+  // 4.0s. Motion ends at 2.45s, so this sets the hold, and the hold is the
+  // only window in which the finished card can be read - the count is moving
+  // for the rest of it. Because the loop is seamless the tail runs straight
+  // into the opening hold, giving 2.05s contiguous on the complete card.
+  //
+  // Was 5.0s, which was the middle of the brief's 4-6s range rather than a
+  // number derived from anything: it left 2.55s of hold and made 51% of the
+  // file static. Shorter is better here for a reason that argues against the
+  // obvious instinct to give people time - the video loops, so a shorter loop
+  // re-runs the count more often, which is more motion in a scrolling feed.
+  //
+  // Not below ~3.5s: the reset then lands before the supporting lines have
+  // been read, and the card reads as a gimmick rather than as a number.
+  seconds: 4.0,
+  phases: {
+    // Poster-safe opening. The first frame is the finished card.
+    holdOpen: 0.5,
+    // The count itself. Ease-out: fast at the start, arriving rather than
+    // stopping. A linear count reads like a spreadsheet recalculating.
+    count: 1.5,
+    // The supporting lines settle in after the number has arrived, so nothing
+    // competes with it while it is moving.
+    settle: 0.45,
+  },
+  // 300px is roughly a desktop timeline thumbnail. Every sampled frame is
+  // checked, not just the last: a count that is legible at 40 and mush at 7
+  // is illegible for the part of the loop the eye is actually tracking.
+  thumbnail: { width: 300, minDisplayPx: 30, sampleEvery: 5 },
+  encode: {
+    crf: 20,
+    preset: 'slow',
+    maxBytes: 5 * 1024 * 1024,
+  },
+}

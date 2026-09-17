@@ -31,8 +31,11 @@
 //
 // The copy lives in content.mjs. This file holds no words of its own.
 
-import { writeFileSync, mkdirSync, rmSync } from 'node:fs'
+import { writeFileSync, mkdirSync, rmSync, statSync, readdirSync } from 'node:fs'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
+import ffmpegPath from 'ffmpeg-static'
+import ffprobeStatic from 'ffprobe-static'
 import sharp from 'sharp'
 import { chromium } from '@playwright/test'
 
@@ -43,11 +46,15 @@ import {
   CAMPAIGN_CONTENT,
   CAMPAIGNS,
   CONTENT,
+  FOUNDING_CLAIMED_CARDS,
+  FOUNDING_CLAIMED_CONTENT,
+  FOUNDING_CLAIMED_VIDEO,
   ROLES,
   SIZES,
 } from './content.mjs'
 import {
   auditContrast,
+  auditContrastResolved,
   compositeOver,
   esc,
   FONT_IMPORT,
@@ -378,6 +385,276 @@ ${suffix}
 `
 }
 
+/**
+ * The founding-spots-claimed card.
+ *
+ * One text element for the whole "40 / 300", coloured with tspans rather than
+ * split into three elements. Three elements would need three x positions,
+ * which means hand-computing advance widths for a proportional font - the
+ * thing that goes wrong silently the first time a digit changes width. As one
+ * element the browser does the layout and the safe-area check measures the
+ * real box.
+ *
+ * No lockup. The brief asked for nothing beside the number, and on a card this
+ * size a mark plus wordmark in the corner is not neutral - it is a second
+ * focal point at the exact moment the number is trying to be the only one.
+ * grainlify.com in the footer carries the attribution instead.
+ */
+function buildFoundingClaimedSvg(c, state = {}) {
+  const { width, height, margin } = c
+  const t = FOUNDING_CLAIMED_CONTENT
+  // The animation state. Defaulting to the finished frame means the static
+  // card IS the video's last frame, produced by the same code rather than a
+  // second layout that has to be kept in step.
+  const count = state.count ?? Number(t.claimed)
+  const supportOpacity = state.supportOpacity ?? 1
+  const hero = `${count}${t.separator}${t.total}`
+  const aria = `${t.claimed}${t.separator}${t.total}. ${t.headline}. ${t.support}`
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(aria)}">
+  <title>Grainlify — founding spots claimed (${c.platform})</title>
+${GENERATED_BY}
+  <style>
+    ${FONT_IMPORT}
+    text { font-family: ${FONT_STACK}; }
+    /* Tight tracking is what makes the count read as one object rather than
+       as separate characters that happen to be adjacent. */
+    .display  { font-size: ${c.display.size}px; font-weight: 700; letter-spacing: -0.045em; }
+    .headline { font-size: ${c.headline.size}px; font-weight: 600; letter-spacing: -0.015em; }
+    .support  { font-size: ${c.support.size}px; font-weight: 400; letter-spacing: 0; }
+    .footer   { font-size: ${c.footer.size}px; font-weight: 600; letter-spacing: 0.01em; }
+  </style>
+
+  <rect data-decorative="true" width="${width}" height="${height}" fill="${C.ground}"/>
+${textureMarkup(c)}
+
+  <g>
+    <text class="display" x="${margin}" y="${c.display.baseline}" fill="${C[c.display.role]}"><tspan class="count">${esc(String(count))}</tspan><tspan fill="${C[c.display.totalRole]}">${esc(t.separator + t.total)}</tspan></text>
+    <text class="headline" x="${margin}" y="${c.headline.baseline}" fill="${C[c.headline.role]}" opacity="${supportOpacity}">${esc(t.headline)}</text>
+    <text class="support" x="${margin}" y="${c.support.baseline}" fill="${C[c.support.role]}" opacity="${supportOpacity}">${esc(t.support)}</text>
+    <text class="footer" x="${width - margin}" y="${c.footer.baseline}" text-anchor="end" fill="${C[c.footer.role]}" opacity="${supportOpacity}">${esc(t.footer)}</text>
+  </g>
+</svg>
+`
+}
+
+/** Ease-out cubic. Fast departure, gentle arrival - the count lands rather
+ *  than stopping dead, and the deceleration is what makes it read as counting
+ *  rather than as a number being replaced. */
+const easeOut = (t) => 1 - Math.pow(1 - t, 3)
+
+/**
+ * The animation state at a given time, as a pure function.
+ *
+ * Pure so the loop-seam check can ask for the state at t=0 and at t=duration
+ * and compare them, rather than comparing rendered PNGs and hoping the encoder
+ * did not smooth the difference away.
+ */
+function foundingVideoStateAt(t, v, finalCount) {
+  const { holdOpen, count, settle } = v.phases
+  if (t < holdOpen) return { count: finalCount, supportOpacity: 1 }
+
+  const intoCount = t - holdOpen
+  if (intoCount < count) {
+    const p = easeOut(intoCount / count)
+    return { count: Math.round(p * finalCount), supportOpacity: 0 }
+  }
+
+  const intoSettle = intoCount - count
+  if (intoSettle < settle) {
+    return { count: finalCount, supportOpacity: intoSettle / settle }
+  }
+  return { count: finalCount, supportOpacity: 1 }
+}
+
+/**
+ * Renders every frame, stitches them, and checks the three things that decide
+ * whether the video works: the poster frame, the loop seam, and legibility at
+ * the size it is actually watched.
+ */
+async function renderFoundingVideo(browser, card, v, problems) {
+  const finalCount = Number(FOUNDING_CLAIMED_CONTENT.claimed)
+  const frameCount = Math.round(v.seconds * v.fps)
+  const frameDir = path.join(outDir, `.frames-founding-${v.name}`)
+  rmSync(frameDir, { recursive: true, force: true })
+  mkdirSync(frameDir, { recursive: true })
+
+  // One page, one navigation, N screenshots. Re-navigating per frame would
+  // re-run the webfont load 150 times and risks catching a fallback mid-swap.
+  const ctx = await browser.newContext({ viewport: { width: card.width, height: card.height }, deviceScaleFactor: 1 })
+  const page = await ctx.newPage()
+
+  const states = []
+  for (let i = 0; i < frameCount; i++) states.push(foundingVideoStateAt(i / v.fps, v, finalCount))
+
+  // The seam, checked on state rather than on pixels.
+  const first = states[0]
+  const last = states[states.length - 1]
+  if (first.count !== last.count || first.supportOpacity !== last.supportOpacity) {
+    problems.push(
+      `founding video: the loop seam jumps - first frame is ${first.count} at opacity ` +
+        `${first.supportOpacity}, last is ${last.count} at ${last.supportOpacity}`,
+    )
+  }
+  // The poster. X shows frame one before autoplay; a zero here is the whole
+  // message inverted.
+  if (first.count !== finalCount || first.supportOpacity !== 1) {
+    problems.push(
+      `founding video: the first frame reads "${first.count}" - X uses it as the still, ` +
+        `so it must be the finished card`,
+    )
+  }
+
+  const svgPath = path.join(frameDir, 'frame.svg')
+  let widestRight = 0
+  let minEdge = Infinity
+  const sampled = []
+
+  for (let i = 0; i < frameCount; i++) {
+    writeFileSync(svgPath, buildFoundingClaimedSvg(card, states[i]))
+    await page.goto(`file://${svgPath}`)
+    if (i === 0) {
+      await page.evaluate(() => document.fonts.ready)
+      await page.waitForTimeout(250)
+    }
+    const framePath = path.join(frameDir, `f${String(i).padStart(4, '0')}.png`)
+    await page.screenshot({ path: framePath })
+
+    // Safe area on EVERY frame. The count changes width as it ticks, and a
+    // frame is not covered by having checked the last one.
+    const boxes = await page.evaluate(() =>
+      [...document.querySelectorAll('text:not([data-decorative])')].map((el) => {
+        const r = el.getBoundingClientRect()
+        return { label: (el.textContent || '').slice(0, 24), left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom) }
+      }),
+    )
+    for (const b of boxes) {
+      widestRight = Math.max(widestRight, b.right)
+      minEdge = Math.min(minEdge, b.left, b.top, card.width - b.right, card.height - b.bottom)
+      if (b.right > card.width - card.margin || b.left < card.margin || b.bottom > card.height - card.margin || b.top < card.margin) {
+        problems.push(`founding video frame ${i}: "${b.label}" breaks the ${card.margin}px safe area`)
+      }
+    }
+    if (i % v.thumbnail.sampleEvery === 0) sampled.push({ i, framePath, state: states[i] })
+  }
+  await ctx.close()
+
+  // Encode. yuv420p because anything else fails to decode on a good share of
+  // mobile clients; +faststart so the first frame is available before the
+  // whole file has arrived, which is what makes the poster appear promptly.
+  const mp4Path = path.join(outDir, `grainlify-founding-claimed-${v.name}.mp4`)
+  execFileSync(ffmpegPath, [
+    '-y', '-loglevel', 'error',
+    '-framerate', String(v.fps),
+    '-i', path.join(frameDir, 'f%04d.png'),
+    '-an',
+    '-c:v', 'libx264', '-preset', v.encode.preset, '-crf', String(v.encode.crf),
+    '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+    mp4Path,
+  ])
+
+  const bytes = statSync(mp4Path).size
+  if (bytes > v.encode.maxBytes) {
+    problems.push(`founding video: ${(bytes / 1024 / 1024).toFixed(2)}MB exceeds the ${v.encode.maxBytes / 1024 / 1024}MB ceiling`)
+  }
+
+  // No audio track at all - not a silent one.
+  //
+  // -an above is the intent; this is the verification, and they are not the
+  // same thing. An MP4 carrying an empty or silent audio stream can be
+  // treated as a video WITH sound, and X then shows it with a play button
+  // instead of autoplaying it. For a card whose entire job is to animate in a
+  // feed, that is the difference between working and not, and it is invisible
+  // in the file size, the duration and the picture.
+  //
+  // Asked as "list the audio streams" rather than "how many streams are
+  // there": a container with one video stream and one audio stream also has
+  // nb_streams=2, and a check on the total would pass a file with the exact
+  // defect this exists to catch if the video stream were ever dropped.
+  const audioStreams = execFileSync(ffprobeStatic.path, [
+    '-v', 'error',
+    '-select_streams', 'a',
+    '-show_entries', 'stream=index',
+    '-of', 'csv=p=0',
+    mp4Path,
+  ]).toString().trim()
+  const audioCount = audioStreams === '' ? 0 : audioStreams.split('\n').length
+  if (audioCount !== 0) {
+    problems.push(
+      `founding video: the MP4 carries ${audioCount} audio stream(s); it must carry none, ` +
+        `or X may show a play button instead of autoplaying`,
+    )
+  }
+
+  return { frameDir, mp4Path, bytes, frameCount, sampled, widestRight, minEdge, audioCount }
+}
+
+/**
+ * Legibility across the whole loop, not just at the end.
+ *
+ * Downscales sampled frames to feed-thumbnail width and counts the gold ink in
+ * the count's region. A card checked only at its final value can be perfectly
+ * legible reading "40" and unreadable for the second and a half where it is
+ * actually moving - which is the part of the loop the eye tracks.
+ *
+ * What this measures is glyph HEIGHT - the vertical span of gold pixels - so
+ * it does not vary with how many digits are showing. That is deliberate:
+ * legibility at thumbnail size is set by cap height, not by how wide the
+ * number happens to be. An earlier comment here claimed the single-digit
+ * frames were the worst case; they are not, and every sampled frame returning
+ * the same figure is the evidence. The check still earns its place by
+ * covering the frames where the count is moving, which is where a mis-set
+ * font size or a mid-animation transform would show up.
+ */
+async function measureVideoInk(card, v, sampled) {
+  const scale = v.thumbnail.width / card.width
+  const target = [1, 3, 5].map((i) => parseInt(C.gold.slice(i, i + 2), 16))
+  const problems = []
+  const rows = []
+
+  for (const { i, framePath, state } of sampled) {
+    const buf = await sharp(framePath).resize({ width: v.thumbnail.width }).raw().toBuffer({ resolveWithObject: true })
+    const { data, info } = buf
+    // The count sits left of centre; scan the left half only so the gold
+    // footer cannot be mistaken for it.
+    const x1 = Math.round(info.width * 0.5)
+    const y0 = Math.round(card.margin * scale)
+    const y1 = Math.round((card.height - card.margin) * scale)
+    let top = null
+    let bottom = null
+    for (let y = y0; y < Math.min(y1, info.height); y++) {
+      let hit = false
+      for (let x = 0; x < x1; x++) {
+        const k = (y * info.width + x) * info.channels
+        if (Math.abs(data[k] - target[0]) < 40 && Math.abs(data[k + 1] - target[1]) < 40 && Math.abs(data[k + 2] - target[2]) < 40) { hit = true; break }
+      }
+      if (hit) { if (top === null) top = y; bottom = y }
+    }
+    const ink = top === null ? 0 : bottom - top + 1
+    rows.push({ i, value: state.count, ink })
+    if (ink < v.thumbnail.minDisplayPx) {
+      problems.push(
+        `founding video frame ${i} (count ${state.count}): ${ink}px of ink at ` +
+          `${v.thumbnail.width}px wide, under the ${v.thumbnail.minDisplayPx}px floor`,
+      )
+    }
+  }
+  return { problems, rows }
+}
+
+function foundingClaimedContrastPairs() {
+  return FOUNDING_CLAIMED_CARDS.flatMap((c) => {
+    const bg = worstBg(c)
+    return [
+      { what: `${c.name} claimed: "${FOUNDING_CLAIMED_CONTENT.claimed}"`, fg: C[c.display.role], bg, px: c.display.size, bold: true },
+      { what: `${c.name} claimed: "/ ${FOUNDING_CLAIMED_CONTENT.total}"`, fg: C[c.display.totalRole], bg, px: c.display.size, bold: true },
+      { what: `${c.name} claimed: headline`, fg: C[c.headline.role], bg, px: c.headline.size, bold: true },
+      { what: `${c.name} claimed: supporting line`, fg: C[c.support.role], bg, px: c.support.size, bold: false },
+      { what: `${c.name} claimed: footer`, fg: C[c.footer.role], bg, px: c.footer.size, bold: false },
+    ]
+  })
+}
+
 function campaignContrastPairs() {
   return CAMPAIGNS.flatMap((c) => {
     const bg = worstBg(c)
@@ -575,6 +852,8 @@ function avatarProblems(variant, boxes) {
 auditContrast(cardContrastPairs(), 'share cards')
 auditContrast(bannerContrastPairs(), 'banners')
 auditContrast(campaignContrastPairs(), 'campaign cards')
+// Deferred until the browser is open: this gate resolves every colour
+// through a canvas rather than parsing it, so it needs a page.
 auditContrast(
   AVATARS.variants.map((v) => ({
     what: `avatar ${v.name}: mark`,
@@ -589,6 +868,18 @@ auditContrast(
 const browser = await chromium.launch()
 const problems = []
 const written = []
+
+// The founding-claimed gate runs through the browser's own colour parser.
+// Every other gate here compares hex to hex, which is correct for this
+// palette; this one does not depend on that staying correct. A regex that
+// reads oklch() numbers as sRGB reports a confident wrong answer rather than
+// an error, and that has already happened once in this codebase.
+{
+  const ctx = await browser.newContext()
+  const page = await ctx.newPage()
+  await auditContrastResolved(page, foundingClaimedContrastPairs(), 'founding-claimed card + video')
+  await ctx.close()
+}
 
 console.log(`\nRendering share cards`)
 for (const size of SIZES) {
@@ -667,6 +958,113 @@ for (const c of CAMPAIGNS) {
       `(em box would have claimed ${ink.boxPx}px) / ${c.thumbnail.minDisplayPx}px floor`,
   )
   written.push(svgPath, pngPath, thumbPath)
+}
+
+console.log(`\nRendering founding-claimed cards`)
+for (const c of FOUNDING_CLAIMED_CARDS) {
+  const svgPath = path.join(outDir, `grainlify-founding-claimed-${c.name}.svg`)
+  const pngPath = path.join(outDir, `grainlify-founding-claimed-${c.name}@2x.png`)
+  const thumbPath = path.join(outDir, `grainlify-founding-claimed-${c.name}-thumb.png`)
+  writeFileSync(svgPath, buildFoundingClaimedSvg(c))
+
+  const { boxes, usedInter } = await renderOne(browser, {
+    svgPath,
+    pngPath,
+    width: c.width,
+    height: c.height,
+  })
+
+  const safeRight = c.width - c.margin
+  const safeBottom = c.height - c.margin
+  for (const el of boxes) {
+    const label = `${c.name} claimed: "${el.label}"`
+    if (el.right > safeRight) problems.push(`${label} ends at ${el.right}px, past the ${safeRight}px safe edge`)
+    if (el.left < c.margin) problems.push(`${label} starts at ${el.left}px, inside the ${c.margin}px margin`)
+    if (el.bottom > safeBottom) problems.push(`${label} reaches ${el.bottom}px, below the ${safeBottom}px safe edge`)
+    if (el.top < c.margin) problems.push(`${label} starts at ${el.top}px, above the ${c.margin}px margin`)
+  }
+
+  // The number has to dominate, not merely fit. A hero spanning less than
+  // half the usable width is the banner v1 failure - correct content, floated
+  // in a field of nothing - and it is invisible in a check that only asks
+  // whether elements stay inside their margins.
+  const display = boxes.find((b) => b.cls === 'display')
+  const usable = c.width - c.margin * 2
+  const fill = (display.right - display.left) / usable
+  if (fill < 0.6) {
+    problems.push(
+      `${c.name} claimed: the count spans ${Math.round(fill * 100)}% of the usable width ` +
+        `(${display.right - display.left}/${usable}px); under 60% it floats rather than fills`,
+    )
+  }
+
+  const thumbScale = c.thumbnail.width / c.width
+  await renderOne(browser, {
+    svgPath,
+    pngPath: thumbPath,
+    width: c.width,
+    height: c.height,
+    scale: thumbScale,
+  })
+  const ink = await measureDisplayInk(c, boxes, thumbPath)
+  problems.push(...ink.problems)
+
+  console.log(
+    `  ${c.name.padEnd(9)} ${c.width}x${c.height} -> ${c.width * 2}x${c.height * 2}` +
+      `  font ${usedInter ? 'Inter' : 'FALLBACK'}`,
+  )
+  console.log(
+    `      count spans ${display.right - display.left}/${usable}px of usable width (${Math.round(fill * 100)}%)`,
+  )
+  console.log(
+    `      safe area: nearest edge ${Math.min(
+      ...boxes.map((b) => Math.min(b.left, b.top, c.width - b.right, c.height - b.bottom)),
+    )}px (margin ${c.margin}px, brief floor 60px)`,
+  )
+  console.log(
+    `      thumbnail ${c.thumbnail.width}x${Math.round(c.height * thumbScale)}: ` +
+      `"${FOUNDING_CLAIMED_CONTENT.claimed}" measures ${ink.inkPx}px of real ink ` +
+      `(em box would have claimed ${ink.boxPx}px) / ${c.thumbnail.minDisplayPx}px floor`,
+  )
+  written.push(svgPath, pngPath, thumbPath)
+}
+
+console.log(`\nRendering founding-claimed video`)
+{
+  const v = FOUNDING_CLAIMED_VIDEO
+  const card = FOUNDING_CLAIMED_CARDS.find((c) => c.name === v.name)
+  const r = await renderFoundingVideo(browser, card, v, problems)
+  const ink = await measureVideoInk(card, v, r.sampled)
+  problems.push(...ink.problems)
+
+  // The still: the video's own last frame, copied rather than re-rendered, so
+  // "the card is the final frame" is true by construction rather than by two
+  // code paths agreeing.
+  //
+  // Native 1600x900 only. An @2x here would have to be upscaled from a 1x
+  // frame, and grainlify-founding-claimed-x@2x.png is already the identical
+  // composition rendered at 2x - 159KB and sharp, against 393KB and soft for
+  // the upscale. Shipping both would mean shipping a worse copy of an asset
+  // that already exists.
+  const stillSrc = path.join(r.frameDir, `f${String(r.frameCount - 1).padStart(4, '0')}.png`)
+  const stillPath = path.join(outDir, `grainlify-founding-claimed-still.png`)
+  await sharp(stillSrc).toFile(stillPath)
+
+  console.log(
+    `  ${v.name.padEnd(9)} ${card.width}x${card.height} ${v.fps}fps ${v.seconds}s ` +
+      `(${r.frameCount} frames)  ${(r.bytes / 1024 / 1024).toFixed(2)}MB / ${v.encode.maxBytes / 1024 / 1024}MB`,
+  )
+  console.log(`      safe area: nearest edge ${r.minEdge}px across all ${r.frameCount} frames (margin ${card.margin}px, brief floor 60px)`)
+  console.log(`      loop seam: frame 0 and frame ${r.frameCount - 1} identical state`)
+  console.log(`      audio: ${r.audioCount} streams (ffprobe -select_streams a), autoplay-safe`)
+  const worst = ink.rows.reduce((a, b) => (b.ink < a.ink ? b : a))
+  console.log(
+    `      thumbnail ${v.thumbnail.width}px: worst frame is #${worst.i} reading "${worst.value}" ` +
+      `at ${worst.ink}px of ink / ${v.thumbnail.minDisplayPx}px floor`,
+  )
+  console.log(`      ink by frame: ${ink.rows.map((x) => `${x.value}:${x.ink}`).join('  ')}`)
+  rmSync(r.frameDir, { recursive: true, force: true })
+  written.push(r.mp4Path, stillPath)
 }
 
 console.log(`\nRendering banners`)
