@@ -175,7 +175,7 @@ type IssueType = {
 
 interface DiscoverPageProps {
   onGoToBilling?: () => void;
-  onGoToOpenSourceWeek?: () => void;
+  onGoToGrainHack?: () => void;
   /** Open an issue in the shared detail view.
    *
    * This page used to render its own IssueDetailPage overlay behind its own
@@ -192,7 +192,7 @@ interface DiscoverPageProps {
 
 export function DiscoverPage({
   onGoToBilling,
-  onGoToOpenSourceWeek,
+  onGoToGrainHack,
   onOpenIssue,
 }: DiscoverPageProps) {
   const { theme } = useTheme();
@@ -485,9 +485,9 @@ export function DiscoverPage({
               Track your GrainHack progress directly from your dashboard and compete for a spot on the leaderboard.
             </p>
             <button
-              onClick={onGoToOpenSourceWeek}
-              disabled={!onGoToOpenSourceWeek}
-              className={`px-7 py-3.5 rounded-[14px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[15px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.45)] transition-all inline-flex items-center gap-2 border border-white/10 ${!onGoToOpenSourceWeek ? 'opacity-70 cursor-default' : ''
+              onClick={onGoToGrainHack}
+              disabled={!onGoToGrainHack}
+              className={`px-7 py-3.5 rounded-[14px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[15px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.45)] transition-all inline-flex items-center gap-2 border border-white/10 ${!onGoToGrainHack ? 'opacity-70 cursor-default' : ''
                 }`}
             >
               <span>Let's go</span>

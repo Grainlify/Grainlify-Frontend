@@ -421,14 +421,14 @@ describe('DiscoverPage', () => {
     expect(mockedGetPublicProjectIssues.mock.calls.length).toBe(callsRightAfterExpansion)
   })
 
-  it('fires onGoToBilling and onGoToOpenSourceWeek when their call-to-action buttons are clicked', async () => {
+  it('fires onGoToBilling and onGoToGrainHack when their call-to-action buttons are clicked', async () => {
     mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
     const onGoToBilling = vi.fn()
-    const onGoToOpenSourceWeek = vi.fn()
+    const onGoToGrainHack = vi.fn()
     const user = userEvent.setup()
 
     renderWithProviders(
-      <DiscoverPage onGoToBilling={onGoToBilling} onGoToOpenSourceWeek={onGoToOpenSourceWeek} />,
+      <DiscoverPage onGoToBilling={onGoToBilling} onGoToGrainHack={onGoToGrainHack} />,
       { withAuth: true },
     )
 
@@ -440,7 +440,7 @@ describe('DiscoverPage', () => {
     expect(onGoToBilling).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole('button', { name: /Let's go/i }))
-    expect(onGoToOpenSourceWeek).toHaveBeenCalledTimes(1)
+    expect(onGoToGrainHack).toHaveBeenCalledTimes(1)
   })
 
   describe('overlay URL persistence', () => {
