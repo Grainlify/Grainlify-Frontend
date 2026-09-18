@@ -26,9 +26,12 @@ interface IssueDetailPageProps {
    * viewer must have actually switched into a mode that can act on it,
    * rather than showing up regardless of which mode is selected. */
   activeRole?: 'contributor' | 'maintainer' | 'admin';
+  /** The repo's display name, when the caller already has it. Used only if
+   *  GET /projects/:id cannot resolve the project. */
+  repoFullName?: string;
 }
 
-export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeRole }: IssueDetailPageProps) {
+export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeRole, repoFullName }: IssueDetailPageProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -42,12 +45,27 @@ export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeR
     const load = async () => {
       setIsLoading(true);
       try {
-        const [p, mine] = await Promise.all([
+        // Settled, not all-or-nothing, and each failure is absorbed.
+        //
+        // These used to run under Promise.all inside a try/finally with no
+        // catch, so one rejection skipped both setState calls and the page
+        // rendered its "no repositories selected" state - a page that looks
+        // fine and shows nothing. GET /projects/:id resolves the repo through
+        // the project's GitHub App installation and answers 404
+        // project_not_accessible whenever that token cannot be minted, which
+        // is a condition of the installation, not of the viewer. Losing the
+        // repo's display name to that is survivable; losing the issue list is
+        // not.
+        const [pRes, mineRes] = await Promise.allSettled([
           projectId ? getPublicProject(projectId) : Promise.resolve(null as any),
           getMyProjects(),
         ]);
         if (cancelled) return;
-        if (projectId) setProject(p);
+        if (projectId && pRes.status === 'fulfilled') setProject(pRes.value);
+        if (pRes.status === 'rejected') {
+          console.warn('IssueDetailPage: could not resolve the project, falling back to its id', pRes.reason);
+        }
+        const mine = mineRes.status === 'fulfilled' ? mineRes.value : [];
         setMyProjects(
           (Array.isArray(mine) ? mine : []).map((x) => ({
             id: x.id,
@@ -69,12 +87,18 @@ export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeR
 
   // Include the current project so contributors (who have no "my projects") still see the issue
   const selectedProjects = useMemo((): ProjectForIssues[] => {
+    // Falls back to the id alone when the project could not be resolved. The
+    // issue list is keyed by project id, so it still loads; only the repo's
+    // display name is missing, and repoFullName supplies that when the caller
+    // already knows it.
     const current: ProjectForIssues | null = project
       ? { id: project.id, github_full_name: project.github_full_name, status: 'verified' }
-      : null;
+      : projectId
+        ? { id: projectId, github_full_name: repoFullName ?? '', status: 'verified' }
+        : null;
     const others = myProjects.filter((m) => !current || m.id !== current.id);
     return current ? [current, ...others] : others;
-  }, [project, myProjects]);
+  }, [project, projectId, repoFullName, myProjects]);
 
   // myProjects comes from GET /projects/mine, which is strictly
   // owner_user_id = caller - real per-project ownership, not generic "my

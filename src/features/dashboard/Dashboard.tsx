@@ -114,6 +114,9 @@ export function Dashboard() {
   const [selectedIssue, setSelectedIssue] = useState<{
     issueId: string;
     projectId?: string;
+    // In-memory only: a convenience for the repo label when the caller already
+    // knows it. Not in the URL, so a reload falls back to resolving it.
+    repoFullName?: string;
   } | null>(() => {
     if (typeof window === "undefined") return null;
     const params = new URLSearchParams(window.location.search);
@@ -1052,6 +1055,7 @@ export function Dashboard() {
               <IssueDetailPage
                 issueId={selectedIssue.issueId}
                 projectId={selectedIssue.projectId}
+                repoFullName={selectedIssue.repoFullName}
                 onClose={() => setSelectedIssue(null)}
                 userRole={userRole}
                 activeRole={activeRole}
@@ -1142,8 +1146,8 @@ export function Dashboard() {
                         setSelectedEventId(null);
                         setSelectedEventName(null);
                       }}
-                      onIssueClick={(issueId, projectId) =>
-                        setSelectedIssue({ issueId, projectId })
+                      onIssueClick={(issueId, projectId, repoFullName) =>
+                        setSelectedIssue({ issueId, projectId, repoFullName })
                       }
                     />
                   )}

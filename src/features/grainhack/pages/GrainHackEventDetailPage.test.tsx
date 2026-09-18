@@ -127,6 +127,8 @@ describe('GrainHackEventDetailPage', () => {
     await user.click(button)
 
     expect(onIssueClick).toHaveBeenCalledTimes(1)
-    expect(onIssueClick).toHaveBeenCalledWith('7', 'proj-77')
+    // The repo name travels with the click so the detail page can label the
+    // list even when GET /projects/:id cannot resolve the project.
+    expect(onIssueClick).toHaveBeenCalledWith('7', 'proj-77', 'Jagadeeshftw/grainhack-sandbox')
   })
 })

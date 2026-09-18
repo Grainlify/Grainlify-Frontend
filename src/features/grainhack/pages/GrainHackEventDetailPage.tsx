@@ -47,7 +47,7 @@ interface GrainHackEventDetailPageProps {
   eventId: string;
   eventName: string;
   onBack: () => void;
-  onIssueClick: (issueId: string, projectId: string) => void;
+  onIssueClick: (issueId: string, projectId: string, repoFullName: string) => void;
 }
 
 export function GrainHackEventDetailPage({ eventId, eventName, onBack, onIssueClick }: GrainHackEventDetailPageProps) {
@@ -182,7 +182,7 @@ export function GrainHackEventDetailPage({ eventId, eventName, onBack, onIssueCl
                       />
                     </div>
                     <button
-                      onClick={() => onIssueClick(String(issue.issue_number), issue.project_id)}
+                      onClick={() => onIssueClick(String(issue.issue_number), issue.project_id, issue.repo_full_name)}
                       className="w-full sm:w-auto shrink-0 px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[13px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_24px_rgba(162,121,44,0.4)] transition-all border border-white/10"
                     >
                       View issue
