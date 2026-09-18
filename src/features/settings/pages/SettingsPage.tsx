@@ -28,7 +28,7 @@ export function SettingsPage() {
 
   const tabs: { id: SettingsTabType; label: string }[] = [
     { id: 'profile', label: 'Profile' },
-    { id: 'notifications', label: 'Notifications' },
+    { id: 'notifications', label: 'Notification Preferences' },
     { id: 'referrals', label: 'Referrals' },
     { id: 'rewards', label: 'Rewards' },
     { id: 'payout', label: 'Payout Preferences' },
