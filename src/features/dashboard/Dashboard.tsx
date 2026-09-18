@@ -118,7 +118,7 @@ export function Dashboard() {
     if (typeof window === "undefined") return null;
     const params = new URLSearchParams(window.location.search);
     const issueId = params.get("issue");
-    const projectId = params.get("project");
+    const projectId = params.get("iproject") || params.get("project");
     if (!issueId) return null;
     return { issueId, projectId: projectId || undefined };
   });
@@ -363,9 +363,12 @@ export function Dashboard() {
     setProjectBackTarget((prev) => (prev === from ? prev : from));
 
     const issueId = params.get("issue");
+    const issueProject = params.get("iproject") || project || undefined;
     setSelectedIssue((prev) => {
       if (!issueId) return prev === null ? prev : null;
-      const projectId = project || undefined;
+      // Falling back to prev rather than undefined: the URL is not allowed to
+      // downgrade a project the click already supplied.
+      const projectId = issueProject || prev?.projectId;
       if (prev && prev.issueId === issueId && prev.projectId === projectId) return prev;
       return { issueId, projectId };
     });
@@ -434,10 +437,29 @@ export function Dashboard() {
       params.delete("project");
       params.delete("from");
     }
-    // selectedProjectId is always kept in sync alongside selectedIssue at every
-    // call site in this file, so project= is already handled by the block above.
-    if (selectedIssue?.issueId) params.set("issue", selectedIssue.issueId);
-    else params.delete("issue");
+    // The issue's own project, under its own key.
+    //
+    // This used to rely on "selectedProjectId is always kept in sync alongside
+    // selectedIssue at every call site", which is a convention nothing
+    // enforces - and opening an issue from a surface with no project page
+    // behind it (the GrainHack event page, Discover) breaks it. The writer
+    // then dropped project=, the reader below rebuilt selectedIssue from the
+    // URL without one, and IssueDetailPage had nothing to resolve the repo
+    // with. It renders its empty state, so the page looks fine and shows
+    // nothing - and it is invisible to anyone who owns the repo, because
+    // /projects/mine supplies the project their link failed to carry.
+    //
+    // Kept separate from project=, which means "a project page is open":
+    // reusing that key would strand the viewer on the project page when they
+    // close the issue.
+    if (selectedIssue?.issueId) {
+      params.set("issue", selectedIssue.issueId);
+      if (selectedIssue.projectId) params.set("iproject", selectedIssue.projectId);
+      else params.delete("iproject");
+    } else {
+      params.delete("issue");
+      params.delete("iproject");
+    }
     setSearchParams(params, { replace: isFirstUrlSync.current });
     isFirstUrlSync.current = false;
   }, [currentPage, activeRole, selectedProjectId, selectedIssue, viewingUserId, viewingUserLogin, viewingOrgLogin, projectBackTarget, setSearchParams]);

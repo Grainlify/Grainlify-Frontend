@@ -42,7 +42,12 @@ vi.mock('./pages/DataPage', () => ({
   DataPage: () => <div data-testid="data-page" />,
 }))
 vi.mock('./pages/IssueDetailPage', () => ({
-  IssueDetailPage: () => <div data-testid="issue-detail-page" />,
+  // projectId is surfaced so the suite can prove the link carried it. Without
+  // it IssueDetailPage cannot resolve the repo, and it renders an empty state
+  // that looks like a working page with no issues.
+  IssueDetailPage: ({ issueId, projectId }: { issueId?: string; projectId?: string }) => (
+    <div data-testid="issue-detail-page" data-issue-id={issueId} data-project-id={projectId ?? ''} />
+  ),
 }))
 
 // UserProfileDropdown pulls in Radix DropdownMenu internals that add nothing to a
@@ -238,6 +243,32 @@ describe('Dashboard', () => {
 
       expect(await screen.findByTestId('issue-detail-page')).toBeInTheDocument()
       expect(screen.queryByTestId('discover-page')).not.toBeInTheDocument()
+    })
+
+    // The bug this pins: an issue opened from a surface with no project page
+    // behind it (the GrainHack event page, Discover) lost its project id on
+    // the round trip through the URL, so IssueDetailPage had nothing to
+    // resolve the repo with and rendered "no issues" on a page that otherwise
+    // looked fine. It was invisible to anyone owning the repo, because
+    // /projects/mine supplied the project the link had dropped.
+    it('carries the issue\'s project through the URL when no project page is open', async () => {
+      const url = '/dashboard?tab=osw&issue=1&iproject=proj-42'
+      window.history.pushState({}, '', url)
+
+      renderWithProviders(<Dashboard />, { route: url })
+
+      const page = await screen.findByTestId('issue-detail-page')
+      expect(page).toHaveAttribute('data-project-id', 'proj-42')
+    })
+
+    it('still honours a legacy ?project= deep link', async () => {
+      const url = '/dashboard?tab=browse&project=proj-1&issue=issue-1'
+      window.history.pushState({}, '', url)
+
+      renderWithProviders(<Dashboard />, { route: url })
+
+      const page = await screen.findByTestId('issue-detail-page')
+      expect(page).toHaveAttribute('data-project-id', 'proj-1')
     })
   })
 

@@ -710,7 +710,19 @@ Only applications submitted via the apply link above will be considered. Please 
     if (isLoadingIssues) return;
     if (!issues || issues.length === 0) return;
 
-    const match = issues.find((it) => it.github_issue_id?.toString() === effectiveInitialIssueId);
+    // Callers legitimately hold different identifiers for the same issue: the
+    // maintainer list carries github_issue_id (GitHub's global id, ~10 digits)
+    // while the public GrainHack issue list exposes issue_number (the per-repo
+    // #1, #2). Matching only the global id meant an entry point holding the
+    // number silently selected nothing, which reads as "this issue does not
+    // exist" rather than "the link used the other id".
+    //
+    // Both are accepted. They cannot be confused: the match is already scoped
+    // to the issues of initialSelectedProjectId, and within one repo a global
+    // id never collides with an issue number.
+    const match =
+      issues.find((it) => it.github_issue_id?.toString() === effectiveInitialIssueId) ??
+      issues.find((it) => it.number?.toString() === effectiveInitialIssueId);
     if (!match) return;
 
     const timeAgoFormatted = formatTimeAgo(match.updated_at);
