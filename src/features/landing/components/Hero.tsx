@@ -124,10 +124,10 @@ export function Hero() {
           >
             <img
               src={isDark ? "/grainhack-event-dark.webp" : "/grainhack-event-light.webp"}
-              alt="The GrainHack event page in the Grainlify dashboard: First GrainHack Event (Base Sepolia), in issue prep, showing an $8.00 contributor pool and one open issue - Fix the flaky retry loop in the sandbox worker, tagged Easy, in Jagadeeshftw/grainhack-sandbox, with 16 hours left to apply."
+              alt="The GrainHack event page in the Grainlify dashboard: First GrainHack Event (Base Sepolia), live, showing an $8.00 contributor pool and two assigned issues in Jagadeeshftw/grainhack-sandbox - Fix the flaky retry loop in the sandbox worker, tagged Easy, and Validate --concurrency instead of silently starting zero workers, tagged Standard."
               className="h-auto w-full object-cover"
               width={1440}
-              height={440}
+              height={900}
               loading="eager"
             />
           </motion.div>
