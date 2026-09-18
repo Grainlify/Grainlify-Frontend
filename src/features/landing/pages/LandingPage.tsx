@@ -568,13 +568,14 @@ const BUILT = [
   "Soroban escrow contract: pools, commitments, pull-based Merkle claims, timelocked sweep - 18 passing tests",
   "Role-based admin access, server-verified on every request",
   "Referral attribution shipped and server-enforced, with a signed 30-day window - not yet exercised end to end in production",
+  "First GrainHack event run on the Base Sepolia testnet - two issues drawn, fixed and judged accepted",
 ];
 
 const PLANNED = [
   "Soroban testnet deployment, then mainnet",
   "External audit before mainnet funds",
   "AI-assisted evidence gathering for judging - humans decide, with appeals",
-  "First GrainHack event",
+  "Paying the first event's contributors on Base Sepolia - not sent yet",
 ];
 
 function BuiltAndPlanned() {
@@ -672,7 +673,9 @@ function BuiltAndPlanned() {
               dark ? "bg-white/[0.04] text-[#c6b7a3]" : "bg-white/[0.12] text-[#6b5d4d]"
             }`}
           >
-            No event has run yet. Draws today are executed by the backend and
+            The first GrainHack event has run, on the Base Sepolia testnet: both
+            of its issues were drawn, fixed and judged accepted. Payouts are
+            next and have not been sent. Draws are executed by the backend and
             recorded, not yet anchored on-chain - commit-reveal and Merkle claims
             are written and tested, and are not yet wired to a live chain. We'd
             rather say that than imply otherwise.

@@ -52,7 +52,15 @@ describe('LandingPage', () => {
     // for a reviewer; if either disappears the page is a feature list again.
     expect(screen.getByText("Why this isn't another bounty board")).toBeInTheDocument()
     expect(screen.getByText('Built, and planned')).toBeInTheDocument()
-    expect(screen.getByText(/No event has run yet/i)).toBeInTheDocument()
+    // The status note tracks what has actually happened: an event has run and
+    // been judged, and nothing has been paid. It must never claim a payout.
+    expect(screen.getByText(/The first GrainHack event has run, on the Base Sepolia testnet/i)).toBeInTheDocument()
+    expect(screen.getByText(/Payouts are\s+next and have not been sent/i)).toBeInTheDocument()
+    expect(screen.queryByText(/No event has run yet/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^First GrainHack event$/)).not.toBeInTheDocument()
+    const status = screen.getByText('Built, and planned').closest('section')?.textContent ?? ''
+    expect(status).toContain('judged accepted')
+    expect(status).not.toMatch(/\b(were paid|have been paid|paid out to|payouts? (were|have been) sent)\b/i)
     expect(screen.getByText('Everything You Need to Succeed')).toBeInTheDocument()
     expect(screen.getByText('How It Works')).toBeInTheDocument()
     expect(screen.getByText('Why Choose Grainlify?')).toBeInTheDocument()
