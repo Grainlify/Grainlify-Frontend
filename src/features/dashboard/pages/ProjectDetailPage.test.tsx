@@ -157,18 +157,22 @@ describe('ProjectDetailPage', () => {
     expect(screen.queryByRole('heading', { level: 1, name: 'widget' })).not.toBeInTheDocument()
   })
 
-  it('does not crash when the fetch fails, and keeps showing the loading skeleton', async () => {
-    vi.mocked(getPublicProject).mockRejectedValue(new Error('network error'))
+  // Replaces a test that asserted the skeleton stayed up forever on failure,
+  // calling it "graceful (if unusual) behavior". A skeleton says "still
+  // loading", so a lookup that had already failed read as merely slow,
+  // indefinitely, with nothing for the viewer to act on - the same "renders
+  // correctly while showing nothing" shape as #1033/#1040. The old test
+  // pinned the defect as a feature.
+  it('shows an explicit error, not an endless skeleton, when the lookup fails', async () => {
+    vi.mocked(getPublicProject).mockRejectedValue(new Error('project_not_accessible'))
 
-    const { container } = renderWithProviders(<ProjectDetailPage projectId="proj-123" />)
+    const { container } = renderWithProviders(<ProjectDetailPage projectId="proj-123" onBack={vi.fn()} />)
 
-    await waitFor(() => expect(console.error).toHaveBeenCalled())
-
-    // Source deliberately leaves isLoading=true forever on failure (see the
-    // "Keep loading state true to show skeleton forever" comment) instead of
-    // surfacing an error UI — assert that graceful (if unusual) behavior.
-    expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0)
-    expect(screen.getByText('Community')).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent("This project couldn't be loaded.")
+    expect(screen.getByRole('alert')).toHaveTextContent('project_not_accessible')
+    expect(container.querySelectorAll('.animate-shimmer').length).toBe(0)
+    // Still escapable: the back control survives the error.
+    expect(screen.getByText('Back')).toBeInTheDocument()
   })
 
   const backLabelCases = [

@@ -34,9 +34,19 @@ vi.mock('../../../../shared/contexts/AuthContext', () => ({
 vi.mock('../../../grainhack/components/HackathonIssueFieldsPanel', () => ({
   HackathonIssueFieldsPanel: () => null,
 }))
-vi.mock('../../../grainhack/components/ApplyToIssuePanel', () => ({
-  ApplyToIssuePanel: () => null,
-}))
+// The real panel decides whether the issue is a published GrainHack issue and
+// reports it up through onGrainHackChange. The stub reports whatever the test
+// sets, so the page's response to that answer can be checked in both directions.
+const grainhack = vi.hoisted(() => ({ value: false }))
+vi.mock('../../../grainhack/components/ApplyToIssuePanel', async () => {
+  const React = await import('react')
+  return {
+    ApplyToIssuePanel: ({ onGrainHackChange }: { onGrainHackChange?: (v: boolean) => void }) => {
+      React.useEffect(() => { onGrainHackChange?.(grainhack.value) }, [onGrainHackChange])
+      return null
+    },
+  }
+})
 
 const mockedGetProjectIssues = vi.mocked(getProjectIssues)
 
@@ -62,6 +72,7 @@ function makeApiIssue(overrides: Partial<Awaited<ReturnType<typeof getProjectIss
 
 describe('IssuesTab - selected issue URL persistence', () => {
   beforeEach(() => {
+    grainhack.value = false
     vi.resetAllMocks()
     mockedGetProjectIssues.mockResolvedValue({
       issues: [makeApiIssue({ github_issue_id: 101 }), makeApiIssue({ github_issue_id: 102 })],
@@ -233,6 +244,38 @@ describe('IssuesTab - closed issue display', () => {
     expect(screen.getByText('This issue is closed. Applications are disabled.')).toBeInTheDocument()
     expect(screen.getByText('This issue is closed, so no new applications can be submitted.')).toBeInTheDocument()
     expect(screen.queryByText(/This issue is open and waiting/)).not.toBeInTheDocument()
+  })
+
+  // A GrainHack issue carried two identically labelled "Apply for this issue"
+  // buttons: the draw's (in ApplyToIssuePanel) and the generic one below it,
+  // which posts a GitHub comment and does NOT enter the draw. A contributor
+  // who used the second believed they had applied and was silently left out.
+  it('does not offer the generic apply on a GrainHack issue, and points to the draw instead', async () => {
+    grainhack.value = true
+    mockedGetProjectIssues.mockResolvedValue({
+      issues: [makeApiIssue({ github_issue_id: 801, title: 'A GrainHack issue', author_login: 'someone-else' })],
+    })
+
+    renderWithProviders(
+      <IssuesTab onNavigate={vi.fn()} selectedProjects={[PROJECT]} initialSelectedIssueId="801" initialSelectedProjectId={PROJECT.id} />
+    )
+
+    expect(await screen.findByText(/This issue is part of a GrainHack event/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Apply for this issue' })).not.toBeInTheDocument()
+  })
+
+  it('still offers the generic apply on an ordinary issue', async () => {
+    grainhack.value = false
+    mockedGetProjectIssues.mockResolvedValue({
+      issues: [makeApiIssue({ github_issue_id: 802, title: 'An ordinary issue', author_login: 'someone-else' })],
+    })
+
+    renderWithProviders(
+      <IssuesTab onNavigate={vi.fn()} selectedProjects={[PROJECT]} initialSelectedIssueId="802" initialSelectedProjectId={PROJECT.id} />
+    )
+
+    expect(await screen.findByRole('button', { name: 'Apply for this issue' })).toBeInTheDocument()
+    expect(screen.queryByText(/This issue is part of a GrainHack event/)).not.toBeInTheDocument()
   })
 
   it('shows no Closed badge and the original waiting-for-contributors text for an open issue', async () => {

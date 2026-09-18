@@ -112,6 +112,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
   const [copiedLink, setCopiedLink] = useState(false);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [project, setProject] = useState<null | Awaited<ReturnType<typeof getPublicProject>>>(null);
   const [issues, setIssues] = useState<Array<{
     github_issue_id: number;
@@ -150,6 +151,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         return;
       }
       setIsLoading(true);
+      setLoadError(null);
       try {
         const [p, i, pr] = await Promise.all([
           getPublicProject(projectId),
@@ -164,8 +166,15 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
       } catch (e) {
         if (cancelled) return;
         console.error('ProjectDetailPage: Error loading project data', e);
-        // Keep loading state true to show skeleton forever when backend is down
-        // Don't set isLoading to false - keep showing skeleton
+        // This used to leave the skeleton up forever. A skeleton says "still
+        // loading", so a page whose lookup had already failed read as merely
+        // slow, indefinitely, with nothing for the viewer to act on. It fails
+        // most often on GET /projects/:id, which answers 404
+        // project_not_accessible when the project's GitHub App installation
+        // cannot mint a token - a condition of the installation, not of the
+        // viewer. Say so rather than spin.
+        setLoadError(e instanceof Error ? e.message : 'Could not load this project.');
+        setIsLoading(false);
       }
     };
 
@@ -392,6 +401,35 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
+
+  if (loadError) {
+    return (
+      <div className="space-y-4">
+        {(onBack || onClose) && (
+          <button
+            onClick={() => (onBack ? onBack() : onClose?.())}
+            className={`px-4 py-2.5 rounded-[16px] border text-[13px] font-semibold transition-all ${
+              theme === 'dark' ? 'bg-white/[0.12] border-white/20 text-[#f5f5f5]' : 'bg-white/[0.35] border-black/10 text-[#2d2820]'
+            }`}
+          >
+            {backLabel || 'Back'}
+          </button>
+        )}
+        <div
+          role="alert"
+          className={`rounded-[20px] border p-6 ${
+            theme === 'dark' ? 'bg-white/[0.06] border-white/10 text-[#e8dfd0]' : 'bg-white/[0.35] border-black/10 text-[#2d2820]'
+          }`}
+        >
+          <p className="text-[15px] font-semibold mb-1">This project couldn&apos;t be loaded.</p>
+          <p className={`text-[13px] ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+            Grainlify could not read its repository from GitHub, so there is nothing to show yet. It is a
+            problem on our side, not with your account. ({loadError})
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex gap-6 h-[calc(100vh-120px)] max-h-[calc(100vh-120px)]">

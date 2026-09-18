@@ -106,6 +106,11 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
   const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
   const [applicationError, setApplicationError] = useState<string | null>(null);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
+  // Set by ApplyToIssuePanel. A GrainHack issue is allocated by the draw, so
+  // the generic "apply and the maintainer picks" flow must not be offered on
+  // it: it shares the button label, posts a GitHub comment, and does NOT enter
+  // the draw - a contributor who used it would believe they had applied.
+  const [isGrainHackIssue, setIsGrainHackIssue] = useState(false);
   const [botCommentModalOpen, setBotCommentModalOpen] = useState(false);
   const [botCommentDraft, setBotCommentDraft] = useState('');
   const [botCommentError, setBotCommentError] = useState<string | null>(null);
@@ -1002,6 +1007,7 @@ Only applications submitted via the apply link above will be considered. Please 
               <ApplyToIssuePanel
                 projectId={selectedIssueFromAPI.projectId}
                 issueNumber={selectedIssueFromAPI.number}
+                onGrainHackChange={setIsGrainHackIssue}
               />
             )}
 
@@ -1037,7 +1043,12 @@ Only applications submitted via the apply link above will be considered. Please 
                 {/* Apply CTA: any logged-in user with GitHub linked can apply when issue is open + unassigned + not author */}
                 {selectedIssueFromAPI && (
                   <div className={`mb-6 rounded-[16px] border p-5 transition-colors ${isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'}`}>
-                    {!user ? (
+                    {isGrainHackIssue ? (
+                      <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+                        This issue is part of a GrainHack event. Apply using the panel above &mdash;
+                        a weighted draw decides who is assigned, so there is no separate application here.
+                      </p>
+                    ) : !user ? (
                       <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
                         Sign in to apply for this issue.
                       </p>

@@ -14,6 +14,9 @@ import {
 interface ApplyToIssuePanelProps {
   projectId: string;
   issueNumber: number;
+  /** Told whether this issue is a published GrainHack issue, so the page can
+   *  stand down its generic apply flow - which does not enter the draw. */
+  onGrainHackChange?: (isGrainHack: boolean) => void;
 }
 
 /** Contributor-facing counterpart to HackathonIssueFieldsPanel: shows the
@@ -21,7 +24,7 @@ interface ApplyToIssuePanelProps {
  *
  * Renders nothing when the issue isn't in a GrainHack, which is the common
  * case - the panel should be invisible on ordinary issues, not an empty box. */
-export function ApplyToIssuePanel({ projectId, issueNumber }: ApplyToIssuePanelProps) {
+export function ApplyToIssuePanel({ projectId, issueNumber, onGrainHackChange }: ApplyToIssuePanelProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [issue, setIssue] = useState<ContributorHackathonIssue | null>(null);
@@ -39,6 +42,11 @@ export function ApplyToIssuePanel({ projectId, issueNumber }: ApplyToIssuePanelP
     setApplicantBucket(data.applicant_bucket);
     setApplication(data.my_application);
   };
+
+  const isGrainHack = !notApplicable && !!issue && issue.status === 'published';
+  useEffect(() => {
+    onGrainHackChange?.(isGrainHack);
+  }, [isGrainHack, onGrainHackChange]);
 
   useEffect(() => {
     let cancelled = false;
