@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { expectNoPersistentAnimation } from '../../../test/noPersistentAnimation'
 import { LeaderboardPage } from './LeaderboardPage'
+import { ApiError } from '../../../shared/api/apiError'
 import { getLeaderboard, getProjectLeaderboard, getEcosystems } from '../../../shared/api/client'
 
 // LeaderboardPage itself fetches getLeaderboard (contributors, the default tab) and
@@ -138,20 +139,31 @@ describe('LeaderboardPage', () => {
     expect(screen.queryByText('#1')).not.toBeInTheDocument()
   })
 
-  it('does not crash when the leaderboard fetch fails, and settles on the empty state', async () => {
+  // Rewritten: this used to assert that a failed fetch "settles on the empty
+  // state" ("No contributors yet"), which is exactly the defect - a board that
+  // could not load was indistinguishable from an empty one.
+  it('says the leaderboard failed to load (not "No contributors yet") when the fetch fails, and retries', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    mockedGetLeaderboard.mockRejectedValue(new Error('server exploded'))
+    mockedGetLeaderboard.mockRejectedValueOnce(
+      new ApiError('internal_error', 500, { error: 'internal_error' }),
+    )
+    mockedGetLeaderboard.mockResolvedValueOnce([row1])
+    const user = userEvent.setup()
 
     const { container } = renderWithProviders(<LeaderboardPage />)
 
     expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0)
 
-    await waitFor(() => {
-      expect(screen.getByText('No contributors yet. Be the first to contribute!')).toBeInTheDocument()
-    })
+    expect(await screen.findByText("Couldn't load the leaderboard")).toBeInTheDocument()
+    expect(screen.getByText(/internal_error/)).toBeInTheDocument()
+    expect(screen.queryByText('No contributors yet. Be the first to contribute!')).not.toBeInTheDocument()
     // Same rule as above: still, even on the error path.
     expectNoPersistentAnimation(container)
-    expect(consoleErrorSpy).toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    await waitFor(() => expect(screen.getAllByText('octocat').length).toBeGreaterThan(0))
+    expect(screen.queryByText("Couldn't load the leaderboard")).not.toBeInTheDocument()
+    expect(mockedGetLeaderboard).toHaveBeenCalledTimes(2)
 
     consoleErrorSpy.mockRestore()
   })
@@ -198,6 +210,22 @@ describe('LeaderboardPage', () => {
       await waitFor(() => expect(screen.getAllByText('acme').length).toBeGreaterThan(0))
       expect(screen.getAllByText('globex').length).toBeGreaterThan(0)
       expect(screen.getAllByText('45').length).toBeGreaterThan(0)
+    })
+
+    it('says the projects board failed to load instead of "No projects yet" when the fetch fails', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      mockedGetLeaderboard.mockResolvedValue([])
+      mockedGetProjectLeaderboard.mockRejectedValue(
+        new ApiError('internal_error', 500, { error: 'internal_error' }),
+      )
+      const user = userEvent.setup()
+
+      renderWithProviders(<LeaderboardPage />)
+      await user.click(screen.getByRole('button', { name: 'Projects' }))
+
+      expect(await screen.findByText("Couldn't load the projects leaderboard")).toBeInTheDocument()
+      expect(screen.queryByText(/No projects yet/)).not.toBeInTheDocument()
+      consoleErrorSpy.mockRestore()
     })
 
     it('asks the server for the projects board rather than deriving it from /projects/recommended', async () => {

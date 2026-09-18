@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../test/renderWithProviders'
+import { ApiError } from '../../../shared/api/apiError'
 import { DrawResults } from './DrawResults'
 
 const mockGetHackathonDraws = vi.fn()
@@ -156,5 +157,25 @@ describe('DrawResults', () => {
     expect(
       await screen.findByText(/They run automatically when an issue's application window closes/),
     ).toBeInTheDocument()
+  })
+})
+
+// Used to toast and fall through to "No draws yet…"
+describe('DrawResults when the load fails', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('says it could not load instead of claiming no draws ran, and retries', async () => {
+    mockGetHackathonDraws.mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+    mockGetHackathonDraws.mockResolvedValueOnce({ draws: [DRAW] })
+    const user = userEvent.setup()
+    renderWithProviders(<DrawResults hackathonId="hack-1" />)
+
+    expect(await screen.findByText("Couldn't load draws")).toBeInTheDocument()
+    expect(screen.queryByText(/No draws yet/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText('acme/widgets#42')).toBeInTheDocument()
   })
 })

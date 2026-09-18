@@ -3,6 +3,7 @@ import { Scale, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { Modal, ModalFooter, ModalButton } from '../../../shared/components/ui/Modal';
 import {
   getHackathonAppeals,
@@ -30,6 +31,7 @@ export function AppealsReview({ hackathonId }: AppealsReviewProps) {
   const [appeals, setAppeals] = useState<HackathonAppeal[]>([]);
   const [window, setWindow] = useState<AppealWindow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [deciding, setDeciding] = useState<HackathonAppeal | null>(null);
   const [upheld, setUpheld] = useState(true);
   const [bucket, setBucket] = useState<string>('');
@@ -38,13 +40,16 @@ export function AppealsReview({ hackathonId }: AppealsReviewProps) {
 
   const load = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await getHackathonAppeals(hackathonId);
       setAppeals(res.appeals);
       setWindow(res.appeal_window);
     } catch (error) {
+      // Used to toast and fall through to "No appeals awaiting a decision" -
+      // the line that says the hackathon is clear to settle.
       console.error('Failed to load appeals:', error);
-      toast.error('Could not load appeals.');
+      setLoadError(error);
     } finally {
       setIsLoading(false);
     }
@@ -89,8 +94,14 @@ export function AppealsReview({ hackathonId }: AppealsReviewProps) {
     return <p className={`text-sm ${mutedText}`}>Loading appeals...</p>;
   }
 
+  if (loadError != null && appeals.length === 0) {
+    return <LoadFailed what="appeals" error={loadError} onRetry={load} />;
+  }
+
   return (
     <div className="space-y-4">
+      {/* A refresh after a decision failed: the counts below predate it. */}
+      {loadError != null && <LoadFailed what="the latest appeals" error={loadError} onRetry={load} />}
       <div className={cardClass}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">

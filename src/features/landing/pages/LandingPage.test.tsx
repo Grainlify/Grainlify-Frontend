@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { LandingPage } from './LandingPage'
 import { getLandingStats } from '../../../shared/api/client'
+import { ApiError } from '../../../shared/api/apiError'
 
 // LandingPage itself fetches nothing directly, but two of the sections it
 // renders (Hero and WhyChooseUs) each call the shared useLandingStats() hook,
@@ -71,6 +72,19 @@ describe('LandingPage', () => {
     // WhyChooseUs's summary tiles); grants_distributed_usd only renders in Hero.
     expect(screen.getAllByText('342').length).toBeGreaterThan(0)
     expect(screen.getAllByText('15,890').length).toBeGreaterThan(0)
+    expect(screen.queryAllByText('—').length).toBe(0)
+  })
+
+  it('says the stats are unavailable, instead of leaving the loading dash up forever, when the stats fetch fails', async () => {
+    mockedGetLandingStats.mockRejectedValue(
+      new ApiError('internal_error', 500, { error: 'internal_error' }),
+    )
+
+    renderWithProviders(<LandingPage />, { withAuth: true })
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Unavailable').length).toBeGreaterThan(0)
+    })
     expect(screen.queryAllByText('—').length).toBe(0)
   })
 

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ExternalLink, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ApplicationWindow } from './ApplicationWindow';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import {
   getMyHackathonIssueApplications,
   type HackathonIssueApplication,
@@ -28,16 +28,22 @@ export function MyApplications() {
   const isDark = theme === 'dark';
   const [applications, setApplications] = useState<HackathonIssueApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
     getMyHackathonIssueApplications()
       .then((res) => {
         if (!cancelled) setApplications(res.applications);
       })
       .catch((error) => {
+        // Used to toast and fall through to "You haven't applied to any
+        // GrainHack issues yet." while applications were waiting on a draw.
         console.error('Failed to load applications:', error);
-        if (!cancelled) toast.error('Could not load your applications.');
+        if (!cancelled) setLoadError(error);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -45,10 +51,14 @@ export function MyApplications() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
   if (isLoading) {
     return <div className={`text-center py-12 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Loading...</div>;
+  }
+
+  if (loadError != null) {
+    return <LoadFailed what="your applications" error={loadError} onRetry={() => setAttempt((n) => n + 1)} />;
   }
 
   if (applications.length === 0) {

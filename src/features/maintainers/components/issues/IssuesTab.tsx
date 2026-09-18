@@ -14,6 +14,7 @@ import { getGitHubAvatarUrl } from '../../../../shared/utils/avatar';
 import RenderMarkdownContent from '../../../../app/utils/renderMarkdown';
 import { HackathonIssueFieldsPanel } from '../../../grainhack/components/HackathonIssueFieldsPanel';
 import { ApplyToIssuePanel } from '../../../grainhack/components/ApplyToIssuePanel';
+import { LoadFailed } from '../../../../shared/components/LoadFailed';
 
 interface Project {
   id: string;
@@ -69,7 +70,7 @@ interface IssueFromAPI {
 // callers now pass an explicit computed value, so this only matters for a
 // caller that forgets to - and Assign/Reject/Unassign failing closed is the
 // right default for a prop that gates those actions.
-export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSelectedIssueId, initialSelectedProjectId, viewMode = 'contributor', isLoadingProjects = false }: IssuesTabProps) {
+export function IssuesTab({ selectedProjects, onRefresh, initialSelectedIssueId, initialSelectedProjectId, viewMode = 'contributor', isLoadingProjects = false }: IssuesTabProps) {
   const { theme } = useTheme();
   const { userRole, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -110,7 +111,8 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
   // the generic "apply and the maintainer picks" flow must not be offered on
   // it: it shares the button label, posts a GitHub comment, and does NOT enter
   // the draw - a contributor who used it would believe they had applied.
-  const [isGrainHackIssue, setIsGrainHackIssue] = useState(false);
+  // null when the GrainHack lookup failed and it is unknown which flow applies.
+  const [isGrainHackIssue, setIsGrainHackIssue] = useState<boolean | null>(false);
   const [botCommentModalOpen, setBotCommentModalOpen] = useState(false);
   const [botCommentDraft, setBotCommentDraft] = useState('');
   const [botCommentError, setBotCommentError] = useState<string | null>(null);
@@ -118,6 +120,9 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
   const [actionInProgress, setActionInProgress] = useState<{ type: 'withdraw' | 'assign' | 'unassign' | 'reject'; id: string } | null>(null);
   const [issues, setIssues] = useState<Array<IssueFromAPI & { projectName: string; projectId: string }>>([]);
   const [isLoadingIssues, setIsLoadingIssues] = useState(true);
+  // Which repositories' issues could not be fetched, and why. Kept apart from
+  // `issues` so a failure can never be rendered as "No issues found".
+  const [issuesLoadError, setIssuesLoadError] = useState<{ error: unknown; repos: string[] } | null>(null);
   const filterBtnRef = useRef<HTMLButtonElement | null>(null);
   const filterPopoverRef = useRef<HTMLDivElement | null>(null);
   const [filterPopoverPos, setFilterPopoverPos] = useState<{ top: number; left: number }>({ top: 140, left: 350 });
@@ -193,6 +198,8 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
 
   const loadIssues = async () => {
     setIsLoadingIssues(true);
+    setIssuesLoadError(null);
+    const failed: { error: unknown; repos: string[] } = { error: null, repos: [] };
     try {
       if (selectedProjects.length === 0) {
         if (isLoadingProjects) {
@@ -215,7 +222,13 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
             projectId: project.id,
           }));
         } catch (err) {
+          // Recorded, not swallowed. This used to return [] and nothing else,
+          // so a failed fetch rendered "No issues in selected repositories" -
+          // on the GrainHack issue page that reads as "there is nothing here
+          // to apply to".
           console.error(`Failed to fetch issues for ${project.github_full_name}:`, err);
+          failed.error = err;
+          failed.repos.push(project.github_full_name || project.id);
           return [];
         }
       });
@@ -231,12 +244,13 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
       });
 
       setIssues(flattenedIssues);
+      setIssuesLoadError(failed.repos.length > 0 ? failed : null);
       setIsLoadingIssues(false);
     } catch (err) {
       console.error('Failed to load issues:', err);
-      // Keep loading state true to show skeleton forever when backend is down
       setIssues([]);
-      // Don't set isLoadingIssues to false - keep showing skeleton
+      setIssuesLoadError({ error: err, repos: [] });
+      setIsLoadingIssues(false);
     }
   };
 
@@ -266,12 +280,19 @@ export function IssuesTab({ onNavigate, selectedProjects, onRefresh, initialSele
     };
   }, [selectedProjects]);
 
-  const handleProfileClick = () => {
+  // Opens the APPLICANT's profile. This used to call onNavigate('profile'),
+  // which on the Maintainers page opened the viewer's own profile and on the
+  // issue page (where onNavigate is a no-op) closed the issue and went
+  // nowhere. Written as the URL Dashboard already reads for a profile, so it
+  // needs no new callback threaded through either mount point; ?view= is
+  // left as it is because it is the viewer's own mode.
+  const handleProfileClick = (login: string) => {
     setSelectedIssue(null);
     const next = new URLSearchParams(searchParams);
-    next.delete('mIssue');
+    for (const key of ['mIssue', 'issue', 'iproject', 'project', 'from', 'subtab']) next.delete(key);
+    next.set('tab', 'profile');
+    next.set('user', login);
     setSearchParams(next);
-    onNavigate('profile');
   };
 
   // Helper function to get GitHub avatar URL
@@ -820,6 +841,8 @@ Only applications submitted via the apply link above will be considered. Please 
                 <IssueCardSkeleton key={idx} />
               ))}
             </div>
+          ) : issuesLoadError && issues.length === 0 ? (
+            <LoadFailed what="the issues" error={issuesLoadError.error} onRetry={loadIssues} />
           ) : issues.length === 0 ? (
             <div className={`px-6 py-8 text-center ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
               }`}>
@@ -838,6 +861,12 @@ Only applications submitted via the apply link above will be considered. Please 
             </div>
           ) : (
             <>
+              {issuesLoadError && issuesLoadError.repos.length > 0 && (
+                <p role="alert" className={`text-[12px] px-1 ${isDark ? 'text-[#e8c571]' : 'text-[#8b6f3a]'}`}>
+                  Couldn't load issues from {issuesLoadError.repos.join(', ')}.{' '}
+                  <button type="button" onClick={loadIssues} className="underline font-semibold">Try again</button>
+                </p>
+              )}
               {visibleIssues.map((issue) => {
                 // Convert API issue to Issue type for compatibility
                 // Backend now always provides updated_at_github, so we use updated_at
@@ -1043,7 +1072,12 @@ Only applications submitted via the apply link above will be considered. Please 
                 {/* Apply CTA: any logged-in user with GitHub linked can apply when issue is open + unassigned + not author */}
                 {selectedIssueFromAPI && (
                   <div className={`mb-6 rounded-[16px] border p-5 transition-colors ${isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'}`}>
-                    {isGrainHackIssue ? (
+                    {isGrainHackIssue === null ? (
+                      <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
+                        Couldn't check whether this issue is part of a GrainHack event, so applying is paused
+                        until it can. Use Try again above.
+                      </p>
+                    ) : isGrainHackIssue ? (
                       <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
                         This issue is part of a GrainHack event. Apply using the panel above &mdash;
                         a weighted draw decides who is assigned, so there is no separate application here.
@@ -1143,7 +1177,7 @@ Only applications submitted via the apply link above will be considered. Please 
                           {/* User Header - Always Visible */}
                           <div className="flex items-center justify-between">
                             <button
-                              onClick={handleProfileClick}
+                              onClick={() => handleProfileClick(application.login)}
                               className="flex items-center gap-3 hover:bg-white/10 -m-2 p-2 rounded-[12px] transition-all group/user"
                             >
                               {failedAvatars.has(application.author.avatar) ? (

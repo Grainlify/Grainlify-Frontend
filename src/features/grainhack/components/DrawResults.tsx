@@ -3,6 +3,7 @@ import { Dices, ChevronDown, ChevronUp, RefreshCw, AlertCircle } from 'lucide-re
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { TicketBreakdown } from './TicketBreakdown';
 import {
   getHackathonDraws,
@@ -28,18 +29,23 @@ export function DrawResults({ hackathonId }: DrawResultsProps) {
   const [draws, setDraws] = useState<HackathonDraw[]>([]);
   const [includeSimulations, setIncludeSimulations] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [simulating, setSimulating] = useState<string | null>(null);
   const [simulation, setSimulation] = useState<HackathonDrawResult | null>(null);
 
   const load = async (withSims: boolean) => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await getHackathonDraws(hackathonId, { include_simulations: withSims });
       setDraws(res.draws);
     } catch (error) {
+      // Used to toast and fall through to "No draws yet…" - exactly what an
+      // admin checking whether a draw ran would not want to see falsely.
       console.error('Failed to load draws:', error);
-      toast.error('Could not load draws.');
+      setDraws([]);
+      setLoadError(error);
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +113,9 @@ export function DrawResults({ hackathonId }: DrawResultsProps) {
         </div>
       )}
 
-      {draws.length === 0 ? (
+      {loadError != null ? (
+        <LoadFailed what="draws" error={loadError} onRetry={() => load(includeSimulations)} />
+      ) : draws.length === 0 ? (
         <div className={`text-center py-12 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
           No draws yet. They run automatically when an issue's application window closes.
         </div>

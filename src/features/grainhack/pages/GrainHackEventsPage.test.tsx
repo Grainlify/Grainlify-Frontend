@@ -68,14 +68,20 @@ describe('GrainHackEventsPage', () => {
     })
   })
 
-  it('falls back to the empty state instead of crashing when the fetch fails', async () => {
-    mockedGetHackathons.mockRejectedValue(new Error('network down'))
+  // This used to assert the empty state on failure - "No GrainHack events
+  // yet" while an event was live.
+  it('says the events could not be loaded, not that there are none, and retries', async () => {
+    mockedGetHackathons
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValue({ hackathons: [makeHackathon({ id: 'h1', name: 'First GrainHack Event (Base Sepolia)' })] })
 
     renderWithProviders(<GrainHackEventsPage onEventClick={vi.fn()} />)
 
-    await waitFor(() => {
-      expect(screen.getByText('No GrainHack events yet')).toBeInTheDocument()
-    })
+    expect(await screen.findByText("Couldn't load GrainHack events")).toBeInTheDocument()
+    expect(screen.queryByText('No GrainHack events yet')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText('First GrainHack Event (Base Sepolia)')).toBeInTheDocument()
   })
 
   it('calls onEventClick with the clicked event id and name', async () => {

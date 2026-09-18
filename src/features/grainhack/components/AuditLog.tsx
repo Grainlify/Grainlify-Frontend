@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { History, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { getHackathonConfigAudit, type HackathonConfigAuditEntry } from '../../../shared/api/client';
 
 interface AuditLogProps {
@@ -17,17 +17,24 @@ export function AuditLog({ hackathonId }: AuditLogProps) {
   const isDark = theme === 'dark';
   const [entries, setEntries] = useState<HackathonConfigAuditEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
+    setLoadError(null);
     getHackathonConfigAudit({ hackathon_id: hackathonId, limit: 100 })
       .then((res) => {
         if (!cancelled) setEntries(res.entries);
       })
       .catch((error) => {
+        // Used to toast and fall through to "No changes recorded yet." - the
+        // one claim an audit trail must never make falsely.
         console.error('Failed to load audit log:', error);
-        if (!cancelled) toast.error('Failed to load the audit log.');
+        if (cancelled) return;
+        setEntries([]);
+        setLoadError(error);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -35,7 +42,7 @@ export function AuditLog({ hackathonId }: AuditLogProps) {
     return () => {
       cancelled = true;
     };
-  }, [hackathonId]);
+  }, [hackathonId, attempt]);
 
   if (isLoading) {
     return (
@@ -54,7 +61,9 @@ export function AuditLog({ hackathonId }: AuditLogProps) {
       <h3 className={`text-[16px] font-bold mb-4 transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>
         Audit trail
       </h3>
-      {entries.length === 0 ? (
+      {loadError != null ? (
+        <LoadFailed what="the audit trail" error={loadError} onRetry={() => setAttempt((n) => n + 1)} />
+      ) : entries.length === 0 ? (
         <div className={`text-center py-8 text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
           No changes recorded yet.
         </div>

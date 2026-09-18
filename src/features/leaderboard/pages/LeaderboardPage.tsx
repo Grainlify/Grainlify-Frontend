@@ -20,6 +20,7 @@ import { Pagination } from "../components/Pagination";
 import { LeaderboardStyles } from "../components/LeaderboardStyles";
 import { ContributorsPodiumSkeleton } from "../components/ContributorsPodiumSkeleton";
 import { ContributorsTableSkeleton } from "../components/ContributorsTableSkeleton";
+import { LoadFailed } from "../../../shared/components/LoadFailed";
 
 const PAGE_SIZE = 25;
 
@@ -44,6 +45,13 @@ export function LeaderboardPage() {
   const [projectsData, setProjectsData] = useState<ProjectData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  // Kept apart from the data so a failed fetch can never be rendered as
+  // "No contributors yet" / "No projects yet". Bumping an attempt counter
+  // re-runs the matching effect for "Try again".
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [projectsLoadError, setProjectsLoadError] = useState<unknown>(null);
+  const [projectsAttempt, setProjectsAttempt] = useState(0);
 
   // The /leaderboard endpoint returns a bare array with no total count, so
   // real numbered pagination can't know the total page count upfront. Instead
@@ -61,6 +69,7 @@ export function LeaderboardPage() {
     const fetchLeaderboard = async () => {
       if (leaderboardType === "contributors") {
         setIsLoading(true);
+        setLoadError(null);
         try {
           const data = await getLeaderboard(
             PAGE_SIZE + 1,
@@ -94,9 +103,12 @@ export function LeaderboardPage() {
           setIsMaxPageFinal(!hasNextPage);
           setIsLoading(false);
         } catch (err) {
+          // This used to set [] and render "No contributors yet. Be the first
+          // to contribute!" - a board that failed to load looked empty.
           console.error("Failed to fetch leaderboard:", err);
           setLeaderboardData([]);
-          setIsLoading(false); // Set loading to false to show empty state instead of skeleton
+          setLoadError(err);
+          setIsLoading(false);
         }
       } else {
         setIsLoading(false);
@@ -107,7 +119,7 @@ export function LeaderboardPage() {
     // activeFilter is deliberately absent: it only changes which secondary
     // line each row renders, and including it refetched an identical page on
     // every dropdown change.
-  }, [leaderboardType, selectedEcosystem.value, leaderboardWindow, page]);
+  }, [leaderboardType, selectedEcosystem.value, leaderboardWindow, page, attempt]);
 
   // Reset pagination when switching leaderboard type, ecosystem, or window -
   // otherwise page 3 of contributors could carry over to a filtered result
@@ -132,6 +144,7 @@ export function LeaderboardPage() {
     let cancelled = false;
     const fetchProjects = async () => {
       setIsLoadingProjects(true);
+      setProjectsLoadError(null);
       setProjectsPage(1);
       try {
         const res = await getProjectLeaderboard(
@@ -156,8 +169,12 @@ export function LeaderboardPage() {
         }));
         setProjectsData(mapped);
       } catch (err) {
+        // Used to fall through to "No projects yet" on any failure.
         console.error("Failed to fetch project leaderboard:", err);
-        if (!cancelled) setProjectsData([]);
+        if (!cancelled) {
+          setProjectsData([]);
+          setProjectsLoadError(err);
+        }
       } finally {
         if (!cancelled) setIsLoadingProjects(false);
       }
@@ -166,7 +183,7 @@ export function LeaderboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [leaderboardType, selectedEcosystem.value, leaderboardWindow]);
+  }, [leaderboardType, selectedEcosystem.value, leaderboardWindow, projectsAttempt]);
 
   // Thirty animated SVG petals used to fall down this page, each carrying a
   // drop-shadow filter, with the whole set torn down and rebuilt every 15
@@ -262,6 +279,7 @@ export function LeaderboardPage() {
           )}
         {leaderboardType === "contributors" &&
           !isLoading &&
+          !loadError &&
           topThreeContributors.length === 0 && (
             <div
               className={`text-center py-8 transition-colors ${
@@ -279,7 +297,7 @@ export function LeaderboardPage() {
         {leaderboardType === "projects" && !isLoadingProjects && projectsData.length > 0 && (
           <ProjectsPodium topThree={projectTopThree} isLoaded={isLoaded} />
         )}
-        {leaderboardType === "projects" && !isLoadingProjects && projectsData.length === 0 && (
+        {leaderboardType === "projects" && !isLoadingProjects && !projectsLoadError && projectsData.length === 0 && (
           <div
             className={`text-center py-8 transition-colors ${
               theme === "dark" ? "text-[#b8a898]" : "text-[#7a6b5a]"
@@ -312,6 +330,12 @@ export function LeaderboardPage() {
         <>
           {isLoading ? (
             <ContributorsTableSkeleton />
+          ) : loadError ? (
+            <LoadFailed
+              what="the leaderboard"
+              error={loadError}
+              onRetry={() => setAttempt((n) => n + 1)}
+            />
           ) : (
             <>
               <ContributorsTable
@@ -340,6 +364,12 @@ export function LeaderboardPage() {
         <>
           {isLoadingProjects ? (
             <ContributorsTableSkeleton />
+          ) : projectsLoadError ? (
+            <LoadFailed
+              what="the projects leaderboard"
+              error={projectsLoadError}
+              onRetry={() => setProjectsAttempt((n) => n + 1)}
+            />
           ) : (
             <>
               <ProjectsTable

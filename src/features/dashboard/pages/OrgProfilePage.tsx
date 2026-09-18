@@ -18,7 +18,9 @@ import {
   type OrgRating,
   type OrgRatingStatus,
 } from '../../../shared/api/client';
+import { isApiError } from '../../../shared/api/apiError';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { getGitHubAvatarUrl } from '../../../shared/utils/avatar';
 import { Spotlight } from '../../../shared/components/ui/Spotlight';
 import { getOnBrandGradient } from '../../../shared/utils/motionVariants';
@@ -122,60 +124,75 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
 
   const [summary, setSummary] = useState<OrgSummary | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
-  const [summaryError, setSummaryError] = useState(false);
+  const [summaryError, setSummaryError] = useState<unknown>(null);
+  const [summaryAttempt, setSummaryAttempt] = useState(0);
 
   const [repos, setRepos] = useState<Project[]>([]);
   const [isLoadingRepos, setIsLoadingRepos] = useState(true);
+  const [reposError, setReposError] = useState<unknown>(null);
+  const [reposAttempt, setReposAttempt] = useState(0);
 
   const [calendar, setCalendar] = useState<OrgCalendarDay[]>([]);
   const [calendarTotal, setCalendarTotal] = useState(0);
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(true);
+  const [calendarError, setCalendarError] = useState<unknown>(null);
+  const [calendarAttempt, setCalendarAttempt] = useState(0);
 
   const [links, setLinks] = useState<OrgLinks | null>(null);
+  const [linksError, setLinksError] = useState(false);
+  const [linksAttempt, setLinksAttempt] = useState(0);
   const [isMaintainer, setIsMaintainer] = useState(false);
   const [isLinksModalOpen, setIsLinksModalOpen] = useState(false);
 
   const [ratings, setRatings] = useState<OrgRating[]>([]);
   const [ratingsTotal, setRatingsTotal] = useState(0);
   const [isLoadingRatings, setIsLoadingRatings] = useState(true);
+  const [ratingsError, setRatingsError] = useState<unknown>(null);
 
   const [myStatus, setMyStatus] = useState<OrgRatingStatus>({ eligible: false, rating: null });
   const [isLoadingMyStatus, setIsLoadingMyStatus] = useState(isAuthenticated);
+  const [myStatusError, setMyStatusError] = useState(false);
+  const [myStatusAttempt, setMyStatusAttempt] = useState(0);
 
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoadingSummary(true);
-    setSummaryError(false);
+    setSummaryError(null);
     getOrgSummary(viewingOrgLogin)
       .then((data) => { if (!cancelled) setSummary(data); })
-      .catch(() => { if (!cancelled) setSummaryError(true); })
+      .catch((err) => { if (!cancelled) setSummaryError(err); })
       .finally(() => { if (!cancelled) setIsLoadingSummary(false); });
     return () => { cancelled = true; };
-  }, [viewingOrgLogin]);
+  }, [viewingOrgLogin, summaryAttempt]);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoadingCalendar(true);
+    setCalendarError(null);
     getOrgCalendar(viewingOrgLogin)
       .then((data) => {
         if (cancelled) return;
         setCalendar(data.calendar);
         setCalendarTotal(data.total);
       })
-      .catch(() => { /* leave calendar empty on failure */ })
+      // Used to leave the calendar empty, which rendered "0 contributions".
+      .catch((err) => { if (!cancelled) setCalendarError(err); })
       .finally(() => { if (!cancelled) setIsLoadingCalendar(false); });
     return () => { cancelled = true; };
-  }, [viewingOrgLogin]);
+  }, [viewingOrgLogin, calendarAttempt]);
 
   useEffect(() => {
     let cancelled = false;
+    setLinksError(false);
     getOrgLinks(viewingOrgLogin)
       .then((data) => { if (!cancelled) setLinks(data); })
-      .catch(() => { /* leave links null - the row just shows every icon inactive */ });
+      // links stays null so every icon but GitHub shows inactive - which
+      // reads as "this org has no links". A small note says it's a failure.
+      .catch(() => { if (!cancelled) setLinksError(true); });
     return () => { cancelled = true; };
-  }, [viewingOrgLogin]);
+  }, [viewingOrgLogin, linksAttempt]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -198,6 +215,7 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
   useEffect(() => {
     let cancelled = false;
     setIsLoadingRepos(true);
+    setReposError(null);
     // limit: 200 (the API's max) rather than relying on its default of 50 -
     // this fetch has to find every repo under one specific org out of every
     // public repo on the platform, so a low default page size risks silently
@@ -225,19 +243,23 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
           });
         setRepos(orgRepos);
       })
-      .catch(() => { /* leave repos empty on failure */ })
+      // Used to leave repos empty: "No public repositories found for this org."
+      .catch((err) => { if (!cancelled) setReposError(err); })
       .finally(() => { if (!cancelled) setIsLoadingRepos(false); });
     return () => { cancelled = true; };
-  }, [viewingOrgLogin]);
+  }, [viewingOrgLogin, reposAttempt]);
 
   const fetchRatings = (offset: number) => {
     setIsLoadingRatings(true);
+    setRatingsError(null);
     getOrgRatings(viewingOrgLogin, { limit: RATINGS_PAGE_SIZE, offset })
       .then((data) => {
         setRatings((prev) => (offset === 0 ? data.ratings : [...prev, ...data.ratings]));
         setRatingsTotal(data.total);
       })
-      .catch(() => { /* leave existing list as-is on a page-load failure */ })
+      // Existing list stays as-is; the failure is shown below it. On a first
+      // page this used to render "No reviews yet. Be the first…".
+      .catch((err) => setRatingsError(err))
       .finally(() => setIsLoadingRatings(false));
   };
 
@@ -255,12 +277,19 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
     }
     let cancelled = false;
     setIsLoadingMyStatus(true);
+    setMyStatusError(false);
     getMyOrgRatingStatus(viewingOrgLogin)
       .then((data) => { if (!cancelled) setMyStatus(data); })
-      .catch(() => { if (!cancelled) setMyStatus({ eligible: false, rating: null }); })
+      // Used to fall through to "Get a pull request merged into X to leave a
+      // review here." - telling an eligible reviewer they weren't.
+      .catch(() => {
+        if (cancelled) return;
+        setMyStatus({ eligible: false, rating: null });
+        setMyStatusError(true);
+      })
       .finally(() => { if (!cancelled) setIsLoadingMyStatus(false); });
     return () => { cancelled = true; };
-  }, [viewingOrgLogin, isAuthenticated]);
+  }, [viewingOrgLogin, isAuthenticated, myStatusAttempt]);
 
   const handleRatingSubmitted = () => {
     setRatings([]);
@@ -276,9 +305,16 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
   const headingText = isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]';
 
   if (summaryError && !isLoadingSummary) {
+    // Only the backend's own 404 means the org doesn't exist; any other
+    // failure used to show the same "Couldn't find" message.
+    const notFound = isApiError(summaryError) && summaryError.status === 404 && summaryError.data?.error === 'org_not_found';
     return (
       <div className="max-w-2xl mx-auto py-16 text-center">
-        <p className={`text-[15px] ${mutedText}`}>Couldn't find an organization called "{viewingOrgLogin}".</p>
+        {notFound ? (
+          <p className={`text-[15px] ${mutedText}`}>Couldn't find an organization called "{viewingOrgLogin}".</p>
+        ) : (
+          <LoadFailed what={`the organization "${viewingOrgLogin}"`} error={summaryError} onRetry={() => setSummaryAttempt((n) => n + 1)} />
+        )}
         {onBack && (
           <button onClick={onBack} className="mt-4 text-[13px] text-[#c9983a] hover:text-[#a67c2e] font-medium">
             ← Back
@@ -363,6 +399,12 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
                   {!isLoadingSummary && (
                     <div className="flex items-center gap-3 flex-wrap mt-4">
                       <OrgSocialLinks orgLogin={viewingOrgLogin} links={links} />
+                      {linksError && (
+                        <p role="alert" className={`text-[12px] ${mutedText}`}>
+                          Couldn't load this org's links.{' '}
+                          <button type="button" onClick={() => setLinksAttempt((n) => n + 1)} className="underline font-semibold">Try again</button>
+                        </p>
+                      )}
                       {isMaintainer && (
                         <button
                           type="button"
@@ -456,6 +498,11 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
           <div>
             {isLoadingMyStatus ? (
               <SkeletonLoader variant="default" width="170px" height="52px" className="rounded-[16px]" />
+            ) : myStatusError ? (
+              <p role="alert" className={`text-[12px] max-w-[280px] text-right ${mutedText}`}>
+                Couldn't check whether you can review {viewingOrgLogin}.{' '}
+                <button type="button" onClick={() => setMyStatusAttempt((n) => n + 1)} className="underline font-semibold">Try again</button>
+              </p>
             ) : myStatus.rating ? (
               <div className="text-right">
                 <p className={`text-[12px] mb-2.5 ${mutedText}`}>You rated this org {myStatus.rating.rating} / 5</p>
@@ -484,7 +531,13 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
 
       {/* Contribution heatmap - same section ProfilePage.tsx shows on a
           user's own profile, ported to aggregate across the org's repos. */}
-      <OrgContributionCalendar calendar={calendar} total={calendarTotal} isLoading={isLoadingCalendar} />
+      {calendarError != null && !isLoadingCalendar ? (
+        <div className={cardClass}>
+          <LoadFailed what="contribution activity" error={calendarError} onRetry={() => setCalendarAttempt((n) => n + 1)} />
+        </div>
+      ) : (
+        <OrgContributionCalendar calendar={calendar} total={calendarTotal} isLoading={isLoadingCalendar} />
+      )}
 
       {/* Activity chart (weekly issues/merged-PRs bar chart) removed for now
           per explicit request - fetch effect/state above and
@@ -501,6 +554,8 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
               <SkeletonLoader key={i} variant="default" width="100%" height="220px" className="rounded-[16px]" />
             ))}
           </div>
+        ) : reposError != null ? (
+          <LoadFailed what="this org's repositories" error={reposError} onRetry={() => setReposAttempt((n) => n + 1)} />
         ) : repos.length === 0 ? (
           <p className={`text-[13px] ${mutedText}`}>No public repositories found for this org.</p>
         ) : (
@@ -521,6 +576,8 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
               <SkeletonLoader key={i} variant="default" width="100%" height="96px" className="rounded-[16px]" />
             ))}
           </div>
+        ) : ratingsError != null && ratings.length === 0 ? (
+          <LoadFailed what="the reviews" error={ratingsError} onRetry={() => fetchRatings(0)} />
         ) : ratings.length === 0 ? (
           <p className={`text-[13px] ${mutedText}`}>No reviews yet. Be the first to rate this org once your PR is merged.</p>
         ) : (
@@ -556,7 +613,13 @@ export function OrgProfilePage({ viewingOrgLogin, onBack, onProjectClick }: OrgP
             ))}
           </div>
         )}
-        {ratings.length < ratingsTotal && (
+        {ratingsError != null && ratings.length > 0 && !isLoadingRatings && (
+          <p role="alert" className={`text-[12px] text-center mt-5 ${mutedText}`}>
+            Couldn't load more reviews.{' '}
+            <button type="button" onClick={() => fetchRatings(ratings.length)} className="underline font-semibold">Try again</button>
+          </p>
+        )}
+        {ratings.length < ratingsTotal && !ratingsError && (
           <div className="text-center mt-5">
             <button
               onClick={() => fetchRatings(ratings.length)}

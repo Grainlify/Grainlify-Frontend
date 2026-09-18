@@ -4,6 +4,7 @@ import { Search, Globe, Plus, ArrowUpRight, Sparkles, Send } from 'lucide-react'
 import { Modal, ModalFooter, ModalButton, ModalInput, ModalSelect } from '../../../shared/components/ui/Modal';
 import { getEcosystems } from '../../../shared/api/client';
 import { EcosystemLogo } from '../../../shared/components/EcosystemLogo';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 
 interface EcosystemsPageProps {
   onEcosystemClick: (id: string, name: string, description?: string | null, logoUrl?: string | null) => void;
@@ -20,11 +21,13 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
   });
   const [ecosystems, setEcosystems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch ecosystems function
   const fetchEcosystems = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const response = await getEcosystems();
       
@@ -85,8 +88,10 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
       setEcosystems(transformed);
     } catch (error) {
       console.error('Failed to fetch ecosystems:', error);
-      console.error('Error details:', error instanceof Error ? error.message : error);
+      // This used to set [] and render "No ecosystems available yet." — a
+      // failed load looked exactly like an empty platform.
       setEcosystems([]);
+      setLoadError(error);
     } finally {
       setIsLoading(false);
     }
@@ -253,6 +258,8 @@ export function EcosystemsPage({ onEcosystemClick }: EcosystemsPageProps) {
             </div>
           ))}
         </div>
+      ) : loadError ? (
+        <LoadFailed what="the ecosystems" error={loadError} onRetry={() => fetchEcosystems()} />
       ) : filteredEcosystems.length === 0 ? (
         <div className={`text-center py-8 md:py-12 px-4 ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
           <p className={`text-[14px] md:text-[16px] ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>

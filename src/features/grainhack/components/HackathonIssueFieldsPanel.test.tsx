@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../test/renderWithProviders'
 import { HackathonIssueFieldsPanel } from './HackathonIssueFieldsPanel'
+import { ApiError } from '../../../shared/api/apiError'
 
 const mockGetHackathonIssue = vi.fn()
 const mockUpdateHackathonIssueFields = vi.fn()
@@ -34,12 +35,19 @@ describe('HackathonIssueFieldsPanel', () => {
   })
 
   it('renders nothing for a plain issue that is not part of any GrainHack (getHackathonIssue 404s)', async () => {
-    mockGetHackathonIssue.mockRejectedValue(new Error('not_found'))
+    mockGetHackathonIssue.mockRejectedValue(new ApiError('not_a_hackathon_issue', 404, { error: 'not_a_hackathon_issue' }))
 
     const { container } = renderWithProviders(<HackathonIssueFieldsPanel projectId="proj-1" issueNumber={42} />)
 
     await waitFor(() => expect(mockGetHackathonIssue).toHaveBeenCalledWith('proj-1', 42))
     await waitFor(() => expect(container).toBeEmptyDOMElement())
+  })
+
+  it('says the fields could not be loaded when the lookup fails for another reason', async () => {
+    mockGetHackathonIssue.mockRejectedValue(new ApiError('load_failed', 500, { error: 'load_failed' }))
+    renderWithProviders(<HackathonIssueFieldsPanel projectId="proj-1" issueNumber={42} />)
+
+    expect(await screen.findByText("Couldn't load this issue's GrainHack fields")).toBeInTheDocument()
   })
 
   it('shows the hackathon banner and flags missing required fields when found', async () => {
@@ -111,7 +119,7 @@ describe('HackathonIssueFieldsPanel', () => {
 
   it('re-fetches independently when projectId/issueNumber change (switching selected issues)', async () => {
     mockGetHackathonIssue.mockResolvedValueOnce(PENDING_ISSUE)
-    mockGetHackathonIssue.mockRejectedValueOnce(new Error('not_found'))
+    mockGetHackathonIssue.mockRejectedValueOnce(new ApiError('not_a_hackathon_issue', 404, { error: 'not_a_hackathon_issue' }))
 
     const { rerender, container } = renderWithProviders(
       <HackathonIssueFieldsPanel projectId="proj-1" issueNumber={42} />,

@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { MaintainersPage } from './MaintainersPage'
 import { getMyProjects, getPendingSetupProjects, getAuthToken } from '../../../shared/api/client'
+import { ApiError } from '../../../shared/api/apiError'
 
 // MaintainersPage now strips github_app_installed via react-router's
 // useSearchParams rather than raw window.history, so under the MemoryRouter
@@ -199,6 +200,33 @@ describe('MaintainersPage', () => {
     await user.click(screen.getByRole('button', { name: 'Select repositories' }))
 
     expect(await screen.findByText('Something went wrong')).toBeInTheDocument()
+  })
+
+  it('shows LoadFailed in the tabs area instead of mounting the tabs with no projects when the projects request fails', async () => {
+    // Previously the tabs mounted with selectedProjects=[] and
+    // isLoadingProjects=false and rendered "No issues found"; the failure was
+    // only visible after opening the repo dropdown.
+    vi.mocked(getMyProjects).mockRejectedValue(new ApiError('internal_error', 500, { error: 'internal_error' }))
+    renderWithProviders(<MaintainersPage onNavigate={vi.fn()} />, { route: '/dashboard?tab=maintainers&subtab=Issues' })
+
+    expect(await screen.findByText("Couldn't load your repositories")).toBeInTheDocument()
+    expect(screen.getByText(/internal_error/)).toBeInTheDocument()
+    expect(screen.queryByTestId('issues-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('dashboard-tab')).not.toBeInTheDocument()
+  })
+
+  it('retries the projects request from the tabs-area LoadFailed and mounts the tabs once it succeeds', async () => {
+    vi.mocked(getMyProjects)
+      .mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+      .mockResolvedValueOnce([makeProject()])
+    const user = userEvent.setup()
+    renderWithProviders(<MaintainersPage onNavigate={vi.fn()} />)
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByTestId('dashboard-tab')).toBeInTheDocument()
+    expect(screen.queryByText("Couldn't load your repositories")).not.toBeInTheDocument()
+    expect(getMyProjects).toHaveBeenCalledTimes(2)
   })
 
   it('strips the github_app_installed query param immediately and opens the setup modal after the sync delay', async () => {

@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { ProfilePage } from './ProfilePage'
+import { ApiError } from '../../../shared/api/apiError'
 import {
   getUserProfile,
   getPublicProfile,
@@ -65,6 +66,8 @@ vi.mock('lucide-react', () => ({
   ArrowLeft: () => null,
   Medal: () => null,
   Shield: () => null,
+  AlertCircle: () => null,
+  RotateCw: () => null,
 }))
 
 type UserProfileResponse = Awaited<ReturnType<typeof getUserProfile>>
@@ -175,18 +178,89 @@ describe('ProfilePage', () => {
     expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0)
   })
 
-  it('does not crash when every fetch fails', async () => {
-    vi.mocked(getUserProfile).mockRejectedValue(new Error('network error'))
-    vi.mocked(getProjectsContributed).mockRejectedValue(new Error('network error'))
-    vi.mocked(getProjectsLed).mockRejectedValue(new Error('network error'))
-    vi.mocked(getProfileCalendar).mockRejectedValue(new Error('network error'))
-    vi.mocked(getProfileActivity).mockRejectedValue(new Error('network error'))
+  // Rewritten: this used to assert that with every fetch failing the page
+  // settled on "No projects contributed yet" / "No contributions yet" - the
+  // defect itself. Without the profile there is nothing true to show, so the
+  // page as a whole says it could not load.
+  it('says the profile failed to load (not zeros / "KYC not verified") when the profile fetch fails, and retries', async () => {
+    const user = userEvent.setup()
+    const err = new ApiError('user_not_found', 404, { error: 'user_not_found' })
+    let profileCalls = 0
+    vi.mocked(getUserProfile).mockImplementation(async () => {
+      profileCalls += 1
+      if (profileCalls === 1) throw err
+      return OWN_PROFILE
+    })
 
     renderWithProviders(<ProfilePage />)
 
-    await waitFor(() => expect(getUserProfile).toHaveBeenCalled())
-    expect(await screen.findByText('No projects contributed yet')).toBeInTheDocument()
-    expect(screen.getByText('No contributions yet')).toBeInTheDocument()
+    expect(await screen.findByText("Couldn't load this profile")).toBeInTheDocument()
+    expect(screen.getByText(/user_not_found/)).toBeInTheDocument()
+    expect(screen.queryByTitle('KYC not verified')).not.toBeInTheDocument()
+    expect(screen.queryByText('No languages found')).not.toBeInTheDocument()
+    expect(screen.queryByText('No ecosystems found')).not.toBeInTheDocument()
+    expect(screen.queryByText('No projects contributed yet')).not.toBeInTheDocument()
+    expect(screen.queryByText('No contributions yet')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText('myself')).toBeInTheDocument()
+    expect(screen.queryByText("Couldn't load this profile")).not.toBeInTheDocument()
+    expect(profileCalls).toBe(2)
+  })
+
+  it('keeps the page and names the failed section when only the contributed-projects fetch fails', async () => {
+    const user = userEvent.setup()
+    let calls = 0
+    vi.mocked(getProjectsContributed).mockImplementation(async () => {
+      calls += 1
+      if (calls === 1) throw new ApiError('internal_error', 500, { error: 'internal_error' })
+      return PROJECTS
+    })
+
+    renderWithProviders(<ProfilePage />)
+
+    expect(await screen.findByText("Couldn't load the projects contributed to")).toBeInTheDocument()
+    expect(screen.queryByText('No projects contributed yet')).not.toBeInTheDocument()
+    // The rest of the page still rendered.
+    expect(screen.getByText('myself')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText('widgets')).toBeInTheDocument()
+  })
+
+  it('says the calendar failed to load instead of "0 contributions last year" over an empty grid', async () => {
+    vi.mocked(getProfileCalendar).mockRejectedValue(
+      new ApiError('internal_error', 500, { error: 'internal_error' }),
+    )
+
+    renderWithProviders(<ProfilePage />)
+
+    expect(await screen.findByText(/Couldn't load the contribution calendar/)).toBeInTheDocument()
+    expect(screen.queryByText('contributions last year')).not.toBeInTheDocument()
+    expect(screen.queryByText('Less')).not.toBeInTheDocument()
+  })
+
+  it('says activity failed to load instead of "No contributions yet"', async () => {
+    vi.mocked(getProfileActivity).mockRejectedValue(
+      new ApiError('internal_error', 500, { error: 'internal_error' }),
+    )
+
+    renderWithProviders(<ProfilePage />)
+
+    expect(await screen.findByText("Couldn't load contribution activity")).toBeInTheDocument()
+    expect(screen.queryByText('No contributions yet')).not.toBeInTheDocument()
+  })
+
+  it('opens the projects-led popover with a failure line when that fetch failed, instead of silently doing nothing', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getProjectsLed).mockRejectedValue(
+      new ApiError('internal_error', 500, { error: 'internal_error' }),
+    )
+
+    renderWithProviders(<ProfilePage />)
+
+    await user.click(await screen.findByRole('button', { name: /Lead\s*1\s*projects/ }))
+    expect(await screen.findByText(/Couldn't load these projects/)).toBeInTheDocument()
   })
 
   it('fetches and displays the OTHER identity when viewingUserId is set, not "me"', async () => {

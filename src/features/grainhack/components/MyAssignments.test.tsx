@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../test/renderWithProviders'
+import { ApiError } from '../../../shared/api/apiError'
 import { MyAssignments } from './MyAssignments'
 
 const mockGetMyHackathonAssignments = vi.fn()
@@ -113,5 +114,39 @@ describe('MyAssignments', () => {
     await user.click(await screen.findByRole('button', { name: 'Keep it' }))
 
     expect(mockReleaseHackathonAssignment).not.toHaveBeenCalled()
+  })
+})
+
+// Used to toast and fall through to "You don't have any GrainHack assignments yet."
+describe('MyAssignments when the load fails', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('says it could not load instead of claiming there are none, and retries', async () => {
+    mockGetMyHackathonAssignments.mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+    mockGetMyHackathonAssignments.mockResolvedValueOnce({ assignments: [base] })
+    const user = userEvent.setup()
+    renderWithProviders(<MyAssignments />)
+
+    expect(await screen.findByText("Couldn't load your assignments")).toBeInTheDocument()
+    expect(screen.queryByText("You don't have any GrainHack assignments yet.")).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText('acme/widgets#42')).toBeInTheDocument()
+  })
+
+  it('flags the list as stale when the reload after a release fails', async () => {
+    mockGetMyHackathonAssignments.mockResolvedValueOnce({ assignments: [base] })
+    mockGetMyHackathonAssignments.mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+    mockReleaseHackathonAssignment.mockResolvedValue({ abandon_recorded: false })
+    const user = userEvent.setup()
+    renderWithProviders(<MyAssignments />)
+
+    await user.click(await screen.findByRole('button', { name: /give this back/i }))
+    await user.click(screen.getByRole('button', { name: /give it back/i }))
+
+    expect(await screen.findByText("Couldn't load your latest assignments")).toBeInTheDocument()
+    expect(screen.getByText('acme/widgets#42')).toBeInTheDocument()
   })
 })

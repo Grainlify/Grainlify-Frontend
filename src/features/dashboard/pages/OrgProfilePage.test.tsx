@@ -15,6 +15,7 @@ import {
   submitOrgRating,
   getPublicProjects,
 } from '../../../shared/api/client'
+import { ApiError } from '../../../shared/api/apiError'
 
 vi.mock('../../../shared/api/client', () => ({
   getOrgSummary: vi.fn(),
@@ -167,15 +168,84 @@ describe('OrgProfilePage', () => {
     expect(mockedGetOrgRatings).toHaveBeenCalledWith('acme', { limit: 10, offset: 0 })
   })
 
+  // Rewritten: this used a plain Error, and the page showed "Couldn't find
+  // an organization" for ANY failure. Only the backend's real 404 means that.
   it('shows a 404-style message when the org does not exist', async () => {
-    mockedGetOrgSummary.mockRejectedValue(new Error('org_not_found'))
+    mockedGetOrgSummary.mockRejectedValue(new ApiError('org_not_found', 404, { error: 'org_not_found' }))
 
     renderWithProviders(<OrgProfilePage viewingOrgLogin="no-such-org" />)
 
     expect(await screen.findByText(/Couldn't find an organization/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Couldn't load/i)).not.toBeInTheDocument()
+  })
+
+  it('shows a load-failed alert (not "Couldn\'t find") when the summary fetch fails for another reason, and retries', async () => {
+    mockedGetOrgSummary
+      .mockRejectedValueOnce(new ApiError('org_lookup_failed', 500, { error: 'org_lookup_failed' }))
+      .mockResolvedValueOnce(SUMMARY)
+    const user = userEvent.setup()
+
+    renderWithProviders(<OrgProfilePage viewingOrgLogin="acme" />)
+
+    expect(await screen.findByText('Couldn\'t load the organization "acme"')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('org_lookup_failed')
+    expect(screen.queryByText(/Couldn't find an organization/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+
+    expect(await screen.findByRole('heading', { name: 'acme' })).toBeInTheDocument()
+  })
+
+  it('shows a load-failed alert (not "No public repositories") when the repos fetch fails, and retries', async () => {
+    mockedGetPublicProjects
+      .mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+      .mockResolvedValueOnce({ projects: [ACME_REPO], total: 1, limit: 200, offset: 0 })
+    const user = userEvent.setup()
+
+    renderWithProviders(<OrgProfilePage viewingOrgLogin="acme" />)
+
+    expect(await screen.findByText("Couldn't load this org's repositories")).toBeInTheDocument()
+    expect(screen.queryByText(/No public repositories found/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+
+    expect(await screen.findByText('widget-kit')).toBeInTheDocument()
+  })
+
+  it('shows a load-failed alert (not "No reviews yet") when the reviews fetch fails, and retries', async () => {
+    mockedGetOrgRatings
+      .mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+      .mockResolvedValueOnce(RATINGS)
+    const user = userEvent.setup()
+
+    renderWithProviders(<OrgProfilePage viewingOrgLogin="acme" />)
+
+    expect(await screen.findByText("Couldn't load the reviews")).toBeInTheDocument()
+    expect(screen.queryByText(/No reviews yet/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+
+    expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument()
+  })
+
+  it('says the links failed to load instead of silently showing every link inactive', async () => {
+    mockedGetOrgLinks.mockRejectedValue(new ApiError('internal_error', 500, { error: 'internal_error' }))
+
+    renderWithProviders(<OrgProfilePage viewingOrgLogin="acme" />)
+
+    expect(await screen.findByText(/Couldn't load this org's links/i)).toBeInTheDocument()
   })
 
   describe('review CTA states', () => {
+    it('says the eligibility check failed instead of telling the user they are ineligible', async () => {
+      mockedGetMyOrgRatingStatus.mockRejectedValue(new ApiError('internal_error', 500, { error: 'internal_error' }))
+
+      renderWithProviders(<OrgProfilePage viewingOrgLogin="acme" />)
+
+      expect(await screen.findByText(/Couldn't check whether you can review acme/i)).toBeInTheDocument()
+      expect(screen.queryByText(/Get a pull request merged into acme/i)).not.toBeInTheDocument()
+    })
+
     it('shows an ineligible explanation when the user has no merged PR in this org', async () => {
       mockedGetMyOrgRatingStatus.mockResolvedValue({ eligible: false, rating: null })
 
@@ -367,6 +437,22 @@ describe('OrgProfilePage', () => {
   })
 
   describe('contribution calendar', () => {
+    it('shows a load-failed alert (not "0 contributions") when the calendar fetch fails, and retries', async () => {
+      mockedGetOrgCalendar
+        .mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+        .mockResolvedValueOnce({ calendar: [{ date: '2026-01-01', count: 5, level: 2 }], total: 1468 })
+      const user = userEvent.setup()
+
+      renderWithProviders(<OrgProfilePage viewingOrgLogin="acme" />)
+
+      expect(await screen.findByText("Couldn't load contribution activity")).toBeInTheDocument()
+      expect(screen.queryByText('contributions last year')).not.toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: /try again/i }))
+
+      expect(await screen.findByText('1468')).toBeInTheDocument()
+    })
+
     it('shows the total contribution count once loaded', async () => {
       mockedGetOrgCalendar.mockResolvedValue({
         calendar: [{ date: '2026-01-01', count: 5, level: 2 }],

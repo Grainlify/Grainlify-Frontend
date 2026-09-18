@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Gavel, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
-import { toast } from 'sonner';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { VerdictDetail } from './VerdictDetail';
 import { DisagreementRate } from './DisagreementRate';
 import { getHackathonVerdicts, type HackathonVerdict, type JudgingStats } from '../../../shared/api/client';
@@ -28,23 +28,30 @@ export function VerdictsReview({ hackathonId }: VerdictsReviewProps) {
   const [filter, setFilter] = useState('needs_review');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
   const load = async (status: string) => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await getHackathonVerdicts(hackathonId, status ? { status } : undefined);
       setVerdicts(res.verdicts);
       setShadowMode(res.shadow_mode);
       setStats(res.stats);
     } catch (error) {
+      // Used to toast and fall through to "Nothing here. Verdicts appear once
+      // merged PRs are judged." - an empty review queue that wasn't.
       console.error('Failed to load verdicts:', error);
-      toast.error('Could not load verdicts.');
+      setLoadError(error);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    // A new filter's failure must not leave the previous filter's rows on
+    // screen under the new tab; only a reload after an override keeps them.
+    setVerdicts([]);
     load(filter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hackathonId, filter]);
@@ -73,12 +80,16 @@ export function VerdictsReview({ hackathonId }: VerdictsReviewProps) {
 
       {isLoading ? (
         <div className={`text-center py-12 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Loading...</div>
+      ) : loadError != null && verdicts.length === 0 ? (
+        <LoadFailed what="verdicts" error={loadError} onRetry={() => load(filter)} />
       ) : verdicts.length === 0 ? (
         <div className={`text-center py-12 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
           Nothing here. Verdicts appear once merged PRs are judged.
         </div>
       ) : (
         <div className="space-y-2">
+          {/* A refresh after an override failed: the rows below predate it. */}
+          {loadError != null && <LoadFailed what="the latest verdicts" error={loadError} onRetry={() => load(filter)} />}
           {verdicts.map((v) => {
             const isExpanded = expanded === v.id;
             return (

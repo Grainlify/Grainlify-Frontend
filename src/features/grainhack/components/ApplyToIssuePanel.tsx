@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Trophy, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
+import { isNotAHackathonIssue } from './notAHackathonIssue';
 import { ModalInput } from '../../../shared/components/ui/Modal';
 import { ApplicationWindow, windowStateOf } from './ApplicationWindow';
 import {
@@ -16,7 +18,7 @@ interface ApplyToIssuePanelProps {
   issueNumber: number;
   /** Told whether this issue is a published GrainHack issue, so the page can
    *  stand down its generic apply flow - which does not enter the draw. */
-  onGrainHackChange?: (isGrainHack: boolean) => void;
+  onGrainHackChange?: (isGrainHack: boolean | null) => void;
 }
 
 /** Contributor-facing counterpart to HackathonIssueFieldsPanel: shows the
@@ -32,6 +34,8 @@ export function ApplyToIssuePanel({ projectId, issueNumber, onGrainHackChange }:
   const [applicantBucket, setApplicantBucket] = useState('');
   const [application, setApplication] = useState<HackathonIssueApplication | null>(null);
   const [notApplicable, setNotApplicable] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
   const [text, setText] = useState('');
   const [isApplying, setIsApplying] = useState(false);
 
@@ -43,7 +47,12 @@ export function ApplyToIssuePanel({ projectId, issueNumber, onGrainHackChange }:
     setApplication(data.my_application);
   };
 
-  const isGrainHack = !notApplicable && !!issue && issue.status === 'published';
+  // null = could not tell. A failed lookup is not "not a GrainHack issue": on
+  // a real one, reporting false would bring back the generic apply button,
+  // which does not enter the draw.
+  const isGrainHack: boolean | null = loadError
+    ? null
+    : !notApplicable && !!issue && issue.status === 'published';
   useEffect(() => {
     onGrainHackChange?.(isGrainHack);
   }, [isGrainHack, onGrainHackChange]);
@@ -51,6 +60,7 @@ export function ApplyToIssuePanel({ projectId, issueNumber, onGrainHackChange }:
   useEffect(() => {
     let cancelled = false;
     setNotApplicable(false);
+    setLoadError(null);
     setIssue(null);
     setApplication(null);
 
@@ -62,16 +72,28 @@ export function ApplyToIssuePanel({ projectId, issueNumber, onGrainHackChange }:
         setApplicantBucket(data.applicant_bucket);
         setApplication(data.my_application);
       })
-      .catch(() => {
-        if (!cancelled) setNotApplicable(true);
+      .catch((error) => {
+        if (cancelled) return;
+        if (isNotAHackathonIssue(error)) setNotApplicable(true);
+        else setLoadError(error);
       });
 
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, issueNumber]);
+  }, [projectId, issueNumber, attempt]);
 
+  if (loadError) {
+    return (
+      <LoadFailed
+        what="this issue's GrainHack details"
+        error={loadError}
+        onRetry={() => setAttempt((n) => n + 1)}
+        className="mb-4"
+      />
+    );
+  }
   if (notApplicable || !issue) return null;
   // Only published issues are open to applications at all.
   if (issue.status !== 'published') return null;

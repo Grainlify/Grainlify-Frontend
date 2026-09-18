@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { getMyIssueApplications, type IssueApplicationSummary } from "../../../shared/api/client";
 import { SkeletonLoader } from "../../../shared/components/SkeletonLoader";
+import { LoadFailed } from "../../../shared/components/LoadFailed";
 
 type ColumnKey = "applied" | "assigned" | "pending_review" | "complete";
 
@@ -73,16 +74,25 @@ export function ContributionsTab() {
 
   const [allItems, setAllItems] = useState<IssueApplicationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [failed, setFailed] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
+    setFailed(null);
     getMyIssueApplications()
       .then((res) => {
         if (!cancelled) setAllItems(res.issue_applications);
       })
       .catch((error) => {
         console.error("Failed to load issue applications:", error);
-        if (!cancelled) toast.error("Failed to load your contributions.");
+        if (cancelled) return;
+        // Kept distinct from the empty state: this used to toast and then
+        // render every column as "No applications yet" with 0 counts, telling
+        // somebody with real applications that they have none.
+        setFailed(error ?? new Error("Failed to load your contributions."));
+        toast.error("Failed to load your contributions.");
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -90,7 +100,17 @@ export function ContributionsTab() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
+
+  if (failed && !isLoading) {
+    return (
+      <LoadFailed
+        what="your contributions"
+        error={failed}
+        onRetry={() => setAttempt((n) => n + 1)}
+      />
+    );
+  }
 
   const applied = allItems.filter((i) => i.status === "applied");
   const assigned = allItems.filter((i) => i.status === "assigned");

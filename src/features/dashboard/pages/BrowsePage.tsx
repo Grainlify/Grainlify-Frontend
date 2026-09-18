@@ -159,6 +159,13 @@ export function BrowsePage({ onProjectClick, onOrgClick }: BrowsePageProps) {
     categories: [],
     tags: [],
   });
+  // Which filter-option lists failed to load. Both used to be swallowed,
+  // leaving the dropdowns silently empty as if there were no options.
+  const [filterOptionsError, setFilterOptionsError] = useState<{ ecosystems: boolean; others: boolean }>({
+    ecosystems: false,
+    others: false,
+  });
+  const [filterOptionsAttempt, setFilterOptionsAttempt] = useState(0);
 
   // Language/category/tag values are whatever's actually on verified
   // projects right now (no hardcoded allow-list anywhere in the schema) -
@@ -166,10 +173,11 @@ export function BrowsePage({ onProjectClick, onOrgClick }: BrowsePageProps) {
   // endpoint so a maintainer adding a project with a new language/category/
   // tag makes it show up here automatically, no code change needed.
   useEffect(() => {
+    setFilterOptionsError((prev) => ({ ...prev, others: false }));
     getProjectFilters()
       .then((data) => setDynamicFilters({ languages: data.languages, categories: data.categories, tags: data.tags }))
-      .catch(() => { /* leave dynamicFilters empty - that filter type just shows no options */ });
-  }, []);
+      .catch(() => setFilterOptionsError((prev) => ({ ...prev, others: true })));
+  }, [filterOptionsAttempt]);
 
   // Filter options data - languages/categories/tags are DB-driven (see
   // dynamicFilters above), only ecosystems was already dynamic before this.
@@ -183,6 +191,7 @@ export function BrowsePage({ onProjectClick, onOrgClick }: BrowsePageProps) {
   // Fetch ecosystems from API
   useEffect(() => {
     const fetchEcosystems = async () => {
+      setFilterOptionsError((prev) => ({ ...prev, ecosystems: false }));
       try {
         const response = await getEcosystems();
         // Handle different response structures
@@ -215,13 +224,18 @@ export function BrowsePage({ onProjectClick, onOrgClick }: BrowsePageProps) {
         setEcosystems(activeEcosystems);
       } catch (err) {
         console.error("BrowsePage: Failed to fetch ecosystems:", err);
-        // Fallback to empty array on error
         setEcosystems([]);
+        setFilterOptionsError((prev) => ({ ...prev, ecosystems: true }));
       }
     };
 
     fetchEcosystems();
-  }, []);
+  }, [filterOptionsAttempt]);
+
+  const failedFilterLabels = [
+    ...(filterOptionsError.others ? ["language, category and tag"] : []),
+    ...(filterOptionsError.ecosystems ? ["ecosystem"] : []),
+  ];
 
   const toggleFilter = (filterType: string, value: string) => {
     setSelectedFilters((prev) => ({
@@ -448,6 +462,18 @@ export function BrowsePage({ onProjectClick, onOrgClick }: BrowsePageProps) {
               : undefined
           }
         />
+        {failedFilterLabels.length > 0 && (
+          <p role="alert" className={`text-[12px] px-1 ${isDark ? "text-[#e8c571]" : "text-[#8b6f3a]"}`}>
+            Couldn't load the {failedFilterLabels.join(" and ")} filter options.{" "}
+            <button
+              type="button"
+              onClick={() => setFilterOptionsAttempt((n) => n + 1)}
+              className="underline font-semibold"
+            >
+              Try again
+            </button>
+          </p>
+        )}
       </div>
 
       {/* Projects / Organizations Grid */}

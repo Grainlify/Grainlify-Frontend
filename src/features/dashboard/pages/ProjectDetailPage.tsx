@@ -4,6 +4,8 @@ import { ExternalLink, Copy, Circle, ArrowLeft, GitPullRequest, ChevronDown } fr
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { getPublicProject, getPublicProjectIssues, getPublicProjectPRs } from '../../../shared/api/client';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
+import { shareableProjectUrl } from '../../../shared/utils/shareLinks';
 import ReactMarkdown from 'react-markdown';
 import { LanguageIcon } from '../../../shared/components/LanguageIcon';
 import { getGitHubAvatarUrl } from '../../../shared/utils/avatar';
@@ -112,7 +114,8 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
   const [copiedLink, setCopiedLink] = useState(false);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
   const [project, setProject] = useState<null | Awaited<ReturnType<typeof getPublicProject>>>(null);
   const [issues, setIssues] = useState<Array<{
     github_issue_id: number;
@@ -166,14 +169,11 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
       } catch (e) {
         if (cancelled) return;
         console.error('ProjectDetailPage: Error loading project data', e);
-        // This used to leave the skeleton up forever. A skeleton says "still
-        // loading", so a page whose lookup had already failed read as merely
-        // slow, indefinitely, with nothing for the viewer to act on. It fails
-        // most often on GET /projects/:id, which answers 404
-        // project_not_accessible when the project's GitHub App installation
-        // cannot mint a token - a condition of the installation, not of the
-        // viewer. Say so rather than spin.
-        setLoadError(e instanceof Error ? e.message : 'Could not load this project.');
+        // This used to leave isLoading true on purpose, "to show skeleton
+        // forever when backend is down". A skeleton that never resolves reads
+        // as slow, not broken, so a contributor waited on a project that was
+        // answering 404 project_not_accessible to everyone.
+        setLoadError(e);
         setIsLoading(false);
       }
     };
@@ -182,7 +182,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, attempt]);
 
   const repoName = useMemo(() => {
     const full = project?.github_full_name || '';
@@ -397,36 +397,31 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
   }, [recentPRs, showAllActivity]);
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    // Not window.location.href. The address bar carries the SENDER's viewer
+    // state - ?view=maintainer, the tab they came from - and whoever opens the
+    // link inherits it. A maintainer who copied this after browsing Ecosystems
+    // handed contributors ?tab=ecosystems&view=maintainer&...&from=ecosystems.
+    navigator.clipboard.writeText(shareableProjectUrl(projectId ?? ''));
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
   if (loadError) {
+    const back = onBack || onClose;
     return (
-      <div className="space-y-4">
-        {(onBack || onClose) && (
+      <div className="space-y-6">
+        {back && (
           <button
-            onClick={() => (onBack ? onBack() : onClose?.())}
-            className={`px-4 py-2.5 rounded-[16px] border text-[13px] font-semibold transition-all ${
+            onClick={back}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-[16px] backdrop-blur-[40px] border transition-all ${
               theme === 'dark' ? 'bg-white/[0.12] border-white/20 text-[#f5f5f5]' : 'bg-white/[0.35] border-black/10 text-[#2d2820]'
             }`}
           >
-            {backLabel || 'Back'}
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-[13px] font-semibold">{backLabel || 'Back'}</span>
           </button>
         )}
-        <div
-          role="alert"
-          className={`rounded-[20px] border p-6 ${
-            theme === 'dark' ? 'bg-white/[0.06] border-white/10 text-[#e8dfd0]' : 'bg-white/[0.35] border-black/10 text-[#2d2820]'
-          }`}
-        >
-          <p className="text-[15px] font-semibold mb-1">This project couldn&apos;t be loaded.</p>
-          <p className={`text-[13px] ${theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
-            Grainlify could not read its repository from GitHub, so there is nothing to show yet. It is a
-            problem on our side, not with your account. ({loadError})
-          </p>
-        </div>
+        <LoadFailed what="this project" error={loadError} onRetry={() => setAttempt((n) => n + 1)} />
       </div>
     );
   }
@@ -757,6 +752,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
               </button>
               <button
                 onClick={handleCopyLink}
+                aria-label="Copy link"
                 className={`p-3 rounded-[12px] backdrop-blur-[20px] border border-white/25 hover:bg-white/[0.2] transition-all ${
                   theme === 'dark' ? 'bg-white/[0.08] text-[#f5f5f5]' : 'bg-white/[0.08] text-[#2d2820]'
                 }`}

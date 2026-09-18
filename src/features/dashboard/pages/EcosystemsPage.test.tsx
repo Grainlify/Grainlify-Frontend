@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { EcosystemsPage } from './EcosystemsPage'
 import { getEcosystems } from '../../../shared/api/client'
+import { ApiError } from '../../../shared/api/apiError'
 
 // EcosystemsPage fetches ecosystems via getEcosystems() on mount and transforms the
 // raw API rows (project_count/user_count/etc.) into UI view-model objects. The
@@ -87,17 +88,35 @@ describe('EcosystemsPage', () => {
     })
   })
 
-  it('does not crash when the ecosystems fetch fails, and settles on the empty state', async () => {
-    mockedGetEcosystems.mockRejectedValue(new Error('network exploded'))
+  // Rewritten: this used to assert that a failed fetch settled on "No ecosystems
+  // available yet." — the defect. A failed load must say it failed.
+  it('shows a load-failed alert (not the empty state) when the ecosystems fetch fails', async () => {
+    mockedGetEcosystems.mockRejectedValue(new ApiError('internal_error', 500, { error: 'internal_error' }))
 
     const { container } = renderWithProviders(<EcosystemsPage onEcosystemClick={vi.fn()} />)
 
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
 
     await waitFor(() => {
-      expect(screen.getByText('No ecosystems available yet.')).toBeInTheDocument()
+      expect(screen.getByText("Couldn't load the ecosystems")).toBeInTheDocument()
     })
+    expect(screen.getByRole('alert')).toHaveTextContent('internal_error')
+    expect(screen.queryByText('No ecosystems available yet.')).not.toBeInTheDocument()
     expect(container.querySelectorAll('.animate-pulse').length).toBe(0)
+  })
+
+  it('retries the ecosystems fetch from the load-failed alert', async () => {
+    mockedGetEcosystems
+      .mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+      .mockResolvedValueOnce({ ecosystems: [ecosystemAlpha] })
+
+    renderWithProviders(<EcosystemsPage onEcosystemClick={vi.fn()} />)
+
+    await userEvent.click(await screen.findByRole('button', { name: /try again/i }))
+
+    expect(await screen.findByText('Alpha Chain')).toBeInTheDocument()
+    expect(screen.queryByText("Couldn't load the ecosystems")).not.toBeInTheDocument()
+    expect(mockedGetEcosystems).toHaveBeenCalledTimes(2)
   })
 
   it('calls onEcosystemClick with the clicked ecosystem id, name, description, and logo url', async () => {

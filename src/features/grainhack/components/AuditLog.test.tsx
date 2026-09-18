@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithProviders, screen, waitFor } from '../../../test/renderWithProviders'
+import { ApiError } from '../../../shared/api/apiError'
+import userEvent from '@testing-library/user-event'
 import { AuditLog } from './AuditLog'
 
 const mockGetHackathonConfigAudit = vi.fn()
@@ -95,5 +97,26 @@ describe('AuditLog', () => {
     await waitFor(() =>
       expect(mockGetHackathonConfigAudit).toHaveBeenCalledWith({ hackathon_id: undefined, limit: 100 }),
     )
+  })
+})
+
+// Used to toast and fall through to "No changes recorded yet."
+describe('AuditLog when the load fails', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('says it could not load instead of claiming nothing changed, and retries', async () => {
+    mockGetHackathonConfigAudit.mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+    mockGetHackathonConfigAudit.mockResolvedValueOnce({ entries: [] })
+    const user = userEvent.setup()
+    renderWithProviders(<AuditLog hackathonId="hack-1" />)
+
+    expect(await screen.findByText("Couldn't load the audit trail")).toBeInTheDocument()
+    expect(screen.queryByText('No changes recorded yet.')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText('No changes recorded yet.')).toBeInTheDocument()
+    expect(mockGetHackathonConfigAudit).toHaveBeenCalledTimes(2)
   })
 })

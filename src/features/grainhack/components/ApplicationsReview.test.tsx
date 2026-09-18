@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../test/renderWithProviders'
+import { ApiError } from '../../../shared/api/apiError'
 import { ApplicationsReview } from './ApplicationsReview'
 
 const mockGetAdminHackathonApplications = vi.fn()
@@ -144,5 +145,25 @@ describe('ApplicationsReview', () => {
 
     const buttons = screen.getAllByRole('button', { name: 'Reject' })
     expect(buttons[buttons.length - 1]).toBeDisabled()
+  })
+})
+
+// Used to toast and fall through to "No pending applications."
+describe('ApplicationsReview when the load fails', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('says it could not load instead of claiming none are pending, and retries', async () => {
+    mockGetAdminHackathonApplications.mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+    mockGetAdminHackathonApplications.mockResolvedValueOnce({ applications: APPLICATIONS })
+    const user = userEvent.setup()
+    renderWithProviders(<ApplicationsReview hackathonId="hack-1" />)
+
+    expect(await screen.findByText("Couldn't load pending applications")).toBeInTheDocument()
+    expect(screen.queryByText('No pending applications.')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText('acme/widgets')).toBeInTheDocument()
   })
 })

@@ -73,6 +73,20 @@ describe('GrainHackEventDetailPage', () => {
     expect(screen.getByText('$8.00')).toBeInTheDocument()
   })
 
+  it('says the event could not be loaded instead of "No issues were published"', async () => {
+    mockedGetHackathon.mockResolvedValue(makeHackathon({ id: 'hack-1', name: 'First GrainHack Event (Base Sepolia)', phase: 'live' }))
+    mockedGetHackathonIssues.mockRejectedValue(new Error('network down'))
+
+    renderWithProviders(
+      <GrainHackEventDetailPage eventId="hack-1" eventName="First GrainHack Event (Base Sepolia)" onBack={vi.fn()} onIssueClick={vi.fn()} />,
+    )
+
+    expect(await screen.findByText("Couldn't load this event")).toBeInTheDocument()
+    expect(screen.queryByText('No issues were published')).not.toBeInTheDocument()
+    // The way back stays available.
+    expect(screen.getByRole('button', { name: /all events/i })).toBeInTheDocument()
+  })
+
   it('shows different empty-state copy for application_period than for issue_prep', async () => {
     mockedGetHackathon.mockResolvedValue(makeHackathon({ id: 'hack-2', name: 'Not Open Yet', phase: 'application_period' }))
     mockedGetHackathonIssues.mockResolvedValue({ issues: [] })

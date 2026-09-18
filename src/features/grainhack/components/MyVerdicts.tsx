@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { Modal, ModalFooter, ModalButton } from '../../../shared/components/ui/Modal';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import {
   getMyGrainHackVerdicts,
   appealVerdict,
@@ -70,18 +71,22 @@ export function MyVerdicts() {
   const isDark = theme === 'dark';
   const [entries, setEntries] = useState<MyVerdictEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [appealing, setAppealing] = useState<MyVerdictEntry | null>(null);
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const load = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await getMyGrainHackVerdicts();
       setEntries(res.verdicts);
     } catch (error) {
+      // Used to toast and fall through to "No results yet." - which, with an
+      // appeal window open, reads as nothing to appeal.
       console.error('Failed to load verdicts:', error);
-      toast.error('Could not load your results.');
+      setLoadError(error);
     } finally {
       setIsLoading(false);
     }
@@ -119,6 +124,10 @@ export function MyVerdicts() {
     return <p className={`text-sm ${mutedText}`}>Loading your results...</p>;
   }
 
+  if (loadError != null && entries.length === 0) {
+    return <LoadFailed what="your results" error={loadError} onRetry={load} />;
+  }
+
   if (entries.length === 0) {
     return (
       <div className={cardClass}>
@@ -133,6 +142,8 @@ export function MyVerdicts() {
 
   return (
     <div className="space-y-4">
+      {/* A refresh after an appeal failed: the list below predates it. */}
+      {loadError != null && <LoadFailed what="your latest results" error={loadError} onRetry={load} />}
       {entries.map((entry) => {
         const v = entry.verdict;
         const bucket = v.final_bucket ?? v.judge_bucket ?? null;

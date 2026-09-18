@@ -3,6 +3,7 @@ import { screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { DiscoverPage } from './DiscoverPage'
+import { ApiError } from '../../../shared/api/apiError'
 import { getRecommendedProjects, getPublicProjectIssues, getUserProfile } from '../../../shared/api/client'
 
 // DiscoverPage fetches recommended projects (getRecommendedProjects) and, once those
@@ -251,26 +252,95 @@ describe('DiscoverPage', () => {
     expect(mockedGetPublicProjectIssues).not.toHaveBeenCalled()
   })
 
-  it('clears both loading skeletons instead of hanging forever when the projects fetch rejects', async () => {
+  // Rewritten: this used to assert the page settled on "No recommended
+  // projects found" / "No recommended issues found" after a rejected fetch -
+  // the skeletons cleared, but into an empty state indistinguishable from a
+  // real absence of projects.
+  it('says projects and issues failed to load (not "No recommended ...") when the projects fetch rejects, and retries', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    mockedGetRecommendedProjects.mockRejectedValue(new Error('network down'))
+    mockedGetRecommendedProjects.mockRejectedValueOnce(
+      new ApiError('internal_error', 500, { error: 'internal_error' }),
+    )
+    mockedGetRecommendedProjects.mockResolvedValueOnce({ projects: [projectA] })
+    mockedGetPublicProjectIssues.mockResolvedValue({
+      issues: [makeApiIssue({ github_issue_id: 101, title: 'Fix crash on startup' })],
+    })
 
     const { container } = renderWithProviders(<DiscoverPage />, { withAuth: true })
 
     expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0)
 
-    await waitFor(() => {
-      expect(screen.getByText('No recommended projects found')).toBeInTheDocument()
-    })
-    await waitFor(() => {
-      expect(screen.getByText('No recommended issues found')).toBeInTheDocument()
-    })
-
+    expect(await screen.findByText("Couldn't load recommended projects")).toBeInTheDocument()
+    expect(screen.getByText("Couldn't load recommended issues")).toBeInTheDocument()
+    expect(screen.queryByText('No recommended projects found')).not.toBeInTheDocument()
+    expect(screen.queryByText('No recommended issues found')).not.toBeInTheDocument()
     expect(screen.queryByText(/Finding the most active projects/i)).not.toBeInTheDocument()
     expect(container.querySelectorAll('.animate-shimmer').length).toBe(0)
+    expect(mockedGetPublicProjectIssues).not.toHaveBeenCalled()
+
+    await userEvent.setup().click(screen.getAllByRole('button', { name: /try again/i })[0])
+    expect(await screen.findByText('acme')).toBeInTheDocument()
+    expect(await screen.findByText('Fix crash on startup')).toBeInTheDocument()
+    expect(screen.queryByText(/Couldn't load/)).not.toBeInTheDocument()
 
     consoleErrorSpy.mockRestore()
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('says issues failed to load, not "No recommended issues found", when every per-project issue fetch fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA, projectB] })
+    mockedGetPublicProjectIssues.mockRejectedValue(
+      new ApiError('project_not_accessible', 404, { error: 'project_not_accessible' }),
+    )
+
+    renderWithProviders(<DiscoverPage />, { withAuth: true })
+
+    expect(await screen.findByText("Couldn't load recommended issues")).toBeInTheDocument()
+    expect(screen.getByText(/project_not_accessible/)).toBeInTheDocument()
+    expect(screen.queryByText('No recommended issues found')).not.toBeInTheDocument()
+    // Projects loaded fine and still show.
+    expect(screen.getByText('acme')).toBeInTheDocument()
+
+    consoleErrorSpy.mockRestore()
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('shows the issues that loaded plus a line naming the project whose issues failed', async () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA, projectB] })
+    mockedGetPublicProjectIssues.mockImplementation(async (projectId: string) => {
+      if (projectId === 'proj-a') {
+        return { issues: [makeApiIssue({ github_issue_id: 101, title: 'Fix crash on startup' })] }
+      }
+      throw new ApiError('internal_error', 500, { error: 'internal_error' })
+    })
+
+    renderWithProviders(<DiscoverPage />, { withAuth: true })
+
+    expect(await screen.findByText('Fix crash on startup')).toBeInTheDocument()
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent("Couldn't load issues from globex")
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('does not tell the user to verify KYC when their profile (and so KYC status) failed to load', async () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mockedGetUserProfile.mockRejectedValue(
+      new ApiError('internal_error', 500, { error: 'internal_error' }),
+    )
+    mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
+
+    renderWithProviders(<DiscoverPage />, { withAuth: true })
+
+    await screen.findByText('No recommended projects found')
+    await waitFor(() => expect(mockedGetUserProfile).toHaveBeenCalled())
+    expect(screen.queryByText(/Verify KYC/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Finish setup/i)).not.toBeInTheDocument()
+
     consoleWarnSpy.mockRestore()
   })
 

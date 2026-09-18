@@ -25,6 +25,7 @@ import { SpotlightCard } from "../../../shared/components/ui/aceternity/Spotligh
 import { SkeletonLoader } from "../../../shared/components/SkeletonLoader";
 import { useOptimisticData } from "../../../shared/hooks/useOptimisticData";
 import { EmptyState } from "../../../shared/components/EmptyState";
+import { LoadFailed } from "../../../shared/components/LoadFailed";
 import {
   DiscoverProjectCard,
   type DiscoverProject,
@@ -237,7 +238,10 @@ export function DiscoverPage({
   // Starts "loading" so the nudge never flashes incomplete before either resolves.
   const [isLoadingSetupStatus, setIsLoadingSetupStatus] = useState(true);
   const [hasBillingProfile, setHasBillingProfile] = useState(false);
-  const [kycVerified, setKycVerified] = useState(false);
+  // null = unknown. The profile fetch failing used to leave this at false, so
+  // the hero told a verified user to "Verify KYC". Unknown hides the nudge
+  // rather than asserting a step is not done.
+  const [kycVerified, setKycVerified] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -249,6 +253,7 @@ export function DiscoverPage({
         setKycVerified(Boolean(profile?.kyc_verified));
       })
       .catch((err) => {
+        // Leaves kycVerified null (unknown), which hides the setup nudge.
         console.warn("DiscoverPage: Failed to load KYC status", err);
       })
       .finally(() => {
@@ -264,15 +269,38 @@ export function DiscoverPage({
   const {
     data: projects,
     isLoading: isLoadingProjects,
+    hasError: projectsHasError,
     fetchData: fetchProjects,
+    clearCache: clearProjectsCache,
   } = useOptimisticData<ProjectType[]>([], { cacheDuration: 30000 });
+  // The hook only keeps a boolean; the error itself is captured here so the
+  // failure message can name its cause.
+  const [projectsError, setProjectsError] = useState<unknown>(null);
+  const [projectsAttempt, setProjectsAttempt] = useState(0);
 
   // Use optimistic data hook for issues with 30-second cache
   const {
     data: recommendedIssues,
     isLoading: isLoadingIssues,
+    hasError: issuesHasError,
     fetchData: fetchIssues,
+    clearCache: clearIssuesCache,
   } = useOptimisticData<IssueType[]>([], { cacheDuration: 30000 });
+  const [issuesError, setIssuesError] = useState<unknown>(null);
+  // Projects whose issue fetch failed while others succeeded - shown as a
+  // partial-failure line under the issues that did load.
+  const [issueFailedProjects, setIssueFailedProjects] = useState<string[]>([]);
+  const [issuesAttempt, setIssuesAttempt] = useState(0);
+
+  const retryProjects = () => {
+    clearProjectsCache();
+    clearIssuesCache();
+    setProjectsAttempt((n) => n + 1);
+  };
+  const retryIssues = () => {
+    clearIssuesCache();
+    setIssuesAttempt((n) => n + 1);
+  };
 
   // "Show more issues" expands this same in-place list instead of navigating
   // anywhere - it used to route to MaintainersPage's Issues tab (owner-only
@@ -291,7 +319,14 @@ export function DiscoverPage({
         // Fetch a larger pool than we display - grouping repos down to one
         // card per org means a small fetch could otherwise collapse to just
         // 1-2 cards when one org owns most of the top projects.
-        const response = await getRecommendedProjects(50);
+        setProjectsError(null);
+        let response: Awaited<ReturnType<typeof getRecommendedProjects>>;
+        try {
+          response = await getRecommendedProjects(50);
+        } catch (err) {
+          setProjectsError(err);
+          throw err;
+        }
 
         // Handle response - check if it exists and has projects array
         if (!response) {
@@ -351,13 +386,17 @@ export function DiscoverPage({
     };
 
     loadRecommendedProjects();
-  }, [fetchProjects]);
+  }, [fetchProjects, projectsAttempt]);
 
   // Fetch recommended issues from top projects (useOptimisticData manages loading state)
   useEffect(() => {
     const loadRecommendedIssues = async () => {
       // Still waiting on projects to resolve — don't touch issues loading state yet.
       if (isLoadingProjects) return;
+      // Projects failed: the issues section renders that failure itself. Do
+      // not cache an empty issue list here - it used to, and render "No
+      // recommended issues found" for a page that simply could not load.
+      if (projectsHasError) return;
 
       // No projects means there's nothing to source issues from. Resolve with an
       // empty result instead of returning early, which would leave isLoadingIssues
@@ -378,6 +417,8 @@ export function DiscoverPage({
 
       await fetchIssues(async () => {
         const issues: IssueType[] = [];
+        const failed: { name: string; error: unknown }[] = [];
+        setIssuesError(null);
 
         // Try to get issues from projects, moving to next if a project has no issues
         for (const project of projects) {
@@ -405,12 +446,19 @@ export function DiscoverPage({
               }
             }
           } catch (err) {
-            // If fetching issues fails, continue to next project
+            // Recorded, not swallowed: this used to `continue` silently, so a
+            // run where every project failed rendered "No recommended issues
+            // found".
             console.warn(`Failed to fetch issues for project ${project.id}:`, err);
-            continue;
+            failed.push({ name: project.name, error: err });
           }
         }
 
+        setIssueFailedProjects(failed.map((f) => f.name));
+        if (issues.length === 0 && failed.length > 0) {
+          setIssuesError(failed[0].error);
+          throw failed[0].error;
+        }
         return issues;
       }, showAllIssues);
     };
@@ -427,7 +475,7 @@ export function DiscoverPage({
     // caught the third occurrence was counting network requests, not asserting
     // on rendered output.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projects, isLoadingProjects, showAllIssues]);
+  }, [projects, isLoadingProjects, projectsHasError, showAllIssues, issuesAttempt]);
 
   // If a project is selected, show the detail page instead
   if (selectedProjectId) {
@@ -457,9 +505,9 @@ export function DiscoverPage({
         <DiscoverHero
           login={user?.github?.login}
           avatarUrl={user?.github?.avatar_url}
-          isLoadingStatus={isLoadingSetupStatus}
+          isLoadingStatus={isLoadingSetupStatus || kycVerified === null}
           hasBillingProfile={hasBillingProfile}
-          kycVerified={kycVerified}
+          kycVerified={kycVerified === true}
           onGoToBilling={onGoToBilling}
         />
       </motion.div>
@@ -577,6 +625,13 @@ export function DiscoverPage({
               </div>
             ))}
           </div>
+        ) : projectsHasError ? (
+          <LoadFailed
+            what="recommended projects"
+            error={projectsError}
+            onRetry={retryProjects}
+            className="mt-6"
+          />
         ) : projects.length === 0 ? (
           <div className="mt-6">
             <EmptyState
@@ -635,7 +690,7 @@ export function DiscoverPage({
             <h3 className={`text-xl md:text-[24px] font-bold transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
               }`}>Recommended Issues</h3>
           </div>
-          {!showAllIssues && recommendedIssues.length > 0 && (
+          {!showAllIssues && !projectsHasError && !issuesHasError && recommendedIssues.length > 0 && (
             <button
               onClick={() => setShowAllIssues(true)}
               className={`shrink-0 inline-flex items-center gap-1 text-[13px] md:text-[14px] font-semibold transition-colors ${
@@ -661,7 +716,15 @@ export function DiscoverPage({
           Open issues from the most active projects
         </p>
 
-        {isLoadingIssues ? (
+        {projectsHasError ? (
+          // Issues are sourced from the recommended projects, so they cannot
+          // load either. Retrying reloads both.
+          <LoadFailed
+            what="recommended issues"
+            error={projectsError}
+            onRetry={retryProjects}
+          />
+        ) : isLoadingIssues ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             {[...Array(6)].map((_, idx) => (
               <div key={idx} className={`backdrop-blur-[30px] rounded-[16px] border p-6 ${isDark ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25'
@@ -693,6 +756,12 @@ export function DiscoverPage({
               </div>
             ))}
           </div>
+        ) : issuesHasError ? (
+          <LoadFailed
+            what="recommended issues"
+            error={issuesError}
+            onRetry={retryIssues}
+          />
         ) : recommendedIssues.length === 0 ? (
           <EmptyState
             icon={Target}
@@ -724,6 +793,22 @@ export function DiscoverPage({
               </motion.div>
             ))}
           </motion.div>
+        )}
+        {!projectsHasError && !isLoadingIssues && !issuesHasError && issueFailedProjects.length > 0 && (
+          <div
+            role="alert"
+            className={`mt-4 flex flex-wrap items-center gap-2 text-[13px] ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}
+          >
+            <span>
+              Couldn't load issues from {issueFailedProjects.join(", ")}.
+            </span>
+            <button
+              onClick={retryIssues}
+              className={`font-semibold underline ${isDark ? 'text-[#c9983a]' : 'text-[#a67c2e]'}`}
+            >
+              Try again
+            </button>
+          </div>
         )}
       </motion.div>
     </motion.div>

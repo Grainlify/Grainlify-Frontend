@@ -47,6 +47,15 @@ export function useLandingStats() {
   }, []);
 
   const display: LandingStatsDisplay = useMemo(() => {
+    // A failed fetch used to leave the loading dash up forever, so "still
+    // loading" and "could not load" looked identical. Say which it is.
+    if (!stats && error) {
+      return {
+        activeProjects: 'Unavailable',
+        contributors: 'Unavailable',
+        grantsDistributed: 'Unavailable',
+      };
+    }
     if (!stats) {
       return {
         activeProjects: '—',
@@ -60,7 +69,7 @@ export function useLandingStats() {
       contributors: formatCount(stats.contributors),
       grantsDistributed: formatUSD(stats.grants_distributed_usd),
     };
-  }, [stats]);
+  }, [stats, error]);
 
   return { stats, display, isLoading, error };
 }

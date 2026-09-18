@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { EcosystemDetailPage } from './EcosystemDetailPage'
 import { getPublicProjects, getEcosystemDetail } from '../../../shared/api/client'
+import { ApiError } from '../../../shared/api/apiError'
 
 // EcosystemDetailPage fetches the ecosystem's own detail record (getEcosystemDetail)
 // and, independently, the list of public projects filtered by ecosystem name
@@ -138,38 +139,72 @@ describe('EcosystemDetailPage', () => {
     expect(getPublicProjects).toHaveBeenCalledWith({ ecosystem: 'Zeta', limit: 100 })
   })
 
-  it('falls back to hardcoded placeholder links/about/key-areas when the detail fetch fails, without crashing', async () => {
-    mockedGetEcosystemDetail.mockRejectedValue(new Error('server exploded'))
+  // Rewritten: this used to assert that a failed detail fetch rendered the
+  // hardcoded placeholder content (fake web3.ecosystem.example / discord.gg /
+  // twitter.com links, stock about text) — the defect. It must say it failed.
+  it('shows a load-failed alert instead of placeholder content when the detail fetch fails', async () => {
+    mockedGetEcosystemDetail.mockRejectedValue(
+      new ApiError('ecosystem_lookup_failed', 500, { error: 'ecosystem_lookup_failed' }),
+    )
     mockedGetPublicProjects.mockResolvedValue(emptyProjects)
 
     renderWithProviders(
       <EcosystemDetailPage ecosystemId="eco-99" ecosystemName="NoDetail Land" onBack={vi.fn()} />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('Official Website')).toBeInTheDocument()
-    })
-    // Hardcoded fallback description (no initialDescription prop, no detail).
-    expect(
-      screen.getByText('Projects building decentralized protocols, tooling, and infrastructure.'),
-    ).toBeInTheDocument()
-    // Hardcoded fallback "about" text (interpolates the ecosystem name).
-    expect(
-      screen.getByText(/The NoDetail Land ecosystem represents a paradigm shift/),
-    ).toBeInTheDocument()
-    // Hardcoded fallback key areas.
-    expect(screen.getByText('Blockchain Protocols:')).toBeInTheDocument()
-    // Hardcoded fallback links, normalized to an https:// href.
-    const officialWebsite = screen.getByText('Official Website')
-    expect(officialWebsite.closest('a')).toHaveAttribute('href', 'https://web3.ecosystem.example')
-    expect(screen.getByText('Discord Community')).toBeInTheDocument()
-    expect(screen.getByText('Twitter')).toBeInTheDocument()
-    // Hardcoded fallback technologies.
-    expect(
-      screen.getByText('TypeScript for smart contract development and tooling'),
-    ).toBeInTheDocument()
-
+    expect(await screen.findByText("Couldn't load this ecosystem")).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('ecosystem_lookup_failed')
+    expect(screen.queryByText('Official Website')).not.toBeInTheDocument()
+    expect(screen.queryByText('Discord Community')).not.toBeInTheDocument()
+    expect(screen.queryByText(/paradigm shift/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Blockchain Protocols:')).not.toBeInTheDocument()
+    // Breadcrumb stays so the user can go back.
+    expect(screen.getByText('Ecosystems')).toBeInTheDocument()
     expect(getEcosystemDetail).toHaveBeenCalledWith('eco-99')
+  })
+
+  it('retries the detail fetch from the load-failed alert', async () => {
+    mockedGetEcosystemDetail
+      .mockRejectedValueOnce(new ApiError('ecosystem_lookup_failed', 500, { error: 'ecosystem_lookup_failed' }))
+      .mockResolvedValueOnce(makeDetail({ about: 'Real about text' }))
+    mockedGetPublicProjects.mockResolvedValue(emptyProjects)
+    const user = userEvent.setup()
+
+    renderWithProviders(
+      <EcosystemDetailPage ecosystemId="eco-1" ecosystemName="Eco One" onBack={vi.fn()} />,
+    )
+
+    await user.click(await screen.findByRole('button', { name: /try again/i }))
+
+    expect(await screen.findByText('Real about text')).toBeInTheDocument()
+    expect(screen.queryByText("Couldn't load this ecosystem")).not.toBeInTheDocument()
+  })
+
+  it('shows a load-failed alert (not "No projects … yet") when the projects fetch fails, and retries', async () => {
+    mockedGetEcosystemDetail.mockResolvedValue(makeDetail())
+    mockedGetPublicProjects
+      .mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+      .mockResolvedValueOnce({
+        projects: [makeApiProject({ id: 'proj-1', github_full_name: 'ecoorg/back-again' })],
+        total: 1,
+        limit: 100,
+        offset: 0,
+      })
+    const user = userEvent.setup()
+
+    renderWithProviders(
+      <EcosystemDetailPage ecosystemId="eco-1" ecosystemName="EcoOrg" onBack={vi.fn()} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Projects' }))
+
+    expect(await screen.findByText("Couldn't load the projects in EcoOrg")).toBeInTheDocument()
+    expect(screen.queryByText('No projects in EcoOrg yet')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+
+    expect(await screen.findByText('back-again')).toBeInTheDocument()
+    expect(getPublicProjects).toHaveBeenCalledTimes(2)
   })
 
   it('calls onBack when the "Ecosystems" breadcrumb is clicked', async () => {

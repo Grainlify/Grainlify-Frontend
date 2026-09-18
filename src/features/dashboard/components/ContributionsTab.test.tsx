@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '../../../test/renderWithProviders'
+import userEvent from '@testing-library/user-event'
 import { ContributionsTab } from './ContributionsTab'
+import { ApiError } from '../../../shared/api/apiError'
 
 const mockGetMyIssueApplications = vi.fn()
 
@@ -119,14 +121,24 @@ describe('ContributionsTab', () => {
     expect(screen.getAllByText('No applications yet').length).toBeGreaterThan(0)
   })
 
-  it('shows a toast and an empty board on fetch failure, without crashing', async () => {
-    mockGetMyIssueApplications.mockRejectedValue(new Error('Network error'))
+  // Rewritten: this used to assert that a failed fetch left "No applications
+  // yet" in every column - the defect itself, since it told somebody with real
+  // applications that they had none.
+  it('says the contributions failed to load (not "No applications yet") on fetch failure, and retries', async () => {
+    mockGetMyIssueApplications.mockRejectedValueOnce(
+      new ApiError('internal_error', 500, { error: 'internal_error' }),
+    )
+    mockGetMyIssueApplications.mockResolvedValueOnce({ issue_applications: ITEMS })
     renderWithProviders(<ContributionsTab />)
 
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalled()
-    })
-    expect(screen.getAllByText('No applications yet').length).toBeGreaterThan(0)
+    expect(await screen.findByText("Couldn't load your contributions")).toBeInTheDocument()
+    expect(screen.getByText(/internal_error/)).toBeInTheDocument()
+    expect(screen.queryByText('No applications yet')).not.toBeInTheDocument()
+    expect(mockToastError).toHaveBeenCalled()
+
+    await userEvent.setup().click(screen.getByRole('button', { name: /try again/i }))
+    expect((await screen.findAllByText('Applied issue title')).length).toBeGreaterThan(0)
+    expect(screen.queryByText("Couldn't load your contributions")).not.toBeInTheDocument()
   })
 
   it('renders in both light and dark theme without crashing', async () => {

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Search, AlertCircle } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { PRFilterType } from '../../types';
 import { PRRow } from './PRRow';
 import { PRFilterDropdown } from './PRFilterDropdown';
 import { getProjectPRs } from '../../../../shared/api/client';
 import { PRRowSkeleton } from '../../../../shared/components/PRRowSkeleton';
+import { LoadFailed } from '../../../../shared/components/LoadFailed';
 
 interface PRFromAPI {
   github_pr_id: number;
@@ -42,7 +43,8 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoa
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [prs, setPrs] = useState<Array<PRFromAPI & { projectName: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // `repos` names the projects whose PR fetch failed; empty when the whole load threw.
+  const [error, setError] = useState<{ error: unknown; repos: string[] } | null>(null);
 
   // Fetch PRs from selected projects
   useEffect(() => {
@@ -52,6 +54,7 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoa
   const loadPRs = async () => {
     setIsLoading(true);
     setError(null);
+    const failed: { error: unknown; repos: string[] } = { error: null, repos: [] };
     try {
       if (selectedProjects.length === 0) {
         if (isLoadingProjects) {
@@ -73,7 +76,12 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoa
             projectName: project.github_full_name,
           }));
         } catch (err) {
+          // Recorded, not swallowed. This used to return [] alone, so the error
+          // branch below was unreachable and a failed fetch rendered
+          // "No pull requests found in selected repositories".
           console.error(`Failed to fetch PRs for ${project.github_full_name}:`, err);
+          failed.error = err;
+          failed.repos.push(project.github_full_name || project.id);
           return [];
         }
       });
@@ -89,9 +97,10 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoa
       });
 
       setPrs(flattenedPRs);
+      setError(failed.repos.length > 0 ? failed : null);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load pull requests';
-      setError(errorMessage);
+      console.error('Failed to load pull requests:', err);
+      setError({ error: err, repos: [] });
       setPrs([]);
     } finally {
       setIsLoading(false);
@@ -233,6 +242,14 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoa
           }`}>Indicators</div>
         </div>
 
+        {/* Some repos loaded, some didn't: name the missing ones above the rows */}
+        {!isLoading && error && error.repos.length > 0 && prs.length > 0 && (
+          <p role="alert" className={`text-[12px] px-1 ${theme === 'dark' ? 'text-[#e8c571]' : 'text-[#8b6f3a]'}`}>
+            Couldn't load pull requests from {error.repos.join(', ')}.{' '}
+            <button type="button" onClick={loadPRs} className="underline font-semibold">Try again</button>
+          </p>
+        )}
+
         {/* Pull Request Rows */}
         {isLoading ? (
           <div className="space-y-4">
@@ -240,15 +257,8 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoa
               <PRRowSkeleton key={idx} />
             ))}
           </div>
-        ) : error ? (
-          <div className={`flex items-center gap-3 px-6 py-4 mx-4 rounded-[12px] ${
-            theme === 'dark'
-              ? 'bg-red-500/10 border border-red-500/30 text-red-400'
-              : 'bg-red-100 border border-red-300 text-red-700'
-          }`}>
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="text-[14px] font-medium">{error}</span>
-          </div>
+        ) : error && prs.length === 0 ? (
+          <LoadFailed what="the pull requests" error={error.error} onRetry={loadPRs} />
         ) : filteredPRs.length > 0 ? (
           filteredPRs.map((pr) => {
             // Determine status: merged takes priority, then state

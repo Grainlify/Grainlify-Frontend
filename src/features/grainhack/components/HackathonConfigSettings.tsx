@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { ConfigSection } from './ConfigSection';
 import { ConfigRow } from './ConfigRow';
 import {
@@ -38,10 +39,12 @@ export function HackathonConfigSettings({ hackathonId }: HackathonConfigSettings
   const [values, setValues] = useState<Record<string, string>>({});
   const [initialValues, setInitialValues] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchSettings = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await getHackathonConfigSettings(hackathonId);
       setSettings(res.settings);
@@ -50,8 +53,10 @@ export function HackathonConfigSettings({ hackathonId }: HackathonConfigSettings
       setValues(map);
       setInitialValues(map);
     } catch (error) {
+      // Used to toast and render the header and an enabled-looking Save
+      // button over no settings at all.
       console.error('Failed to load config settings:', error);
-      toast.error('Failed to load settings.');
+      setLoadError(error);
     } finally {
       setIsLoading(false);
     }
@@ -100,6 +105,10 @@ export function HackathonConfigSettings({ hackathonId }: HackathonConfigSettings
     );
   }
 
+  if (loadError != null && settings.length === 0) {
+    return <LoadFailed what="settings" error={loadError} onRetry={fetchSettings} />;
+  }
+
   const sections = SECTION_ORDER.map((section) => ({
     section,
     settings: settings.filter((s) => s.section === section),
@@ -121,6 +130,9 @@ export function HackathonConfigSettings({ hackathonId }: HackathonConfigSettings
           {isSaving ? 'Saving...' : 'Save changes'}
         </button>
       </div>
+
+      {/* A refresh after a save or reset failed: values below predate it. */}
+      {loadError != null && <LoadFailed what="the latest settings" error={loadError} onRetry={fetchSettings} />}
 
       {sections.map(({ section, settings: sectionSettings }) => (
         <ConfigSection key={section} title={section}>

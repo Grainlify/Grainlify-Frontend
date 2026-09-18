@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../../test/renderWithProviders'
 import { DashboardTab } from './DashboardTab'
 import { getProjectIssues, getProjectPRs } from '../../../../shared/api/client'
+import { ApiError } from '../../../../shared/api/apiError'
 
 vi.mock('../../../../shared/api/client', () => ({
   getProjectIssues: vi.fn(),
@@ -112,5 +113,59 @@ describe('DashboardTab - closed issue state in Last activity', () => {
     await screen.findByText('A fresh issue')
     expect(container.querySelector('.lucide-circle')).toBeInTheDocument()
     expect(container.querySelector('.lucide-check')).not.toBeInTheDocument()
+  })
+})
+
+describe('DashboardTab - load failures', () => {
+  const OTHER = { id: 'proj-43', github_full_name: 'acme/gadgets', status: 'verified' }
+  const serverError = () => new ApiError('internal_error', 500, { error: 'internal_error' })
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('shows LoadFailed, not zero counts or "No recent activity found.", when every fetch fails', async () => {
+    // Previously each per-project catch returned [], so this rendered the
+    // stats at 0 and "No recent activity found." as if the repo were idle.
+    vi.mocked(getProjectIssues).mockRejectedValue(serverError())
+    vi.mocked(getProjectPRs).mockRejectedValue(serverError())
+
+    renderWithProviders(<DashboardTab selectedProjects={[PROJECT]} />)
+
+    expect(await screen.findByText("Couldn't load the dashboard")).toBeInTheDocument()
+    expect(screen.getByText(/internal_error/)).toBeInTheDocument()
+    expect(screen.queryByText('No recent activity found.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Pull Requests Opened')).not.toBeInTheDocument()
+  })
+
+  it('shows loaded data plus a line naming the repo that failed when only some fetches fail', async () => {
+    vi.mocked(getProjectIssues).mockImplementation(async (id: string) => {
+      if (id === OTHER.id) throw serverError()
+      return { issues: [makeIssue({ title: 'Loaded issue' })] }
+    })
+    vi.mocked(getProjectPRs).mockResolvedValue({ prs: [] })
+
+    renderWithProviders(<DashboardTab selectedProjects={[PROJECT, OTHER]} />)
+
+    expect(await screen.findByText('Loaded issue')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load all dashboard data from acme/gadgets")
+    expect(screen.queryByText("Couldn't load the dashboard")).not.toBeInTheDocument()
+  })
+
+  it('retries from LoadFailed and renders the data once the fetch succeeds', async () => {
+    vi.mocked(getProjectIssues)
+      .mockRejectedValueOnce(serverError())
+      .mockResolvedValue({ issues: [makeIssue({ title: 'Back again' })] })
+    vi.mocked(getProjectPRs)
+      .mockRejectedValueOnce(serverError())
+      .mockResolvedValue({ prs: [] })
+    const user = userEvent.setup()
+
+    renderWithProviders(<DashboardTab selectedProjects={[PROJECT]} />)
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByText('Back again')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

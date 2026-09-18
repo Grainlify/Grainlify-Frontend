@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { Modal, ModalFooter, ModalButton, ModalInput } from '../../../shared/components/ui/Modal';
 import { getAdminHackathons, createHackathon, type Hackathon } from '../../../shared/api/client';
 
@@ -21,18 +22,22 @@ export function HackathonList({ onSelect }: HackathonListProps) {
   const isDark = theme === 'dark';
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
   const fetchHackathons = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await getAdminHackathons();
       setHackathons(res.hackathons);
     } catch (error) {
+      // Used to toast and fall through to "No hackathons yet. Create one to
+      // get started." - an invitation to create a duplicate.
       console.error('Failed to fetch hackathons:', error);
-      toast.error('Failed to load hackathons.');
+      setLoadError(error);
     } finally {
       setIsLoading(false);
     }
@@ -77,12 +82,16 @@ export function HackathonList({ onSelect }: HackathonListProps) {
 
       {isLoading ? (
         <div className={`text-center py-12 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Loading...</div>
+      ) : loadError != null && hackathons.length === 0 ? (
+        <LoadFailed what="hackathons" error={loadError} onRetry={fetchHackathons} />
       ) : hackathons.length === 0 ? (
         <div className={`text-center py-12 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
           No hackathons yet. Create one to get started.
         </div>
       ) : (
         <div className="space-y-2">
+          {/* A refresh after creating one failed: keep the list, but say it's stale. */}
+          {loadError != null && <LoadFailed what="the latest hackathons" error={loadError} onRetry={fetchHackathons} />}
           {hackathons.map((h) => (
             <button
               key={h.id}

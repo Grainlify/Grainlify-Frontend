@@ -3,6 +3,7 @@ import { Trophy } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { getHackathons, type Hackathon } from '../../../shared/api/client';
 import { formatUsdAmount } from '../../../shared/utils/usd';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 
 const PHASE_LABELS: Record<string, string> = {
   application_period: 'Applications open',
@@ -28,17 +29,24 @@ export function GrainHackEventsPage({ onEventClick }: GrainHackEventsPageProps) 
 
   const [isLoading, setIsLoading] = useState(true);
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let mounted = true;
+    setIsLoading(true);
+    setLoadError(null);
     getHackathons()
       .then((res) => {
         if (!mounted) return;
         setHackathons(res.hackathons || []);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!mounted) return;
+        // Not setHackathons([]): that rendered "No GrainHack events yet"
+        // while an event was live.
         setHackathons([]);
+        setLoadError(error);
       })
       .finally(() => {
         if (!mounted) return;
@@ -47,7 +55,7 @@ export function GrainHackEventsPage({ onEventClick }: GrainHackEventsPageProps) 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [attempt]);
 
   return (
     <div className="space-y-6">
@@ -82,6 +90,8 @@ export function GrainHackEventsPage({ onEventClick }: GrainHackEventsPageProps) 
             ))}
           </div>
         </div>
+      ) : loadError ? (
+        <LoadFailed what="GrainHack events" error={loadError} onRetry={() => setAttempt((n) => n + 1)} />
       ) : hackathons.length === 0 ? (
         <div className={`rounded-[24px] border p-8 sm:p-10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] text-center ${isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'}`}>
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#c9983a] to-[#a67c2e] flex items-center justify-center shadow-[0_8px_24px_rgba(162,121,44,0.3)] border border-white/15 mx-auto mb-4">

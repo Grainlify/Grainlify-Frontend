@@ -11,6 +11,7 @@ import { getMyProjects, getPendingSetupProjects, type PendingSetupProject } from
 import { getGitHubAvatarUrl } from '../../../shared/utils/avatar';
 import { InstallGitHubAppModal } from '../components/InstallGitHubAppModal';
 import { NewProjectSetupModal } from '../components/NewProjectSetupModal';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 
 const VALID_TABS: TabType[] = ['Dashboard', 'Issues', 'Pull Requests'];
 
@@ -80,6 +81,8 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** The raw getMyProjects() failure, for the tabs area's LoadFailed (which shows its code). */
+  const [projectsLoadError, setProjectsLoadError] = useState<unknown>(null);
   const [selectedRepoIds, setSelectedRepoIds] = useState<Set<string>>(new Set());
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
   const [targetIssueId, setTargetIssueId] = useState<string | undefined>(undefined);
@@ -153,6 +156,7 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
  const loadProjects = async () => {
   setIsLoading(true);
   setError(null);
+  setProjectsLoadError(null);
 
   try {
     const data = await getMyProjects();
@@ -163,6 +167,7 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
     setProjects(projectsArray);
     setError(null);
   } catch (err) {
+    setProjectsLoadError(err);
     const errorMessage =
       err instanceof Error ? err.message : 'Failed to load repositories';
 
@@ -568,6 +573,13 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
           valve for Dashboard/Pull Requests, whose content can be taller than the
           available space and isn't internally scrollable the way Issues is. */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-custom">
+        {/* Without this the tabs mounted with selectedProjects=[] and
+            isLoadingProjects=false, i.e. "No issues found" - the only trace
+            of the failure was inside the closed repo dropdown. */}
+        {!isLoading && error ? (
+          <LoadFailed what="your repositories" error={projectsLoadError ?? new Error(error)} onRetry={loadProjects} />
+        ) : (
+        <>
         {activeTab === 'Dashboard' && (
           <DashboardTab
             selectedProjects={selectedProjects}
@@ -591,6 +603,8 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
 
         {activeTab === 'Pull Requests' && (
           <PullRequestsTab selectedProjects={selectedProjects} isLoadingProjects={isLoading} onRefresh={refreshAll} />
+        )}
+        </>
         )}
       </div>
 

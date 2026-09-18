@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../test/renderWithProviders'
 import { ApplyToIssuePanel } from './ApplyToIssuePanel'
+import { ApiError } from '../../../shared/api/apiError'
 
 const mockGetContributorHackathonIssue = vi.fn()
 const mockApplyToHackathonIssue = vi.fn()
@@ -41,11 +42,49 @@ describe('ApplyToIssuePanel', () => {
   })
 
   it('renders nothing for an issue that is not in a GrainHack', async () => {
-    mockGetContributorHackathonIssue.mockRejectedValue(new Error('not_a_hackathon_issue'))
+    mockGetContributorHackathonIssue.mockRejectedValue(new ApiError('not_a_hackathon_issue', 404, { error: 'not_a_hackathon_issue' }))
     const { container } = renderWithProviders(<ApplyToIssuePanel projectId="proj-1" issueNumber={42} />)
 
     await waitFor(() => expect(mockGetContributorHackathonIssue).toHaveBeenCalledWith('proj-1', 42))
     await waitFor(() => expect(container).toBeEmptyDOMElement())
+  })
+
+  // Any other failure on a real GrainHack issue used to render nothing too,
+  // which on the issue page reads as "you can't apply to this".
+  it('says the GrainHack details could not be loaded when the lookup fails for another reason', async () => {
+    mockGetContributorHackathonIssue.mockRejectedValue(new ApiError('load_failed', 500, { error: 'load_failed' }))
+    renderWithProviders(<ApplyToIssuePanel projectId="proj-1" issueNumber={42} />)
+
+    expect(await screen.findByText("Couldn't load this issue's GrainHack details")).toBeInTheDocument()
+    expect(screen.getByText(/load_failed/)).toBeInTheDocument()
+  })
+
+  it('reports "unknown", not "not a GrainHack issue", when the lookup fails', async () => {
+    mockGetContributorHackathonIssue.mockRejectedValue(new ApiError('load_failed', 500, { error: 'load_failed' }))
+    const onGrainHackChange = vi.fn()
+    renderWithProviders(<ApplyToIssuePanel projectId="proj-1" issueNumber={42} onGrainHackChange={onGrainHackChange} />)
+
+    await screen.findByText("Couldn't load this issue's GrainHack details")
+    expect(onGrainHackChange).toHaveBeenLastCalledWith(null)
+  })
+
+  it('reports false for an issue that is genuinely not in a GrainHack', async () => {
+    mockGetContributorHackathonIssue.mockRejectedValue(new ApiError('not_a_hackathon_issue', 404, { error: 'not_a_hackathon_issue' }))
+    const onGrainHackChange = vi.fn()
+    renderWithProviders(<ApplyToIssuePanel projectId="proj-1" issueNumber={42} onGrainHackChange={onGrainHackChange} />)
+
+    await waitFor(() => expect(mockGetContributorHackathonIssue).toHaveBeenCalled())
+    await waitFor(() => expect(onGrainHackChange).toHaveBeenLastCalledWith(false))
+  })
+
+  it('an expired session is a failure, not "not a GrainHack issue", and Try again recovers', async () => {
+    mockGetContributorHackathonIssue
+      .mockRejectedValueOnce(new Error('Authentication failed. Please sign in again.'))
+      .mockResolvedValue(ok())
+    renderWithProviders(<ApplyToIssuePanel projectId="proj-1" issueNumber={42} />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText('Tests pass and docs updated.')).toBeInTheDocument()
   })
 
   it('shows the window, applicant count and criteria, and offers to apply', async () => {

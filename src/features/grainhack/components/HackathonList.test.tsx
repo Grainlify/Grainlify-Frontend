@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../test/renderWithProviders'
+import { ApiError } from '../../../shared/api/apiError'
 import { HackathonList } from './HackathonList'
 
 const mockGetAdminHackathons = vi.fn()
@@ -60,5 +61,28 @@ describe('HackathonList', () => {
 
     await waitFor(() => expect(mockCreateHackathon).toHaveBeenCalledWith('GrainHack Winter 2026'))
     await waitFor(() => expect(onSelect).toHaveBeenCalledWith('new-hack-id'))
+  })
+})
+
+// Used to toast and fall through to "No hackathons yet. Create one to get started."
+describe('HackathonList when the load fails', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('says it could not load instead of claiming there are none, and retries', async () => {
+    mockGetAdminHackathons.mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+    mockGetAdminHackathons.mockResolvedValueOnce({
+      hackathons: [{ id: 'hack-1', name: 'GrainHack Spring 2026', phase: 'draft' }],
+    })
+    const user = userEvent.setup()
+    renderWithProviders(<HackathonList onSelect={vi.fn()} />)
+
+    expect(await screen.findByText("Couldn't load hackathons")).toBeInTheDocument()
+    expect(screen.getByText(/internal_error/)).toBeInTheDocument()
+    expect(screen.queryByText(/No hackathons yet/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText('GrainHack Spring 2026')).toBeInTheDocument()
   })
 })

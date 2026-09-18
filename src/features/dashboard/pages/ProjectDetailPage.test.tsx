@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { ProjectDetailPage } from './ProjectDetailPage'
 import { getPublicProject, getPublicProjectIssues, getPublicProjectPRs } from '../../../shared/api/client'
+import { ApiError } from '../../../shared/api/apiError'
 
 vi.mock('../../../shared/api/client', () => ({
   getPublicProject: vi.fn(),
@@ -25,6 +26,8 @@ vi.mock('lucide-react', () => ({
   ArrowLeft: () => null,
   GitPullRequest: () => null,
   ChevronDown: () => null,
+  AlertCircle: () => null,
+  RotateCw: () => null,
 }))
 
 vi.mock('react-markdown', () => ({
@@ -157,22 +160,54 @@ describe('ProjectDetailPage', () => {
     expect(screen.queryByRole('heading', { level: 1, name: 'widget' })).not.toBeInTheDocument()
   })
 
-  // Replaces a test that asserted the skeleton stayed up forever on failure,
-  // calling it "graceful (if unusual) behavior". A skeleton says "still
-  // loading", so a lookup that had already failed read as merely slow,
-  // indefinitely, with nothing for the viewer to act on - the same "renders
-  // correctly while showing nothing" shape as #1033/#1040. The old test
-  // pinned the defect as a feature.
-  it('shows an explicit error, not an endless skeleton, when the lookup fails', async () => {
-    vi.mocked(getPublicProject).mockRejectedValue(new Error('project_not_accessible'))
+  // This test used to assert the opposite - that a failed load kept the
+  // skeleton up forever - which is how the behaviour survived. The live case:
+  // GET /projects/:id answered 404 project_not_accessible for the GrainHack
+  // sandbox repo, and every panel sat in its loading state with no message.
+  it('says the project could not be loaded, names the cause, and stops the skeleton', async () => {
+    vi.mocked(getPublicProject).mockRejectedValue(
+      new ApiError('project_not_accessible', 404, { error: 'project_not_accessible' }),
+    )
 
-    const { container } = renderWithProviders(<ProjectDetailPage projectId="proj-123" onBack={vi.fn()} />)
+    const { container } = renderWithProviders(
+      <ProjectDetailPage projectId="proj-123" onBack={() => {}} backLabel="Back to Ecosystems" />,
+    )
 
-    expect(await screen.findByRole('alert')).toHaveTextContent("This project couldn't be loaded.")
-    expect(screen.getByRole('alert')).toHaveTextContent('project_not_accessible')
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByText("Couldn't load this project")).toBeInTheDocument()
+    expect(within(alert).getByText(/project_not_accessible/)).toBeInTheDocument()
     expect(container.querySelectorAll('.animate-shimmer').length).toBe(0)
-    // Still escapable: the back control survives the error.
-    expect(screen.getByText('Back')).toBeInTheDocument()
+    // The way out stays on screen.
+    expect(screen.getByRole('button', { name: 'Back to Ecosystems' })).toBeInTheDocument()
+  })
+
+  it('retries the load from the error state', async () => {
+    vi.mocked(getPublicProject)
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockResolvedValue(buildProject())
+
+    renderWithProviders(<ProjectDetailPage projectId="proj-123" />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'widget' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('copies a link that carries the project and none of the sender\'s view state', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    window.history.replaceState(null, '', '/dashboard?tab=ecosystems&view=maintainer&project=proj-123&from=ecosystems')
+
+    renderWithProviders(<ProjectDetailPage projectId="proj-123" />)
+    await screen.findByRole('heading', { level: 1, name: 'widget' })
+    await userEvent.click(screen.getByRole('button', { name: /copy link/i }))
+
+    const copied = new URL(writeText.mock.calls[0][0])
+    expect(copied.searchParams.get('project')).toBe('proj-123')
+    expect(copied.searchParams.has('view')).toBe(false)
+    expect(copied.searchParams.has('from')).toBe(false)
+    expect(copied.searchParams.get('tab')).toBe('browse')
   })
 
   const backLabelCases = [

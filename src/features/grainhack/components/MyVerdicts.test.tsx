@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../test/renderWithProviders'
+import { ApiError } from '../../../shared/api/apiError'
 import { MyVerdicts } from './MyVerdicts'
 
 const mockGetMyGrainHackVerdicts = vi.fn()
@@ -152,5 +153,25 @@ describe('MyVerdicts', () => {
 
     await waitFor(() => expect(screen.getByText(/No results yet/i)).toBeInTheDocument())
     expect(screen.getByText(/appeal window opens at the same time/i)).toBeInTheDocument()
+  })
+})
+
+// Used to toast and fall through to "No results yet."
+describe('MyVerdicts when the load fails', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('says it could not load instead of claiming there are no results, and retries', async () => {
+    mockGetMyGrainHackVerdicts.mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+    mockGetMyGrainHackVerdicts.mockResolvedValueOnce({ verdicts: [] })
+    const user = userEvent.setup()
+    renderWithProviders(<MyVerdicts />)
+
+    expect(await screen.findByText("Couldn't load your results")).toBeInTheDocument()
+    expect(screen.queryByText('No results yet.')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText('No results yet.')).toBeInTheDocument()
   })
 })

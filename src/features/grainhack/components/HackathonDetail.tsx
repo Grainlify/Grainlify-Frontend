@@ -9,6 +9,7 @@ import { VerdictsReview } from './VerdictsReview';
 import { AppealsReview } from './AppealsReview';
 import { HackathonConfigSettings } from './HackathonConfigSettings';
 import { AuditLog } from './AuditLog';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { KeeperHubPayoutPanel } from './keeperhub/KeeperHubPayoutPanel';
 import {
   getAdminHackathon,
@@ -36,18 +37,22 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
   const [nextPhase, setNextPhase] = useState<string>('');
   const [blocking, setBlocking] = useState<HackathonBlockingReason[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const load = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await getAdminHackathon(hackathonId);
       setHackathon(res.hackathon);
       setNextPhase(res.next_phase);
       setBlocking(res.blocking_reasons);
     } catch (error) {
+      // Used to toast and leave "Loading..." up forever, since hackathon
+      // stayed null.
       console.error('Failed to load hackathon:', error);
-      toast.error('Failed to load hackathon.');
+      setLoadError(error);
     } finally {
       setIsLoading(false);
     }
@@ -72,18 +77,35 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
     }
   };
 
-  if (isLoading || !hackathon) {
+  const backButton = (
+    <button
+      onClick={onBack}
+      className={`flex items-center gap-2 text-[13px] font-semibold transition-colors ${isDark ? 'text-[#c9983a] hover:text-[#e8c571]' : 'text-[#8b6f3a] hover:text-[#c9983a]'}`}
+    >
+      <ArrowLeft className="w-4 h-4" /> Back to hackathons
+    </button>
+  );
+
+  if (isLoading) {
     return <div className={`text-center py-16 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Loading...</div>;
+  }
+
+  if (!hackathon) {
+    return (
+      <div className="space-y-6">
+        {backButton}
+        <LoadFailed what="this hackathon" error={loadError} onRetry={load} />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <button
-        onClick={onBack}
-        className={`flex items-center gap-2 text-[13px] font-semibold transition-colors ${isDark ? 'text-[#c9983a] hover:text-[#e8c571]' : 'text-[#8b6f3a] hover:text-[#c9983a]'}`}
-      >
-        <ArrowLeft className="w-4 h-4" /> Back to hackathons
-      </button>
+      {backButton}
+
+      {/* A reload after a transition or save failed: the details below are
+          from before that change, so say so rather than show them as current. */}
+      {loadError != null && <LoadFailed what="the latest state of this hackathon" error={loadError} onRetry={load} />}
 
       <div
         className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 transition-colors ${

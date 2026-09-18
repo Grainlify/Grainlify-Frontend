@@ -8,6 +8,7 @@ import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 import { RankBadgeCard } from '../components/RankBadgeCard';
 import { LanguageIcon } from '../../../shared/components/LanguageIcon';
 import { getGitHubAvatarUrl } from '../../../shared/utils/avatar';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 
 interface ProfileData {
   contributions_count: number;
@@ -99,6 +100,21 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
   const [leadModalOpen, setLeadModalOpen] = useState(false);
   const [showAllProjects, setShowAllProjects] = useState(false);
   const [projectsLed, setProjectsLed] = useState<Project[]>([]);
+  // Every fetch below used to only console.error on failure, leaving its
+  // section rendering zeros, "KYC not verified", "No projects contributed
+  // yet", an empty calendar or "No contributions yet". Failures are kept
+  // apart from the data so they can never be rendered as absence. The
+  // profile failing fails the page; the others fail their own section.
+  const [profileError, setProfileError] = useState<unknown>(null);
+  const [projectsError, setProjectsError] = useState<unknown>(null);
+  const [projectsLedError, setProjectsLedError] = useState<unknown>(null);
+  const [calendarError, setCalendarError] = useState<unknown>(null);
+  const [activityError, setActivityError] = useState<unknown>(null);
+  const [profileAttempt, setProfileAttempt] = useState(0);
+  const [projectsAttempt, setProjectsAttempt] = useState(0);
+  const [projectsLedAttempt, setProjectsLedAttempt] = useState(0);
+  const [calendarAttempt, setCalendarAttempt] = useState(0);
+  const [activityAttempt, setActivityAttempt] = useState(0);
 
   // Ref to avoid applying stale fetch results when the viewed user changes mid-request
   const viewingRef = useRef({ viewingUserId, viewingUserLogin });
@@ -124,6 +140,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
     }
     const fetchProfile = async () => {
       setIsLoadingProfile(true);
+      setProfileError(null);
       try {
         let data;
         if (isViewingOther) {
@@ -139,13 +156,16 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
         }
         setProfileData(data);
       } catch (error) {
-        if (isSameView(requestedUserId, requestedLogin)) console.error('Failed to fetch profile:', error);
+        if (isSameView(requestedUserId, requestedLogin)) {
+          console.error('Failed to fetch profile:', error);
+          setProfileError(error);
+        }
       } finally {
         if (isSameView(requestedUserId, requestedLogin)) setIsLoadingProfile(false);
       }
     };
     fetchProfile();
-  }, [viewingUserId, viewingUserLogin]);
+  }, [viewingUserId, viewingUserLogin, profileAttempt]);
 
   // Fetch user's contributed projects (for viewed user or self)
   useEffect(() => {
@@ -154,6 +174,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
     if (requestedUserId || requestedLogin) setProjects([]);
     const fetchProjects = async () => {
       setIsLoadingProjects(true);
+      setProjectsError(null);
       try {
         const data = await getProjectsContributed(requestedUserId || undefined, requestedLogin || undefined);
         if (!isSameView(requestedUserId, requestedLogin)) return;
@@ -170,19 +191,23 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
         }));
         setProjects(contributedProjects);
       } catch (error) {
-        if (isSameView(requestedUserId, requestedLogin)) console.error('Failed to fetch projects:', error);
+        if (isSameView(requestedUserId, requestedLogin)) {
+          console.error('Failed to fetch projects:', error);
+          setProjectsError(error);
+        }
       } finally {
         if (isSameView(requestedUserId, requestedLogin)) setIsLoadingProjects(false);
       }
     };
     fetchProjects();
-  }, [viewingUserId, viewingUserLogin]);
+  }, [viewingUserId, viewingUserLogin, projectsAttempt]);
 
   // Fetch projects led (for viewed user or self)
   useEffect(() => {
     const requestedUserId = viewingUserId;
     const requestedLogin = viewingUserLogin;
     setProjectsLed([]);
+    setProjectsLedError(null);
     const fetchLed = async () => {
       try {
         const data = await getProjectsLed(requestedUserId || undefined, requestedLogin || undefined);
@@ -199,11 +224,14 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
           contributors_count: 0,
         })));
       } catch (error) {
-        if (isSameView(requestedUserId, requestedLogin)) console.error('Failed to fetch projects led:', error);
+        if (isSameView(requestedUserId, requestedLogin)) {
+          console.error('Failed to fetch projects led:', error);
+          setProjectsLedError(error);
+        }
       }
     };
     fetchLed();
-  }, [viewingUserId, viewingUserLogin]);
+  }, [viewingUserId, viewingUserLogin, projectsLedAttempt]);
 
   // Fetch contribution calendar (for viewed user or self)
   useEffect(() => {
@@ -212,18 +240,22 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
     if (requestedUserId || requestedLogin) setContributionCalendar([]);
     const fetchCalendar = async () => {
       setIsLoadingCalendar(true);
+      setCalendarError(null);
       try {
         const data = await getProfileCalendar(requestedUserId || undefined, requestedLogin || undefined);
         if (!isSameView(requestedUserId, requestedLogin)) return;
         setContributionCalendar(data.calendar || []);
       } catch (error) {
-        if (isSameView(requestedUserId, requestedLogin)) console.error('Failed to fetch calendar:', error);
+        if (isSameView(requestedUserId, requestedLogin)) {
+          console.error('Failed to fetch calendar:', error);
+          setCalendarError(error);
+        }
       } finally {
         if (isSameView(requestedUserId, requestedLogin)) setIsLoadingCalendar(false);
       }
     };
     fetchCalendar();
-  }, [viewingUserId, viewingUserLogin]);
+  }, [viewingUserId, viewingUserLogin, calendarAttempt]);
 
   // Fetch contribution activity
   useEffect(() => {
@@ -232,6 +264,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
     if (requestedUserId || requestedLogin) setContributionActivity([]);
     const fetchActivity = async () => {
       setIsLoadingActivity(true);
+      setActivityError(null);
       try {
         const data = await getProfileActivity(100, 0, requestedUserId || undefined, requestedLogin || undefined);
         if (!isSameView(requestedUserId, requestedLogin)) return;
@@ -246,13 +279,16 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
         });
         setExpandedMonths(monthsObj);
       } catch (error) {
-        if (isSameView(requestedUserId, requestedLogin)) console.error('Failed to fetch activity:', error);
+        if (isSameView(requestedUserId, requestedLogin)) {
+          console.error('Failed to fetch activity:', error);
+          setActivityError(error);
+        }
       } finally {
         if (isSameView(requestedUserId, requestedLogin)) setIsLoadingActivity(false);
       }
     };
     fetchActivity();
-  }, [viewingUserId, viewingUserLogin]);
+  }, [viewingUserId, viewingUserLogin, activityAttempt]);
 
   const toggleMonth = (month: string) => {
     setExpandedMonths(prev => ({
@@ -341,21 +377,44 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
   const rewardsData: Array<{ name: string; value: number; color: string; amount: number }> = [];
   const totalRewards = 0;
 
+  // Back Button (only when viewing another user's profile)
+  const backButton = onBack && (viewingUserId || viewingUserLogin) && (
+    <button
+      onClick={onBack}
+      className={`flex items-center gap-2 px-4 py-2 rounded-[12px] border font-medium text-[14px] hover:bg-white/[0.2] transition-all ${theme === 'dark'
+          ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#d4c5b0]'
+          : 'bg-white/[0.15] border-white/25 text-[#2d2820]'
+        }`}
+    >
+      <ArrowLeft className="w-4 h-4" />
+      Back to Leaderboard
+    </button>
+  );
+
+  // Without the profile there is nothing true to show: the header would read
+  // 0 contributions, "KYC not verified" and "No languages found".
+  if (profileError && !isLoadingProfile) {
+    return (
+      <div className="space-y-6">
+        {backButton}
+        <LoadFailed
+          what="this profile"
+          error={profileError}
+          onRetry={() => {
+            setProfileAttempt((n) => n + 1);
+            if (projectsError) setProjectsAttempt((n) => n + 1);
+            if (projectsLedError) setProjectsLedAttempt((n) => n + 1);
+            if (calendarError) setCalendarAttempt((n) => n + 1);
+            if (activityError) setActivityAttempt((n) => n + 1);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Back Button (only when viewing another user's profile) */}
-      {onBack && (viewingUserId || viewingUserLogin) && (
-        <button
-          onClick={onBack}
-          className={`flex items-center gap-2 px-4 py-2 rounded-[12px] border font-medium text-[14px] hover:bg-white/[0.2] transition-all ${theme === 'dark'
-              ? 'bg-[#3d342c]/[0.4] border-white/15 text-[#d4c5b0]'
-              : 'bg-white/[0.15] border-white/25 text-[#2d2820]'
-            }`}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Leaderboard
-        </button>
-      )}
+      {backButton}
 
       {/* Profile Header */}
       <div className="bg-gradient-to-br from-white/[0.18] to-white/[0.10] rounded-[32px] border-2 border-white/30 shadow-[0_20px_60px_rgba(0,0,0,0.15),0_0_80px_rgba(201,152,58,0.08)] p-12 relative overflow-hidden z-20 group">
@@ -675,7 +734,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                       </button>
                     )}
                     {/* Small popover for contributed projects */}
-                    {contributorModalOpen && projects.length > 0 && (
+                    {contributorModalOpen && (projects.length > 0 || !!projectsError) && (
                       <div
                         className={`absolute z-[200] top-full mt-2 left-0 w-[260px] rounded-[18px] border shadow-lg ${
                           theme === 'dark'
@@ -699,7 +758,13 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                           </button>
                         </div>
                         <div className="max-h-[260px] overflow-y-auto p-2 space-y-1">
-                          {projects.map((project) => {
+                          {projectsError ? (
+                            <InlineLoadFailed
+                              what="these projects"
+                              isDark={theme === 'dark'}
+                              onRetry={() => setProjectsAttempt((n) => n + 1)}
+                            />
+                          ) : projects.map((project) => {
                             const name = project.github_full_name.split('/')[1] || project.github_full_name;
                             return (
                               <button
@@ -754,7 +819,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                       </button>
                     )}
                     {/* Small popover for led projects */}
-                    {leadModalOpen && projectsLed.length > 0 && (
+                    {leadModalOpen && (projectsLed.length > 0 || !!projectsLedError) && (
                       <div
                         className={`absolute z-[200] top-full mt-2 left-0 w-[260px] rounded-[18px] border shadow-lg ${
                           theme === 'dark'
@@ -778,7 +843,13 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                           </button>
                         </div>
                         <div className="max-h-[260px] overflow-y-auto p-2 space-y-1">
-                          {projectsLed.map((project) => {
+                          {projectsLedError ? (
+                            <InlineLoadFailed
+                              what="these projects"
+                              isDark={theme === 'dark'}
+                              onRetry={() => setProjectsLedAttempt((n) => n + 1)}
+                            />
+                          ) : projectsLed.map((project) => {
                             const name = project.github_full_name.split('/')[1] || project.github_full_name;
                             return (
                               <button
@@ -887,6 +958,13 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                 </div>
               </div>
             ))
+          ) : projectsError ? (
+            <LoadFailed
+              what="the projects contributed to"
+              error={projectsError}
+              onRetry={() => setProjectsAttempt((n) => n + 1)}
+              className="col-span-full"
+            />
           ) : (showAllProjects ? projects : projects.slice(0, 3)).length > 0 ? (
             (showAllProjects ? projects : projects.slice(0, 3)).map((project, idx) => {
               const projectName = project.github_full_name.split('/')[1] || project.github_full_name;
@@ -1248,6 +1326,14 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
             }`}>
             {isLoadingCalendar ? (
               <SkeletonLoader variant="text" width="200px" height="32px" />
+            ) : calendarError ? (
+              // A failed calendar used to read "0 contributions last year"
+              // over an empty grid; the grid is hidden below as well.
+              <InlineLoadFailed
+                what="the contribution calendar"
+                isDark={theme === 'dark'}
+                onRetry={() => setCalendarAttempt((n) => n + 1)}
+              />
             ) : (
               <>
                 <span className={`text-[32px] font-black transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
@@ -1262,110 +1348,112 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
         </div>
 
         {/* GitHub-style Heatmap Grid */}
-        <div className="w-full bg-white/[0.12] rounded-[20px] border border-white/30 p-6">
-          {/* Month Labels */}
-          <div className="flex mb-4">
-            <div className="w-16" /> {/* Space for day labels */}
-            <div className="flex-1 flex justify-between px-1">
-              {months.map((month, idx) => (
-                <div key={idx} className={`text-[13px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                  }`}>
-                  {month}
+        {!calendarError && (
+          <div className="w-full bg-white/[0.12] rounded-[20px] border border-white/30 p-6">
+            {/* Month Labels */}
+            <div className="flex mb-4">
+              <div className="w-16" /> {/* Space for day labels */}
+              <div className="flex-1 flex justify-between px-1">
+                {months.map((month, idx) => (
+                  <div key={idx} className={`text-[13px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                    }`}>
+                    {month}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Grid Container */}
+            <div className="flex gap-3">
+              {/* Day of week labels */}
+              <div className="flex flex-col justify-between py-[3px]">
+                <div className={`h-[14px] text-[12px] font-bold flex items-center transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                  }`}>Mon</div>
+                <div className="h-[14px]" />
+                <div className={`h-[14px] text-[12px] font-bold flex items-center transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                  }`}>Wed</div>
+                <div className="h-[14px]" />
+                <div className={`h-[14px] text-[12px] font-bold flex items-center transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                  }`}>Fri</div>
+                <div className="h-[14px]" />
+                <div className={`h-[14px] text-[12px] font-bold flex items-center transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+                  }`}>Sun</div>
+              </div>
+
+              {/* Contribution squares - 52 weeks */}
+              {isLoadingCalendar ? (
+                <div className="flex-1 flex justify-between gap-[3px]">
+                  {Array.from({ length: 52 }).map((_, weekIdx) => (
+                    <div key={weekIdx} className="flex flex-col gap-[3px] flex-1 max-w-[20px]">
+                      {Array.from({ length: 7 }).map((_, dayIdx) => (
+                        <SkeletonLoader key={dayIdx} variant="default" width="100%" height="100%" className="aspect-square rounded-[4px]" />
+                      ))}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              ) : (
+                <div className="flex-1 flex justify-between gap-[3px]">
+                  {Array.from({ length: 52 }).map((_, weekIdx) => (
+                    <div key={weekIdx} className="flex flex-col gap-[3px] flex-1 max-w-[20px]">
+                      {Array.from({ length: 7 }).map((_, dayIdx) => {
+                        // Calculate the date for this square (365 days ago to today)
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const daysAgo = 364 - (weekIdx * 7 + dayIdx);
+                        const targetDate = new Date(today);
+                        targetDate.setDate(targetDate.getDate() - daysAgo);
+                        const dateStr = targetDate.toISOString().split('T')[0];
 
-          {/* Grid Container */}
-          <div className="flex gap-3">
-            {/* Day of week labels */}
-            <div className="flex flex-col justify-between py-[3px]">
-              <div className={`h-[14px] text-[12px] font-bold flex items-center transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                }`}>Mon</div>
-              <div className="h-[14px]" />
-              <div className={`h-[14px] text-[12px] font-bold flex items-center transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                }`}>Wed</div>
-              <div className="h-[14px]" />
-              <div className={`h-[14px] text-[12px] font-bold flex items-center transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                }`}>Fri</div>
-              <div className="h-[14px]" />
-              <div className={`h-[14px] text-[12px] font-bold flex items-center transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                }`}>Sun</div>
+                        // Find matching calendar entry
+                        const calendarEntry = contributionCalendar.find(entry => entry.date === dateStr);
+                        const count = calendarEntry?.count || 0;
+                        const level = calendarEntry?.level || 0;
+                        const hasSparkle = level >= 3 && count > 0;
+
+                        let bgColor = 'bg-white/40 border-2 border-white/60'; // Empty
+                        let shadowClass = 'shadow-[0_2px_8px_rgba(255,255,255,0.3)]';
+                        if (level === 1) {
+                          bgColor = 'bg-[#c9983a]/50 border-2 border-[#c9983a]/70';
+                          shadowClass = 'shadow-[0_2px_10px_rgba(201,152,58,0.3)]';
+                        } else if (level === 2) {
+                          bgColor = 'bg-[#c9983a]/75 border-2 border-[#c9983a]/90';
+                          shadowClass = 'shadow-[0_3px_14px_rgba(201,152,58,0.45)]';
+                        } else if (level >= 3) {
+                          bgColor = 'bg-gradient-to-br from-[#c9983a] to-[#b8873a] border-2 border-[#ffd700]';
+                          shadowClass = 'shadow-[0_4px_20px_rgba(201,152,58,0.6),0_0_15px_rgba(255,215,0,0.4)]';
+                        }
+
+                        return (
+                          <div
+                            key={dayIdx}
+                            className={`w-full aspect-square rounded-[4px] ${bgColor} ${shadowClass} hover:scale-125 hover:ring-2 hover:ring-[#c9983a] hover:shadow-[0_4px_24px_rgba(201,152,58,0.8)] hover:z-10 transition-all duration-200 cursor-pointer relative group`}
+                            title={count > 0 ? `${count} contribution${count !== 1 ? 's' : ''} on ${dateStr}` : 'No contributions'}
+                          >
+                            {hasSparkle && (
+                              <Sparkles className="w-[10px] h-[10px] text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_0_6px_rgba(255,255,255,1)] animate-pulse" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Contribution squares - 52 weeks */}
-            {isLoadingCalendar ? (
-              <div className="flex-1 flex justify-between gap-[3px]">
-                {Array.from({ length: 52 }).map((_, weekIdx) => (
-                  <div key={weekIdx} className="flex flex-col gap-[3px] flex-1 max-w-[20px]">
-                    {Array.from({ length: 7 }).map((_, dayIdx) => (
-                      <SkeletonLoader key={dayIdx} variant="default" width="100%" height="100%" className="aspect-square rounded-[4px]" />
-                    ))}
-                  </div>
-                ))}
+            {/* Legend */}
+            <div className="flex items-center justify-end gap-4 mt-6">
+              <span className={`text-[13px] font-bold transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Less</span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-[16px] h-[16px] rounded-[4px] bg-white/40 border-2 border-white/60 shadow-[0_2px_8px_rgba(255,255,255,0.3)]" />
+                <div className="w-[16px] h-[16px] rounded-[4px] bg-[#c9983a]/50 border-2 border-[#c9983a]/70 shadow-[0_2px_10px_rgba(201,152,58,0.3)]" />
+                <div className="w-[16px] h-[16px] rounded-[4px] bg-[#c9983a]/75 border-2 border-[#c9983a]/90 shadow-[0_3px_14px_rgba(201,152,58,0.45)]" />
+                <div className="w-[16px] h-[16px] rounded-[4px] bg-gradient-to-br from-[#c9983a] to-[#b8873a] border-2 border-[#ffd700] shadow-[0_4px_20px_rgba(201,152,58,0.6),0_0_15px_rgba(255,215,0,0.4)]" />
               </div>
-            ) : (
-              <div className="flex-1 flex justify-between gap-[3px]">
-                {Array.from({ length: 52 }).map((_, weekIdx) => (
-                  <div key={weekIdx} className="flex flex-col gap-[3px] flex-1 max-w-[20px]">
-                    {Array.from({ length: 7 }).map((_, dayIdx) => {
-                      // Calculate the date for this square (365 days ago to today)
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const daysAgo = 364 - (weekIdx * 7 + dayIdx);
-                      const targetDate = new Date(today);
-                      targetDate.setDate(targetDate.getDate() - daysAgo);
-                      const dateStr = targetDate.toISOString().split('T')[0];
-
-                      // Find matching calendar entry
-                      const calendarEntry = contributionCalendar.find(entry => entry.date === dateStr);
-                      const count = calendarEntry?.count || 0;
-                      const level = calendarEntry?.level || 0;
-                      const hasSparkle = level >= 3 && count > 0;
-
-                      let bgColor = 'bg-white/40 border-2 border-white/60'; // Empty
-                      let shadowClass = 'shadow-[0_2px_8px_rgba(255,255,255,0.3)]';
-                      if (level === 1) {
-                        bgColor = 'bg-[#c9983a]/50 border-2 border-[#c9983a]/70';
-                        shadowClass = 'shadow-[0_2px_10px_rgba(201,152,58,0.3)]';
-                      } else if (level === 2) {
-                        bgColor = 'bg-[#c9983a]/75 border-2 border-[#c9983a]/90';
-                        shadowClass = 'shadow-[0_3px_14px_rgba(201,152,58,0.45)]';
-                      } else if (level >= 3) {
-                        bgColor = 'bg-gradient-to-br from-[#c9983a] to-[#b8873a] border-2 border-[#ffd700]';
-                        shadowClass = 'shadow-[0_4px_20px_rgba(201,152,58,0.6),0_0_15px_rgba(255,215,0,0.4)]';
-                      }
-
-                      return (
-                        <div
-                          key={dayIdx}
-                          className={`w-full aspect-square rounded-[4px] ${bgColor} ${shadowClass} hover:scale-125 hover:ring-2 hover:ring-[#c9983a] hover:shadow-[0_4px_24px_rgba(201,152,58,0.8)] hover:z-10 transition-all duration-200 cursor-pointer relative group`}
-                          title={count > 0 ? `${count} contribution${count !== 1 ? 's' : ''} on ${dateStr}` : 'No contributions'}
-                        >
-                          {hasSparkle && (
-                            <Sparkles className="w-[10px] h-[10px] text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_0_6px_rgba(255,255,255,1)] animate-pulse" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center justify-end gap-4 mt-6">
-            <span className={`text-[13px] font-bold transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Less</span>
-            <div className="flex items-center gap-2.5">
-              <div className="w-[16px] h-[16px] rounded-[4px] bg-white/40 border-2 border-white/60 shadow-[0_2px_8px_rgba(255,255,255,0.3)]" />
-              <div className="w-[16px] h-[16px] rounded-[4px] bg-[#c9983a]/50 border-2 border-[#c9983a]/70 shadow-[0_2px_10px_rgba(201,152,58,0.3)]" />
-              <div className="w-[16px] h-[16px] rounded-[4px] bg-[#c9983a]/75 border-2 border-[#c9983a]/90 shadow-[0_3px_14px_rgba(201,152,58,0.45)]" />
-              <div className="w-[16px] h-[16px] rounded-[4px] bg-gradient-to-br from-[#c9983a] to-[#b8873a] border-2 border-[#ffd700] shadow-[0_4px_20px_rgba(201,152,58,0.6),0_0_15px_rgba(255,215,0,0.4)]" />
+              <span className={`text-[13px] font-bold transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>More</span>
             </div>
-            <span className={`text-[13px] font-bold transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>More</span>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Contributions Activity */}
@@ -1406,6 +1494,12 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
               </div>
             ))}
           </div>
+        ) : activityError ? (
+          <LoadFailed
+            what="contribution activity"
+            error={activityError}
+            onRetry={() => setActivityAttempt((n) => n + 1)}
+          />
         ) : Object.keys(contributionsByMonth).length === 0 ? (
           <div className={`text-center py-12 ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
             <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -1531,5 +1625,18 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
         )}
       </div>
     </div>
+  );
+}
+
+// Compact failure line for small widgets (the calendar header, the project
+// popovers) where a full LoadFailed card would not fit.
+function InlineLoadFailed({ what, isDark, onRetry }: { what: string; isDark: boolean; onRetry: () => void }) {
+  return (
+    <span role="alert" className={`flex flex-wrap items-center gap-2 text-[13px] font-medium ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
+      Couldn't load {what}.
+      <button type="button" onClick={onRetry} className="font-semibold text-[#c9983a] hover:text-[#a67c2e] underline">
+        Try again
+      </button>
+    </span>
   );
 }

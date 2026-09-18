@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { Modal, ModalFooter, ModalButton, ModalInput } from '../../../shared/components/ui/Modal';
 import { ApplicationSignalsPanel } from './ApplicationSignalsPanel';
 import {
@@ -21,6 +22,7 @@ export function ApplicationsReview({ hackathonId }: ApplicationsReviewProps) {
   const isDark = theme === 'dark';
   const [applications, setApplications] = useState<HackathonApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{ app: HackathonApplication; action: 'reject' | 'more_info' } | null>(null);
@@ -28,12 +30,14 @@ export function ApplicationsReview({ hackathonId }: ApplicationsReviewProps) {
 
   const fetchApplications = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await getAdminHackathonApplications(hackathonId, 'pending');
       setApplications(res.applications);
     } catch (error) {
+      // Used to toast and fall through to "No pending applications."
       console.error('Failed to fetch hackathon applications:', error);
-      toast.error('Failed to load pending applications.');
+      setLoadError(error);
     } finally {
       setIsLoading(false);
     }
@@ -93,10 +97,16 @@ export function ApplicationsReview({ hackathonId }: ApplicationsReviewProps) {
 
       {isLoading ? (
         <div className={`text-center py-12 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Loading...</div>
+      ) : loadError != null && applications.length === 0 ? (
+        <LoadFailed what="pending applications" error={loadError} onRetry={fetchApplications} />
       ) : applications.length === 0 ? (
         <div className={`text-center py-12 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>No pending applications.</div>
       ) : (
         <div className="space-y-3">
+          {/* A refresh after a review action failed: the list below predates it. */}
+          {loadError != null && (
+            <LoadFailed what="the latest pending applications" error={loadError} onRetry={fetchApplications} />
+          )}
           {applications.map((app) => {
             const expanded = expandedId === app.id;
             return (

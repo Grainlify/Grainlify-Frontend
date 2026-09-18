@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { Modal, ModalFooter, ModalButton } from '../../../shared/components/ui/Modal';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import {
   getMyHackathonAssignments,
   releaseHackathonAssignment,
@@ -32,17 +33,21 @@ export function MyAssignments() {
   const isDark = theme === 'dark';
   const [assignments, setAssignments] = useState<HackathonAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [releasing, setReleasing] = useState<HackathonAssignment | null>(null);
   const [isReleasing, setIsReleasing] = useState(false);
 
   const load = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await getMyHackathonAssignments();
       setAssignments(res.assignments);
     } catch (error) {
+      // Used to toast and fall through to "You don't have any GrainHack
+      // assignments yet." while a stale timer was running on one.
       console.error('Failed to load assignments:', error);
-      toast.error('Could not load your assignments.');
+      setLoadError(error);
     } finally {
       setIsLoading(false);
     }
@@ -75,6 +80,10 @@ export function MyAssignments() {
     return <div className={`text-center py-12 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Loading...</div>;
   }
 
+  if (loadError != null && assignments.length === 0) {
+    return <LoadFailed what="your assignments" error={loadError} onRetry={load} />;
+  }
+
   if (assignments.length === 0) {
     return (
       <div className={`text-center py-12 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
@@ -85,6 +94,8 @@ export function MyAssignments() {
 
   return (
     <div className="space-y-3">
+      {/* A refresh after a release failed: the list below predates it. */}
+      {loadError != null && <LoadFailed what="your latest assignments" error={loadError} onRetry={load} />}
       {assignments.map((a) => {
         const status = STATUS_COPY[a.status] ?? { label: a.status, tone: 'muted' as const };
         const isOpen = a.status === 'active' || a.status === 'pr_submitted';

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../test/renderWithProviders'
+import { ApiError } from '../../../shared/api/apiError'
 import { AppealsReview } from './AppealsReview'
 
 const mockGetHackathonAppeals = vi.fn()
@@ -144,5 +145,27 @@ describe('AppealsReview', () => {
     await waitFor(() =>
       expect(screen.getByText(/Appeal window closed and payouts recomputed/i)).toBeInTheDocument(),
     )
+  })
+})
+
+// Used to toast and fall through to "No appeals awaiting a decision" /
+// "No appeals have been submitted." - which read as clear to settle.
+describe('AppealsReview when the load fails', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('says it could not load instead of claiming nothing is pending, and retries', async () => {
+    mockGetHackathonAppeals.mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+    mockGetHackathonAppeals.mockResolvedValueOnce({ appeals: [pendingAppeal], appeal_window: openWindow })
+    const user = userEvent.setup()
+    renderWithProviders(<AppealsReview hackathonId="hack-1" />)
+
+    expect(await screen.findByText("Couldn't load appeals")).toBeInTheDocument()
+    expect(screen.queryByText('No appeals awaiting a decision')).not.toBeInTheDocument()
+    expect(screen.queryByText('No appeals have been submitted.')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText(/1 appeal awaiting a decision/i)).toBeInTheDocument()
   })
 })

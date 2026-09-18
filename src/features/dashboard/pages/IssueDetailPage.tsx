@@ -38,6 +38,10 @@ export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeR
   const [project, setProject] = useState<null | Awaited<ReturnType<typeof getPublicProject>>>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [myProjects, setMyProjects] = useState<ProjectForIssues[]>([]);
+  // Set when /projects/mine failed: we cannot tell whether the viewer owns
+  // this project, so maintainer actions are hidden - and that must be said,
+  // not rendered as if they were a contributor.
+  const [ownershipUnknown, setOwnershipUnknown] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +70,7 @@ export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeR
           console.warn('IssueDetailPage: could not resolve the project, falling back to its id', pRes.reason);
         }
         const mine = mineRes.status === 'fulfilled' ? mineRes.value : [];
+        setOwnershipUnknown(mineRes.status === 'rejected');
         setMyProjects(
           (Array.isArray(mine) ? mine : []).map((x) => ({
             id: x.id,
@@ -126,6 +131,12 @@ export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeR
           <span className="text-[13px] font-semibold">Back</span>
         </button>
       </div>
+
+      {ownershipUnknown && modeAllowsManage && (
+        <p role="alert" className={`text-[12.5px] flex-shrink-0 ${isDark ? 'text-[#e8c571]' : 'text-[#8b6f3a]'}`}>
+          Couldn't check whether you maintain this project, so maintainer actions are hidden. Reload to try again.
+        </p>
+      )}
 
       <div className="flex-1 min-h-0">
         {isLoading ? (

@@ -7,6 +7,7 @@ import { getPublicProjects, getEcosystemDetail, type EcosystemDetail } from '../
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 import { EcosystemLogo } from '../../../shared/components/EcosystemLogo';
 import { getGitHubAvatarUrl } from '../../../shared/utils/avatar';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 
 const formatNumber = (num: number): string => {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -53,8 +54,11 @@ export function EcosystemDetailPage({ ecosystemId, ecosystemName, initialDescrip
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [ecosystemProjects, setEcosystemProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [projectsError, setProjectsError] = useState<unknown>(null);
+  const [projectsAttempt, setProjectsAttempt] = useState(0);
   const [ecosystemDetail, setEcosystemDetail] = useState<EcosystemDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(true);
+  const [detailError, setDetailError] = useState<unknown>(null);
 
   const fetchEcosystemDetail = React.useCallback(async () => {
     if (!ecosystemId) {
@@ -63,11 +67,16 @@ export function EcosystemDetailPage({ ecosystemId, ecosystemName, initialDescrip
       return;
     }
     setIsLoadingDetail(true);
+    setDetailError(null);
     try {
       const detail = await getEcosystemDetail(ecosystemId);
       setEcosystemDetail(detail);
-    } catch {
+    } catch (err) {
+      // A null detail used to fall through to the hardcoded placeholder
+      // content below (fake web3.ecosystem.example / discord.gg / twitter.com
+      // links, stock "about" text, zero stats). Record the failure instead.
       setEcosystemDetail(null);
+      setDetailError(err);
     } finally {
       setIsLoadingDetail(false);
     }
@@ -92,6 +101,7 @@ export function EcosystemDetailPage({ ecosystemId, ecosystemName, initialDescrip
     let cancelled = false;
     const load = async () => {
       setIsLoadingProjects(true);
+      setProjectsError(null);
       try {
         const res = await getPublicProjects({ ecosystem: ecosystemName, limit: 100 });
         if (cancelled || !res?.projects) return;
@@ -125,15 +135,19 @@ export function EcosystemDetailPage({ ecosystemId, ecosystemName, initialDescrip
           };
         });
         setEcosystemProjects(mapped);
-      } catch {
-        if (!cancelled) setEcosystemProjects([]);
+      } catch (err) {
+        // Used to set [] and render "No projects in X yet".
+        if (!cancelled) {
+          setEcosystemProjects([]);
+          setProjectsError(err);
+        }
       } finally {
         if (!cancelled) setIsLoadingProjects(false);
       }
     };
     load();
     return () => { cancelled = true; };
-  }, [ecosystemName]);
+  }, [ecosystemName, projectsAttempt]);
 
   // Prefer API detail when loaded; use hardcoded fallbacks only when detail is null (loading/error)
   const detail = ecosystemDetail;
@@ -270,6 +284,9 @@ export function EcosystemDetailPage({ ecosystemId, ecosystemName, initialDescrip
         </span>
       </div>
 
+      {detailError != null && !isLoadingDetail ? (
+        <LoadFailed what="this ecosystem" error={detailError} onRetry={() => fetchEcosystemDetail()} />
+      ) : (
       <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
         {/* Left Sidebar - Ecosystem Info */}
         <div className="flex-[1] flex-shrink-0 space-y-4 md:space-y-6">
@@ -632,6 +649,12 @@ export function EcosystemDetailPage({ ecosystemId, ecosystemName, initialDescrip
                     </div>
                   ))}
                 </div>
+              ) : projectsError != null ? (
+                <LoadFailed
+                  what={`the projects in ${ecosystemName}`}
+                  error={projectsError}
+                  onRetry={() => setProjectsAttempt((n) => n + 1)}
+                />
               ) : filteredProjects.length === 0 ? (
                 <div className={`rounded-[16px] border p-8 text-center ${isDark ? 'bg-white/[0.08] border-white/15 text-[#d4d4d4]' : 'bg-white/[0.15] border-white/25 text-[#7a6b5a]'}`}>
                   <FolderGit2 className={`w-10 h-10 mx-auto mb-3 ${isDark ? 'text-[#b8a898]' : 'text-[#8a7b6a]'}`} />
@@ -662,6 +685,7 @@ export function EcosystemDetailPage({ ecosystemId, ecosystemName, initialDescrip
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

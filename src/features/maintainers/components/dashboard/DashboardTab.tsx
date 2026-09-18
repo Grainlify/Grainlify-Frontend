@@ -9,6 +9,7 @@ import { StatCard, Activity, ChartDataPoint } from '../../types';
 import { getProjectIssues, getProjectPRs } from '../../../../shared/api/client';
 import { ActivityItemSkeleton } from '../../../../shared/components/ActivityItemSkeleton';
 import { ChartSkeleton } from '../../../../shared/components/ChartSkeleton';
+import { LoadFailed } from '../../../../shared/components/LoadFailed';
 
 interface Project {
   id: string;
@@ -29,6 +30,9 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
   const [issues, setIssues] = useState<any[]>([]);
   const [prs, setPrs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // `repos` names the projects whose issues or PRs failed; `nothingLoaded` is
+  // true when every fetch failed, so the zero counts would be pure invention.
+  const [loadError, setLoadError] = useState<{ error: unknown; repos: string[]; nothingLoaded: boolean } | null>(null);
   const [showAllActivities, setShowAllActivities] = useState(false);
 
   // Show loading when parent is loading projects OR when we're loading dashboard data
@@ -44,6 +48,14 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
 
   const loadData = async () => {
     setIsLoading(true);
+    setLoadError(null);
+    const failed: { error: unknown; repos: string[]; count: number } = { error: null, repos: [], count: 0 };
+    const recordFailure = (project: Project, err: unknown) => {
+      failed.error = err;
+      failed.count += 1;
+      const name = project.github_full_name || project.id;
+      if (!failed.repos.includes(name)) failed.repos.push(name);
+    };
     try {
       if (selectedProjects.length === 0) {
         setIssues([]);
@@ -63,7 +75,10 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
               projectId: project.id,
             }));
           } catch (err) {
+            // Recorded, not swallowed: this used to return [] alone, so a failed
+            // fetch rendered zero counts and "No recent activity found."
             console.error(`Failed to fetch issues for ${project.github_full_name}:`, err);
+            recordFailure(project, err);
             return [];
           }
         })),
@@ -76,6 +91,7 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
             }));
           } catch (err) {
             console.error(`Failed to fetch PRs for ${project.github_full_name}:`, err);
+            recordFailure(project, err);
             return [];
           }
         })),
@@ -99,11 +115,17 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
 
       setIssues(allIssues);
       setPrs(allPRs);
+      setLoadError(failed.count > 0
+        ? { error: failed.error, repos: failed.repos, nothingLoaded: failed.count === selectedProjects.length * 2 }
+        : null);
       setIsLoading(false);
     } catch (err) {
+      // This used to leave isLoading true, i.e. a skeleton forever.
       console.error('Failed to load dashboard data:', err);
-      // Keep loading state true to show skeleton forever when backend is down
-      // Don't set isLoading to false - keep showing skeleton
+      setIssues([]);
+      setPrs([]);
+      setLoadError({ error: err, repos: [], nothingLoaded: true });
+      setIsLoading(false);
     }
   };
 
@@ -305,8 +327,18 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
     });
   }, [issues, prs]);
 
+  if (!showLoading && loadError?.nothingLoaded) {
+    return <LoadFailed what="the dashboard" error={loadError.error} onRetry={loadData} />;
+  }
+
   return (
     <>
+      {loadError && loadError.repos.length > 0 && !showLoading && (
+        <p role="alert" className={`text-[12px] px-1 mb-4 ${theme === 'dark' ? 'text-[#e8c571]' : 'text-[#8b6f3a]'}`}>
+          Couldn't load all dashboard data from {loadError.repos.join(', ')}; the numbers below leave it out.{' '}
+          <button type="button" onClick={loadData} className="underline font-semibold">Try again</button>
+        </p>
+      )}
       {/* Stats Cards */}
       <div className="grid grid-cols-5 gap-5 mb-6">
         {showLoading ? (

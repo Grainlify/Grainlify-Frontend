@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { BrowsePage } from './BrowsePage'
 import { getPublicProjects, getEcosystems, getProjectFilters } from '../../../shared/api/client'
+import { ApiError } from '../../../shared/api/apiError'
 
 // BrowsePage fetches projects via getPublicProjects, ecosystems (for the
 // "Ecosystem" filter values) via getEcosystems, and language/category/tag
@@ -279,6 +280,42 @@ describe('BrowsePage', () => {
   })
 
   describe('filters', () => {
+    // The two filter-option fetches used to swallow failures, leaving the
+    // dropdowns silently empty — indistinguishable from "no options exist".
+    it('says the ecosystem filter options failed to load (instead of an empty dropdown), and retries', async () => {
+      mockedGetEcosystems
+        .mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+        .mockResolvedValue({ ecosystems: [] })
+      mockedGetProjectFilters.mockResolvedValue({ languages: ['TypeScript'], categories: [], tags: [] })
+      mockedGetPublicProjects.mockResolvedValue({ projects: [projectX], total: 1, limit: 20, offset: 0 })
+      const user = userEvent.setup()
+
+      renderWithProviders(<BrowsePage />)
+
+      const alert = await screen.findByRole('alert')
+      expect(alert).toHaveTextContent("Couldn't load the ecosystem filter options.")
+      expect(alert).not.toHaveTextContent('language')
+      // The main grid is unaffected.
+      expect(await screen.findByText('foo')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: /try again/i }))
+
+      await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+      expect(mockedGetEcosystems).toHaveBeenCalledTimes(2)
+    })
+
+    it('says the language/category/tag filter options failed to load when getProjectFilters rejects', async () => {
+      mockedGetEcosystems.mockResolvedValue({ ecosystems: [] })
+      mockedGetProjectFilters.mockRejectedValue(new ApiError('internal_error', 500, { error: 'internal_error' }))
+      mockedGetPublicProjects.mockResolvedValue({ projects: [projectX], total: 1, limit: 20, offset: 0 })
+
+      renderWithProviders(<BrowsePage />)
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        "Couldn't load the language, category and tag filter options.",
+      )
+    })
+
     it('defaults to the Language filter type, populated from getProjectFilters (not a hardcoded list)', async () => {
       mockedGetEcosystems.mockResolvedValue({ ecosystems: [] })
       mockedGetProjectFilters.mockResolvedValue({

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Trophy, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
+import { isNotAHackathonIssue } from './notAHackathonIssue';
 import { ModalInput, ModalSelect } from '../../../shared/components/ui/Modal';
 import { getHackathonIssue, updateHackathonIssueFields, type HackathonIssue } from '../../../shared/api/client';
 
@@ -26,6 +28,8 @@ export function HackathonIssueFieldsPanel({ projectId, issueNumber }: HackathonI
   const isDark = theme === 'dark';
   const [issue, setIssue] = useState<HackathonIssue | null>(null);
   const [notApplicable, setNotApplicable] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
   const [acceptanceCriteria, setAcceptanceCriteria] = useState('');
   const [difficultyTier, setDifficultyTier] = useState('');
   const [primaryLanguage, setPrimaryLanguage] = useState('');
@@ -34,6 +38,7 @@ export function HackathonIssueFieldsPanel({ projectId, issueNumber }: HackathonI
   useEffect(() => {
     let cancelled = false;
     setNotApplicable(false);
+    setLoadError(null);
     setIssue(null);
     getHackathonIssue(projectId, issueNumber)
       .then((data) => {
@@ -43,14 +48,26 @@ export function HackathonIssueFieldsPanel({ projectId, issueNumber }: HackathonI
         setDifficultyTier(data.difficulty_tier);
         setPrimaryLanguage(data.primary_language);
       })
-      .catch(() => {
-        if (!cancelled) setNotApplicable(true);
+      .catch((error) => {
+        if (cancelled) return;
+        if (isNotAHackathonIssue(error)) setNotApplicable(true);
+        else setLoadError(error);
       });
     return () => {
       cancelled = true;
     };
-  }, [projectId, issueNumber]);
+  }, [projectId, issueNumber, attempt]);
 
+  if (loadError) {
+    return (
+      <LoadFailed
+        what="this issue's GrainHack fields"
+        error={loadError}
+        onRetry={() => setAttempt((n) => n + 1)}
+        className="mb-4"
+      />
+    );
+  }
   if (notApplicable || !issue) return null;
 
   const missingCriteria = !acceptanceCriteria.trim();

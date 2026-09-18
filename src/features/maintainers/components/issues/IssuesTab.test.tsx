@@ -37,11 +37,11 @@ vi.mock('../../../grainhack/components/HackathonIssueFieldsPanel', () => ({
 // The real panel decides whether the issue is a published GrainHack issue and
 // reports it up through onGrainHackChange. The stub reports whatever the test
 // sets, so the page's response to that answer can be checked in both directions.
-const grainhack = vi.hoisted(() => ({ value: false }))
+const grainhack = vi.hoisted(() => ({ value: false as boolean | null }))
 vi.mock('../../../grainhack/components/ApplyToIssuePanel', async () => {
   const React = await import('react')
   return {
-    ApplyToIssuePanel: ({ onGrainHackChange }: { onGrainHackChange?: (v: boolean) => void }) => {
+    ApplyToIssuePanel: ({ onGrainHackChange }: { onGrainHackChange?: (v: boolean | null) => void }) => {
       React.useEffect(() => { onGrainHackChange?.(grainhack.value) }, [onGrainHackChange])
       return null
     },
@@ -264,6 +264,22 @@ describe('IssuesTab - closed issue display', () => {
     expect(screen.queryByRole('button', { name: 'Apply for this issue' })).not.toBeInTheDocument()
   })
 
+  // The panel reports null when its lookup failed. Treating that as "not a
+  // GrainHack issue" would put the draw-less button back on a real one.
+  it('pauses the generic apply when it is unknown whether the issue is in a GrainHack', async () => {
+    grainhack.value = null
+    mockedGetProjectIssues.mockResolvedValue({
+      issues: [makeApiIssue({ github_issue_id: 803, title: 'Unknown', author_login: 'someone-else' })],
+    })
+
+    renderWithProviders(
+      <IssuesTab onNavigate={vi.fn()} selectedProjects={[PROJECT]} initialSelectedIssueId="803" initialSelectedProjectId={PROJECT.id} />
+    )
+
+    expect(await screen.findByText(/Couldn't check whether this issue is part of a GrainHack event/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Apply for this issue' })).not.toBeInTheDocument()
+  })
+
   it('still offers the generic apply on an ordinary issue', async () => {
     grainhack.value = false
     mockedGetProjectIssues.mockResolvedValue({
@@ -290,5 +306,90 @@ describe('IssuesTab - closed issue display', () => {
 
     await screen.findByText(/This issue is open and waiting/)
     expect(screen.queryByText('Closed')).not.toBeInTheDocument()
+  })
+})
+
+describe('IssuesTab - a failed fetch is not an empty list', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('says the issues could not be loaded instead of "No issues found"', async () => {
+    mockedGetProjectIssues.mockRejectedValue(new Error('Authentication failed. Please sign in again.'))
+
+    renderWithProviders(<IssuesTab onNavigate={vi.fn()} selectedProjects={[PROJECT]} />)
+
+    expect(await screen.findByText("Couldn't load the issues")).toBeInTheDocument()
+    expect(screen.queryByText('No issues found')).not.toBeInTheDocument()
+  })
+
+  it('shows the repos that did load and names the ones that did not', async () => {
+    const OTHER = { id: 'proj-2', github_full_name: 'acme/gadgets', status: 'verified' }
+    mockedGetProjectIssues.mockImplementation(async (id: string) => {
+      if (id === 'proj-2') throw new Error('boom')
+      return { issues: [makeApiIssue({ github_issue_id: 101 })] }
+    })
+
+    renderWithProviders(<IssuesTab onNavigate={vi.fn()} selectedProjects={[PROJECT, OTHER]} />)
+
+    expect(await screen.findByText('Issue 101')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load issues from acme/gadgets")
+  })
+
+  it('recovers on Try again', async () => {
+    mockedGetProjectIssues
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValue({ issues: [makeApiIssue({ github_issue_id: 101 })] })
+
+    renderWithProviders(<IssuesTab onNavigate={vi.fn()} selectedProjects={[PROJECT]} />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText('Issue 101')).toBeInTheDocument()
+  })
+})
+
+describe('IssuesTab - applicant profile link', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it("opens the applicant's profile, not the viewer's, and keeps the viewer's mode", async () => {
+    const user = userEvent.setup()
+    mockedGetProjectIssues.mockResolvedValue({
+      issues: [
+        makeApiIssue({
+          github_issue_id: 101,
+          comments_count: 1,
+          comments: [
+            {
+              id: 9001,
+              body: '**@arisu6804 has applied to work on this issue as part of the Grainlify program.**\n\n> I can take this',
+              user: { login: 'arisu6804' },
+              created_at: '2026-09-18T10:00:00Z',
+              updated_at: '2026-09-18T10:00:00Z',
+            },
+          ],
+        } as any),
+      ],
+    })
+
+    renderWithProviders(
+      <>
+        <IssuesTab onNavigate={vi.fn()} selectedProjects={[PROJECT]} initialSelectedIssueId="101" />
+        <LocationSpy />
+      </>,
+      { route: '/dashboard?tab=osw&view=maintainer&issue=1&iproject=proj-1' },
+    )
+
+    await user.click(await screen.findByRole('button', { name: /arisu6804/ }))
+
+    await waitFor(() => {
+      const params = new URLSearchParams(screen.getByTestId('location-spy').textContent || '')
+      expect(params.get('tab')).toBe('profile')
+      expect(params.get('user')).toBe('arisu6804')
+      expect(params.get('view')).toBe('maintainer')
+      expect(params.has('issue')).toBe(false)
+      expect(params.has('iproject')).toBe(false)
+    })
   })
 })

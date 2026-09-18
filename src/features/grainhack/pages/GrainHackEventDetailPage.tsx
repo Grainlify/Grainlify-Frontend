@@ -3,6 +3,7 @@ import { ArrowLeft, Wrench } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ApplicationWindow } from '../components/ApplicationWindow';
 import { formatUsdAmount } from '../../../shared/utils/usd';
+import { LoadFailed } from '../../../shared/components/LoadFailed';
 import {
   getHackathon,
   getHackathonIssues,
@@ -57,20 +58,26 @@ export function GrainHackEventDetailPage({ eventId, eventName, onBack, onIssueCl
   const [isLoading, setIsLoading] = useState(true);
   const [hackathon, setHackathon] = useState<Hackathon | null>(null);
   const [issues, setIssues] = useState<PublicHackathonIssue[]>([]);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let mounted = true;
     setIsLoading(true);
+    setLoadError(null);
     Promise.all([getHackathon(eventId), getHackathonIssues(eventId)])
       .then(([h, i]) => {
         if (!mounted) return;
         setHackathon(h);
         setIssues(i.issues || []);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!mounted) return;
+        // Recorded rather than rendered as the empty state: this used to
+        // fall through to "No issues were published" on a live event.
         setHackathon(null);
         setIssues([]);
+        setLoadError(error);
       })
       .finally(() => {
         if (!mounted) return;
@@ -79,7 +86,7 @@ export function GrainHackEventDetailPage({ eventId, eventName, onBack, onIssueCl
     return () => {
       mounted = false;
     };
-  }, [eventId]);
+  }, [eventId, attempt]);
 
   const phase = hackathon?.phase ?? '';
   const title = hackathon?.name ?? eventName;
@@ -102,6 +109,8 @@ export function GrainHackEventDetailPage({ eventId, eventName, onBack, onIssueCl
           <div className={`h-7 w-72 rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
           <div className={`h-4 w-40 rounded mt-4 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
         </div>
+      ) : loadError ? (
+        <LoadFailed what="this event" error={loadError} onRetry={() => setAttempt((n) => n + 1)} />
       ) : (
         <>
           <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 sm:gap-0">

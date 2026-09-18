@@ -111,6 +111,23 @@ describe('IssueDetailPage', () => {
     expect(props.viewMode).toBe('contributor')
   })
 
+  it('says ownership could not be checked when /projects/mine fails in maintainer mode', async () => {
+    vi.mocked(getMyProjects).mockRejectedValue(new Error('network down'))
+    renderWithProviders(<IssueDetailPage issueId="1" projectId="p1" onClose={vi.fn()} activeRole="maintainer" />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't check whether you maintain this project")
+    // The issue itself still loads - a contributor path must not depend on it.
+    expect(screen.getByTestId('issues-tab')).toBeInTheDocument()
+  })
+
+  it('says nothing about ownership to a contributor when /projects/mine fails', async () => {
+    vi.mocked(getMyProjects).mockRejectedValue(new Error('network down'))
+    renderWithProviders(<IssueDetailPage issueId="1" projectId="p1" onClose={vi.fn()} activeRole="contributor" />)
+
+    await waitFor(() => expect(screen.getByTestId('issues-tab')).toBeInTheDocument())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   // viewMode="maintainer" requires BOTH: authorization for this project
   // (ownership or an admin account) AND having actually switched into a
   // maintainer-capable mode via the nav pill (activeRole). Neither alone is

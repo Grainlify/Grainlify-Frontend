@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, screen, waitFor } from '../../../test/renderWithProviders'
+import { ApiError } from '../../../shared/api/apiError'
 import { HackathonConfigSettings } from './HackathonConfigSettings'
 
 const mockGetHackathonConfigSettings = vi.fn()
@@ -142,5 +143,25 @@ describe('HackathonConfigSettings', () => {
     await waitFor(() =>
       expect(mockResetHackathonConfigSetting).toHaveBeenCalledWith({ hackathon_id: 'hack-1', key: 'max_issues_per_org' }),
     )
+  })
+})
+
+// Used to toast and render the header and Save button over no settings.
+describe('HackathonConfigSettings when the load fails', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('says it could not load instead of an empty settings page, and retries', async () => {
+    mockGetHackathonConfigSettings.mockRejectedValueOnce(new ApiError('internal_error', 500, { error: 'internal_error' }))
+    mockGetHackathonConfigSettings.mockResolvedValueOnce({ settings: BASE_SETTINGS })
+    const user = userEvent.setup()
+    renderWithProviders(<HackathonConfigSettings hackathonId="hack-1" />)
+
+    expect(await screen.findByText("Couldn't load settings")).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /save changes/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText('Issue intake')).toBeInTheDocument()
   })
 })
