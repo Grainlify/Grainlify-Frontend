@@ -623,7 +623,7 @@ export function Dashboard() {
     // boundary, and this surface can accept/reject applications and edit
     // live event config.
     ...(userRole === "admin"
-      ? [{ id: "grainhack", icon: Flag, label: "GrainHack admin" }]
+      ? [{ id: "grainhack", icon: Flag, label: "GrainHack management", ariaLabel: "GrainHack management" }]
       : []),
     // The review queues (social-follow proofs, redemptions) and ecosystem
     // management live on this page. It had no rail icon and nothing navigated
@@ -787,6 +787,7 @@ export function Dashboard() {
                   tourId={item.id}
                   icon={item.icon as any}
                   label={item.label}
+                  ariaLabel={(item as any).ariaLabel}
                   isActive={currentPage === item.id}
                   onClick={() => handleNavigation(item.id)}
                   onHover={setHoveredNavItem}
