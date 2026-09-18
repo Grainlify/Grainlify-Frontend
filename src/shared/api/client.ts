@@ -2089,6 +2089,28 @@ export interface HackathonConfigAuditEntry {
 export const getHackathons = () => apiRequest<{ hackathons: Hackathon[] }>("/hackathons");
 export const getHackathon = (id: string) => apiRequest<Hackathon>(`/hackathons/${id}`);
 
+/** The contributor-facing shape of one published issue: enough to decide
+ *  whether to apply, and nothing that compares how contested it is against
+ *  any other issue on the list. Deliberately narrower than HackathonIssue
+ *  (the admin/maintainer DTO) - no applicant_count, applicant_bucket,
+ *  flagged_for_admin, org_login, or synced_at. Matches
+ *  publicHackathonIssueDTO in internal/handlers/hackathon_public.go. */
+export interface PublicHackathonIssue {
+  id: string;
+  project_id: string;
+  repo_full_name: string;
+  issue_number: number;
+  issue_title: string;
+  difficulty_tier: string;
+  acceptance_criteria: string;
+  reserved: boolean;
+  application_window_opens_at: string | null;
+  application_window_closes_at: string | null;
+}
+
+export const getHackathonIssues = (id: string) =>
+  apiRequest<{ issues: PublicHackathonIssue[] }>(`/hackathons/${id}/issues`);
+
 // Project-owner-facing
 export const applyToHackathon = (
   hackathonId: string,

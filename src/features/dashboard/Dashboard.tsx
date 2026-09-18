@@ -7,7 +7,6 @@ import {
   Search,
   Compass,
   Grid3x3,
-  Calendar,
   Globe,
   Users,
   Trophy,
@@ -52,8 +51,8 @@ import { AdminAccessRequired } from "./components/AdminAccessRequired";
 const ContributorsPage = lazy(() => import("./pages/ContributorsPage").then((m) => ({ default: m.ContributorsPage })));
 const BrowsePage = lazy(() => import("./pages/BrowsePage").then((m) => ({ default: m.BrowsePage })));
 const DiscoverPage = lazy(() => import("./pages/DiscoverPage").then((m) => ({ default: m.DiscoverPage })));
-const OpenSourceWeekPage = lazy(() => import("./pages/OpenSourceWeekPage").then((m) => ({ default: m.OpenSourceWeekPage })));
-const OpenSourceWeekDetailPage = lazy(() => import("./pages/OpenSourceWeekDetailPage").then((m) => ({ default: m.OpenSourceWeekDetailPage })));
+const GrainHackEventsPage = lazy(() => import("../grainhack/pages/GrainHackEventsPage").then((m) => ({ default: m.GrainHackEventsPage })));
+const GrainHackEventDetailPage = lazy(() => import("../grainhack/pages/GrainHackEventDetailPage").then((m) => ({ default: m.GrainHackEventDetailPage })));
 const EcosystemsPage = lazy(() => import("./pages/EcosystemsPage").then((m) => ({ default: m.EcosystemsPage })));
 const EcosystemDetailPage = lazy(() => import("./pages/EcosystemDetailPage").then((m) => ({ default: m.EcosystemDetailPage })));
 const MaintainersPage = lazy(() => import("../maintainers/pages/MaintainersPage").then((m) => ({ default: m.MaintainersPage })));
@@ -582,7 +581,7 @@ export function Dashboard() {
   const allNavItems = [
     { id: "discover", icon: Compass, label: "Discover" },
     { id: "browse", icon: Grid3x3, label: "Browse" },
-    { id: "osw", icon: Calendar, label: "Open-Source Week" },
+    { id: "osw", icon: Trophy, label: "GrainHack" },
     { id: "ecosystems", icon: Globe, label: "Ecosystems" },
     // Show Contributors for contributors, Maintainers for maintainers
     activeRole === "maintainer" || activeRole === "admin"
@@ -1087,7 +1086,7 @@ export function Dashboard() {
                       setSearchParams(params);
                       setCurrentPage("settings");
                     }}
-                    onGoToOpenSourceWeek={() => setCurrentPage("osw")}
+                    onGoToGrainHack={() => setCurrentPage("osw")}
                   />
                 )}
                 {currentPage === "browse" && (
@@ -1104,7 +1103,7 @@ export function Dashboard() {
                   />
                 )}
                 {currentPage === "osw" && !selectedEventId && (
-                  <OpenSourceWeekPage
+                  <GrainHackEventsPage
                     onEventClick={(id, name) => {
                       setSelectedEventId(id);
                       setSelectedEventName(name);
@@ -1114,13 +1113,16 @@ export function Dashboard() {
                 {currentPage === "osw" &&
                   selectedEventId &&
                   selectedEventName && (
-                    <OpenSourceWeekDetailPage
+                    <GrainHackEventDetailPage
                       eventId={selectedEventId}
                       eventName={selectedEventName}
                       onBack={() => {
                         setSelectedEventId(null);
                         setSelectedEventName(null);
                       }}
+                      onIssueClick={(issueId, projectId) =>
+                        setSelectedIssue({ issueId, projectId })
+                      }
                     />
                   )}
                 {currentPage === "ecosystems" && !selectedEcosystemId && (
