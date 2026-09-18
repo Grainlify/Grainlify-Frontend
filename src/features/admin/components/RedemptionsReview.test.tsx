@@ -37,7 +37,12 @@ describe('RedemptionsReview', () => {
   it('loads and displays pending redemptions', async () => {
     renderWithProviders(<RedemptionsReview />)
     await waitFor(() => expect(mockGetAdminRedemptions).toHaveBeenCalledWith('pending'))
-    expect(await screen.findByText(/@octocat - 300 points/)).toBeInTheDocument()
+    // Asserts the amount too, not just the prefix. The fixture has always
+    // been the real fixed-scale shape ('3.000000'), but nothing checked how
+    // it rendered, so this surface showed "$3.000000 USDC" to admins while
+    // the test passed.
+    expect(await screen.findByText(/@octocat - 300 points → \$3\.00 USDC/)).toBeInTheDocument()
+    expect(screen.queryByText(/3\.000000/)).not.toBeInTheDocument()
     expect(screen.getByText('GABC123DEF456')).toBeInTheDocument()
   })
 
