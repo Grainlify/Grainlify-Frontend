@@ -42,12 +42,17 @@ export function Hero() {
     <section className="relative flex w-full items-center justify-center overflow-hidden px-4 sm:px-6 pt-28 pb-20 md:pt-36 md:pb-28">
       <Background isDark={isDark} reduceMotion={reduceMotion} />
 
-      <div className="relative z-10 mx-auto w-full max-w-6xl text-center">
+      {/* 86rem = 1376px, the smallest container that fits the measured 1357px
+            second heading line at 1440 while keeping the px-4 gutter. max-w-7xl
+            (1280px) was 77px short and still wrapped to three lines. Only the
+            heading is affected - the paragraph, shot and stats set their own
+            narrower max widths. */}
+        <div className="relative z-10 mx-auto w-full max-w-[86rem] text-center">
         <Badge isDark={isDark} reduceMotion={reduceMotion} />
 
         <motion.h1
           {...rise(0.1)}
-          className={`text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight transition-colors ${
+          className={`text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-tight transition-colors ${
             isDark ? "text-[#e8dfd0]" : "text-[#2d2820]"
           }`}
         >
@@ -117,11 +122,11 @@ export function Hero() {
             }`}
           >
             <img
-              src="/grainhack-event-dark.webp"
+              src={isDark ? "/grainhack-event-dark.webp" : "/grainhack-event-light.webp"}
               alt="The GrainHack event page in the Grainlify dashboard: First GrainHack Event (Base Sepolia), in issue prep, showing an $8.00 contributor pool and one open issue - Fix the flaky retry loop in the sandbox worker, tagged Easy, in Jagadeeshftw/grainhack-sandbox, with 16 hours left to apply."
               className="h-auto w-full object-cover"
               width={1440}
-              height={400}
+              height={440}
               loading="eager"
             />
           </motion.div>
