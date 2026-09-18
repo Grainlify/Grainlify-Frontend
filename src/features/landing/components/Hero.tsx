@@ -67,8 +67,11 @@ export function Hero() {
             Funded issues
           </span>{" "}
           aren&apos;t first-come
+          {/* Authored break, deliberately. Left to the container the line becomes
+              an automatic wrap that moves with the font or the width, and the
+              two halves of the scoped claim stop being a fixed pair. */}
           <br />
-          A weighted draw decides who gets them
+          A weighted draw assigns them
         </motion.h1>
 
         <motion.p
@@ -77,10 +80,8 @@ export function Hero() {
             isDark ? "text-[#b8a898]" : "text-[#7a6b5a]"
           }`}
         >
-          A contribution platform whose allocation rules are published in full -
-          102 of them - because the design doesn&apos;t reward gaming them. Nobody
-          wins an issue by refreshing fastest, and nobody can compute their
-          payout in advance.
+          Every allocation rule is published &mdash; all 102. Nobody wins an issue
+          by refreshing fastest, and nobody can compute a payout in advance.
         </motion.p>
 
         <motion.div
