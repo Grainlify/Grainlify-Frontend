@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { getHackathons, type Hackathon } from '../../../shared/api/client';
+import { formatPoolUSD } from '../pools';
 
 const PHASE_LABELS: Record<string, string> = {
   application_period: 'Applications open',
@@ -111,7 +112,7 @@ export function GrainHackEventsPage({ onEventClick }: GrainHackEventsPageProps) 
                   <div className="flex-1 min-w-0">
                     <p className={`text-[15px] font-semibold sm:truncate ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>{h.name}</p>
                     <p className={`text-[12.5px] mt-0.5 ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
-                      {h.contributor_prize_pool ? `$${h.contributor_prize_pool} contributor pool` : 'Contributor pool TBD'}
+                      {formatPoolUSD(h.contributor_prize_pool) ? `${formatPoolUSD(h.contributor_prize_pool)} contributor pool` : 'Contributor pool TBD'}
                     </p>
                   </div>
                 </div>

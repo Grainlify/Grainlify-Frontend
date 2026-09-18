@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Wrench } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ApplicationWindow } from '../components/ApplicationWindow';
+import { formatPoolUSD } from '../pools';
 import {
   getHackathon,
   getHackathonIssues,
@@ -114,13 +115,13 @@ export function GrainHackEventDetailPage({ eventId, eventName, onBack, onIssueCl
                 {PHASE_LABELS[phase] ?? phase}
               </span>
             </div>
-            {hackathon?.contributor_prize_pool && (
+            {formatPoolUSD(hackathon?.contributor_prize_pool) && (
               <div className="text-left sm:text-right">
                 <div className={`text-[11px] font-bold uppercase tracking-wide ${isDark ? 'text-[#b8a898]' : 'text-[#9a8b7a]'}`}>
                   Contributor pool
                 </div>
                 <div className={`text-[20px] font-extrabold ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>
-                  ${hackathon.contributor_prize_pool}
+                  {formatPoolUSD(hackathon?.contributor_prize_pool)}
                 </div>
               </div>
             )}

@@ -27,7 +27,7 @@ function makeHackathon(overrides: Partial<Hackathon> & Pick<Hackathon, 'id' | 'n
     sponsor_total_usdc: '10',
     platform_fee_usdc: '2',
     platform_fee_rate_pct: '20',
-    contributor_prize_pool: '8',
+    contributor_prize_pool: '8.000000',  // the shape the API actually returns
     maintainer_prize_pool: '2',
     net_pool_usdc: '10',
     created_at: '2026-09-01T00:00:00.000Z',
@@ -70,7 +70,7 @@ describe('GrainHackEventDetailPage', () => {
       screen.getByText(/Maintainers are preparing this event's issues/),
     ).toBeInTheDocument()
     expect(screen.getByText('Issue prep')).toBeInTheDocument()
-    expect(screen.getByText('$8')).toBeInTheDocument()
+    expect(screen.getByText('$8.00')).toBeInTheDocument()
   })
 
   it('shows different empty-state copy for application_period than for issue_prep', async () => {
