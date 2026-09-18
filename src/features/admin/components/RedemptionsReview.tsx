@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { formatUsdAmount } from '../../../shared/utils/usd';
 import { Modal, ModalFooter, ModalButton, ModalInput } from '../../../shared/components/ui/Modal';
 import {
   getAdminRedemptions,
@@ -97,7 +98,7 @@ export function RedemptionsReview() {
             >
               <div className="flex-1 min-w-0">
                 <p className={`text-[14px] font-semibold ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>
-                  {r.login ? `@${r.login}` : r.user_id} - {r.points_spent.toLocaleString()} points → ${r.usdc_amount} USDC
+                  {r.login ? `@${r.login}` : r.user_id} - {r.points_spent.toLocaleString()} points → ${formatUsdAmount(r.usdc_amount) ?? r.usdc_amount} USDC
                 </p>
                 <button
                   onClick={() => copyWallet(r.stellar_wallet_address)}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
+import { formatUsdAmount } from "../../../shared/utils/usd";
 import { getMyRedemptions, type Redemption } from "../../../shared/api/client";
 import { SkeletonLoader } from "../../../shared/components/SkeletonLoader";
 
@@ -157,9 +158,10 @@ export function RewardsTab() {
                 <td className={cell}>{formatDate(r.created_at)}</td>
                 <td className={cell}>{r.points_spent.toLocaleString()}</td>
                 {/* usdc_amount arrives as a string straight from numeric::text
-                    so the decimal is never rounded through a float. Rendered as
-                    given. */}
-                <td className={`${cell} font-semibold`}>{r.usdc_amount} USDC</td>
+                    so the decimal is never rounded through a float. formatUsdAmount
+                    keeps that guarantee - it formats by digit-string arithmetic and
+                    never parses - and falls back to the raw value. */}
+                <td className={`${cell} font-semibold`}>{formatUsdAmount(r.usdc_amount) ?? r.usdc_amount} USDC</td>
                 <td className={`${cell} font-mono text-[12px] ${muted}`} title={r.stellar_wallet_address}>
                   {shortAddress(r.stellar_wallet_address)}
                 </td>
