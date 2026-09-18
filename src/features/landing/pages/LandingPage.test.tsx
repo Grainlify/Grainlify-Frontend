@@ -45,7 +45,7 @@ describe('LandingPage', () => {
 
     renderWithProviders(<LandingPage />, { withAuth: true })
 
-    expect(screen.getByText(/allocation rules are published in full/i)).toBeInTheDocument()
+    expect(screen.getByText(/Every allocation rule is published/i)).toBeInTheDocument()
     expect(screen.getByText('Built for Every Blockchain Ecosystem')).toBeInTheDocument()
     // The mechanism and the built/planned split are what the page leads with
     // for a reviewer; if either disappears the page is a feature list again.
