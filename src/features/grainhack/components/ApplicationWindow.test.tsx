@@ -59,6 +59,14 @@ describe('ApplicationWindow', () => {
     expect(screen.getByText('1 applicant')).toBeInTheDocument()
   })
 
+  it('says Assigned, not that the draw is coming, once the issue is held', () => {
+    renderWithProviders(
+      <ApplicationWindow opensAt={null} closesAt={new Date(Date.now() - 60_000).toISOString()} assigned />,
+    )
+    expect(screen.getByText('Assigned')).toBeInTheDocument()
+    expect(screen.queryByText(/the draw runs shortly/)).not.toBeInTheDocument()
+  })
+
   it('says the draw is coming once the window has closed', () => {
     renderWithProviders(
       <ApplicationWindow opensAt={null} closesAt={new Date(Date.now() - 60_000).toISOString()} />,

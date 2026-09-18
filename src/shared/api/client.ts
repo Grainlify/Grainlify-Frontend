@@ -2106,6 +2106,9 @@ export interface PublicHackathonIssue {
   reserved: boolean;
   application_window_opens_at: string | null;
   application_window_closes_at: string | null;
+  /** The draw has run and the issue is held (or was completed). A bare flag on
+   *  purpose: the public endpoint never says who holds it. */
+  assigned: boolean;
 }
 
 export const getHackathonIssues = (id: string) =>

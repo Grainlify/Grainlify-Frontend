@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock, Users, Lock } from 'lucide-react';
+import { Clock, Users, Lock, UserCheck } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 
 /** Formats a remaining duration as a coarse countdown. Deliberately coarse:
@@ -47,6 +47,9 @@ interface ApplicationWindowProps {
   /** Reserved issues draw only from contributors with no completed
    * GrainHack issues (§3.8), which changes whether it's worth applying. */
   reserved?: boolean;
+  /** The draw has already run and the issue is held. Once that is true the
+   *  window is history: saying "the draw runs shortly" would be false. */
+  assigned?: boolean;
   compact?: boolean;
 }
 
@@ -59,6 +62,7 @@ export function ApplicationWindow({
   applicantCount,
   applicantBucket,
   reserved,
+  assigned = false,
   compact = false,
 }: ApplicationWindowProps) {
   const { theme } = useTheme();
@@ -77,12 +81,15 @@ export function ApplicationWindow({
   const remaining = target ? new Date(target).getTime() - now : 0;
 
   const tone =
-    state === 'open'
+    state === 'open' && !assigned
       ? isDark ? 'text-green-400' : 'text-green-700'
       : isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
 
-  const label =
-    state === 'not_open'
+  // Assigned wins over every window state. Never who it is assigned to: the
+  // status word is all a contributor who lost the draw needs to see.
+  const label = assigned
+    ? 'Assigned'
+    : state === 'not_open'
       ? `Applications open in ${formatTimeLeft(remaining)}`
       : state === 'closed'
         ? 'Applications closed - the draw runs shortly'
@@ -91,7 +98,7 @@ export function ApplicationWindow({
   return (
     <div className={`flex items-center gap-3 flex-wrap ${compact ? 'text-[12px]' : 'text-[13px]'}`}>
       <span className={`flex items-center gap-1.5 font-semibold ${tone}`}>
-        {state === 'closed' ? <Lock className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+        {assigned ? <UserCheck className="w-3.5 h-3.5" /> : state === 'closed' ? <Lock className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
         {label}
       </span>
       {typeof applicantCount === 'number' ? (

@@ -44,6 +44,7 @@ function makeIssue(overrides: Partial<PublicHackathonIssue> & Pick<PublicHackath
     reserved: false,
     application_window_opens_at: '2026-09-18T00:00:00.000Z',
     application_window_closes_at: '2026-09-19T00:00:00.000Z',
+    assigned: false,
     ...overrides,
   }
 }
@@ -144,5 +145,44 @@ describe('GrainHackEventDetailPage', () => {
     // The repo name travels with the click so the detail page can label the
     // list even when GET /projects/:id cannot resolve the project.
     expect(onIssueClick).toHaveBeenCalledWith('7', 'proj-77', 'Jagadeeshftw/grainhack-sandbox')
+  })
+
+  // The live event, the day after its draws ran: windows closed, both issues
+  // held. The page used to say the draw was still coming and count both open.
+  it('says an issue is assigned once its draw has run, and stops counting it as open', async () => {
+    mockedGetHackathon.mockResolvedValue(makeHackathon({ id: 'hack-5', name: 'First GrainHack Event (Base Sepolia)', phase: 'live' }))
+    mockedGetHackathonIssues.mockResolvedValue({
+      issues: [
+        makeIssue({ id: 'row-1', issue_number: 1, project_id: 'proj-1', application_window_closes_at: '2026-09-18T15:05:31Z', assigned: true }),
+        makeIssue({ id: 'row-2', issue_number: 2, project_id: 'proj-1', issue_title: 'Validate --concurrency', application_window_closes_at: '2026-09-18T15:05:31Z', assigned: true }),
+      ],
+    })
+
+    const { container } = renderWithProviders(
+      <GrainHackEventDetailPage eventId="hack-5" eventName="First GrainHack Event (Base Sepolia)" onBack={vi.fn()} onIssueClick={vi.fn()} />,
+    )
+
+    expect(await screen.findByText('2 issues assigned')).toBeInTheDocument()
+    expect(screen.getAllByText('Assigned')).toHaveLength(2)
+    const rendered = container.textContent ?? ''
+    expect(rendered).not.toContain('the draw runs shortly')
+    expect(rendered).not.toMatch(/\bopen\b/)
+  })
+
+  it('counts a mix of open and assigned issues separately', async () => {
+    mockedGetHackathon.mockResolvedValue(makeHackathon({ id: 'hack-6', name: 'Mixed', phase: 'live' }))
+    mockedGetHackathonIssues.mockResolvedValue({
+      issues: [
+        makeIssue({ id: 'row-1', issue_number: 1, project_id: 'proj-1', assigned: true }),
+        makeIssue({ id: 'row-2', issue_number: 2, project_id: 'proj-1', issue_title: 'Still open', application_window_closes_at: '2099-01-01T00:00:00Z' }),
+      ],
+    })
+
+    renderWithProviders(
+      <GrainHackEventDetailPage eventId="hack-6" eventName="Mixed" onBack={vi.fn()} onIssueClick={vi.fn()} />,
+    )
+
+    expect(await screen.findByText('1 open · 1 assigned')).toBeInTheDocument()
+    expect(screen.getAllByText('Assigned')).toHaveLength(1)
   })
 })

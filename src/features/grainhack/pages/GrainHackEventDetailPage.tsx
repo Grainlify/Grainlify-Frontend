@@ -44,6 +44,17 @@ function emptyStateCopy(phase: string): { title: string; body: string } {
   };
 }
 
+/** "2 issues open", "2 issues assigned", or "1 open · 1 assigned" for a mix.
+ *  An assigned issue is never counted as open: its draw has run. */
+export function issueCountLabel(issues: Pick<PublicHackathonIssue, 'assigned'>[]): string {
+  const assigned = issues.filter((i) => i.assigned === true).length;
+  const open = issues.length - assigned;
+  const plural = (n: number) => `${n} issue${n === 1 ? '' : 's'}`;
+  if (assigned === 0) return `${plural(open)} open`;
+  if (open === 0) return `${plural(assigned)} assigned`;
+  return `${open} open · ${assigned} assigned`;
+}
+
 interface GrainHackEventDetailPageProps {
   eventId: string;
   eventName: string;
@@ -155,7 +166,7 @@ export function GrainHackEventDetailPage({ eventId, eventName, onBack, onIssueCl
               }`}
             >
               <p className={`text-[11px] font-bold uppercase tracking-wide mb-3 ${isDark ? 'text-[#b8a898]' : 'text-[#9a8b7a]'}`}>
-                {issues.length} issue{issues.length === 1 ? '' : 's'} open
+                {issueCountLabel(issues)}
               </p>
               <div className="space-y-2">
                 {issues.map((issue) => (
@@ -187,6 +198,7 @@ export function GrainHackEventDetailPage({ eventId, eventName, onBack, onIssueCl
                         opensAt={issue.application_window_opens_at}
                         closesAt={issue.application_window_closes_at}
                         reserved={issue.reserved}
+                        assigned={issue.assigned === true}
                         compact
                       />
                     </div>
