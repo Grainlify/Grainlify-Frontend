@@ -21,6 +21,7 @@ import {
   Ticket,
   ClipboardCheck,
   LifeBuoy,
+  Coins,
 } from "lucide-react";
 import { SUPPORT_TRIGGER_LABEL } from "../../shared/components/supportContext";
 import { RailButton } from "./components/RailButton";
@@ -62,6 +63,7 @@ const DataPage = lazy(() => import("./pages/DataPage").then((m) => ({ default: m
 const ProjectDetailPage = lazy(() => import("./pages/ProjectDetailPage").then((m) => ({ default: m.ProjectDetailPage })));
 const IssueDetailPage = lazy(() => import("./pages/IssueDetailPage").then((m) => ({ default: m.IssueDetailPage })));
 const LeaderboardPage = lazy(() => import("../leaderboard/pages/LeaderboardPage").then((m) => ({ default: m.LeaderboardPage })));
+const BountiesTab = lazy(() => import("../bounties/pages/BountiesTab").then((m) => ({ default: m.BountiesTab })));
 const BlogPage = lazy(() => import("../blog/pages/BlogPage").then((m) => ({ default: m.BlogPage })));
 const SettingsPage = lazy(() => import("../settings/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const AdminPage = lazy(() => import("../admin/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
@@ -635,6 +637,7 @@ export function Dashboard() {
     ...(userRole === "admin"
       ? [{ id: "admin", icon: ClipboardCheck, label: "Reviews" }]
       : []),
+    { id: "bounties", icon: Coins, label: "Bounties" },
     { id: "leaderboard", icon: Trophy, label: "Leaderboard" },
     { id: "blog", icon: FileText, label: "Grainlify Blog" },
   ];
@@ -1233,6 +1236,7 @@ export function Dashboard() {
                     />
                   ))}
                 {currentPage === "leaderboard" && <LeaderboardPage />}
+                {currentPage === "bounties" && <BountiesTab />}
                 {currentPage === "blog" && <BlogPage />}
                 {currentPage === "support" && <SupportPage />}
                 {currentPage === "settings" && (

@@ -43,6 +43,8 @@ describe('top-level routes', () => {
     '/support': 'deliberately anonymous — the person who most needs it may have no account',
     '/dashboard': 'every signed-in surface, selected by ?tab=',
     '/notifications': 'ALIAS ONLY — redirects to /dashboard?tab=notifications so a typed URL works',
+    '/bounties/ledger': 'deliberately anonymous — the public Bounties ledger; signed-in users also get it at ?tab=bounties&subtab=ledger',
+    '/bounties/link': 'deliberately anonymous — opens inside a wallet app browser, where nobody is signed in',
   }
 
   it('are exactly the agreed set', () => {

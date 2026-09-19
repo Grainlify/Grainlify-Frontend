@@ -16,6 +16,8 @@ const SignInPage = lazy(() => import("../features/auth").then((m) => ({ default:
 const SignUpPage = lazy(() => import("../features/auth").then((m) => ({ default: m.SignUpPage })));
 const AuthCallbackPage = lazy(() => import("../features/auth").then((m) => ({ default: m.AuthCallbackPage })));
 const Dashboard = lazy(() => import("../features/dashboard").then((m) => ({ default: m.Dashboard })));
+const PublicBountyLedgerPage = lazy(() => import("../features/bounties/pages/PublicBountyLedgerPage").then((m) => ({ default: m.PublicBountyLedgerPage })));
+const WalletLinkPage = lazy(() => import("../features/bounties/pages/WalletLinkPage").then((m) => ({ default: m.WalletLinkPage })));
 
 // Suspense fallback for lazy-loaded routes — matches Dashboard's own background
 // gradient so the swap from "loading" to "loaded" doesn't flash a different backdrop.
@@ -79,6 +81,12 @@ export default function App() {
                     redirected exactly them to the sign-in they could not
                     complete. */}
                 <Route path="/support" element={<SupportRoutePage />} />
+                {/* Grainlify Bounties, public for the same reason as /support:
+                    the ledger is for anyone checking a payout, and the link
+                    page opens inside a wallet app's browser, where nobody is
+                    signed in. Both only read from the bounty agent. */}
+                <Route path="/bounties/ledger" element={<PublicBountyLedgerPage />} />
+                <Route path="/bounties/link" element={<WalletLinkPage />} />
                 {/* An alias, not a surface. Signed-in surfaces are ?tab= on
                     /dashboard - the convention the backend's link builder
                     states - so this exists only so a typed or pasted
