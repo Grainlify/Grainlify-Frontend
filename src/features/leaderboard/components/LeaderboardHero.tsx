@@ -82,13 +82,16 @@ export function LeaderboardHero({ leaderboardType, isLoaded, activeWindow, child
         <div className="absolute bottom-1/4 left-1/4 w-20 h-20 border-2 border-[#c9983a]/15 rounded-full" />
       </div>
 
-      <div className="relative z-10 p-10">
+      {/* Below 640px the 40px padding left ~220px for a 44px heading that
+          needs ~270px, and the card's overflow-hidden cut "Leaderboard" off.
+          Phone-only (max-sm:) so the desktop hero is unchanged. */}
+      <div className="relative z-10 p-10 max-sm:p-5">
         {/* Title Section with Entrance Animation */}
         <div className={`text-center mb-10 transition-opacity duration-150 ${
           isLoaded ? 'opacity-100' : 'opacity-0 -translate-y-4'
         }`}>
           <div className="relative inline-block mb-3">
-            <h1 className={`text-[44px] font-bold drop-shadow-sm relative z-10 transition-colors ${
+            <h1 className={`text-[44px] font-bold drop-shadow-sm relative z-10 transition-colors max-sm:text-[30px] max-sm:leading-tight ${
               theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
             }`}>
               <span className="bg-gradient-to-br from-[#e8c87a] via-[#c9983a] to-[#a67c2e] bg-clip-text text-transparent">
@@ -106,7 +109,7 @@ export function LeaderboardHero({ leaderboardType, isLoaded, activeWindow, child
                 there is room. Absolutely positioned at every width, it landed
                 on top of the title as soon as the title wrapped. */}
             <Crown className="mx-auto mb-1 w-9 h-9 md:w-10 md:h-10 md:absolute md:-top-8 md:left-1/2 md:-translate-x-1/2 md:mb-0 text-[#c9983a] drop-shadow-[0_2px_8px_rgba(201,152,58,0.4)]" />
-            <h2 className={`text-[44px] font-bold mb-4 ml-2 pt-4 transition-colors ${
+            <h2 className={`text-[44px] font-bold mb-4 ml-2 pt-4 transition-colors max-sm:text-[30px] max-sm:leading-tight max-sm:ml-0 max-sm:pt-1 ${
               theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
             }`} style={{ 
               textShadow: '0 2px 8px rgba(201, 152, 58, 0.3), 0 0 20px rgba(201, 152, 58, 0.2)' 
@@ -128,7 +131,7 @@ export function LeaderboardHero({ leaderboardType, isLoaded, activeWindow, child
             than 'solid' to keep it distinguishable from the hero behind it. */}
         <GlassCard
           tone="raised"
-          className={`p-8 max-w-3xl mx-auto transition-opacity duration-150 ${
+          className={`p-8 max-w-3xl mx-auto max-sm:p-3 transition-opacity duration-150 ${
             isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
           }`}
         >
