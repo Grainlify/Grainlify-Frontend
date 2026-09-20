@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Wallet } from "lucide-react";
 import { toast } from "sonner";
+import { format, parseISO } from "date-fns";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { formatUsdAmount } from "../../../shared/utils/usd";
 import { getMyRedemptions, type Redemption } from "../../../shared/api/client";
@@ -47,9 +48,11 @@ function StatusPill({ status, theme }: { status: Redemption["status"]; theme: st
 }
 
 function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "Unknown";
-  return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+  try {
+    return format(parseISO(iso), 'dd MMM yyyy');
+  } catch {
+    return "Unknown";
+  }
 }
 
 /** Truncates a Stellar address to something readable without implying the
@@ -156,7 +159,7 @@ export function RewardsTab() {
                 className={`border-b last:border-0 ${isDark ? "border-white/[0.06]" : "border-black/[0.04]"}`}
               >
                 <td className={cell}>{formatDate(r.created_at)}</td>
-                <td className={cell}>{r.points_spent.toLocaleString()}</td>
+                <td className={cell}>{r.points_spent.toLocaleString('en-GB')}</td>
                 {/* usdc_amount arrives as a string straight from numeric::text
                     so the decimal is never rounded through a float. formatUsdAmount
                     keeps that guarantee - it formats by digit-string arithmetic and
