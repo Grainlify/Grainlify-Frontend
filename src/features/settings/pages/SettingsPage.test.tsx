@@ -55,7 +55,7 @@ describe('SettingsPage', () => {
     // Starts on Profile.
     expect(screen.getByTestId('profile-tab')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Notifications' }))
+    await user.click(screen.getByRole('button', { name: 'Notification Preferences' }))
     expect(screen.getByTestId('notifications-tab')).toBeInTheDocument()
     expect(screen.queryByTestId('profile-tab')).not.toBeInTheDocument()
 
