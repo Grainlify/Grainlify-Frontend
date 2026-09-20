@@ -94,14 +94,12 @@ export function Dashboard() {
   // const [currentPage, setCurrentPage] = useState('discover');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     () => {
-      if (typeof window === "undefined") return null;
-      const params = new URLSearchParams(window.location.search);
+      const params = new URLSearchParams(location.search);
       return params.get("project");
     },
   );
   const [projectBackTarget, setProjectBackTarget] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     return params.get("from");
   });
   // Where "Back" from a contributor's profile should return to - defaults to
@@ -120,8 +118,7 @@ export function Dashboard() {
     // knows it. Not in the URL, so a reload falls back to resolving it.
     repoFullName?: string;
   } | null>(() => {
-    if (typeof window === "undefined") return null;
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const issueId = params.get("issue");
     const projectId = params.get("iproject") || params.get("project");
     if (!issueId) return null;
@@ -157,14 +154,12 @@ export function Dashboard() {
   const [activeRole, setActiveRole] = useState<
     "contributor" | "maintainer" | "admin"
   >(() => {
-    if (typeof window === "undefined") return "contributor";
-    const v = new URLSearchParams(window.location.search).get("view");
+    const v = new URLSearchParams(location.search).get("view");
     return v === "maintainer" || v === "admin" ? v : "contributor";
   });
   // Initialize viewing user from URL so profile page gets correct user on first render (avoids race with own profile fetch)
   const [viewingUserId, setViewingUserId] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const userParam = params.get("user");
     const tabParam = params.get("tab") || params.get("page");
     if (tabParam === "profile" && userParam) {
@@ -175,8 +170,7 @@ export function Dashboard() {
     return null;
   });
   const [viewingUserLogin, setViewingUserLogin] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const userParam = params.get("user");
     const tabParam = params.get("tab") || params.get("page");
     if (tabParam === "profile" && userParam) {
@@ -189,8 +183,7 @@ export function Dashboard() {
   // Org login has no id/login ambiguity (unlike users, orgs are only ever a
   // plain GitHub login string) - a single state, mirroring viewingUserLogin.
   const [viewingOrgLogin, setViewingOrgLogin] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const orgParam = params.get("org");
     const tabParam = params.get("tab") || params.get("page");
     return tabParam === "org" && orgParam ? orgParam : null;
@@ -232,7 +225,7 @@ export function Dashboard() {
   // Deep links are unaffected because they carry ?tab= and are handled above
   // it — see the returnTo chain in App.tsx -> SignInPage -> AuthCallbackPage.
   const [currentPage, setCurrentPage] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const tabFromUrl = params.get("tab");
     // The Redeem page is gone with the points programme. Redirect rather than
     // 404: links to it exist in the UI, in notifications, and possibly
@@ -249,7 +242,7 @@ export function Dashboard() {
   // rather than in the state initialiser because the router has already read
   // the location by then, and setSearchParams is what it actually observes.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     if (params.get("tab") !== RETIRED_REDEEM_TAB) return;
     params.set("tab", REDEEM_REPLACEMENT_TAB);
     params.set("subtab", "rewards");
@@ -417,7 +410,7 @@ export function Dashboard() {
   // (after the first) so the browser Back button steps through in-app
   // navigation instead of leaving the app entirely - see isFirstUrlSync above.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     params.set("tab", currentPage);
     // Kept alongside tab so the pair cannot desynchronise on reload: a URL
     // carrying tab=maintainers without a matching view= is the bug this fixes.
