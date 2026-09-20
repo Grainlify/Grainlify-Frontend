@@ -127,19 +127,14 @@ async function openAdminModal(user: ReturnType<typeof userEvent.setup>) {
 }
 
 /** Renders straight onto the admin tab as a non-admin, which is the only
- *  remaining route to the bootstrap prompt. The URL has to be set before
- *  render because Dashboard resolves its tab in the state initialiser. */
+ *  remaining route to the bootstrap prompt. The route is passed directly to
+ *  renderWithProviders so the router initializes on the correct location. */
 function renderOnAdminTabAsNonAdmin() {
-  window.history.pushState({}, '', '/dashboard?tab=admin')
-  renderWithProviders(<Dashboard />)
+  renderWithProviders(<Dashboard />, { route: '/dashboard?tab=admin' })
 }
 
 describe('Dashboard', () => {
   beforeEach(() => {
-    // Dashboard reads window.location.search (not react-router's location) for its
-    // initial tab, and reads/writes sessionStorage for admin auth — both persist
-    // across tests within a file (jsdom is shared per test file), so reset them.
-    window.history.pushState({}, '', '/dashboard')
     sessionStorage.clear()
     mockUseAuth.mockReset().mockReturnValue({
       userRole: null,
@@ -167,9 +162,7 @@ describe('Dashboard', () => {
   })
 
   it('renders the Browse page when the initial URL has ?tab=browse', async () => {
-    window.history.pushState({}, '', '/dashboard?tab=browse')
-
-    renderWithProviders(<Dashboard />)
+    renderWithProviders(<Dashboard />, { route: '/dashboard?tab=browse' })
 
     expect(await screen.findByTestId('browse-page')).toBeInTheDocument()
     expect(screen.queryByTestId('discover-page')).not.toBeInTheDocument()
@@ -183,20 +176,26 @@ describe('Dashboard', () => {
         <LocationSpy />
       </>,
     )
+
+    // Discover is active by default.
     expect(await screen.findByTestId('discover-page')).toBeInTheDocument()
 
-    const browseNavButton = container.querySelector('[data-icon="Grid3x3"]')?.closest('button')
-    expect(browseNavButton).toBeTruthy()
+    // Click Browse (icon-only rail in the mock design; use testid or data-icon).
+    const browseButton = container.querySelector('[data-tour-id="browse"]')
+    expect(browseButton).not.toBeNull()
+    await user.click(browseButton!)
 
-    await user.click(browseNavButton as HTMLButtonElement)
-
+    // Switches the rendered child.
     expect(await screen.findByTestId('browse-page')).toBeInTheDocument()
     expect(screen.queryByTestId('discover-page')).not.toBeInTheDocument()
+
+    // Syncs ?tab=browse to the URL. LocationSpy observes the router's own
+    // location.search, so it proves the react-router URL updated.
     await waitFor(() => {
-      expect(screen.getByTestId('location-spy').textContent).toContain('tab=browse')
+      expect(screen.getByTestId('location-spy')).toHaveTextContent('tab=browse')
     })
-    // The URL is now the only record of which tab is open. A `dashboardTab`
-    // localStorage mirror used to be written here too; it is gone, because the
+
+    // Does NOT write dashboardTab to localStorage: that was a bug where the
     // only thing it actually decided was where you landed after signing in.
     expect(localStorage.getItem('dashboardTab')).toBeNull()
   })
@@ -208,9 +207,8 @@ describe('Dashboard', () => {
       // viewed — the Leaderboard, Settings after finishing setup, and so on.
       // Nothing cleared it, not even logout.
       localStorage.setItem('dashboardTab', 'leaderboard')
-      window.history.pushState({}, '', '/dashboard')
 
-      renderWithProviders(<Dashboard />)
+      renderWithProviders(<Dashboard />, { route: '/dashboard' })
 
       expect(await screen.findByTestId('discover-page')).toBeInTheDocument()
     })
@@ -220,41 +218,23 @@ describe('Dashboard', () => {
       // the original URL, so the tab arrives as ?tab=. That has to keep beating
       // the Discover default or signing in would strand people.
       localStorage.setItem('dashboardTab', 'leaderboard')
-      window.history.pushState({}, '', '/dashboard?tab=browse')
 
-      renderWithProviders(<Dashboard />)
+      renderWithProviders(<Dashboard />, { route: '/dashboard?tab=browse' })
 
       expect(await screen.findByTestId('browse-page')).toBeInTheDocument()
       expect(screen.queryByTestId('discover-page')).not.toBeInTheDocument()
     })
 
     it('lands someone who deep-linked to an issue on that issue, not on Discover', async () => {
-      // The case the brief calls out: click a link to a specific issue, get
-      // bounced to sign-in, come back. The replayed URL opens the issue overlay.
-      // BOTH sources, deliberately. Dashboard's useState initializers read
-      // window.location while its URL reader reads the router's location;
-      // under BrowserRouter those are always the same string, and setting only
-      // one here builds a state production cannot reach - which is what made
-      // this test fail against a correct reader.
       const url = '/dashboard?tab=browse&project=proj-1&issue=issue-1'
-      window.history.pushState({}, '', url)
-
       renderWithProviders(<Dashboard />, { route: url })
 
       expect(await screen.findByTestId('issue-detail-page')).toBeInTheDocument()
       expect(screen.queryByTestId('discover-page')).not.toBeInTheDocument()
     })
 
-    // The bug this pins: an issue opened from a surface with no project page
-    // behind it (the GrainHack event page, Discover) lost its project id on
-    // the round trip through the URL, so IssueDetailPage had nothing to
-    // resolve the repo with and rendered "no issues" on a page that otherwise
-    // looked fine. It was invisible to anyone owning the repo, because
-    // /projects/mine supplied the project the link had dropped.
     it('carries the issue\'s project through the URL when no project page is open', async () => {
       const url = '/dashboard?tab=osw&issue=1&iproject=proj-42'
-      window.history.pushState({}, '', url)
-
       renderWithProviders(<Dashboard />, { route: url })
 
       const page = await screen.findByTestId('issue-detail-page')
@@ -263,8 +243,6 @@ describe('Dashboard', () => {
 
     it('still honours a legacy ?project= deep link', async () => {
       const url = '/dashboard?tab=browse&project=proj-1&issue=issue-1'
-      window.history.pushState({}, '', url)
-
       renderWithProviders(<Dashboard />, { route: url })
 
       const page = await screen.findByTestId('issue-detail-page')
@@ -395,18 +373,14 @@ describe('Dashboard', () => {
         login: mockLogin,
         logout: mockLogout,
       })
-      window.history.pushState({}, '', '/dashboard?tab=data')
-
-      const { container } = renderWithProviders(<Dashboard />)
+      const { container } = renderWithProviders(<Dashboard />, { route: '/dashboard?tab=data' })
 
       expect(await screen.findByTestId('data-page')).toBeInTheDocument()
       expect(container.textContent).not.toBe('')
     })
 
     it('explains itself on the Data page for a non-admin rather than rendering blank', async () => {
-      window.history.pushState({}, '', '/dashboard?tab=data')
-
-      renderWithProviders(<Dashboard />)
+      renderWithProviders(<Dashboard />, { route: '/dashboard?tab=data' })
 
       expect(await screen.findByText('Admin Access Required')).toBeInTheDocument()
       expect(screen.queryByTestId('data-page')).not.toBeInTheDocument()
@@ -509,9 +483,7 @@ describe('Dashboard', () => {
     })
 
     it('blocks the grainhack page for a non-admin even when navigated to directly via ?tab= (the nav item alone is not the security boundary)', async () => {
-      window.history.pushState({}, '', '/dashboard?tab=grainhack')
-
-      renderWithProviders(<Dashboard />)
+      renderWithProviders(<Dashboard />, { route: '/dashboard?tab=grainhack' })
 
       expect(await screen.findByText('Admin Access Required')).toBeInTheDocument()
       expect(screen.queryByTestId('grainhack-page')).not.toBeInTheDocument()
@@ -521,7 +493,6 @@ describe('Dashboard', () => {
 
 describe('Dashboard admin pill visibility', () => {
   beforeEach(() => {
-    window.history.pushState({}, '', '/dashboard')
     sessionStorage.clear()
     localStorage.clear()
   })
@@ -558,3 +529,14 @@ describe('Dashboard admin pill visibility', () => {
     expect(await screen.findByRole('button', { name: 'ADMIN' })).toBeInTheDocument()
   })
 })
+
+describe('Dashboard URL single source of truth (#1041)', () => {
+  it('does not read window.location.search directly in Dashboard.tsx', async () => {
+    const fs = await import('fs')
+    const path = await import('path')
+    const filePath = path.resolve(__dirname, 'Dashboard.tsx')
+    const content = fs.readFileSync(filePath, 'utf-8')
+    expect(content).not.toContain('window.location.search')
+  })
+})
+
