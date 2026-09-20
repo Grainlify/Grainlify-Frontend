@@ -8,7 +8,7 @@ type LandingStatsDisplay = {
   grantsDistributed: string;
 };
 
-const formatCount = (n: number) => n.toLocaleString();
+const formatCount = (n: number) => n.toLocaleString('en-GB');
 
 const formatUSD = (n: number) =>
   new Intl.NumberFormat('en-US', {

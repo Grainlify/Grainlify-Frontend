@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { Shield, Globe, Plus, Sparkles, Trash2, ExternalLink, Calendar, Pencil, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -921,7 +922,7 @@ export function AdminPage() {
                       }`}>{ev.title}</h3>
                     <p className={`text-[12px] mt-1 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                       }`}>
-                      {new Date(ev.start_at).toLocaleDateString()} → {new Date(ev.end_at).toLocaleDateString()}
+                      {format(new Date(ev.start_at), 'd MMM yyyy')} → {format(new Date(ev.end_at), 'd MMM yyyy')}
                     </p>
                   </div>
                   <button

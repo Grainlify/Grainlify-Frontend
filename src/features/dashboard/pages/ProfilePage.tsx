@@ -1009,17 +1009,17 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                     <div className={`flex items-center gap-1.5 group-hover/project:text-[#c9983a] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                       }`}>
                       <Star className="w-5 h-5" />
-                      <span>{(project.stars_count || 0).toLocaleString()}</span>
+                      <span>{(project.stars_count || 0).toLocaleString('en-GB')}</span>
                     </div>
                     <div className={`flex items-center gap-1.5 group-hover/project:text-[#c9983a] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                       }`}>
                       <Users className="w-5 h-5" />
-                      <span>{(project.contributors_count || 0).toLocaleString()}</span>
+                      <span>{(project.contributors_count || 0).toLocaleString('en-GB')}</span>
                     </div>
                     <div className={`flex items-center gap-1.5 group-hover/project:text-[#c9983a] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                       }`}>
                       <GitFork className="w-5 h-5" />
-                      <span>{(project.forks_count || 0).toLocaleString()}</span>
+                      <span>{(project.forks_count || 0).toLocaleString('en-GB')}</span>
                     </div>
                   </div>
 
@@ -1256,7 +1256,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                           return (
                             <div className="bg-[#e8dfd0]/95 rounded-[14px] border border-white/25 shadow-[0_8px_24px_rgba(0,0,0,0.12)] px-6 py-4">
                               <div className="text-[24px] font-black text-[#2d2820] drop-shadow-sm">
-                                ${data.amount.toLocaleString()}
+                                ${data.amount.toLocaleString('en-GB')}
                               </div>
                               <div className="text-[11px] font-bold text-[#7a6b5a] uppercase tracking-widest mt-1">
                                 {data.name}
@@ -1306,7 +1306,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                       <div className={`text-[13px] font-semibold mb-1 group-hover/card:text-[#c9983a] transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>{item.name}</div>
                       <div className="flex items-baseline gap-2">
                         <div className={`text-[20px] font-black group-hover/card:scale-105 transition-transform origin-left ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>
-                          ${item.amount.toLocaleString()}
+                          ${item.amount.toLocaleString('en-GB')}
                         </div>
                         <div className="text-[11px] font-bold text-[#c9983a] group-hover/card:scale-110 transition-transform">{item.value}%</div>
                       </div>
