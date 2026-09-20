@@ -25,6 +25,20 @@ export default defineConfig({
         return html.replace(/%VITE_BUILD_COMMIT%/g, BUILD_COMMIT)
       },
     },
+    {
+      // The not-found page with a real 404 status. vercel.json rewrites only
+      // the app's own routes to index.html; Vercel answers every other path
+      // with 404.html and status 404. That file is the app itself, so the
+      // router's catch-all renders NotFoundPage for it.
+      name: 'spa-404-page',
+      apply: 'build',
+      enforce: 'post',
+      generateBundle(_options, bundle) {
+        const index = bundle['index.html']
+        if (!index || index.type !== 'asset') throw new Error('spa-404-page: index.html missing from the bundle')
+        this.emitFile({ type: 'asset', fileName: '404.html', source: index.source })
+      },
+    },
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them
     react(),

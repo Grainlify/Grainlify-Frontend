@@ -43,8 +43,10 @@ describe('top-level routes', () => {
     '/support': 'deliberately anonymous — the person who most needs it may have no account',
     '/dashboard': 'every signed-in surface, selected by ?tab=',
     '/notifications': 'ALIAS ONLY — redirects to /dashboard?tab=notifications so a typed URL works',
-    '/bounties/ledger': 'deliberately anonymous — the public Bounties ledger; signed-in users also get it at ?tab=bounties&subtab=ledger',
-    '/bounties/link': 'deliberately anonymous — opens inside a wallet app browser, where nobody is signed in',
+    '/bounties': 'ALIAS ONLY — redirects to /dashboard?tab=bounties (the dashboard guard handles sign-in)',
+    '/bounties/ledger': 'ALIAS ONLY — redirects to /dashboard?tab=bounties&subtab=ledger, the in-dashboard ledger',
+    '/bounties/link': 'signed-in, behind ProtectedRoute — its own page because it opens inside a wallet app browser',
+    '*': 'the not-found page, public and LAST so it only gets what nothing else claims',
   }
 
   it('are exactly the agreed set', () => {
@@ -74,5 +76,44 @@ describe('top-level routes', () => {
     const src = readFileSync(join(__dirname, 'App.tsx'), 'utf8')
     const block = src.slice(src.indexOf('path="/notifications"'), src.indexOf('path="/dashboard"'))
     expect(block).toMatch(/Navigate\s+to="\/dashboard\?tab=notifications"/)
+  })
+
+  it('keeps the Bounties aliases redirects into the dashboard', () => {
+    const src = readFileSync(join(__dirname, 'App.tsx'), 'utf8')
+    const block = (from: string, to: string) => src.slice(src.indexOf(`path="${from}"`), src.indexOf(`path="${to}"`))
+    expect(block('/bounties', '/bounties/ledger')).toMatch(/Navigate\s+to="\/dashboard\?tab=bounties"/)
+    expect(block('/bounties/ledger', '/bounties/link')).toMatch(/Navigate\s+to="\/dashboard\?tab=bounties&subtab=ledger"/)
+  })
+
+  it('keeps /bounties/link behind the sign-in guard', () => {
+    const src = readFileSync(join(__dirname, 'App.tsx'), 'utf8')
+    const block = src.slice(src.indexOf('path="/bounties/link"'), src.indexOf('path="/notifications"'))
+    expect(block).toMatch(/<ProtectedRoute>\s*<WalletLinkPage \/>\s*<\/ProtectedRoute>/)
+  })
+
+  it('declares the not-found route last', () => {
+    const src = readFileSync(join(__dirname, 'App.tsx'), 'utf8')
+    const found = [...src.matchAll(/<Route\s+path="([^"]+)"/g)].map((m) => m[1])
+    expect(found[found.length - 1]).toBe('*')
+  })
+
+  // The server half of "not found": vercel.json sends only these paths to the
+  // app with a 200; everything else gets 404.html and a 404 status. A route
+  // added here but not there would load, but as a 404; one left there after
+  // being removed here would answer 200 for a page that no longer exists.
+  it('matches the paths vercel.json serves with a 200', () => {
+    const vercel = JSON.parse(readFileSync(join(__dirname, '../../vercel.json'), 'utf8')) as { rewrites: { source: string; destination: string }[] }
+    const served = new Set<string>()
+    for (const r of vercel.rewrites) {
+      expect(r.destination).toBe('/index.html')
+      if (r.source === '/') served.add('/')
+      const m = /^\/\(([^)]+)\)\/?$/.exec(r.source)
+      if (m) for (const p of m[1].split('|')) served.add('/' + p)
+    }
+    const routes = Object.keys(ALLOWED).filter((p) => p !== '*')
+    expect([...served].sort()).toEqual(routes.sort())
+    // Every alternation appears with and without a trailing slash.
+    const groups = vercel.rewrites.map((r) => r.source).filter((x) => x !== '/')
+    expect(groups.map((g) => g.replace(/\/$/, ''))).toEqual([groups[0], groups[0]])
   })
 })

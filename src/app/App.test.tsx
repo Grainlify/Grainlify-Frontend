@@ -18,6 +18,12 @@ vi.mock('../features/auth', () => ({
 vi.mock('../features/dashboard', () => ({
   Dashboard: () => <div data-testid="dashboard-page" />,
 }))
+vi.mock('../features/bounties/pages/WalletLinkPage', () => ({
+  WalletLinkPage: () => <div data-testid="wallet-link-page" />,
+}))
+vi.mock('../features/support/pages/SupportRoutePage', () => ({
+  SupportRoutePage: () => <div data-testid="support-page" />,
+}))
 
 const { mockUseAuth } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
@@ -27,6 +33,8 @@ vi.mock('../shared/contexts/AuthContext', () => ({
   AuthProvider: ({ children }: any) => children,
   useAuth: () => mockUseAuth(),
 }))
+
+const at = () => window.location.pathname + window.location.search
 
 function renderAppAt(route: string) {
   window.history.pushState({}, '', route)
@@ -93,5 +101,68 @@ describe('App routing', () => {
       ),
     )
     vi.unstubAllGlobals()
+  })
+
+  describe('Grainlify Bounties', () => {
+    it.each([
+      ['/bounties', '/dashboard?tab=bounties'],
+      ['/bounties/ledger', '/dashboard?tab=bounties&subtab=ledger'],
+    ])('%s signed out goes to sign-in, returning to %s', async (path, target) => {
+      renderAppAt(path)
+      expect(await screen.findByTestId('signin-page')).toBeInTheDocument()
+      expect(at()).toBe(`/signin?returnTo=${encodeURIComponent(target)}`)
+    })
+
+    it.each([
+      ['/bounties', '/dashboard?tab=bounties'],
+      ['/bounties/ledger', '/dashboard?tab=bounties&subtab=ledger'],
+    ])('%s signed in lands on %s, inside the dashboard', async (path, target) => {
+      mockUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false })
+      renderAppAt(path)
+      expect(await screen.findByTestId('dashboard-page')).toBeInTheDocument()
+      expect(at()).toBe(target)
+    })
+
+    it('/bounties/link signed out goes to sign-in and comes back with its query', async () => {
+      renderAppAt('/bounties/link?bounty=b1')
+      expect(await screen.findByTestId('signin-page')).toBeInTheDocument()
+      expect(at()).toBe(`/signin?returnTo=${encodeURIComponent('/bounties/link?bounty=b1')}`)
+    })
+
+    it('/bounties/link signed in is its own page', async () => {
+      mockUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false })
+      renderAppAt('/bounties/link?bounty=b1')
+      expect(await screen.findByTestId('wallet-link-page')).toBeInTheDocument()
+      expect(at()).toBe('/bounties/link?bounty=b1')
+    })
+  })
+
+  describe('Page not found', () => {
+    it.each(['/some-unknown-page', '/bounty', '/bounties/foo', '/dashboardx', '/signin/extra'])(
+      '%s shows Page not found, signed out, without a sign-in detour',
+      async (path) => {
+        renderAppAt(path)
+        expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+        expect(window.location.pathname).toBe(path)
+        expect(screen.getByText(new RegExp(path.replace(/[/]/g, '\\/') + '$'))).toBeInTheDocument()
+      },
+    )
+
+    it('also for a signed-in visitor', async () => {
+      mockUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false })
+      renderAppAt('/nope')
+      expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+    })
+
+    it('does not swallow existing routes or deep links', async () => {
+      renderAppAt('/support')
+      expect(await screen.findByTestId('support-page')).toBeInTheDocument()
+      mockUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false })
+      renderAppAt('/dashboard?tab=leaderboard')
+      expect(await screen.findByTestId('dashboard-page')).toBeInTheDocument()
+      expect(at()).toBe('/dashboard?tab=leaderboard')
+      renderAppAt('/notifications')
+      await waitFor(() => expect(at()).toBe('/dashboard?tab=notifications'))
+    })
   })
 })

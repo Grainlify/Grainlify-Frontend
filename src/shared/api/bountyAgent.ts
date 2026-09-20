@@ -1,10 +1,11 @@
 /**
- * Read-only client for the Grainlify bounty agent's public API.
+ * Client for the Grainlify bounty agent.
  *
  * The agent is a separate service (repo Grainlify/grainlify-bounty-agent, its
  * own Railway project), not this backend: it prices and reviews bounties and
- * pays them on Solana. It answers only GET, and only grainlify.com origins get
- * CORS, so nothing here carries a token or can change anything.
+ * pays them on Solana. Its public API is read-only; the one write, linking a
+ * wallet, is authorised by two signatures in the body (Grainlify's and the
+ * wallet's), never by a token. Only grainlify.com origins get CORS.
  */
 
 export const BOUNTY_AGENT_URL: string =
@@ -85,6 +86,37 @@ async function get<T>(path: string): Promise<T> {
 export const getBounties = () => get<{ status: BountyAgentStatus; bounties: PublicBounty[] }>('/public/bounties');
 export const getBounty = (id: string) => get<{ status: BountyAgentStatus; bounty: PublicBounty }>(`/public/bounties/${encodeURIComponent(id)}`);
 export const getBountyLedger = () => get<BountyLedger>('/public/ledger');
+
+export interface LinkedWallet {
+  linked: true;
+  wallet: string;
+  githubLogin: string;
+  replaced: string | null;
+  unchanged: boolean;
+}
+
+/** Why the agent refused a link, in words for the person who asked. */
+const LINK_REFUSALS: Record<string, string> = {
+  expired: 'That request expired before it was signed. Start again; it takes a few seconds.',
+  nonce_used: 'That request was already used. Start again to get a fresh one.',
+  wallet_linked_to_another_account: 'That wallet is already linked to another GitHub account. Use a different wallet, or unlink it from the other account first.',
+  bad_wallet_signature: 'The signature did not match this wallet. Try again from the same wallet.',
+  bad_countersignature: 'Grainlify could not confirm who you are. Sign in again and retry.',
+  session_links_off: 'Wallet linking is switched off right now. Try again later.',
+};
+
+/** Stores the link: Grainlify's countersigned message plus the wallet's signature over it. */
+export async function linkWalletFromSession(body: { message: string; countersignature: string; walletSignature: string }): Promise<LinkedWallet> {
+  let res: Response;
+  try {
+    res = await fetch(`${BOUNTY_AGENT_URL}/link/session`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  } catch {
+    throw new BountyAgentError(0, 'The bounty agent could not be reached.');
+  }
+  const data = (await res.json().catch(() => ({}))) as { error?: string } & Partial<LinkedWallet>;
+  if (!res.ok) throw new BountyAgentError(res.status, LINK_REFUSALS[data.error ?? ''] ?? `The bounty agent answered ${res.status}.`);
+  return data as LinkedWallet;
+}
 
 /** "20 USDC" on mainnet, "20 test USDC" anywhere else: devnet tokens have no value and must say so. */
 export function formatBountyAmount(b: Pick<PublicBounty, 'amountMinor' | 'decimals' | 'currency' | 'network'>): string {

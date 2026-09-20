@@ -1,52 +1,62 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, ExternalLink, Smartphone } from 'lucide-react';
+import type { WalletAccount } from '@wallet-standard/base';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { formatBountyAmount, getBounty, type PublicBounty } from '../../../shared/api/bountyAgent';
+import { useAuth } from '../../../shared/contexts/AuthContext';
+import { ApiError, createBountyWalletChallenge, type BountyWalletChallenge } from '../../../shared/api/client';
+import { formatBountyAmount, getBounty, linkWalletFromSession, type LinkedWallet, type PublicBounty } from '../../../shared/api/bountyAgent';
 import {
-  connectSolanaWallet,
-  detectSolanaWallet,
-  findSolanaWallet,
-  isGitHubLogin,
-  linkMessage,
-  signLinkMessage,
+  KNOWN_WALLETS,
+  WalletRejectedError,
+  base58,
+  connectWallet,
+  phoneOs,
+  registerMobileWalletAdapter,
+  signText,
   walletBrowseLink,
-  type SolanaWalletId,
+  watchSolanaWallets,
+  type SolanaWallet,
 } from '../../../shared/wallet/solana';
+import grainlifyLogo from '../../../assets/grainlify_log.svg';
 
-/** /bounties/link: link a Solana wallet to a GitHub account, from a phone.
+/** /bounties/link: link a Solana wallet to the signed-in GitHub account.
  *
- * Public, because it has to open inside the wallet app's own browser, where
- * nobody is signed in to Grainlify. It needs no account: GitHub proves who
- * posts the comment, the signature proves the wallet. Nothing is sent
- * on-chain and the page never sees a key.
+ * Behind the sign-in guard. The GitHub account comes from the Grainlify
+ * session, never from a field: Grainlify-Backend writes it into a message with
+ * the wallet, a single-use nonce and a ten-minute expiry and countersigns it,
+ * the wallet signs the same message, and the bounty agent checks both before
+ * it stores the link. Nothing is sent on-chain and the page never sees a key.
  *
- * The frame is the sign-in page's (SignInPage) - its ground, card, logo tile
- * and notice box - and the parts inside are the payout-address cards'. Static
- * behind the form, per docs/design-system.md (Tier A, sign-in rule). */
+ * The frame is the sign-in page's (SignInPage) - its ground, card, logo and
+ * notice box - with static glows: nothing moves behind a form, per
+ * docs/design-system.md. */
 
-type Step = 'open' | 'sign' | 'post';
-
-const WALLETS: { id: SolanaWalletId; name: string; logo: string }[] = [
-  { id: 'phantom', name: 'Phantom', logo: '/wallets/phantom.svg' },
-  { id: 'solflare', name: 'Solflare', logo: '/wallets/solflare.svg' },
-];
+type Step = 'connect' | 'sign' | 'linked';
 
 export function WalletLinkPage() {
   const { theme } = useTheme();
   const dark = theme === 'dark';
+  const { user } = useAuth();
+  const login = user?.github?.login ?? null;
   const [params] = useSearchParams();
   const bountyId = params.get('bounty');
+  const os = useMemo(() => phoneOs(), []);
 
   const [bounty, setBounty] = useState<PublicBounty | null>(null);
-  const [step, setStep] = useState<Step>(() => (detectSolanaWallet() ? 'sign' : 'open'));
-  const [login, setLogin] = useState('');
-  const [walletId, setWalletId] = useState<SolanaWalletId | null>(() => detectSolanaWallet());
-  const [address, setAddress] = useState<string | null>(null);
-  const [comment, setComment] = useState<string | null>(null);
+  const [wallets, setWallets] = useState<SolanaWallet[]>([]);
+  const [step, setStep] = useState<Step>('connect');
+  const [wallet, setWallet] = useState<SolanaWallet | null>(null);
+  const [account, setAccount] = useState<WalletAccount | null>(null);
+  const [challenge, setChallenge] = useState<BountyWalletChallenge | null>(null);
+  const [linked, setLinked] = useState<LinkedWallet | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void registerMobileWalletAdapter(window.location.origin);
+    return watchSolanaWallets(setWallets);
+  }, []);
 
   useEffect(() => {
     if (!bountyId) return;
@@ -59,68 +69,86 @@ export function WalletLinkPage() {
     };
   }, [bountyId]);
 
-  const preview = useMemo(() => linkMessage(login || 'your-github-username', address ?? 'your-wallet-address', new Date().toISOString().slice(0, 17) + '00Z'), [login, address]);
-
   const c = {
     strong: dark ? 'text-[#f5efe5]' : 'text-[#2d2820]',
     muted: dark ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]',
     card: dark ? 'bg-white/[0.08] border-white/15' : 'bg-white/[0.15] border-white/25',
     notice: dark ? 'bg-white/[0.06] border-white/10' : 'bg-white/[0.12] border-white/20',
     picker: dark ? 'border-white/15 bg-black/25 text-[#f5efe5]' : 'border-black/15 bg-white/[0.35] text-[#2d2820]',
-    input: dark ? 'bg-white/[0.06] border-white/10 text-[#f5efe5] placeholder:text-white/30' : 'bg-white/[0.4] border-white/40 text-[#2d2820] placeholder:text-black/30',
     msg: dark ? 'border-white/12 bg-black/25 text-[#f5efe5]' : 'border-black/12 bg-white/[0.45] text-[#2d2820]',
     green: dark ? 'text-[#4ade80]' : 'text-[#123f22]',
     secondary: dark ? 'border-white/15 text-[#b8a898] hover:bg-white/[0.06]' : 'border-black/15 text-[#4a4038] hover:bg-white/[0.30]',
   };
   const primary = 'min-h-[52px] w-full rounded-[12px] border border-white/10 bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[16px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center justify-center';
+  const row = `flex min-h-[52px] items-center gap-3 rounded-[12px] border px-3 py-2 text-left hover:border-[#c9983a]/60 ${c.picker}`;
+  const pill = `rounded-full bg-[#22c55e]/20 px-2.5 py-1 text-[12px] font-bold ${c.green}`;
 
-  const here = typeof window !== 'undefined' ? window.location.href : 'https://grainlify.com/bounties/link';
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://grainlify.com';
+  const here = window.location.href;
+  const origin = window.location.origin;
+  const detected = wallets.filter((w) => !w.mobileAdapter);
+  const mwa = wallets.find((w) => w.mobileAdapter) ?? null;
+  const notDetected = KNOWN_WALLETS.filter((k) => !detected.some((w) => w.name === k.name));
+  // On a phone outside any wallet, the page has to move into the wallet app's browser.
+  const outsideWalletOnPhone = os !== null && detected.length === 0;
 
-  async function connect(id: SolanaWalletId) {
-    setError(null);
-    const provider = findSolanaWallet(id);
-    if (!provider) {
-      setError(`${id === 'phantom' ? 'Phantom' : 'Solflare'} is not available in this browser. Open this page from the wallet app.`);
-      return;
+  function explain(e: unknown): string {
+    if (e instanceof WalletRejectedError) return e.message + " Sign again when you're ready.";
+    if (e instanceof ApiError && (e.data as { error?: string } | undefined)?.error === 'github_not_linked') {
+      return 'Your Grainlify account has no GitHub account attached, and bounties are paid by GitHub account. Sign in with GitHub and try again.';
     }
-    try {
-      setWalletId(id);
-      setAddress(await connectSolanaWallet(provider));
-    } catch {
-      setError('The wallet did not connect. Try again, and approve the request in the wallet.');
-    }
+    return e instanceof Error ? e.message : 'Something went wrong. Try again.';
   }
 
-  async function sign() {
-    if (!walletId || !address) return;
-    const provider = findSolanaWallet(walletId);
-    if (!provider) return;
-    setBusy(true);
+  async function connect(w: SolanaWallet) {
     setError(null);
+    setBusy(true);
     try {
-      const r = await signLinkMessage(provider, login, address);
-      setComment(r.comment);
-      setStep('post');
-      try {
-        await navigator.clipboard.writeText(r.comment);
-        setCopied(true);
-      } catch {
-        setCopied(false); // some in-app browsers refuse; the copy button is still there
-      }
-    } catch {
-      setError('Signing was cancelled or failed. Nothing was sent.');
+      const acc = await connectWallet(w);
+      const ch = await createBountyWalletChallenge(acc.address);
+      setWallet(w);
+      setAccount(acc);
+      setChallenge(ch);
+      setStep('sign');
+    } catch (e) {
+      setError(explain(e));
     } finally {
       setBusy(false);
     }
   }
 
-  const steps: { id: Step; label: string }[] = [
-    { id: 'open', label: 'Open' },
+  async function sign() {
+    if (!wallet || !account || !challenge) return;
+    setError(null);
+    setBusy(true);
+    try {
+      // A request older than its ten minutes would be refused; fetch a fresh one first.
+      let ch = challenge;
+      if (Date.parse(ch.expires_at) - Date.now() < 30_000) {
+        ch = await createBountyWalletChallenge(account.address);
+        setChallenge(ch);
+      }
+      const signature = await signText(wallet, account, ch.message);
+      const result = await linkWalletFromSession({ message: ch.message, countersignature: ch.countersignature, walletSignature: base58(signature) });
+      setLinked(result);
+      setStep('linked');
+    } catch (e) {
+      setError(explain(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const steps = [
+    { id: 'connect', label: 'Connect' },
     { id: 'sign', label: 'Sign' },
-    { id: 'post', label: 'Post' },
+    { id: 'linked', label: 'Linked' },
   ];
-  const stepIndex = steps.findIndex((s) => s.id === step);
+  const stepIndex = step === 'linked' ? steps.length : steps.findIndex((s) => s.id === step);
+  const who = (
+    <p className={`text-[15px] ${c.muted}`}>
+      Payouts for <span className={`font-semibold ${c.strong}`}>@{login ?? 'you'}</span> go to the wallet you link.
+    </p>
+  );
 
   return (
     <div className={`min-h-screen flex items-start sm:items-center justify-center px-4 sm:px-6 py-16 relative overflow-hidden ${dark ? 'bg-gradient-to-br from-[#1a1512] via-[#231c17] to-[#2d241d]' : 'bg-gradient-to-br from-[#e8dfd0] via-[#d4c5b0] to-[#c9b89a]'}`}>
@@ -128,8 +156,7 @@ export function WalletLinkPage() {
       <div aria-hidden="true" className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-[#c9983a]/30 blur-3xl" />
       <div aria-hidden="true" className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-[#d4af37]/20 blur-3xl" />
 
-      {/* Home, not the dashboard: inside a wallet's browser nobody is signed in. */}
-      <Link to="/" className={`absolute top-6 left-6 flex items-center space-x-2 hover:text-[#c9983a] font-medium ${c.muted}`}>
+      <Link to="/dashboard?tab=bounties" className={`absolute top-6 left-6 flex items-center space-x-2 hover:text-[#c9983a] font-medium ${c.muted}`}>
         <ArrowLeft className="w-5 h-5" />
         <span>Back to Grainlify</span>
       </Link>
@@ -137,7 +164,7 @@ export function WalletLinkPage() {
       <div className="relative w-full max-w-md">
         <div className={`backdrop-blur-[40px] border rounded-[28px] p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] flex flex-col gap-5 ${c.card}`}>
           <div className="flex items-center justify-center space-x-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#c9983a] to-[#d4af37] shadow-[0_2px_8px_rgba(201,152,58,0.4)]" />
+            <img src={grainlifyLogo} alt="" className="w-10 h-10" />
             <span className={`text-2xl font-semibold ${c.strong}`}>Grainlify</span>
           </div>
 
@@ -156,7 +183,7 @@ export function WalletLinkPage() {
             ))}
           </ol>
 
-          {bounty && (
+          {bounty && step !== 'linked' && (
             <div className={`flex flex-col gap-1 rounded-[12px] border p-3 text-[13px] leading-[1.5] ${c.strong} ${dark ? 'border-[#c9983a]/30 bg-[#c9983a]/[0.08]' : 'border-[#c9983a]/35 bg-[#c9983a]/10'}`}>
               <span className="font-semibold">You're claiming</span>
               <span>
@@ -165,102 +192,99 @@ export function WalletLinkPage() {
             </div>
           )}
 
-          {step === 'open' && (
+          {step === 'connect' && (
             <>
               <div className="text-center">
                 <h1 className={`text-[26px] leading-tight font-bold mb-2 ${c.strong}`}>Link a wallet to get paid</h1>
-                <p className={`text-[16px] ${c.muted}`}>Sign one message in your wallet app.</p>
-              </div>
-              {WALLETS.map((w) => (
-                <a key={w.id} href={walletBrowseLink(w.id, here, origin)} className={`flex min-h-[52px] items-center gap-3 rounded-[12px] border px-3 py-2 hover:border-[#c9983a]/60 ${c.picker}`}>
-                  <img src={w.logo} alt="" className="w-8 h-8 rounded-[8px]" />
-                  <span className="flex-1 text-[15px] font-semibold">Open in {w.name}</span>
-                  <ChevronRight className="w-4 h-4" />
-                </a>
-              ))}
-              <button type="button" onClick={() => setStep('sign')} className={`min-h-[52px] rounded-[12px] border border-dashed text-[14px] ${dark ? 'border-white/15' : 'border-black/15'} ${c.muted}`}>
-                Already in your wallet's browser? Continue
-              </button>
-            </>
-          )}
-
-          {step === 'sign' && (
-            <>
-              <h1 className={`text-center text-[26px] leading-tight font-bold ${c.strong}`}>Sign with your wallet</h1>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="gh-login" className={`text-[14px] font-semibold ${c.strong}`}>Your GitHub username</label>
-                <input
-                  id="gh-login"
-                  value={login}
-                  onChange={(e) => setLogin(e.target.value.trim())}
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  placeholder="octocat"
-                  className={`min-h-[44px] rounded-[12px] border px-4 py-2.5 text-[16px] ${c.input}`}
-                />
-                {login && !isGitHubLogin(login) && <span className={`text-[12px] ${dark ? 'text-[#fca5a5]' : 'text-[#6f1818]'}`}>That is not a valid GitHub username.</span>}
+                {who}
               </div>
 
-              {address ? (
-                <div className={`flex min-h-[52px] items-center gap-3 rounded-[12px] border px-3 py-2 ${c.picker}`}>
-                  <img src={WALLETS.find((w) => w.id === walletId)!.logo} alt="" className="w-8 h-8 rounded-[8px]" />
-                  <span className="flex-1 min-w-0 truncate font-mono text-[13px]">{address.slice(0, 6)}…{address.slice(-5)}</span>
-                  <span className={`rounded-full bg-[#22c55e]/20 px-2.5 py-1 text-[12px] font-bold ${c.green}`}>Connected</span>
-                </div>
+              {outsideWalletOnPhone ? (
+                <>
+                  {mwa && (
+                    <button type="button" disabled={busy} onClick={() => connect(mwa)} className={row}>
+                      <span className="w-8 h-8 inline-flex items-center justify-center">
+                        <Smartphone className="w-5 h-5" />
+                      </span>
+                      <span className="flex-1 text-[15px] font-semibold">Use a wallet app on this phone</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
+                  <span className={`text-[13px] ${c.muted}`}>{mwa ? 'Or open this page inside your wallet' : 'Open this page inside your wallet app'}</span>
+                  {(['Phantom', 'Solflare'] as const).map((name) => (
+                    <a key={name} href={walletBrowseLink(name, here, origin)} className={row}>
+                      <img src={KNOWN_WALLETS.find((k) => k.name === name)!.icon} alt="" className="w-8 h-8 rounded-[8px]" />
+                      <span className="flex-1 text-[15px] font-semibold">Open in {name}</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </a>
+                  ))}
+                  <a href="https://backpack.app/download" target="_blank" rel="noreferrer" className={row}>
+                    <img src="/wallets/backpack.png" alt="" className="w-8 h-8 rounded-[8px]" />
+                    <span className="flex-1 text-[15px] font-semibold">Get Backpack</span>
+                    <span className={`inline-flex items-center gap-1.5 text-[13px] ${c.muted}`}>
+                      Install <ExternalLink className="w-3.5 h-3.5" />
+                    </span>
+                  </a>
+                </>
               ) : (
-                WALLETS.map((w) => (
-                  <button key={w.id} type="button" onClick={() => connect(w.id)} className={`flex min-h-[52px] items-center gap-3 rounded-[12px] border px-3 py-2 text-left hover:border-[#c9983a]/60 ${c.picker}`}>
-                    <img src={w.logo} alt="" className="w-8 h-8 rounded-[8px]" />
-                    <span className="flex-1 text-[15px] font-semibold">Connect {w.name}</span>
-                  </button>
-                ))
+                <>
+                  {detected.length > 0 && <span className={`text-[13px] ${c.muted}`}>Found in this browser</span>}
+                  {detected.map((w) => (
+                    <button key={w.name} type="button" disabled={busy} onClick={() => connect(w)} className={row}>
+                      <img src={w.icon} alt="" className="w-8 h-8 rounded-[8px]" />
+                      <span className="flex-1 text-[15px] font-semibold">{w.name}</span>
+                      <span className={pill}>Detected</span>
+                    </button>
+                  ))}
+                  {notDetected.length > 0 && (
+                    <span className={`text-[13px] ${c.muted}`}>{detected.length ? 'Other Solana wallets' : 'No Solana wallet found in this browser. Install one:'}</span>
+                  )}
+                  {notDetected.map((k) => (
+                    <a key={k.name} href={k.install} target="_blank" rel="noreferrer" className={row}>
+                      <img src={k.icon} alt="" className="w-8 h-8 rounded-[8px]" />
+                      <span className="flex-1 text-[15px] font-semibold">{k.name}</span>
+                      <span className={`inline-flex items-center gap-1.5 text-[13px] ${c.muted}`}>
+                        Install <ExternalLink className="w-3.5 h-3.5" />
+                      </span>
+                    </a>
+                  ))}
+                </>
               )}
-
-              <div className="flex flex-col gap-1.5">
-                <span className={`text-[13px] ${c.muted}`}>You're signing exactly this:</span>
-                <pre className={`whitespace-pre-wrap break-all rounded-[12px] border p-3 font-mono text-[11px] leading-[1.6] ${c.msg}`}>{preview}</pre>
-              </div>
-
-              <button type="button" disabled={!address || !isGitHubLogin(login) || busy} onClick={sign} className={primary}>
-                {busy ? 'Waiting for the wallet…' : 'Sign message'}
-              </button>
-              <p className={`rounded-[12px] border p-3 text-center text-[12px] ${c.notice} ${c.muted}`}>Free. No transaction. We never ask for a recovery phrase.</p>
             </>
           )}
 
-          {step === 'post' && comment && (
+          {step === 'sign' && wallet && account && challenge && (
             <>
               <div className="text-center">
-                <h1 className={`text-[26px] leading-tight font-bold mb-2 ${c.strong}`}>Now post it on GitHub</h1>
+                <h1 className={`text-[26px] leading-tight font-bold mb-2 ${c.strong}`}>Sign to confirm</h1>
+                {who}
+              </div>
+              <div className={`flex min-h-[52px] items-center gap-3 rounded-[12px] border px-3 py-2 ${c.picker}`}>
+                <img src={wallet.icon} alt="" className="w-8 h-8 rounded-[8px]" />
+                <span className="flex-1 min-w-0 truncate font-mono text-[13px]">
+                  {account.address.slice(0, 6)}…{account.address.slice(-5)}
+                </span>
+                <span className={pill}>Connected</span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className={`text-[13px] ${c.muted}`}>Your wallet will show exactly this:</span>
+                <pre className={`whitespace-pre-wrap [overflow-wrap:anywhere] rounded-[12px] border p-3 font-mono text-[11px] leading-[1.6] ${c.msg}`}>{challenge.message}</pre>
+              </div>
+            </>
+          )}
+
+          {step === 'linked' && linked && (
+            <>
+              <div className="text-center">
+                <h1 className={`text-[26px] leading-tight font-bold mb-2 ${c.strong}`}>Wallet linked</h1>
                 <p className={`text-[15px] ${c.muted}`}>
-                  Paste it as a comment {bounty ? 'on the bounty issue' : 'on any bounty issue'} from @{login}, within 24 hours.
+                  Bounties you win as <span className={`font-semibold ${c.strong}`}>@{linked.githubLogin}</span> are paid here.
                 </p>
               </div>
               <div className={`flex flex-col gap-1 rounded-[12px] border border-[#22c55e]/30 bg-[#22c55e]/[0.08] p-3 text-[13px] leading-[1.5] ${c.strong}`}>
-                <span className={`font-semibold ${c.green}`}>{copied ? 'Signed and copied' : 'Signed'}</span>
-                <span>The agent replies on the issue once your wallet is linked.</span>
+                <span className={`font-semibold ${c.green}`}>{linked.unchanged ? 'Already linked' : 'Linked just now'}</span>
+                <span className="font-mono break-all">{linked.wallet}</span>
               </div>
-              <pre className={`whitespace-pre-wrap break-all rounded-[12px] border p-3 font-mono text-[11px] leading-[1.6] ${c.msg}`}>{comment}</pre>
-              <button
-                type="button"
-                className={primary}
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(comment);
-                    setCopied(true);
-                  } catch {
-                    setCopied(false);
-                  }
-                }}
-              >
-                {copied ? 'Copied' : 'Copy comment'}
-              </button>
-              {bounty && (
-                <a href={bounty.issueUrl} target="_blank" rel="noreferrer" className={`min-h-[52px] rounded-[12px] border bg-transparent inline-flex items-center justify-center text-[15px] font-medium ${c.secondary}`}>
-                  Open the issue on GitHub
-                </a>
-              )}
             </>
           )}
 
@@ -268,6 +292,26 @@ export function WalletLinkPage() {
             <p role="alert" className={`rounded-[12px] border p-3 text-[13px] ${dark ? 'border-[#ef4444]/25 bg-[#ef4444]/10 text-[#fca5a5]' : 'border-[#ef4444]/25 bg-[#ef4444]/[0.06] text-[#6f1818]'}`}>
               {error}
             </p>
+          )}
+
+          {step === 'sign' && (
+            <>
+              <button type="button" disabled={busy} onClick={sign} className={primary}>
+                {busy ? 'Waiting for the wallet…' : error ? 'Try again' : 'Sign message'}
+              </button>
+              <p className={`rounded-[12px] border p-3 text-center text-[12px] ${c.notice} ${c.muted}`}>Free. No transaction. Valid once, for 10 minutes. We never ask for a recovery phrase.</p>
+            </>
+          )}
+
+          {step === 'linked' && (
+            <>
+              <Link to="/dashboard?tab=bounties" className={primary}>
+                Back to Bounties
+              </Link>
+              <Link to="/dashboard?tab=bounties&subtab=ledger" className={`min-h-[52px] rounded-[12px] border bg-transparent inline-flex items-center justify-center text-[15px] font-medium ${c.secondary}`}>
+                Open the ledger
+              </Link>
+            </>
           )}
 
           <Link to="/support" className="self-center text-[13px] font-medium text-[#c9983a] hover:text-[#d4af37]">

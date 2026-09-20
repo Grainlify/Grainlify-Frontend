@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ArrowLeft, Github } from 'lucide-react';
 import { getGitHubLoginUrl } from '../../../shared/api/client';
+import grainlifyLogo from '../../../assets/grainlify_log.svg';
 
 export function SignUpPage() {
   const { theme } = useTheme();
@@ -59,7 +60,7 @@ export function SignUpPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex items-center space-x-3 justify-center mb-4">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#c9983a] to-[#d4af37] shadow-[0_2px_8px_rgba(201,152,58,0.4)]" />
+              <img src={grainlifyLogo} alt="" className="w-10 h-10" />
               <span className={`text-2xl font-semibold transition-colors ${
                 theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
               }`}>Grainlify</span>

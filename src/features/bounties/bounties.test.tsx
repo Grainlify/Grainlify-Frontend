@@ -1,15 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { BountiesProgramPage } from './pages/BountiesProgramPage'
 import { BountyLedger } from './components/BountyLedger'
 import { WalletLinkPage } from './pages/WalletLinkPage'
-import { getBounties, getBounty, getBountyLedger, type BountyLedger as Ledger, type PublicBounty } from '../../shared/api/bountyAgent'
+import { BountyAgentError, getBounties, getBounty, getBountyLedger, linkWalletFromSession, type BountyLedger as Ledger, type PublicBounty } from '../../shared/api/bountyAgent'
+import { ApiError, createBountyWalletChallenge } from '../../shared/api/client'
+import { registerFakeWallet } from '../../test/fakeSolanaWallet'
+import { base58 } from '../../shared/wallet/solana'
 
 vi.mock('../../shared/api/bountyAgent', async (orig) => {
   const real = await orig<typeof import('../../shared/api/bountyAgent')>()
-  return { ...real, getBounties: vi.fn(), getBounty: vi.fn(), getBountyLedger: vi.fn() }
+  return { ...real, getBounties: vi.fn(), getBounty: vi.fn(), getBountyLedger: vi.fn(), linkWalletFromSession: vi.fn() }
+})
+vi.mock('../../shared/api/client', async (orig) => {
+  const real = await orig<typeof import('../../shared/api/client')>()
+  return { ...real, createBountyWalletChallenge: vi.fn() }
+})
+vi.mock('../../shared/contexts/AuthContext', async (orig) => {
+  const real = await orig<typeof import('../../shared/contexts/AuthContext')>()
+  return { ...real, useAuth: () => ({ user: { id: 'u1', role: 'contributor', github: { login: 'Octocat' } }, isAuthenticated: true, isLoading: false }) }
 })
 
 const devnet = {
@@ -108,48 +119,127 @@ describe('BountyLedger', () => {
 })
 
 describe('WalletLinkPage', () => {
-  beforeEach(() => vi.resetAllMocks())
+  const WALLET = 'H4AbmvyPav1oLUgcKGQUpsSdk1Uh7EkYLQX7qHJdUCmu'
+  const message = (nonce = 'a'.repeat(32)) =>
+    `Grainlify: link this wallet to my GitHub account\nGitHub: Octocat (id 583231)\nWallet: ${WALLET}\nNonce: ${nonce}\nIssued: 2026-09-19T14:02:11Z\nExpires: 2026-09-19T14:12:11Z`
+  const challenge = (over: Partial<{ message: string; expires_at: string }> = {}) => ({
+    message: message(),
+    countersignature: 'Q09VTlRFUlNJR04=',
+    expires_at: new Date(Date.now() + 9 * 60_000).toISOString(),
+    ...over,
+  })
+  const cleanup: (() => void)[] = []
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(getBounty).mockResolvedValue({ status: devnet, bounty: bounty() })
+    vi.mocked(createBountyWalletChallenge).mockResolvedValue(challenge())
+    vi.mocked(linkWalletFromSession).mockResolvedValue({ linked: true, wallet: WALLET, githubLogin: 'Octocat', replaced: null, unchanged: false })
+  })
   afterEach(() => {
-    delete window.phantom
-    delete window.solflare
+    cleanup.splice(0).forEach((f) => f())
+    vi.restoreAllMocks()
   })
 
-  it('outside a wallet, offers to open the page inside Phantom or Solflare', async () => {
-    vi.mocked(getBounty).mockResolvedValue({ status: devnet, bounty: bounty() })
+  it('names the signed-in account and asks for no username', async () => {
+    renderWithProviders(<WalletLinkPage />, { route: '/bounties/link' })
+    expect(await screen.findByText('@Octocat')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    // The real logo (src/assets/grainlify_log.svg), not the old placeholder square.
+    const logo = document.querySelector('img.w-10.h-10')
+    expect(logo?.getAttribute('src')).toMatch(/grainlify_log|^data:image\/svg/)
+    expect(document.querySelector('div.w-10.h-10.rounded-lg')).toBeNull()
+  })
+
+  it('on a computer, lists detected wallets first and install links for the rest, including ones that load late', async () => {
+    cleanup.push(registerFakeWallet({ name: 'Phantom' }).unregister)
+    renderWithProviders(<WalletLinkPage />, { route: '/bounties/link' })
+    expect(await screen.findByText('Found in this browser')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Phantom\s*Detected/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Solflare\s*Install/ })).toHaveAttribute('href', 'https://solflare.com/download')
+    expect(screen.getByRole('link', { name: /Backpack\s*Install/ })).toHaveAttribute('href', 'https://backpack.app/download')
+    // Solflare's extension registering after the page rendered still shows up.
+    cleanup.push(registerFakeWallet({ name: 'Solflare' }).unregister)
+    expect(await screen.findByRole('button', { name: /Solflare\s*Detected/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Solflare\s*Install/ })).not.toBeInTheDocument()
+  })
+
+  it('connects, signs exactly Grainlify\u2019s message, and stores the link', async () => {
+    const fake = registerFakeWallet({ name: 'Phantom' })
+    cleanup.push(fake.unregister)
     renderWithProviders(<WalletLinkPage />, { route: '/bounties/link?bounty=b1' })
     expect(await screen.findByText(/20 test USDC/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Open in Phantom/ }).getAttribute('href')).toMatch(/^https:\/\/phantom\.app\/ul\/browse\//)
-    expect(screen.getByRole('link', { name: /Open in Solflare/ }).getAttribute('href')).toMatch(/^https:\/\/solflare\.com\/ul\/v1\/browse\//)
-  })
-
-  it('inside Phantom: connects, signs exactly the link message, and hands back the comment', async () => {
-    let signed = ''
-    window.phantom = {
-      solana: {
-        isPhantom: true,
-        connect: async () => ({ publicKey: { toString: () => 'H4AbmvyPav1oLUgcKGQUpsSdk1Uh7EkYLQX7qHJdUCmu' } }),
-        signMessage: async (m: Uint8Array) => {
-          signed = new TextDecoder().decode(m)
-          return { signature: new Uint8Array([1, 2, 3]) }
-        },
-      },
-    }
-    renderWithProviders(<WalletLinkPage />, { route: '/bounties/link' })
-    const sign = screen.getByRole('button', { name: 'Sign message' })
-    expect(sign).toBeDisabled()
-    await userEvent.type(screen.getByLabelText('Your GitHub username'), 'Baskarayelu')
-    await userEvent.click(screen.getByRole('button', { name: /Connect Phantom/ }))
-    await waitFor(() => expect(screen.getByText('Connected')).toBeInTheDocument())
+    await userEvent.click(await screen.findByRole('button', { name: /Phantom\s*Detected/ }))
+    expect(createBountyWalletChallenge).toHaveBeenCalledWith(WALLET)
+    expect(await screen.findByRole('heading', { name: 'Sign to confirm' })).toBeInTheDocument()
+    expect(screen.getByText(/Nonce: a{32}/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Sign message' }))
-    expect(await screen.findByText(/Now post it on GitHub/)).toBeInTheDocument()
-    expect(signed).toMatch(/^Grainlify bounty agent: link this wallet to my GitHub account\nGitHub: baskarayelu\nWallet: H4AbmvyPav1oLUgcKGQUpsSdk1Uh7EkYLQX7qHJdUCmu\nIssued: /)
-    expect(screen.getByText(/^\/grainlify link H4AbmvyPav1oLUgcKGQUpsSdk1Uh7EkYLQX7qHJdUCmu Ldp /)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Wallet linked' })).toBeInTheDocument()
+    expect(fake.signed).toEqual([message()])
+    expect(linkWalletFromSession).toHaveBeenCalledWith({ message: message(), countersignature: 'Q09VTlRFUlNJR04=', walletSignature: base58(new Uint8Array(64).fill(7)) })
+    expect(screen.getByRole('link', { name: 'Back to Bounties' })).toHaveAttribute('href', '/dashboard?tab=bounties')
+    expect(screen.getByRole('link', { name: 'Open the ledger' })).toHaveAttribute('href', '/dashboard?tab=bounties&subtab=ledger')
   })
 
-  it('refuses an invalid GitHub username', async () => {
-    window.phantom = { solana: { isPhantom: true, connect: async () => ({ publicKey: { toString: () => 'W' } }), signMessage: async () => new Uint8Array() } }
+  it('says so plainly when the person declines in the wallet, and lets them try again', async () => {
+    let decline = true
+    cleanup.push(registerFakeWallet({ name: 'Phantom', signMessage: async () => (decline ? Promise.reject(Object.assign(new Error('User rejected'), { code: 4001 })) : new Uint8Array(64).fill(7)) }).unregister)
     renderWithProviders(<WalletLinkPage />, { route: '/bounties/link' })
-    await userEvent.type(screen.getByLabelText('Your GitHub username'), 'bad--name')
-    expect(screen.getByText('That is not a valid GitHub username.')).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: /Phantom\s*Detected/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Sign message' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('You declined the request in Phantom, so nothing was linked.')
+    expect(linkWalletFromSession).not.toHaveBeenCalled()
+    decline = false
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('heading', { name: 'Wallet linked' })).toBeInTheDocument()
+  })
+
+  it('shows the agent\u2019s refusal, such as a wallet already on another account', async () => {
+    vi.mocked(linkWalletFromSession).mockRejectedValue(new BountyAgentError(409, 'That wallet is already linked to another GitHub account. Use a different wallet, or unlink it from the other account first.'))
+    cleanup.push(registerFakeWallet({ name: 'Phantom' }).unregister)
+    renderWithProviders(<WalletLinkPage />, { route: '/bounties/link' })
+    await userEvent.click(await screen.findByRole('button', { name: /Phantom\s*Detected/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Sign message' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('already linked to another GitHub account')
+    expect(screen.queryByRole('heading', { name: 'Wallet linked' })).not.toBeInTheDocument()
+  })
+
+  it('fetches a fresh request instead of signing one about to expire', async () => {
+    vi.mocked(createBountyWalletChallenge)
+      .mockResolvedValueOnce(challenge({ expires_at: new Date(Date.now() + 5_000).toISOString() }))
+      .mockResolvedValueOnce(challenge({ message: message('b'.repeat(32)) }))
+    const fake = registerFakeWallet({ name: 'Phantom' })
+    cleanup.push(fake.unregister)
+    renderWithProviders(<WalletLinkPage />, { route: '/bounties/link' })
+    await userEvent.click(await screen.findByRole('button', { name: /Phantom\s*Detected/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Sign message' }))
+    expect(await screen.findByRole('heading', { name: 'Wallet linked' })).toBeInTheDocument()
+    expect(fake.signed).toEqual([message('b'.repeat(32))])
+  })
+
+  it('explains an account with no GitHub attached', async () => {
+    vi.mocked(createBountyWalletChallenge).mockRejectedValue(new ApiError('github_not_linked', 409, { error: 'github_not_linked' }))
+    cleanup.push(registerFakeWallet({ name: 'Phantom' }).unregister)
+    renderWithProviders(<WalletLinkPage />, { route: '/bounties/link' })
+    await userEvent.click(await screen.findByRole('button', { name: /Phantom\s*Detected/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('no GitHub account attached')
+  })
+
+  it('on an iPhone outside any wallet, opens the page inside Phantom or Solflare', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)')
+    renderWithProviders(<WalletLinkPage />, { route: '/bounties/link?bounty=b1' })
+    expect(await screen.findByText('Open this page inside your wallet app')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open in Phantom/ }).getAttribute('href')).toMatch(/^https:\/\/phantom\.app\/ul\/browse\/http/)
+    expect(screen.getByRole('link', { name: /Open in Solflare/ }).getAttribute('href')).toMatch(/^https:\/\/solflare\.com\/ul\/v1\/browse\/http/)
+    expect(screen.getByRole('link', { name: /Get Backpack/ })).toBeInTheDocument()
+    expect(screen.queryByText('Use a wallet app on this phone')).not.toBeInTheDocument()
+  })
+
+  it('inside a wallet\u2019s own browser on a phone, connects directly', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Phantom')
+    cleanup.push(registerFakeWallet({ name: 'Phantom' }).unregister)
+    renderWithProviders(<WalletLinkPage />, { route: '/bounties/link' })
+    expect(await screen.findByRole('button', { name: /Phantom\s*Detected/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Open in Phantom/ })).not.toBeInTheDocument()
   })
 })

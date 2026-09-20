@@ -1,6 +1,17 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(signin|signup|auth/callback|support|dashboard|notifications|bounties|bounties/ledger|bounties/link)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(signin|signup|auth/callback|support|dashboard|notifications|bounties|bounties/ledger|bounties/link)/",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {

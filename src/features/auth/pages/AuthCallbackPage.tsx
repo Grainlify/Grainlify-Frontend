@@ -17,7 +17,9 @@ export function AuthCallbackPage() {
     if (isAuthenticated && !error) {
       const returnTo = sessionStorage.getItem('authReturnTo');
       sessionStorage.removeItem('authReturnTo');
-      if (returnTo && returnTo.startsWith('/dashboard')) {
+      // Only our own pages: /dashboard (every signed-in surface) and the
+      // Bounties wallet-link page, the one signed-in page outside it.
+      if (returnTo && (returnTo.startsWith('/dashboard') || returnTo === '/bounties/link' || returnTo.startsWith('/bounties/link?'))) {
         navigate(returnTo, { replace: true });
       } else {
         navigate('/dashboard', { replace: true });

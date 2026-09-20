@@ -995,6 +995,25 @@ export const createPayoutAddressChallenge = (chainId: string, address: string) =
     body: JSON.stringify({ chain_id: chainId, address }),
   });
 
+/** Grainlify Bounties: Grainlify's countersignature on a Solana wallet link.
+ *
+ *  The backend writes the signed-in account's GitHub identity, the wallet, a
+ *  single-use nonce and a ten-minute expiry into `message` and signs it; the
+ *  wallet signs the same message, and the bounty agent checks both before it
+ *  stores the link. Separate from the payout address above. */
+export interface BountyWalletChallenge {
+  message: string;
+  countersignature: string;
+  expires_at: string;
+}
+
+export const createBountyWalletChallenge = (wallet: string) =>
+  apiRequest<BountyWalletChallenge>('/me/bounty-wallet/challenge', {
+    method: 'POST',
+    requiresAuth: true,
+    body: JSON.stringify({ wallet }),
+  });
+
 /** The registration response, which carries one field the plain lookup does not.
  *
  *  `replaced` is null on a first registration and names the displaced address

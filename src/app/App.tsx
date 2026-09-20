@@ -16,8 +16,8 @@ const SignInPage = lazy(() => import("../features/auth").then((m) => ({ default:
 const SignUpPage = lazy(() => import("../features/auth").then((m) => ({ default: m.SignUpPage })));
 const AuthCallbackPage = lazy(() => import("../features/auth").then((m) => ({ default: m.AuthCallbackPage })));
 const Dashboard = lazy(() => import("../features/dashboard").then((m) => ({ default: m.Dashboard })));
-const PublicBountyLedgerPage = lazy(() => import("../features/bounties/pages/PublicBountyLedgerPage").then((m) => ({ default: m.PublicBountyLedgerPage })));
 const WalletLinkPage = lazy(() => import("../features/bounties/pages/WalletLinkPage").then((m) => ({ default: m.WalletLinkPage })));
+const NotFoundPage = lazy(() => import("../features/not-found/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 
 // Suspense fallback for lazy-loaded routes — matches Dashboard's own background
 // gradient so the swap from "loading" to "loaded" doesn't flash a different backdrop.
@@ -81,12 +81,25 @@ export default function App() {
                     redirected exactly them to the sign-in they could not
                     complete. */}
                 <Route path="/support" element={<SupportRoutePage />} />
-                {/* Grainlify Bounties, public for the same reason as /support:
-                    the ledger is for anyone checking a payout, and the link
-                    page opens inside a wallet app's browser, where nobody is
-                    signed in. Both only read from the bounty agent. */}
-                <Route path="/bounties/ledger" element={<PublicBountyLedgerPage />} />
-                <Route path="/bounties/link" element={<WalletLinkPage />} />
+                {/* Grainlify Bounties. Every page needs an account. /bounties
+                    and /bounties/ledger are aliases for the dashboard tab, like
+                    /notifications: the dashboard's guard sends a signed-out
+                    visitor to sign in and back. /bounties/link is its own
+                    page (it opens inside a wallet app's browser, where the
+                    dashboard chrome has no place) behind the same guard. */}
+                <Route path="/bounties" element={<Navigate to="/dashboard?tab=bounties" replace />} />
+                <Route
+                  path="/bounties/ledger"
+                  element={<Navigate to="/dashboard?tab=bounties&subtab=ledger" replace />}
+                />
+                <Route
+                  path="/bounties/link"
+                  element={
+                    <ProtectedRoute>
+                      <WalletLinkPage />
+                    </ProtectedRoute>
+                  }
+                />
                 {/* An alias, not a surface. Signed-in surfaces are ?tab= on
                     /dashboard - the convention the backend's link builder
                     states - so this exists only so a typed or pasted
@@ -104,6 +117,9 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+                {/* Last, and public: whatever no route above claims. The
+                    server answers these with HTTP 404 too (vercel.json). */}
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>
             <Toast />
