@@ -53,7 +53,7 @@ export function RailButton({
     <button
       type="button"
       data-tour-id={tourId}
-      aria-label={ariaLabel}
+      aria-label={ariaLabel || label}
       aria-current={isActive ? 'page' : undefined}
       onClick={onClick}
       onMouseEnter={(e) => {
