@@ -1036,6 +1036,55 @@ export interface BountyWalletChallenge {
  *  own link needs proof of who is asking, not proof of wallet control. Signed
  *  under a different domain from the link challenge so one can never stand in
  *  for the other. */
+/** The wallet linked to the signed-in account.
+ *
+ *  One call, to an origin the browser already trusts. Grainlify does the signed
+ *  hop to the bounty agent itself, because the browser doing it was the
+ *  problem: wallet extensions replace window.fetch and re-issue the page's
+ *  request from their own context, which broke that call four different ways
+ *  while the agent answered correctly each time. */
+export interface LinkedWalletState {
+  linked: boolean;
+  wallet: string | null;
+  linked_at: string | null;
+}
+
+export const getBountyWalletLink = () =>
+  apiRequest<LinkedWalletState>('/me/bounty-wallet/link', { requiresAuth: true });
+
+/** Completes a wallet link. The browser holds the wallet's signature, which
+ *  Grainlify cannot produce, so it still sends it -- but to this origin, which
+ *  relays it to the agent. Same reasoning as the read: a wallet extension
+ *  re-issuing a cross-origin POST is what broke this path. */
+const BOUNTY_LINK_REFUSALS: Record<string, string> = {
+  expired: 'That request expired before it was signed. Start again; it takes a few seconds.',
+  nonce_used: 'That request was already used. Start again to get a fresh one.',
+  wallet_linked_to_another_account: 'That wallet is already linked to another GitHub account. Use a different wallet, or unlink it from the other account first.',
+  bad_wallet_signature: 'The signature did not match this wallet. Try again from the same wallet.',
+  bad_countersignature: 'Grainlify could not confirm who you are. Sign in again and retry.',
+  session_links_off: 'Wallet linking is switched off right now. Try again later.',
+  agent_unreachable: 'The bounty agent could not be reached. Nothing was changed; try again in a moment.',
+};
+
+export async function postBountyWalletLink(body: { message: string; countersignature: string; walletSignature: string }) {
+  try {
+    return await apiRequest<{ linked: true; wallet: string; githubLogin: string; replaced: string | null; unchanged: boolean }>(
+      '/me/bounty-wallet/link',
+      { method: 'POST', requiresAuth: true, body: JSON.stringify(body) },
+    );
+  } catch (e) {
+    // The relay passes the agent's refusal through verbatim, because the agent
+    // writes them for the person who asked. Turning that code into those words
+    // is this layer's job; without it the page showed a raw
+    // "wallet_linked_to_another_account" to a human.
+    const raw = e instanceof Error ? e.message : String(e);
+    for (const [code, words] of Object.entries(BOUNTY_LINK_REFUSALS)) {
+      if (raw.includes(code)) throw new Error(words);
+    }
+    throw e;
+  }
+}
+
 export const createBountyWalletReadChallenge = () =>
   apiRequest<BountyWalletChallenge>('/me/bounty-wallet/read-challenge', {
     method: 'POST',

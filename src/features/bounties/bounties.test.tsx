@@ -5,18 +5,18 @@ import { renderWithProviders } from '../../test/renderWithProviders'
 import { BountiesProgramPage } from './pages/BountiesProgramPage'
 import { BountyLedger } from './components/BountyLedger'
 import { WalletLinkPage } from './pages/WalletLinkPage'
-import { BountyAgentError, getBounties, getBounty, getBountyLedger, linkWalletFromSession, type BountyLedger as Ledger, type PublicBounty } from '../../shared/api/bountyAgent'
-import { ApiError, createBountyWalletChallenge } from '../../shared/api/client'
+import { BountyAgentError, getBounties, getBounty, getBountyLedger, type BountyLedger as Ledger, type PublicBounty } from '../../shared/api/bountyAgent'
+import { ApiError, createBountyWalletChallenge, postBountyWalletLink } from '../../shared/api/client'
 import { registerFakeWallet } from '../../test/fakeSolanaWallet'
 import { base58 } from '../../shared/wallet/solana'
 
 vi.mock('../../shared/api/bountyAgent', async (orig) => {
   const real = await orig<typeof import('../../shared/api/bountyAgent')>()
-  return { ...real, getBounties: vi.fn(), getBounty: vi.fn(), getBountyLedger: vi.fn(), linkWalletFromSession: vi.fn() }
+  return { ...real, getBounties: vi.fn(), getBounty: vi.fn(), getBountyLedger: vi.fn() }
 })
 vi.mock('../../shared/api/client', async (orig) => {
   const real = await orig<typeof import('../../shared/api/client')>()
-  return { ...real, createBountyWalletChallenge: vi.fn() }
+  return { ...real, createBountyWalletChallenge: vi.fn(), postBountyWalletLink: vi.fn() }
 })
 vi.mock('../../shared/contexts/AuthContext', async (orig) => {
   const real = await orig<typeof import('../../shared/contexts/AuthContext')>()
@@ -151,7 +151,7 @@ describe('WalletLinkPage', () => {
     vi.resetAllMocks()
     vi.mocked(getBounty).mockResolvedValue({ status: devnet, bounty: bounty() })
     vi.mocked(createBountyWalletChallenge).mockResolvedValue(challenge())
-    vi.mocked(linkWalletFromSession).mockResolvedValue({ linked: true, wallet: WALLET, githubLogin: 'Octocat', replaced: null, unchanged: false })
+    vi.mocked(postBountyWalletLink).mockResolvedValue({ linked: true, wallet: WALLET, githubLogin: 'Octocat', replaced: null, unchanged: false })
   })
   afterEach(() => {
     cleanup.splice(0).forEach((f) => f())
@@ -193,7 +193,7 @@ describe('WalletLinkPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Sign message' }))
     expect(await screen.findByRole('heading', { name: 'Wallet linked' })).toBeInTheDocument()
     expect(fake.signed).toEqual([message()])
-    expect(linkWalletFromSession).toHaveBeenCalledWith({ message: message(), countersignature: 'Q09VTlRFUlNJR04=', walletSignature: base58(new Uint8Array(64).fill(7)) })
+    expect(postBountyWalletLink).toHaveBeenCalledWith({ message: message(), countersignature: 'Q09VTlRFUlNJR04=', walletSignature: base58(new Uint8Array(64).fill(7)) })
     expect(screen.getByRole('link', { name: 'Back to Bounties' })).toHaveAttribute('href', '/dashboard?tab=bounties')
     expect(screen.getByRole('link', { name: 'Open the ledger' })).toHaveAttribute('href', '/dashboard?tab=bounties&subtab=ledger')
   })
@@ -205,14 +205,14 @@ describe('WalletLinkPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Phantom\s*Detected/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Sign message' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('You declined the request in Phantom, so nothing was linked.')
-    expect(linkWalletFromSession).not.toHaveBeenCalled()
+    expect(postBountyWalletLink).not.toHaveBeenCalled()
     decline = false
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('heading', { name: 'Wallet linked' })).toBeInTheDocument()
   })
 
   it('shows the agent\u2019s refusal, such as a wallet already on another account', async () => {
-    vi.mocked(linkWalletFromSession).mockRejectedValue(new BountyAgentError(409, 'That wallet is already linked to another GitHub account. Use a different wallet, or unlink it from the other account first.'))
+    vi.mocked(postBountyWalletLink).mockRejectedValue(new BountyAgentError(409, 'That wallet is already linked to another GitHub account. Use a different wallet, or unlink it from the other account first.'))
     cleanup.push(registerFakeWallet({ name: 'Phantom' }).unregister)
     renderWithProviders(<WalletLinkPage />, { route: '/bounties/link' })
     await userEvent.click(await screen.findByRole('button', { name: /Phantom\s*Detected/ }))

@@ -4,8 +4,8 @@ import { ArrowLeft, Check, ChevronRight, ExternalLink, Smartphone } from 'lucide
 import type { WalletAccount } from '@wallet-standard/base';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { useAuth } from '../../../shared/contexts/AuthContext';
-import { ApiError, createBountyWalletChallenge, type BountyWalletChallenge } from '../../../shared/api/client';
-import { formatBountyAmount, getBounty, linkWalletFromSession, type LinkedWallet, type PublicBounty } from '../../../shared/api/bountyAgent';
+import { ApiError, createBountyWalletChallenge, type BountyWalletChallenge, postBountyWalletLink} from '../../../shared/api/client';
+import { formatBountyAmount, getBounty, type LinkedWallet, type PublicBounty } from '../../../shared/api/bountyAgent';
 import {
   KNOWN_WALLETS,
   WalletRejectedError,
@@ -128,7 +128,9 @@ export function WalletLinkPage() {
         setChallenge(ch);
       }
       const signature = await signText(wallet, account, ch.message);
-      const result = await linkWalletFromSession({ message: ch.message, countersignature: ch.countersignature, walletSignature: base58(signature) });
+      // Through Grainlify, not straight to the agent: a wallet extension
+      // re-issuing that cross-origin POST is what broke the read path.
+      const result = await postBountyWalletLink({ message: ch.message, countersignature: ch.countersignature, walletSignature: base58(signature) });
       setLinked(result);
       setStep('linked');
     } catch (e) {
