@@ -53,8 +53,28 @@ describe('the connected wallet card', () => {
     // question we had not actually asked. Unknown must not render as absent.
     vi.mocked(readWalletLink).mockRejectedValue(new BountyAgentError(0, 'unreachable'))
     renderWithProviders(<ConnectedWallet />)
-    expect(await screen.findByText(/could not check whether a wallet is linked/)).toBeInTheDocument()
+    expect(await screen.findByText(/Could not check whether a wallet is linked/)).toBeInTheDocument()
     expect(screen.queryByText('No wallet linked')).not.toBeInTheDocument()
+  })
+
+  it('names which call failed and its status, so the screen is the diagnosis', async () => {
+    // Three rounds went into guessing at a generic message. The two calls fail
+    // for completely different reasons and the page must say which one broke.
+    vi.mocked(createBountyWalletReadChallenge).mockRejectedValue(Object.assign(new Error('nope'), { status: 503 }))
+    renderWithProviders(<ConnectedWallet />)
+    expect(await screen.findByText(/Grainlify: HTTP 503/)).toBeInTheDocument()
+  })
+
+  it('distinguishes an agent failure from a Grainlify one', async () => {
+    vi.mocked(readWalletLink).mockRejectedValue(new BountyAgentError(401, 'unauthorized'))
+    renderWithProviders(<ConnectedWallet />)
+    expect(await screen.findByText(/the bounty agent: HTTP 401/)).toBeInTheDocument()
+  })
+
+  it('says "network" when there is no status at all', async () => {
+    vi.mocked(createBountyWalletReadChallenge).mockRejectedValue(new TypeError('Failed to fetch'))
+    renderWithProviders(<ConnectedWallet />)
+    expect(await screen.findByText(/Grainlify: network/)).toBeInTheDocument()
   })
 
   it('copies the full address, not the shortened one', async () => {

@@ -27,7 +27,8 @@ export function ConnectedWallet() {
   const isDark = theme === 'dark';
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [state, setState] = useState<WalletLinkState | null>(null);
-  const [failed, setFailed] = useState(false);
+  /** Which call failed and how, so the screen itself says the cause. */
+  const [failed, setFailed] = useState<{ step: 'challenge' | 'agent'; detail: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -40,12 +41,27 @@ export function ConnectedWallet() {
     if (authLoading || !isAuthenticated) return;
     let live = true;
     (async () => {
+      // Two calls, two very different failures. Which one broke is the whole
+      // diagnosis, so it is carried into the message rather than collapsed
+      // into one sentence that hides the cause.
+      let challenge;
       try {
-        const challenge = await createBountyWalletReadChallenge();
+        challenge = await createBountyWalletReadChallenge();
+      } catch (e) {
+        const status = (e as { status?: number })?.status;
+        const detail = status ? `HTTP ${status}` : 'network';
+        console.error('[wallet] read-challenge failed (grainlify API):', status ?? e, e);
+        if (live) setFailed({ step: 'challenge', detail });
+        return;
+      }
+      try {
         const r = await readWalletLink({ message: challenge.message, countersignature: challenge.countersignature });
         if (live) setState(r);
-      } catch {
-        if (live) setFailed(true);
+      } catch (e) {
+        const status = (e as { status?: number })?.status;
+        const detail = status ? `HTTP ${status}` : 'network';
+        console.error('[wallet] read failed (bounty agent):', status ?? e, e);
+        if (live) setFailed({ step: 'agent', detail });
       }
     })();
     return () => {
@@ -68,10 +84,12 @@ export function ConnectedWallet() {
     );
   }
   if (failed) {
+    const where = failed.step === 'challenge' ? 'Grainlify' : 'the bounty agent';
     return (
       <div className={card}>
         <p className={`text-[13.5px] ${muted}`}>
-          We could not check whether a wallet is linked. That does not mean one is not — reload, or{' '}
+          Could not check whether a wallet is linked — <span className="font-mono">{where}: {failed.detail}</span>. That does not
+          mean one is not linked. Reload, or{' '}
           <Link to="/bounties/link" className={isDark ? 'text-[#e8c571] underline underline-offset-2' : 'text-[#5c4214] underline underline-offset-2'}>open the wallet page</Link>.
         </p>
       </div>
