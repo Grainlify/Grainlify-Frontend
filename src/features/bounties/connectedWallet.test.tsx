@@ -15,12 +15,20 @@ vi.mock('../../shared/api/client', async (orig) => {
   return { ...real, createBountyWalletReadChallenge: vi.fn() }
 })
 
+// Controlled per test: the card must not ask anything until the session is ready.
+let auth = { user: { id: 'u1' }, isAuthenticated: true, isLoading: false }
+vi.mock('../../shared/contexts/AuthContext', async (orig) => {
+  const real = await orig<typeof import('../../shared/contexts/AuthContext')>()
+  return { ...real, useAuth: () => auth }
+})
+
 const ADDRESS = 'HKMMpctYvofRCSF2uGnqfEGWcmMhD8A86xFqgmWTvcq9'
 const challenge = { message: 'Grainlify: read my linked wallet\n…', countersignature: 'sig', expires_at: '2026-09-26T10:00:00Z' }
 
 describe('the connected wallet card', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    auth = { user: { id: 'u1' }, isAuthenticated: true, isLoading: false }
     vi.mocked(createBountyWalletReadChallenge).mockResolvedValue(challenge)
   })
 
@@ -61,5 +69,25 @@ describe('the connected wallet card', () => {
   it('shortens an address from both ends and leaves a short one alone', () => {
     expect(shortAddress(ADDRESS)).toBe('HKMM…vcq9')
     expect(shortAddress('short')).toBe('short')
+  })
+
+  it('asks nothing while the session is still loading', async () => {
+    // The failure this pins: apiRequest sends a requiresAuth call with no
+    // Authorization header when the token is not ready, the backend answers
+    // 401, and the 401 handler clears the token. Firing early does not merely
+    // fail, it can sign the person out.
+    auth = { user: null, isAuthenticated: false, isLoading: true } as never
+    renderWithProviders(<ConnectedWallet />)
+    await new Promise((r) => setTimeout(r, 20))
+    expect(createBountyWalletReadChallenge).not.toHaveBeenCalled()
+    expect(screen.queryByText(/could not check/)).not.toBeInTheDocument()
+    expect(screen.queryByText('No wallet linked')).not.toBeInTheDocument()
+  })
+
+  it('asks nothing when nobody is signed in', async () => {
+    auth = { user: null, isAuthenticated: false, isLoading: false } as never
+    renderWithProviders(<ConnectedWallet />)
+    await new Promise((r) => setTimeout(r, 20))
+    expect(createBountyWalletReadChallenge).not.toHaveBeenCalled()
   })
 })

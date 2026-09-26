@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Copy, Wallet } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 import { createBountyWalletReadChallenge } from '../../../shared/api/client';
 import { readWalletLink, type WalletLinkState } from '../../../shared/api/bountyAgent';
 
@@ -24,11 +25,19 @@ export function shortAddress(a: string): string {
 export function ConnectedWallet() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [state, setState] = useState<WalletLinkState | null>(null);
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    // Wait for the session before asking. apiRequest sends a requiresAuth call
+    // with NO Authorization header when the token is not there yet, and the
+    // 401 handler then calls removeAuthToken() -- so firing this on mount does
+    // not merely fail, it can sign the person out. That is what made this card
+    // say "could not check" on a page where the wallet was linked and the user
+    // was signed in.
+    if (authLoading || !isAuthenticated) return;
     let live = true;
     (async () => {
       try {
@@ -42,12 +51,22 @@ export function ConnectedWallet() {
     return () => {
       live = false;
     };
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
   const card = `rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-4 sm:p-5 ${isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'}`;
   const strong = isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]';
   const muted = isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
 
+  if (authLoading) {
+    return (
+      <div className={card}>
+        <div className="animate-pulse flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-[12px] ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+          <div className={`h-4 w-40 rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+        </div>
+      </div>
+    );
+  }
   if (failed) {
     return (
       <div className={card}>
