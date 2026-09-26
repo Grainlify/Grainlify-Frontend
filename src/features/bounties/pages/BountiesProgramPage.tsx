@@ -6,6 +6,7 @@ import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { getBounties, type BountyAgentStatus, type PublicBounty } from '../../../shared/api/bountyAgent';
 import { getMyBountyState, type MyBountyState } from '../../../shared/api/client';
+import { docHref, DOCS_LIVE } from '../../../shared/docs/docsLinks';
 import { StatusNotice } from '../components/StatusNotice';
 import { ConnectedWallet } from '../components/ConnectedWallet';
 import { BountyRow } from '../components/BountyRow';
@@ -185,42 +186,42 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
       )}
 
       <div className={`${card} p-5 sm:p-6`}>
-        <h2 className={`text-[15px] font-bold mb-3 ${strong}`}>How to claim a bounty</h2>
-        <ol className={`space-y-2 text-[13.5px] leading-[1.55] list-decimal pl-5 ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
-          <li>Link a Solana wallet to your GitHub account once. A phone wallet is enough.</li>
-          <li>
-            Apply here while the bounty's window is open — six hours by default. Do not open a pull request yet, and there is no need to
-            comment on the issue.
-          </li>
-          <li>When the window closes, one applicant is drawn and assigned. You will see who won on this page.</li>
-          <li>If you are drawn, open a pull request that says <code className="font-mono text-[12.5px]">Closes #N</code> before the deadline shown on the bounty.</li>
-          <li>The agent posts an advisory review. A maintainer decides whether to merge.</li>
-          <li>After the merge, a person approves the payout and it is sent to your wallet.</li>
-        </ol>
+        <h2 className={`text-[15px] font-bold mb-2 ${strong}`}>How to claim a bounty</h2>
+        {/* The summary stays on the dashboard whatever happens; the detail is
+            reference material, and reference material on a dashboard is read
+            once and scrolled past forever. See shared/docs/docsLinks.ts - one
+            constant moves the detail to the docs site when it ships. */}
+        <p className={`text-[13.5px] leading-[1.55] mb-3 ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
+          Link a wallet, apply while a bounty's window is open, and wait for the draw. If you are the one drawn, open a pull request that
+          says <code className="font-mono text-[12.5px]">Closes #N</code>; a maintainer merges it and a person approves the payout. Applying
+          early gives you no advantage, and applying to more bounties does not change your odds on any of them.
+        </p>
 
-        <h3 className={`text-[13.5px] font-bold mt-5 mb-2 ${strong}`}>How the draw works</h3>
-        <p className={`text-[13px] leading-[1.55] ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
-          It is weighted, not first-come. Applying early gives you no advantage, and applying to more bounties does not improve your odds on
-          any of them. Everyone starts with the same ticket; it is multiplied by how well the issue matches what you have done before, by a
-          bonus if you have never been assigned a bounty, by a bonus per bounty you have completed (capped, so wins cannot compound
-          indefinitely), and reduced if you have been assigned a bounty and gone silent. A pull request that is reviewed and rejected is not
-          counted against you.
-        </p>
-        <p className={`mt-2 text-[13px] leading-[1.55] ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
-          What the draw cannot see: your follower count, your stars, how many pull requests you have opened anywhere, and how well your
-          application is written. There is no code path that reads them.
-        </p>
-        <p className={`mt-2 text-[13px] leading-[1.55] ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
-          Every draw stores its seed and the full ticket breakdown, so a result can be recomputed rather than argued about. While a window
-          is open the page says roughly how busy a bounty is, not exactly — otherwise the draw becomes something to time. The exact number
-          appears once the window closes.
-        </p>
-        <p className={`mt-3 text-[13px] ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
-          <Link to="/bounties/rules" className={`underline underline-offset-2 font-medium ${isDark ? 'text-[#e8c571]' : 'text-[#5c4214]'}`}>
-            Read every rule and its current value
+        {!DOCS_LIVE && (
+          <ol className={`space-y-2 text-[13.5px] leading-[1.55] list-decimal pl-5 mb-3 ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
+            <li>Link a Solana wallet to your GitHub account once. A phone wallet is enough.</li>
+            <li>Apply here while the bounty's window is open — six hours by default. Do not open a pull request yet.</li>
+            <li>When the window closes, one applicant is drawn and assigned. You will see who won on this page.</li>
+            <li>If you are drawn, open a pull request before the deadline shown on the bounty.</li>
+            <li>The agent posts an advisory review. A maintainer decides whether to merge.</li>
+            <li>After the merge, a person approves the payout and it is sent to your wallet.</li>
+          </ol>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+          <Link
+            to={docHref('applyForABounty')}
+            className={`inline-flex items-center gap-1.5 text-[13px] font-medium underline underline-offset-2 ${isDark ? 'text-[#e8c571]' : 'text-[#5c4214]'}`}
+          >
+            How the draw works, and what it cannot see
           </Link>
-          {' '}— the live settings, not a copy.
-        </p>
+          <Link
+            to={docHref('bountyRules')}
+            className={`inline-flex items-center gap-1.5 text-[13px] font-medium underline underline-offset-2 ${isDark ? 'text-[#e8c571]' : 'text-[#5c4214]'}`}
+          >
+            Rules and limits
+          </Link>
+        </div>
 
         <p className={`mt-4 text-[12.5px] ${muted}`}>
           One wallet per GitHub account, and one bounty at a time. Accounts must be at least 30 days old. Maintainers of a repository cannot

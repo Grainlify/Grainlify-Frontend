@@ -175,27 +175,33 @@ describe('how to claim, after the draw replaced comment-and-PR claiming', () => 
     vi.mocked(getMyBountyState).mockResolvedValue({ applications: {}, assignments: {} })
   })
 
-  it('describes applying and the draw, not claiming by comment or pull request', async () => {
+  it('summarises the flow and does not describe claiming by comment or pull request', async () => {
     vi.mocked(getBounties).mockResolvedValue({ status, bounties: [] })
     renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
     await screen.findByText(/how to claim a bounty/i)
 
-    expect(screen.getByText(/apply here while the bounty's window is open/i)).toBeInTheDocument()
-    expect(screen.getByText(/one applicant is drawn and assigned/i)).toBeInTheDocument()
+    expect(screen.getByText(/apply while a bounty's window is open, and wait for the draw/i)).toBeInTheDocument()
     // The old instructions told people to open a PR to claim, which under the
-    // draw gets them nothing and wastes their work.
+    // draw earns nothing and wastes their work.
     expect(screen.queryByText(/up to \$50 per bounty/i)).not.toBeInTheDocument()
     expect(screen.getByText(/do not open a pull request yet/i)).toBeInTheDocument()
   })
 
-  it('states what the draw cannot see, because that is the claim people check', async () => {
+  it('links out for the detail rather than printing it on the dashboard', async () => {
+    // Reference material on a dashboard is read once and scrolled past
+    // forever. The links point somewhere real today and swap to the docs site
+    // from one constant when it ships.
     vi.mocked(getBounties).mockResolvedValue({ status, bounties: [] })
     renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
-    expect(await screen.findByText(/follower count/i)).toBeInTheDocument()
-    expect(screen.getByText(/applying early gives you no advantage/i)).toBeInTheDocument()
-    // The claim moved when the page started publishing a coarse band: it now
-    // says roughly, not nothing, and exactly once the window closes.
-    expect(screen.getByText(/says roughly how busy a bounty is, not exactly/i)).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /how the draw works, and what it cannot see/i })).toHaveAttribute('href', '/bounties/rules')
+    expect(screen.getByRole('link', { name: /rules and limits/i })).toHaveAttribute('href', '/bounties/rules')
+  })
+
+  it('still states the limits people are caught by, on the page itself', async () => {
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [] })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+    expect(await screen.findByText(/one bounty at a time/i)).toBeInTheDocument()
+    expect(screen.getByText(/self-merged pull requests are not paid/i)).toBeInTheDocument()
   })
 })
 
