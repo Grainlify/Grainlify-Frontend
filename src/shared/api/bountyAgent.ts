@@ -23,10 +23,17 @@
  * for an extension to break. The CORS headers on the agent remain correct for
  * anyone calling it directly; this simply stops depending on them.
  *
- * VITE_BOUNTY_AGENT_URL still overrides, for pointing a local build at a local
- * agent.
+ * VITE_BOUNTY_AGENT_URL overrides in development only, for pointing a local
+ * build at a local agent. A production build ALWAYS uses the same-origin
+ * proxy, deliberately: the variable was set to the agent's absolute URL in
+ * Vercel at one point, which silently put every production request back on the
+ * cross-origin path this proxy exists to avoid, and the symptom was identical
+ * to the bug it was meant to fix. A deployment setting should not be able to
+ * reintroduce it.
  */
-export const BOUNTY_AGENT_URL: string = (import.meta.env.VITE_BOUNTY_AGENT_URL as string | undefined) || '/agent';
+export const BOUNTY_AGENT_URL: string = import.meta.env.DEV
+  ? (import.meta.env.VITE_BOUNTY_AGENT_URL as string | undefined) || '/agent'
+  : '/agent';
 
 export interface BountyAgentStatus {
   network: string;
