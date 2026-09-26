@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Menu, X, Moon, Sun } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useAuth } from "../../../shared/contexts/AuthContext";
@@ -30,7 +30,18 @@ const LINKS = [
   { label: "FAQ", href: "#faq" },
 ];
 
-export function Navbar() {
+interface NavbarProps {
+  /** Shown after the wordmark, e.g. "Docs". */
+  label?: string;
+  /** Replaces the landing anchor pills in the centre (the docs search field). */
+  center?: ReactNode;
+  /** Extra controls before the hamburger on small screens. */
+  mobileActions?: ReactNode;
+  /** When set, the hamburger calls this instead of opening the anchor dropdown. */
+  onMobileMenu?: () => void;
+}
+
+export function Navbar({ label, center, mobileActions, onMobileMenu }: NavbarProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated, logout } = useAuth();
@@ -69,29 +80,40 @@ export function Navbar() {
             >
               Grainlify
             </span>
+            {label && (
+              <span
+                className={`ml-1 rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${
+                  isDark ? "border-white/15 text-[#c6b9a8]" : "border-black/10 text-[#6f6152]"
+                }`}
+              >
+                {label}
+              </span>
+            )}
           </Link>
 
           {/* The pill group */}
-          <nav
-            className={`hidden md:flex items-center gap-1 rounded-full border p-1 backdrop-blur-[30px] transition-colors ${
-              isDark ? "bg-white/[0.06] border-white/12" : "bg-white/[0.25] border-white/30"
-            }`}
-          >
-            {LINKS.map((l) => (
-              <motion.a
-                key={l.href}
-                href={l.href}
-                {...lift}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                  isDark
-                    ? "text-[#c6b9a8] hover:text-[#e8dfd0] hover:bg-white/[0.08]"
-                    : "text-[#6f6152] hover:text-[#2d2820] hover:bg-white/[0.5]"
-                }`}
-              >
-                {l.label}
-              </motion.a>
-            ))}
-          </nav>
+          {center ?? (
+            <nav
+              className={`hidden md:flex items-center gap-1 rounded-full border p-1 backdrop-blur-[30px] transition-colors ${
+                isDark ? "bg-white/[0.06] border-white/12" : "bg-white/[0.25] border-white/30"
+              }`}
+            >
+              {LINKS.map((l) => (
+                <motion.a
+                  key={l.href}
+                  href={l.href}
+                  {...lift}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    isDark
+                      ? "text-[#c6b9a8] hover:text-[#e8dfd0] hover:bg-white/[0.08]"
+                      : "text-[#6f6152] hover:text-[#2d2820] hover:bg-white/[0.5]"
+                  }`}
+                >
+                  {l.label}
+                </motion.a>
+              ))}
+            </nav>
+          )}
 
           <div className="hidden md:flex items-center gap-2 shrink-0">
             <motion.button
@@ -126,19 +148,22 @@ export function Navbar() {
             )}
           </div>
 
-          <motion.button
-            {...tap}
-            onClick={() => setMobileMenuOpen((s) => !s)}
-            aria-label="Toggle mobile menu"
-            aria-expanded={mobileMenuOpen}
-            className={`md:hidden inline-flex size-10 items-center justify-center rounded-full border transition-colors ${
-              isDark
-                ? "bg-white/[0.08] border-white/15 text-[#e8dfd0]"
-                : "bg-white/[0.15] border-white/25 text-[#2d2820]"
-            }`}
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </motion.button>
+          <div className="md:hidden flex items-center gap-2">
+            {mobileActions}
+            <motion.button
+              {...tap}
+              onClick={() => (onMobileMenu ? onMobileMenu() : setMobileMenuOpen((s) => !s))}
+              aria-label={onMobileMenu ? "Open menu" : "Toggle mobile menu"}
+              aria-expanded={onMobileMenu ? undefined : mobileMenuOpen}
+              className={`md:hidden inline-flex size-10 items-center justify-center rounded-full border transition-colors ${
+                isDark
+                  ? "bg-white/[0.08] border-white/15 text-[#e8dfd0]"
+                  : "bg-white/[0.15] border-white/25 text-[#2d2820]"
+              }`}
+            >
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </motion.button>
+          </div>
         </div>
 
         <AnimatePresence initial={false}>
