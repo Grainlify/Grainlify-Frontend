@@ -18,6 +18,7 @@ const AuthCallbackPage = lazy(() => import("../features/auth").then((m) => ({ de
 const Dashboard = lazy(() => import("../features/dashboard").then((m) => ({ default: m.Dashboard })));
 const WalletLinkPage = lazy(() => import("../features/bounties/pages/WalletLinkPage").then((m) => ({ default: m.WalletLinkPage })));
 const BountyRulesPage = lazy(() => import("../features/bounties/pages/BountyRulesPage").then((m) => ({ default: m.BountyRulesPage })));
+const DocsPage = lazy(() => import("../features/docs/pages/DocsPage").then((m) => ({ default: m.DocsPage })));
 const NotFoundPage = lazy(() => import("../features/not-found/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 
 // Suspense fallback for lazy-loaded routes — matches Dashboard's own background
@@ -121,6 +122,9 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+                {/* The docs, public. Each page is also prerendered to static
+                    HTML at build time (features/docs/prerender.ts). */}
+                <Route path="/docs/*" element={<DocsPage />} />
                 {/* Last, and public: whatever no route above claims. The
                     server answers these with HTTP 404 too (vercel.json). */}
                 <Route path="*" element={<NotFoundPage />} />

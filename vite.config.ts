@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { docsPrerender } from './src/features/docs/prerender'
 
 // The deployed commit, taken from whichever platform built this. Vercel sets
 // VERCEL_GIT_COMMIT_SHA; the others are accepted so the check survives the
@@ -39,6 +40,8 @@ export default defineConfig({
         this.emitFile({ type: 'asset', fileName: '404.html', source: index.source })
       },
     },
+    // Static HTML for each public docs page (src/features/docs/prerender.ts).
+    docsPrerender(path.resolve(__dirname, 'src/features/docs/content')),
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them
     react(),

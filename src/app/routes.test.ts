@@ -47,6 +47,7 @@ describe('top-level routes', () => {
     '/bounties/ledger': 'ALIAS ONLY — redirects to /dashboard?tab=bounties&subtab=ledger, the in-dashboard ledger',
     '/bounties/link': 'signed-in, behind ProtectedRoute — its own page because it opens inside a wallet app browser',
     '/bounties/rules': 'deliberately anonymous — the published draw rules; one you must sign in to read is not published',
+    '/docs/*': 'deliberately anonymous — the public documentation; each page is also prerendered to static HTML',
     '*': 'the not-found page, public and LAST so it only gets what nothing else claims',
   }
 
@@ -123,7 +124,12 @@ describe('top-level routes', () => {
       const m = /^\/\(([^)]+)\)\/?$/.exec(r.source)
       if (m) for (const p of m[1].split('|')) served.add('/' + p)
     }
-    const routes = Object.keys(ALLOWED).filter((p) => p !== '*')
+    // /docs/* is served by files, not by a rewrite: the build writes
+    // dist/docs/<page>/index.html for every published page, and Vercel serves a
+    // file before it applies rewrites. A rewrite here would answer 200 for a
+    // docs page that does not exist; without one, it gets 404.html and a 404.
+    const servedAsFiles = new Set(['/docs/*'])
+    const routes = Object.keys(ALLOWED).filter((p) => p !== '*' && !servedAsFiles.has(p))
     expect([...served].sort()).toEqual(routes.sort())
     // Every alternation appears with and without a trailing slash.
     const groups = spa.map((r) => r.source).filter((x) => x !== '/')
