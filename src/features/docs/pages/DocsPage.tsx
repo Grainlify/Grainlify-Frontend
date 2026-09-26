@@ -107,8 +107,15 @@ export function DocsPage() {
       <Navbar label="Docs" center={searchField} mobileActions={searchIcon} onMobileMenu={() => setDrawerOpen(true)} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-[92px] sm:pt-[100px] pb-16 lg:flex lg:gap-8 xl:gap-10">
-        <aside className="hidden lg:block w-[264px] shrink-0 sticky top-[100px] self-start max-h-[calc(100vh-116px)] overflow-y-auto pr-1 pb-6 scrollbar-custom">
-          <DocsSidebar key={slug} sections={sections} slug={slug} />
+        {/* Fixed, not sticky. App.tsx wraps every route in overflow-x-hidden,
+            which makes that wrapper the scroll container a sticky element sticks
+            to, and it never scrolls, so sticky here would scroll away with the
+            page. A fixed panel with no left offset keeps its place in the
+            column and stays put while the article scrolls. */}
+        <aside className="hidden lg:block w-[264px] shrink-0">
+          <div className="fixed top-[100px] bottom-4 w-[264px] overflow-y-auto pr-1 pb-6 scrollbar-custom">
+            <DocsSidebar key={slug} sections={sections} slug={slug} />
+          </div>
         </aside>
 
         <main className="min-w-0 flex-1">
@@ -297,9 +304,12 @@ function Article({
       </div>
 
       {headings.length > 1 && (
-        <aside className="hidden xl:block w-[200px] shrink-0 sticky top-[100px] self-start">
-          <p className="mb-3 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--brand-gold-text-deep)]">On this page</p>
-          {toc}
+        <aside className="hidden xl:block w-[200px] shrink-0">
+          {/* Fixed for the same reason as the contents tree. */}
+          <div className="fixed top-[100px] w-[200px] max-h-[calc(100vh-116px)] overflow-y-auto">
+            <p className="mb-3 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--brand-gold-text-deep)]">On this page</p>
+            {toc}
+          </div>
         </aside>
       )}
     </div>
