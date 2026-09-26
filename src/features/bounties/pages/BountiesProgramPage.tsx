@@ -33,6 +33,9 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
   const [loadError, setLoadError] = useState<unknown>(null);
   const [attempt, setAttempt] = useState(0);
   const [mine, setMine] = useState<MyBountyState | null>(null);
+  // Separate from `mine` being null: signed out, there is nothing to ask and
+  // the answer IS known. Only a signed-in viewer waits.
+  const [mineLoading, setMineLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -72,11 +75,16 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
     let mounted = true;
     if (!isAuthenticated) {
       setMine(null);
+      setMineLoading(false);
       return;
     }
+    setMineLoading(true);
     getMyBountyState()
       .then((m) => mounted && setMine(m))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (mounted) setMineLoading(false);
+      });
     return () => {
       mounted = false;
     };
@@ -96,6 +104,7 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
       isDark={isDark}
       canApply={canApply}
       mine={mine?.applications[b.id]}
+      mineLoading={mineLoading}
       onApplied={() => setAttempt((n) => n + 1)}
     />
   );
@@ -115,7 +124,11 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
         </div>
       </div>
 
-      <StatusNotice status={status} paidOnMainnet={bounties.some((b) => b.status === 'paid' && b.network === 'solana-mainnet')} />
+      <StatusNotice
+        status={status}
+        loading={isLoading}
+        paidOnMainnet={bounties.some((b) => b.status === 'paid' && b.network === 'solana-mainnet')}
+      />
 
       <ConnectedWallet />
 

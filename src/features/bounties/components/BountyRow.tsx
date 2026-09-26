@@ -169,10 +169,14 @@ interface BountyRowProps {
   canApply: boolean;
   /** This viewer's application, from the server. */
   mine?: MyBountyApplication;
+  /** True until the server has said whether this viewer has applied. An Apply
+   *  button shown before that is a guess, and it was wrong often enough to
+   *  matter: it appeared, then turned into a refusal a moment later. */
+  mineLoading?: boolean;
   onApplied?: () => void;
 }
 
-export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: BountyRowProps) {
+export function BountyRow({ bounty: b, isDark, canApply, mine, mineLoading = false, onApplied }: BountyRowProps) {
   const [text, setText] = useState('');
   const [applying, setApplying] = useState(false);
   // Held only until the refreshed server state arrives, so the row says
@@ -285,7 +289,7 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: Boun
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <p className={`flex-1 text-[12.5px] ${muted}`}>
-          {serverLine ?? (justApplied ? 'You are in the draw for this bounty. The result appears here when it runs.' : cta.line)}
+          {mineLoading ? 'Checking whether you have applied…' : (serverLine ?? (justApplied ? 'You are in the draw for this bounty. The result appears here when it runs.' : cta.line))}
           {b.isTest && b.waivedRules.length > 0 && !applied && (
             <>
               {' '}
@@ -293,7 +297,14 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: Boun
             </>
           )}
         </p>
-        {cta.kind === 'apply' && !applied && (
+        {mineLoading && cta.kind === 'apply' && (
+          <div
+            aria-busy="true"
+            aria-label="Checking whether you have applied"
+            className={`animate-pulse h-[44px] w-[180px] rounded-[12px] shrink-0 ${isDark ? 'bg-white/10' : 'bg-black/10'}`}
+          />
+        )}
+        {!mineLoading && cta.kind === 'apply' && !applied && (
           <button
             type="button"
             onClick={apply}
@@ -303,7 +314,7 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: Boun
             {applying ? 'Applying…' : !canApply ? 'Sign in to apply' : refusal ? 'Try again' : 'Apply for this bounty'}
           </button>
         )}
-        {refusal?.action && !applied && (
+        {refusal?.action && !applied && !mineLoading && (
           <Link
             to={refusal.action.to}
             className={`inline-flex items-center justify-center min-h-[44px] px-4 py-2.5 rounded-[12px] border text-[13px] font-medium transition-colors shrink-0 ${

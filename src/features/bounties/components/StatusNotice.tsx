@@ -8,7 +8,19 @@ import type { BountyAgentStatus } from '../../../shared/api/bountyAgent';
  * this repo, so it changes when mainnet is switched on and cannot say more
  * than is true. The gold banner is KeeperHubPayoutPanel's; unknown status
  * (agent unreachable) says so rather than guessing. */
-export function StatusNotice({ status, paidOnMainnet = false }: { status: BountyAgentStatus | null; paidOnMainnet?: boolean }) {
+export function StatusNotice({
+  status,
+  paidOnMainnet = false,
+  loading = false,
+}: {
+  status: BountyAgentStatus | null;
+  paidOnMainnet?: boolean;
+  /** True until the first answer arrives. Without it, null means both "not
+   *  asked yet" and "asked and failed", and the panel announced the agent was
+   *  unreachable on every first paint - a wrong answer shown before the real
+   *  one was known, then corrected a moment later. */
+  loading?: boolean;
+}) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const live = status?.mainnetLive === true;
@@ -18,6 +30,25 @@ export function StatusNotice({ status, paidOnMainnet = false }: { status: Bounty
   // already holds and passes it in; blurring the two is how a page ends up
   // claiming something that has not happened.
   const Icon = live && paidOnMainnet ? CircleCheck : FlaskConical;
+
+  if (loading) {
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label="Checking the bounty programme status"
+        className={`rounded-[16px] border p-4 sm:p-5 ${isDark ? 'border-[#c9983a]/35 bg-[#c9983a]/[0.08]' : 'border-[#c9983a]/40 bg-[#c9983a]/10'}`}
+      >
+        <div className="animate-pulse flex items-start gap-3">
+          <div className={`w-5 h-5 rounded shrink-0 mt-0.5 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+          <div className="flex-1 space-y-2">
+            <div className={`h-4 w-64 max-w-full rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+            <div className={`h-3 w-80 max-w-full rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
