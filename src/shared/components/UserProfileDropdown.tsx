@@ -136,11 +136,6 @@ export function UserProfileDropdown({ onPageChange, showMobileNav, onLogout }: U
               <p className="text-xs text-[#c9983a] capitalize font-medium">
                 {userRole}
               </p>
-              <p className={`text-xs truncate ${
-                darkTheme ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
-              }`}>
-                ID: {user.id.substring(0, 8)}...
-              </p>
             </div>
           </div>
         </DropdownMenuLabel>

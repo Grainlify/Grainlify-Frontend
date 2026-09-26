@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Coins, ExternalLink, Wallet, ScrollText } from 'lucide-react';
+import { Coins, ExternalLink, ScrollText } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { formatBountyAmount, getBounties, type BountyAgentStatus, type PublicBounty } from '../../../shared/api/bountyAgent';
 import { StatusNotice } from '../components/StatusNotice';
+import { ConnectedWallet } from '../components/ConnectedWallet';
 
 const STATUS_LABELS: Record<string, string> = {
   posted: 'Open',
@@ -116,16 +117,11 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
         </div>
       </div>
 
-      <StatusNotice status={status} />
+      <StatusNotice status={status} paidOnMainnet={bounties.some((b) => b.status === 'paid' && b.network === 'solana-mainnet')} />
+
+      <ConnectedWallet />
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <Link
-          to="/bounties/link"
-          className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[13.5px] shadow-[0_4px_14px_rgba(162,121,44,0.35)] hover:shadow-[0_6px_20px_rgba(162,121,44,0.45)] transition-all border border-white/10"
-        >
-          <Wallet className="w-4 h-4" />
-          Link your wallet
-        </Link>
         <Link
           to={ledgerHref}
           className={`inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-[12px] border text-[13px] font-medium transition-colors ${

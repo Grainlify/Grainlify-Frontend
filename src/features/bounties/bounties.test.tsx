@@ -51,8 +51,12 @@ describe('BountiesProgramPage', () => {
     expect(await screen.findByText('Add docs')).toBeInTheDocument()
     expect(screen.getByText(/1 bounty open/i)).toBeInTheDocument()
     expect(screen.getAllByText('20 test USDC')).toHaveLength(2)
-    expect(screen.getByText(devnet.statusLine)).toBeInTheDocument()
-    expect(screen.getByText('Devnet test run')).toBeInTheDocument()
+    // The heading states the currencies; the body states, plainly, that no
+    // mainnet payout has happened. "Mainnet is switched on" and "a mainnet
+    // payout has settled" are different claims and the page must not blur them.
+    expect(screen.getByText('Bounties pay real USDC and $ANSEM on Solana')).toBeInTheDocument()
+    expect(screen.getByText(/No mainnet payout has happened yet/)).toBeInTheDocument()
+    expect(screen.queryByText('Devnet test run')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'transaction' })).toHaveAttribute('href', 'https://solscan.io/tx/sig?cluster=devnet')
     expect(screen.getByRole('link', { name: /Open the ledger/ })).toHaveAttribute('href', '/dashboard?tab=bounties&subtab=ledger')
   })
@@ -65,11 +69,24 @@ describe('BountiesProgramPage', () => {
     expect(screen.getByText('Status unavailable')).toBeInTheDocument()
   })
 
-  it('says mainnet is live only when the agent says so', async () => {
+  it('keeps saying no payout has happened while mainnet is on but nothing has settled', async () => {
+    // The trap this pins: mainnetLive true with no paid mainnet bounty is the
+    // state we are actually in, and the page must not imply otherwise.
     vi.mocked(getBounties).mockResolvedValue({ status: { ...devnet, network: 'solana-mainnet', mainnetLive: true, statusLine: 'Live on Solana mainnet.' }, bounties: [bounty({ network: 'solana-mainnet' })] })
     renderWithProviders(<BountiesProgramPage ledgerHref="/bounties/ledger" />)
-    expect(await screen.findByText('Live on Solana mainnet')).toBeInTheDocument()
+    expect(await screen.findByText(/No mainnet payout has happened yet/)).toBeInTheDocument()
+    expect(screen.queryByText('Live on Solana mainnet.')).not.toBeInTheDocument()
     expect(screen.getByText('20 USDC')).toBeInTheDocument()
+  })
+
+  it('switches to the agent’s own line once a mainnet payout has settled', async () => {
+    vi.mocked(getBounties).mockResolvedValue({
+      status: { ...devnet, network: 'solana-mainnet', mainnetLive: true, statusLine: 'Live on Solana mainnet.' },
+      bounties: [bounty({ status: 'paid', network: 'solana-mainnet', payout: { txSignature: 'sig', txUrl: 'https://solscan.io/tx/sig', paidAt: '2026-09-26T10:00:00.000Z', recipientLogin: 'someone' } })],
+    })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/bounties/ledger" />)
+    expect(await screen.findByText('Live on Solana mainnet.')).toBeInTheDocument()
+    expect(screen.queryByText(/No mainnet payout has happened yet/)).not.toBeInTheDocument()
   })
 })
 

@@ -118,6 +118,27 @@ export async function linkWalletFromSession(body: { message: string; countersign
   return data as LinkedWallet;
 }
 
+export interface WalletLinkState {
+  linked: boolean;
+  wallet: string | null;
+  linkedAt: string | null;
+  githubLogin: string;
+}
+
+/** Reads the caller's own link. Never throws for "no link": that is an answer,
+ *  not a failure, and the page needs to tell the two apart. */
+export async function readWalletLink(body: { message: string; countersignature: string }): Promise<WalletLinkState> {
+  let res: Response;
+  try {
+    res = await fetch(`${BOUNTY_AGENT_URL}/link/session/read`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  } catch {
+    throw new BountyAgentError(0, 'The bounty agent could not be reached.');
+  }
+  const data = (await res.json().catch(() => ({}))) as { error?: string } & Partial<WalletLinkState>;
+  if (!res.ok) throw new BountyAgentError(res.status, LINK_REFUSALS[data.error ?? ''] ?? `The bounty agent answered ${res.status}.`);
+  return { linked: data.linked === true, wallet: data.wallet ?? null, linkedAt: data.linkedAt ?? null, githubLogin: data.githubLogin ?? '' };
+}
+
 /** "20 USDC" on mainnet, "20 test USDC" anywhere else: devnet tokens have no value and must say so. */
 export function formatBountyAmount(b: Pick<PublicBounty, 'amountMinor' | 'decimals' | 'currency' | 'network'>): string {
   const n = Number(b.amountMinor) / 10 ** b.decimals;

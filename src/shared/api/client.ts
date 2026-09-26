@@ -1007,6 +1007,19 @@ export interface BountyWalletChallenge {
   expires_at: string;
 }
 
+/** Asks Grainlify to countersign "which wallet is linked to my GitHub account".
+ *
+ *  Takes no wallet: the GitHub identity comes from the session, and reading your
+ *  own link needs proof of who is asking, not proof of wallet control. Signed
+ *  under a different domain from the link challenge so one can never stand in
+ *  for the other. */
+export const createBountyWalletReadChallenge = () =>
+  apiRequest<BountyWalletChallenge>('/me/bounty-wallet/read-challenge', {
+    method: 'POST',
+    requiresAuth: true,
+    body: JSON.stringify({}),
+  });
+
 export const createBountyWalletChallenge = (wallet: string) =>
   apiRequest<BountyWalletChallenge>('/me/bounty-wallet/challenge', {
     method: 'POST',
