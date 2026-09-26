@@ -88,19 +88,33 @@ describe('ApiError keeps e.message byte-identical to the old Error', () => {
     expect(isApiError(err)).toBe(false)
   })
 
-  it('401 and 403 are unchanged, including both 403 parse paths', async () => {
+  it('401 is unchanged', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(401, {}))
     expect(await messageOf(checkHealth())).toBe('Authentication failed. Please sign in again.')
+  })
 
+  // 403 deliberately BROKE compatibility, in both directions.
+  //
+  // It used to throw a plain Error, so the parsed body was discarded and
+  // every feature that maps a refusal code to a readable sentence never
+  // fired. A contributor who had not linked a wallet was told "Permission
+  // denied: no_linked_wallet. You may need admin privileges to perform this
+  // action." - developer text, and the admin claim was false. Most 403s here
+  // are ordinary rules, not missing privileges.
+  it('403 now carries its code, so features can turn it into words', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(403, { error: 'not_project_owner' }))
-    expect(await messageOf(checkHealth())).toBe(
-      'Permission denied: not_project_owner. You may need admin privileges to perform this action.',
-    )
+    const err = await checkHealth().catch((e) => e)
+    expect(isApiError(err)).toBe(true)
+    expect(err.status).toBe(403)
+    expect(err.data).toMatchObject({ error: 'not_project_owner' })
+    expect(err.message).not.toMatch(/admin privileges/i)
+  })
 
+  it('403 with an unreadable body says so plainly and claims nothing about admin', async () => {
     fetchMock.mockResolvedValueOnce(unparsable(403))
-    expect(await messageOf(checkHealth())).toBe(
-      'Permission denied: You do not have permission to perform this action. Admin privileges may be required.',
-    )
+    const err = await checkHealth().catch((e) => e)
+    expect(isApiError(err)).toBe(true)
+    expect(err.message).toBe('You do not have permission to do that.')
   })
 })
 

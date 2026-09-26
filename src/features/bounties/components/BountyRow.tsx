@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ExternalLink, FlaskConical, Sprout } from 'lucide-react';
 import { applyForBounty, type MyBountyApplication } from '../../../shared/api/client';
 import { formatBountyAmount, type PublicBounty } from '../../../shared/api/bountyAgent';
@@ -73,6 +74,60 @@ export function callToAction(b: PublicBounty, now: Date): { kind: 'apply' | 'wai
   return { kind: 'wait', line: 'Not open for applications yet.' };
 }
 
+/**
+ * Why an application was refused, in words, with the thing to do about it.
+ *
+ * The agent returns a code. A code is the right thing to store and the wrong
+ * thing to show: "no_linked_wallet" tells somebody nothing, and routed
+ * through the generic 403 handler it arrived as "Permission denied:
+ * no_linked_wallet. You may need admin privileges to perform this action" -
+ * which was also untrue.
+ *
+ * `fixable` is the important field. Most refusals are a state the person can
+ * change, and the agent lets them apply again once they have; treating every
+ * refusal as final is what left a contributor staring at a stale
+ * no_linked_wallet two minutes after linking their wallet, with no button.
+ */
+export interface Refusal {
+  line: string;
+  fixable: boolean;
+  action?: { label: string; to: string };
+}
+
+export const APPLY_REFUSALS: Record<string, Refusal> = {
+  no_linked_wallet: {
+    line: 'Link a Solana wallet before applying, so a bounty you win can be paid.',
+    fixable: true,
+    action: { label: 'Link a wallet', to: '/bounties/link' },
+  },
+  account_too_new: {
+    line: 'Your GitHub account is too new to apply yet. Accounts must be at least 30 days old.',
+    fixable: false,
+  },
+  account_age_unknown: {
+    line: 'We could not read your GitHub account to check its age. Try again in a moment.',
+    fixable: true,
+  },
+  holding_another_bounty: {
+    line: 'You already hold a bounty. Finish or release it before applying for another.',
+    fixable: false,
+  },
+  org_member: {
+    line: 'You maintain this repository, so you cannot win its bounties.',
+    fixable: false,
+  },
+  already_applied: { line: 'You have already applied for this bounty.', fixable: false },
+  applications_closed: { line: 'Applications have closed. The draw runs next.', fixable: false },
+  not_open: { line: 'This bounty is not open for applications.', fixable: false },
+  no_such_bounty: { line: 'That bounty no longer exists.', fixable: false },
+};
+
+export function refusalFor(reason: string | null): Refusal {
+  if (reason && APPLY_REFUSALS[reason]) return APPLY_REFUSALS[reason];
+  // Never show the raw code. An unmapped one is our gap, not the reader's.
+  return { line: 'You could not enter the draw for this bounty.', fixable: true };
+}
+
 /** What the SERVER says about this viewer and this bounty. The row keeps no
  *  opinion of its own beyond the in-flight click: local state is what made
  *  "have I applied" unanswerable after a re-render. */
@@ -88,12 +143,22 @@ export function applicationLine(mine: MyBountyApplication | undefined): string |
     case 'withdrawn':
       return 'You withdrew from this bounty.';
     case 'rejected_gate':
-      return mine.gateFailureReason
-        ? `You could not enter the draw: ${mine.gateFailureReason}`
-        : 'You could not enter the draw for this bounty.';
+      return refusalFor(mine.gateFailureReason).line;
     default:
       return null;
   }
+}
+
+/**
+ * Does this stored application mean the person is done here?
+ *
+ * A refusal does NOT. The agent re-admits somebody whose reason no longer
+ * holds, so the page must offer the button again - otherwise linking a wallet
+ * fixes nothing, which is exactly what happened: applied at 20:29:40, linked
+ * at 20:32:00, and the row showed the 20:29 refusal with no way to retry.
+ */
+export function isSettled(mine: MyBountyApplication | undefined): boolean {
+  return mine !== undefined && mine.status !== 'rejected_gate';
 }
 
 interface BountyRowProps {
@@ -116,7 +181,8 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: Boun
   const [error, setError] = useState<string | null>(null);
   const cta = callToAction(b, new Date());
   const serverLine = applicationLine(mine);
-  const applied = Boolean(mine) || justApplied;
+  const applied = isSettled(mine) || justApplied;
+  const refusal = mine?.status === 'rejected_gate' ? refusalFor(mine.gateFailureReason) : null;
 
   const row = `flex flex-col gap-3 p-4 rounded-[16px] border transition-all ${
     b.isTest
@@ -231,11 +297,21 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: Boun
           <button
             type="button"
             onClick={apply}
-            disabled={applying || !canApply}
+            disabled={applying || !canApply || refusal?.fixable === false}
             className="inline-flex items-center justify-center min-h-[44px] px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[13px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_24px_rgba(162,121,44,0.4)] transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           >
-            {applying ? 'Applying…' : canApply ? 'Apply for this bounty' : 'Sign in to apply'}
+            {applying ? 'Applying…' : !canApply ? 'Sign in to apply' : refusal ? 'Try again' : 'Apply for this bounty'}
           </button>
+        )}
+        {refusal?.action && !applied && (
+          <Link
+            to={refusal.action.to}
+            className={`inline-flex items-center justify-center min-h-[44px] px-4 py-2.5 rounded-[12px] border text-[13px] font-medium transition-colors shrink-0 ${
+              isDark ? 'border-white/15 bg-white/[0.06] text-[#d4d4d4] hover:bg-white/[0.10]' : 'border-black/15 bg-white/[0.20] text-[#2d2820] hover:bg-white/[0.30]'
+            }`}
+          >
+            {refusal.action.label}
+          </Link>
         )}
       </div>
 

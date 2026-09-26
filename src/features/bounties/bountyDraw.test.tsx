@@ -233,14 +233,44 @@ describe('"have I applied" survives a reload, because the server answers it', ()
     expect(screen.queryByRole('button', { name: /apply for this bounty/i })).not.toBeInTheDocument()
   })
 
-  it('tells you which rule refused you, from the stored application', async () => {
+  it('tells you which rule refused you, in words, and offers the fix', async () => {
+    // The exact case from the live test: applied at 20:29:40, linked a wallet
+    // at 20:32:00, and the row still showed the refusal with no way back in.
     vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty()] })
     vi.mocked(getMyBountyState).mockResolvedValue({
       applications: { b1: { status: 'rejected_gate', gateFailureReason: 'no_linked_wallet', appliedAt: 'x' } },
       assignments: {},
     })
     renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
-    expect(await screen.findByText(/could not enter the draw: no_linked_wallet/i)).toBeInTheDocument()
+
+    expect(await screen.findByText(/link a solana wallet before applying/i)).toBeInTheDocument()
+    // Never the raw code.
+    expect(screen.queryByText(/no_linked_wallet/)).not.toBeInTheDocument()
+    // And a way to act on it, plus a way back in once they have.
+    expect(screen.getByRole('link', { name: /link a wallet/i })).toHaveAttribute('href', '/bounties/link')
+    expect(screen.getByRole('button', { name: /try again/i })).toBeEnabled()
+  })
+
+  it('does not offer a retry for a refusal the person cannot fix', async () => {
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty()] })
+    vi.mocked(getMyBountyState).mockResolvedValue({
+      applications: { b1: { status: 'rejected_gate', gateFailureReason: 'holding_another_bounty', appliedAt: 'x' } },
+      assignments: {},
+    })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+    expect(await screen.findByText(/already hold a bounty/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /try again/i })).toBeDisabled()
+  })
+
+  it('never shows a raw refusal code, even one it has no wording for', async () => {
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty()] })
+    vi.mocked(getMyBountyState).mockResolvedValue({
+      applications: { b1: { status: 'rejected_gate', gateFailureReason: 'some_new_rule', appliedAt: 'x' } },
+      assignments: {},
+    })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+    expect(await screen.findByText(/could not enter the draw for this bounty/i)).toBeInTheDocument()
+    expect(screen.queryByText(/some_new_rule/)).not.toBeInTheDocument()
   })
 
   it('says you won, and what to do next', async () => {

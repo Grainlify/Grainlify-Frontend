@@ -181,19 +181,19 @@ describe('apiRequest (exercised through the exported endpoint functions)', () =>
     await expect(checkHealth()).rejects.toThrow('API request failed with status 502')
   })
 
-  it('throws a permission-denied message including the parsed error field for a 403 with a JSON body', async () => {
+  it('surfaces the refusal code on a 403, so a feature can turn it into words', async () => {
     fetchMock.mockResolvedValueOnce(nonOkJsonResponse(403, { error: 'not_project_owner' }))
 
     await expect(checkHealth()).rejects.toThrow(
-      'Permission denied: not_project_owner. You may need admin privileges to perform this action.'
+      'not_project_owner'
     )
   })
 
-  it('falls back to a generic permission-denied message for a 403 with a non-JSON body', async () => {
+  it('says plainly that permission was refused when the 403 body is unreadable', async () => {
     fetchMock.mockResolvedValueOnce(nonOkUnparsableResponse(403))
 
     await expect(checkHealth()).rejects.toThrow(
-      'Permission denied: You do not have permission to perform this action. Admin privileges may be required.'
+      'You do not have permission to do that.'
     )
   })
 

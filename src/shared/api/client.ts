@@ -120,22 +120,29 @@ async function apiRequest<T>(
     }
 
     if (response.status === 403) {
-      // Forbidden - user doesn't have permission. Same fix as the generic
-      // branch below: the throw using the parsed message must sit outside
-      // the try that guards response.json(), or it's caught by this same
-      // block's own catch and the specific message never reaches the caller.
+      // Forbidden. Two things were wrong here and both reached real users.
+      //
+      // It threw a plain Error, so the structured body was discarded. Every
+      // feature that maps a refusal code to a sentence - the bounty apply
+      // flow among them - reads err.data.error, which a plain Error does not
+      // carry. The mapping silently never fired and the developer string went
+      // straight to the screen: "Permission denied: no_linked_wallet. You may
+      // need admin privileges to perform this action."
+      //
+      // And that sentence was untrue. Most 403s here are ordinary rules -
+      // you have not linked a wallet, you already hold a bounty - and telling
+      // someone they need admin privileges sends them to ask for access they
+      // neither need nor could use.
       let forbiddenData: { message?: string; error?: string } | undefined;
       try {
         forbiddenData = await response.json();
       } catch {
-        throw new Error(
-          "Permission denied: You do not have permission to perform this action. Admin privileges may be required.",
-        );
+        throw new ApiError("You do not have permission to do that.", 403);
       }
-      const errorMsg =
-        forbiddenData?.message || forbiddenData?.error || "Access forbidden";
-      throw new Error(
-        `Permission denied: ${errorMsg}. You may need admin privileges to perform this action.`,
+      throw new ApiError(
+        forbiddenData?.message || forbiddenData?.error || "You do not have permission to do that.",
+        403,
+        forbiddenData as Record<string, unknown> | undefined,
       );
     }
 
@@ -1076,7 +1083,7 @@ const BOUNTY_APPLY_REFUSALS: Record<string, string> = {
   already_applied: 'You have already applied for this bounty.',
   holding_another_bounty: 'You already hold a bounty. Finish or release it before applying for another.',
   no_linked_wallet: 'Link a Solana wallet first, so a bounty you win can be paid.',
-  account_too_new: 'Your GitHub account is too new to apply yet.',
+  account_too_new: 'Your GitHub account is too new to apply yet. Accounts must be at least 30 days old.',
   account_age_unknown: 'We could not read your GitHub account just now. Try again shortly.',
   org_member: 'You maintain this repository, so you cannot win its bounties.',
   github_not_linked: 'Connect your GitHub account first.',
