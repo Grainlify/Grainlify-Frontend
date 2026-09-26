@@ -21,7 +21,19 @@ vi.mock('../../../shared/api/client', () => ({
   getAdminOpenSourceWeekEvents: vi.fn(),
   createOpenSourceWeekEvent: vi.fn(),
   deleteOpenSourceWeekEvent: vi.fn(),
+  // The Bounty Draw section renders on this page too. Resolving rather than
+  // rejecting keeps its failure path out of every unrelated admin assertion.
+  getDrawSettings: vi.fn().mockResolvedValue({ settings: [] }),
+  setDrawSetting: vi.fn(),
+  resetDrawSetting: vi.fn(),
+  getBountyDrawState: vi.fn(),
+  runBountyDraw: vi.fn(),
 }))
+
+vi.mock('../../../shared/api/bountyAgent', async (orig) => {
+  const real = await orig<typeof import('../../../shared/api/bountyAgent')>()
+  return { ...real, getBounties: vi.fn().mockResolvedValue({ status: { network: 'solana-mainnet', mainnetLive: true, inferenceMode: 'live', statusLine: '' }, bounties: [] }) }
+})
 
 vi.mock('sonner', () => ({
   toast: {

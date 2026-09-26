@@ -1,18 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Coins, ExternalLink, ScrollText } from 'lucide-react';
+import { Coins, ScrollText } from 'lucide-react';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
-import { formatBountyAmount, getBounties, type BountyAgentStatus, type PublicBounty } from '../../../shared/api/bountyAgent';
+import { getBounties, type BountyAgentStatus, type PublicBounty } from '../../../shared/api/bountyAgent';
 import { StatusNotice } from '../components/StatusNotice';
 import { ConnectedWallet } from '../components/ConnectedWallet';
-
-const STATUS_LABELS: Record<string, string> = {
-  posted: 'Open',
-  in_review: 'PR in review',
-  payable: 'Awaiting approval',
-  paid: 'Paid',
-};
+import { BountyRow } from '../components/BountyRow';
 
 interface BountiesProgramPageProps {
   /** Where "Open the ledger" goes: the dashboard subtab, or the public page. */
@@ -25,7 +20,11 @@ interface BountiesProgramPageProps {
  * programme; it reads from the bounty agent, not this backend. */
 export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
   const { theme } = useTheme();
+  const { isAuthenticated, user } = useAuth();
   const isDark = theme === 'dark';
+  // A button that can only produce "connect GitHub first" is worse than one
+  // that says so before it is pressed.
+  const canApply = Boolean(isAuthenticated && user?.github?.login);
 
   const [isLoading, setIsLoading] = useState(true);
   const [bounties, setBounties] = useState<PublicBounty[]>([]);
@@ -60,46 +59,12 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
   const open = bounties.filter((b) => b.status !== 'paid');
   const paid = bounties.filter((b) => b.status === 'paid');
   const card = `rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-colors ${isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'}`;
-  const row = `flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-[16px] border transition-all ${isDark ? 'bg-white/[0.06] border-white/10' : 'bg-white/[0.35] border-white/30'}`;
   const strong = isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]';
   const muted = isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
   const eyebrow = `text-[11px] font-bold uppercase tracking-wide ${isDark ? 'text-[#b8a898]' : 'text-[#9a8b7a]'}`;
-  const pill = `px-3 py-1 rounded-full text-[11px] font-bold shrink-0 ${isDark ? 'bg-[#c9983a]/20 text-[#e8c571]' : 'bg-[#c9983a]/20 text-[#8b6f3a]'}`;
 
   const renderRow = (b: PublicBounty) => (
-    <div key={b.id} className={row}>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap mb-1">
-          <span className={`text-[14.5px] font-semibold ${strong}`}>{b.issueTitle || `Issue #${b.issueNumber}`}</span>
-          <span className={pill}>{STATUS_LABELS[b.status] ?? b.status}</span>
-        </div>
-        <p className={`text-[12.5px] ${muted}`}>
-          {b.repo} #{b.issueNumber}
-          {b.payout && (
-            <>
-              {' · paid to '}
-              {b.payout.recipientLogin}
-              {' · '}
-              <a href={b.payout.txUrl} target="_blank" rel="noreferrer" className={`underline underline-offset-2 ${isDark ? 'text-[#e8c571]' : 'text-[#5c4214]'}`}>
-                transaction
-              </a>
-            </>
-          )}
-        </p>
-      </div>
-      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-        <span className={`text-[16px] font-extrabold tabular-nums ${strong}`}>{formatBountyAmount(b)}</span>
-        <a
-          href={b.issueUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[13px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_24px_rgba(162,121,44,0.4)] transition-all border border-white/10"
-        >
-          View issue
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
-    </div>
+    <BountyRow key={b.id} bounty={b} isDark={isDark} canApply={canApply} onApplied={() => setAttempt((n) => n + 1)} />
   );
 
   return (
@@ -157,7 +122,7 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
             </p>
             {open.length === 0 ? (
               <p className={`text-[13.5px] py-2 ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
-                No bounty is open right now. New ones are posted as comments on the issues themselves, and appear here.
+                No bounty is open right now. New ones appear here when they are posted, with a window to apply in.
               </p>
             ) : (
               <div className="space-y-2">{open.map(renderRow)}</div>
@@ -177,14 +142,39 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
         <h2 className={`text-[15px] font-bold mb-3 ${strong}`}>How to claim a bounty</h2>
         <ol className={`space-y-2 text-[13.5px] leading-[1.55] list-decimal pl-5 ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
           <li>Link a Solana wallet to your GitHub account once. A phone wallet is enough.</li>
-          <li>Open a pull request that says <code className="font-mono text-[12.5px]">Closes #N</code> for the bounty issue.</li>
+          <li>
+            Apply here while the bounty's window is open — six hours by default. Do not open a pull request yet, and there is no need to
+            comment on the issue.
+          </li>
+          <li>When the window closes, one applicant is drawn and assigned. You will see who won on this page.</li>
+          <li>If you are drawn, open a pull request that says <code className="font-mono text-[12.5px]">Closes #N</code> before the deadline shown on the bounty.</li>
           <li>The agent posts an advisory review. A maintainer decides whether to merge.</li>
           <li>After the merge, a person approves the payout and it is sent to your wallet.</li>
         </ol>
-        <p className={`mt-3 text-[12.5px] ${muted}`}>
-          One wallet per GitHub account. Accounts must be at least 30 days old. Self-merged pull requests are not paid. Up to $50 per bounty.
+
+        <h3 className={`text-[13.5px] font-bold mt-5 mb-2 ${strong}`}>How the draw works</h3>
+        <p className={`text-[13px] leading-[1.55] ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
+          It is weighted, not first-come. Applying early gives you no advantage, and applying to more bounties does not improve your odds on
+          any of them. Everyone starts with the same ticket; it is multiplied by how well the issue matches what you have done before, by a
+          bonus if you have never been assigned a bounty, by a bonus per bounty you have completed (capped, so wins cannot compound
+          indefinitely), and reduced if you have been assigned a bounty and gone silent. A pull request that is reviewed and rejected is not
+          counted against you.
+        </p>
+        <p className={`mt-2 text-[13px] leading-[1.55] ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
+          What the draw cannot see: your follower count, your stars, how many pull requests you have opened anywhere, and how well your
+          application is written. There is no code path that reads them.
+        </p>
+        <p className={`mt-2 text-[13px] leading-[1.55] ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
+          Every draw stores its seed and the full ticket breakdown, so a result can be recomputed rather than argued about. How many people
+          applied is not published while a window is open — otherwise the draw becomes something to time.
+        </p>
+
+        <p className={`mt-4 text-[12.5px] ${muted}`}>
+          One wallet per GitHub account, and one bounty at a time. Accounts must be at least 30 days old. Maintainers of a repository cannot
+          win its bounties. Self-merged pull requests are not paid. Every payout is approved by a person before it is sent.
         </p>
       </div>
+
     </div>
   );
 }

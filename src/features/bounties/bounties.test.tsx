@@ -33,7 +33,9 @@ const devnet = {
 const bounty = (o: Partial<PublicBounty> = {}): PublicBounty => ({
   id: 'b1', repo: 'Grainlify/grainlify-agent-sandbox', issueNumber: 1, issueTitle: 'Fix the spelling of "Wellcome"',
   issueUrl: 'https://github.com/Grainlify/grainlify-agent-sandbox/issues/1', amountMinor: '20000000', decimals: 6,
-  currency: 'USDC', network: 'solana-devnet', status: 'posted', postedAt: '2026-09-18T20:48:00.000Z', payout: null, ...o,
+  currency: 'USDC', network: 'solana-devnet', status: 'posted', postedAt: '2026-09-18T20:48:00.000Z', payout: null,
+  isTest: false, waivedRules: [], applicationsOpenAt: null, applicationsCloseAt: null, applicationState: 'none',
+  assignedTo: null, assignmentStaleAt: null, ...o,
 })
 
 describe('BountiesProgramPage', () => {

@@ -1066,6 +1066,100 @@ const BOUNTY_LINK_REFUSALS: Record<string, string> = {
   agent_unreachable: 'The bounty agent could not be reached. Nothing was changed; try again in a moment.',
 };
 
+/** Why an application was refused, in words for the person who asked. The
+ *  agent returns a code; it writes the sentence for the admin view, but a
+ *  contributor deserves one written for them. */
+const BOUNTY_APPLY_REFUSALS: Record<string, string> = {
+  no_such_bounty: 'That bounty no longer exists.',
+  not_open: 'That bounty is not open for applications.',
+  applications_closed: 'Applications for this bounty have closed. The draw runs next.',
+  already_applied: 'You have already applied for this bounty.',
+  holding_another_bounty: 'You already hold a bounty. Finish or release it before applying for another.',
+  no_linked_wallet: 'Link a Solana wallet first, so a bounty you win can be paid.',
+  account_too_new: 'Your GitHub account is too new to apply yet.',
+  account_age_unknown: 'We could not read your GitHub account just now. Try again shortly.',
+  org_member: 'You maintain this repository, so you cannot win its bounties.',
+  github_not_linked: 'Connect your GitHub account first.',
+  nonce_used: 'That request was already used. Try again.',
+  agent_unreachable: 'The bounty agent could not be reached. Nothing was changed; try again in a moment.',
+  draw_not_configured: 'Applications are not switched on yet.',
+};
+
+export interface BountyApplied {
+  applied: true;
+  applicationId: string;
+  closesAt: string | null;
+}
+
+/** Applies for a bounty. The browser sends no identity: Grainlify countersigns
+ *  who is asking and relays it, exactly as it does for the wallet link. */
+export async function applyForBounty(bountyId: string): Promise<BountyApplied> {
+  try {
+    return await apiRequest<BountyApplied>(`/bounties/${encodeURIComponent(bountyId)}/apply`, { method: 'POST', requiresAuth: true });
+  } catch (e) {
+    const code = (e as ApiError)?.data?.error as string | undefined;
+    if (code && BOUNTY_APPLY_REFUSALS[code]) throw new ApiError(BOUNTY_APPLY_REFUSALS[code], (e as ApiError).status, (e as ApiError).data);
+    throw e;
+  }
+}
+
+// ---------------------------------------------------------------- admin: draw
+
+export interface DrawSetting {
+  key: string;
+  type: 'int' | 'float' | 'bool';
+  section: string;
+  description: string;
+  default: string;
+  value: string;
+  overridden: boolean;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+export interface DrawCandidate {
+  githubLogin: string;
+  githubUserId: number;
+  fit: string;
+  tickets: number;
+  weights: Record<string, number>;
+  share: number;
+}
+
+export interface DrawResultView {
+  drawId: string;
+  seed: number;
+  simulation: boolean;
+  triggeredBy: string;
+  poolSize: number;
+  pool: DrawCandidate[];
+  winner: { githubLogin: string; githubUserId: number; tickets: number } | null;
+  firstComeFallback: boolean;
+  noWinnerReason: string | null;
+  assignmentId: string | null;
+  staleAt: string | null;
+}
+
+export interface BountyDrawState {
+  applications: {
+    total: number;
+    eligible: number;
+    refused: number;
+    applications: { githubLogin: string; githubUserId: number; status: string; gateFailureReason: string | null; fit: string | null; appliedAt: string }[];
+  };
+  draws: (DrawResultView & { ranAt: string; winnerLogin: string | null; configSnapshot: Record<string, string> })[];
+}
+
+export const getDrawSettings = () => apiRequest<{ settings: DrawSetting[] }>('/admin/bounty-draw/settings', { requiresAuth: true });
+export const setDrawSetting = (key: string, value: string) =>
+  apiRequest<{ ok: true; settings: DrawSetting[] }>('/admin/bounty-draw/settings', { method: 'POST', requiresAuth: true, body: JSON.stringify({ key, value }) });
+export const resetDrawSetting = (key: string) =>
+  apiRequest<{ ok: true; settings: DrawSetting[] }>('/admin/bounty-draw/settings/reset', { method: 'POST', requiresAuth: true, body: JSON.stringify({ key }) });
+export const getBountyDrawState = (bountyId: string) =>
+  apiRequest<BountyDrawState>(`/admin/bounty-draw/${encodeURIComponent(bountyId)}/state`, { requiresAuth: true });
+export const runBountyDraw = (bountyId: string, simulate: boolean) =>
+  apiRequest<DrawResultView>(`/admin/bounty-draw/${encodeURIComponent(bountyId)}/run`, { method: 'POST', requiresAuth: true, body: JSON.stringify({ simulate }) });
+
 export async function postBountyWalletLink(body: { message: string; countersignature: string; walletSignature: string }) {
   try {
     return await apiRequest<{ linked: true; wallet: string; githubLogin: string; replaced: string | null; unchanged: boolean }>(

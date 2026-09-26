@@ -56,6 +56,17 @@ export interface PublicBounty {
   status: 'posted' | 'in_review' | 'payable' | 'paid' | string;
   postedAt: string;
   payout: { txSignature: string; txUrl: string; paidAt: string; recipientLogin: string } | null;
+  /** A bounty that exists to exercise the pipeline. Always shown as such. */
+  isTest: boolean;
+  /** Eligibility rules this bounty waives, by name. Public on purpose: a
+   *  relaxed rule nobody can see is indistinguishable from one that is broken. */
+  waivedRules: string[];
+  applicationsOpenAt: string | null;
+  applicationsCloseAt: string | null;
+  applicationState: 'none' | 'open' | 'closed';
+  /** Who holds it now. How many applied is deliberately not published. */
+  assignedTo: string | null;
+  assignmentStaleAt: string | null;
 }
 
 export type LedgerEventKind = 'bounty_posted' | 'inference' | 'gate_passed' | 'gate_refused' | 'payout';
