@@ -97,6 +97,23 @@ export const getBounties = () => get<{ status: BountyAgentStatus; bounties: Publ
 export const getBounty = (id: string) => get<{ status: BountyAgentStatus; bounty: PublicBounty }>(`/public/bounties/${encodeURIComponent(id)}`);
 export const getBountyLedger = () => get<BountyLedger>('/public/ledger');
 
+/**
+ * text/plain, deliberately, on every POST to the agent.
+ *
+ * application/json makes a cross-origin POST a "preflighted" request: the
+ * browser sends an OPTIONS first and refuses to send the real request unless
+ * that succeeds. A wallet extension sitting in the request path can break that
+ * exchange, and when it does the page sees "No 'Access-Control-Allow-Origin'
+ * header is present" even though the server sent one -- which is exactly what
+ * happened on the wallet card, with the preflight verifiably correct from curl
+ * and from a clean browser.
+ *
+ * text/plain is on the short list of content types that make a POST a simple
+ * request, so there is no preflight to intercept. The agent never reads the
+ * content type; it reads the raw body and parses it as JSON.
+ */
+const AGENT_POST = { 'content-type': 'text/plain' } as const;
+
 export interface LinkedWallet {
   linked: true;
   wallet: string;
@@ -119,7 +136,7 @@ const LINK_REFUSALS: Record<string, string> = {
 export async function linkWalletFromSession(body: { message: string; countersignature: string; walletSignature: string }): Promise<LinkedWallet> {
   let res: Response;
   try {
-    res = await fetch(`${BOUNTY_AGENT_URL}/link/session`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    res = await fetch(`${BOUNTY_AGENT_URL}/link/session`, { method: 'POST', headers: AGENT_POST, body: JSON.stringify(body) });
   } catch {
     throw new BountyAgentError(0, 'The bounty agent could not be reached.');
   }
@@ -140,7 +157,7 @@ export interface WalletLinkState {
 export async function readWalletLink(body: { message: string; countersignature: string }): Promise<WalletLinkState> {
   let res: Response;
   try {
-    res = await fetch(`${BOUNTY_AGENT_URL}/link/session/read`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    res = await fetch(`${BOUNTY_AGENT_URL}/link/session/read`, { method: 'POST', headers: AGENT_POST, body: JSON.stringify(body) });
   } catch {
     throw new BountyAgentError(0, 'The bounty agent could not be reached.');
   }
