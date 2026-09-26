@@ -28,7 +28,7 @@ const bounty = (o: Partial<PublicBounty> = {}): PublicBounty => ({
   id: 'b1', repo: 'Grainlify/sandbox', issueNumber: 7, issueTitle: 't',
   issueUrl: 'u', amountMinor: '1000000', decimals: 6, currency: 'USDC', network: 'solana-mainnet',
   status: 'posted', postedAt: '2026-09-27T09:00:00.000Z', payout: null, isTest: false, waivedRules: [],
-  applicationsOpenAt: null, applicationsCloseAt: null, applicationState: 'closed', assignedTo: null, assignmentStaleAt: null, applicantBucket: null, applicantCount: null, ...o,
+  applicationsOpenAt: null, applicationsCloseAt: null, applicationState: 'closed', assignedTo: null, assignmentStaleAt: null, applicantBucket: null, applicantCount: null, reservedForNewcomers: false, ...o,
 })
 
 const drawResult: DrawResultView = {
@@ -46,10 +46,14 @@ beforeEach(() => {
   vi.mocked(getDrawSettings).mockResolvedValue({ settings: [setting()] })
   vi.mocked(getBounties).mockResolvedValue({ status: { network: 'solana-mainnet', mainnetLive: true, inferenceMode: 'live', statusLine: '' }, bounties: [bounty()] })
   vi.mocked(getBountyDrawState).mockResolvedValue({
-    applications: { total: 2, eligible: 2, refused: 0, applications: [
-      { githubLogin: 'alice', githubUserId: 1, status: 'applied', gateFailureReason: null, fit: null, appliedAt: 'x' },
-      { githubLogin: 'bob', githubUserId: 2, status: 'applied', gateFailureReason: null, fit: null, appliedAt: 'x' },
-    ] },
+    applications: {
+      total: 2, eligible: 2, refused: 0,
+      fitCost: { assessed: 2, totalMicro: 4062, perApplicationMicro: 2031 },
+      applications: [
+        { githubLogin: 'alice', githubUserId: 1, status: 'applied', gateFailureReason: null, fit: 'strong', difficultyMatch: 'matched', fitEvidence: 'Three TypeScript repos.', fitConcerns: [], fitCostMicro: 2031, appliedAt: 'x' },
+        { githubLogin: 'bob', githubUserId: 2, status: 'applied', gateFailureReason: null, fit: 'plausible', difficultyMatch: 'matched', fitEvidence: null, fitConcerns: ['instruction_injection_attempt'], fitCostMicro: 2031, appliedAt: 'x' },
+      ],
+    },
     draws: [],
   })
 })
@@ -104,7 +108,23 @@ describe('running a draw by hand', () => {
     expect(screen.queryByText(/^Winner:/)).not.toBeInTheDocument()
   })
 
-  it('shows application counts, which the public page never does', async () => {
+  it('reports what the fit assessment cost, per application and in total', async () => {
+    renderWithProviders(<BountyDrawControls />)
+    await userEvent.selectOptions(await screen.findByLabelText('Bounty'), 'b1')
+    expect(await screen.findByText(/2 assessed/i)).toBeInTheDocument()
+    expect(screen.getByText(/\$0.002031 per application/i)).toBeInTheDocument()
+    expect(screen.getByText(/same lifetime inference budget/i)).toBeInTheDocument()
+  })
+
+  it('shows the fit verdict and any concern the model raised', async () => {
+    renderWithProviders(<BountyDrawControls />)
+    await userEvent.selectOptions(await screen.findByLabelText('Bounty'), 'b1')
+    expect(await screen.findByText(/fit strong/i)).toBeInTheDocument()
+    expect(screen.getByText(/instruction_injection_attempt/i)).toBeInTheDocument()
+    expect(screen.getByText('Three TypeScript repos.')).toBeInTheDocument()
+  })
+
+  it('shows application counts, which the public page shows only coarsely', async () => {
     renderWithProviders(<BountyDrawControls />)
     await userEvent.selectOptions(await screen.findByLabelText('Bounty'), 'b1')
     expect(await screen.findByText(/2 applied · 2 in the pool · 0 refused/i)).toBeInTheDocument()

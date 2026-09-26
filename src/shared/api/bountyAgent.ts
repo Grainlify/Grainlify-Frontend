@@ -67,6 +67,8 @@ export interface PublicBounty {
   /** Who holds it now. How many applied is deliberately not published. */
   assignedTo: string | null;
   assignmentStaleAt: string | null;
+  /** Only contributors with no completed bounty can win it. */
+  reservedForNewcomers: boolean;
   /** Coarse band while a window is open; null when hidden or once closed. */
   applicantBucket: 'none' | 'few' | 'many' | null;
   /** Exact size, released once the window closes. */

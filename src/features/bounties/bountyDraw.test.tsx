@@ -33,7 +33,7 @@ const bounty = (o: Partial<PublicBounty> = {}): PublicBounty => ({
   currency: 'USDC', network: 'solana-mainnet', status: 'posted', postedAt: '2026-09-27T09:00:00.000Z', payout: null,
   isTest: false, waivedRules: [], applicationsOpenAt: '2026-09-27T09:00:00.000Z',
   applicationsCloseAt: new Date(Date.now() + 5 * 3600_000).toISOString(), applicationState: 'open',
-  assignedTo: null, assignmentStaleAt: null, applicantBucket: null, applicantCount: null, ...o,
+  assignedTo: null, assignmentStaleAt: null, applicantBucket: null, applicantCount: null, reservedForNewcomers: false, ...o,
 })
 
 describe('what a bounty tells a contributor they can do', () => {
@@ -85,6 +85,12 @@ describe('what a bounty tells a contributor they can do', () => {
     expect(c.line).toContain('A few applicants')
   })
 
+  it('says a reserved bounty is reserved, because it changes whether to bother', () => {
+    const c = callToAction(bounty({ reservedForNewcomers: true, applicationsCloseAt: '2026-09-27T18:00:00Z' }), now)
+    expect(c.kind).toBe('apply')
+    expect(c.line).toMatch(/have not completed a bounty yet/i)
+  })
+
   it('counts down in minutes, hours then days, and stops at zero', () => {
     expect(timeUntil('2026-09-27T12:30:00Z', now)).toBe('in 30 minutes')
     expect(timeUntil('2026-09-27T17:00:00Z', now)).toBe('in 5 hours')
@@ -107,8 +113,29 @@ describe('applying from the bounties page', () => {
 
     const button = await screen.findByRole('button', { name: /apply for this bounty/i })
     await userEvent.click(button)
-    expect(vi.mocked(applyForBounty)).toHaveBeenCalledWith('b1')
+    expect(vi.mocked(applyForBounty)).toHaveBeenCalledWith('b1', undefined)
     expect(await screen.findByText(/you are in the draw/i)).toBeInTheDocument()
+  })
+
+  it('sends the optional note, and sends nothing when it is blank', async () => {
+    // §4.4: untrusted, very likely AI-generated, never weighted. It travels
+    // outside the signed message for that reason - Grainlify does not vouch
+    // for words the applicant wrote.
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty()] })
+    vi.mocked(applyForBounty).mockResolvedValue({ applied: true, applicationId: 'a1', closesAt: null })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+
+    const note = await screen.findByLabelText(/anything you want to add/i)
+    await userEvent.type(note, 'I wrote the original fixture this test uses.')
+    await userEvent.click(screen.getByRole('button', { name: /apply for this bounty/i }))
+    expect(vi.mocked(applyForBounty)).toHaveBeenCalledWith('b1', 'I wrote the original fixture this test uses.')
+  })
+
+  it('says plainly that the note is not weighted', async () => {
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty()] })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+    const note = await screen.findByLabelText(/anything you want to add/i)
+    expect(note).toHaveAttribute('placeholder', expect.stringMatching(/does not weight this/i))
   })
 
   it('shows the reason an application was refused, in words', async () => {
@@ -125,6 +152,12 @@ describe('applying from the bounties page', () => {
     renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
     expect(await screen.findByText(/assigned to someone/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /apply for this bounty/i })).not.toBeInTheDocument()
+  })
+
+  it('marks a bounty reserved for first-timers', async () => {
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty({ reservedForNewcomers: true })] })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+    expect(await screen.findByText(/first bounty only/i)).toBeInTheDocument()
   })
 
   it('marks a test bounty visibly and names what it relaxes', async () => {

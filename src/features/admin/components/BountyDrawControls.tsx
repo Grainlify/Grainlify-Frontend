@@ -161,9 +161,18 @@ export function BountyDrawControls() {
         <div className={box}>
           <h3 className={`text-[15px] font-bold mb-1 ${strong}`}>Applications</h3>
           <p className={`text-[12.5px] mb-3 ${muted}`}>
-            {state.applications.total} applied · {state.applications.eligible} in the pool · {state.applications.refused} refused. Counts are
-            admin-only; the public page never shows them while a window is open.
+            {state.applications.total} applied · {state.applications.eligible} in the pool · {state.applications.refused} refused. The public
+            page shows only a coarse band until the window closes.
           </p>
+          {state.applications.fitCost.assessed > 0 && (
+            <p className={`text-[12.5px] mb-3 ${muted}`}>
+              Fit assessment: {state.applications.fitCost.assessed} assessed, ${(state.applications.fitCost.totalMicro / 1_000_000).toFixed(6)} total
+              {state.applications.fitCost.perApplicationMicro !== null && (
+                <> · ${(state.applications.fitCost.perApplicationMicro / 1_000_000).toFixed(6)} per application</>
+              )}
+              . Charged against the same lifetime inference budget as pricing and review.
+            </p>
+          )}
           {state.applications.applications.length === 0 ? (
             <p className={`text-[13px] ${muted}`}>Nobody has applied yet.</p>
           ) : (
@@ -175,7 +184,10 @@ export function BountyDrawControls() {
                     {' — '}
                     {a.status}
                     {a.gateFailureReason ? ` (${a.gateFailureReason})` : ''}
+                    {a.fit ? ` · fit ${a.fit}` : ''}
+                    {a.fitConcerns.length > 0 ? ` · ${a.fitConcerns.join(', ')}` : ''}
                   </span>
+                  {a.fitEvidence && <p className={`text-[12px] ${muted}`}>{a.fitEvidence}</p>}
                 </li>
               ))}
             </ul>

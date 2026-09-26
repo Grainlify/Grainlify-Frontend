@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ExternalLink, FlaskConical } from 'lucide-react';
+import { ExternalLink, FlaskConical, Sprout } from 'lucide-react';
 import { applyForBounty, type MyBountyApplication } from '../../../shared/api/client';
 import { formatBountyAmount, type PublicBounty } from '../../../shared/api/bountyAgent';
 
@@ -58,7 +58,13 @@ export function callToAction(b: PublicBounty, now: Date): { kind: 'apply' | 'wai
   if (b.applicationState === 'open') {
     const left = timeUntil(b.applicationsCloseAt, now);
     const pool = poolLine(b);
-    const base = left ? `Applications close ${left}. Everyone who applies in time goes into the draw.` : 'Applications are open.';
+    const base = b.reservedForNewcomers
+      ? left
+        ? `Applications close ${left}. Reserved for contributors who have not completed a bounty yet.`
+        : 'Applications are open, for contributors who have not completed a bounty yet.'
+      : left
+        ? `Applications close ${left}. Everyone who applies in time goes into the draw.`
+        : 'Applications are open.';
     // Said alongside the deadline because together they are what someone
     // actually wants to know, and apart they invite refreshing for a number.
     return { kind: 'apply', line: pool ? `${base} ${pool}` : base };
@@ -102,6 +108,7 @@ interface BountyRowProps {
 }
 
 export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: BountyRowProps) {
+  const [text, setText] = useState('');
   const [applying, setApplying] = useState(false);
   // Held only until the refreshed server state arrives, so the row says
   // something the instant the click succeeds rather than after a round trip.
@@ -127,7 +134,7 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: Boun
     setApplying(true);
     setError(null);
     try {
-      await applyForBounty(b.id);
+      await applyForBounty(b.id, text.trim() || undefined);
       setJustApplied(true);
       onApplied?.();
     } catch (e) {
@@ -144,6 +151,16 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: Boun
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className={`text-[14.5px] font-semibold ${strong}`}>{b.issueTitle || `Issue #${b.issueNumber}`}</span>
             <span className={pill}>{STATUS_LABELS[b.status] ?? b.status}</span>
+            {b.reservedForNewcomers && (
+              <span
+                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold shrink-0 ${
+                  isDark ? 'bg-[#6f9e5a]/25 text-[#cfe6bf]' : 'bg-[#6f9e5a]/20 text-[#3d5a2f]'
+                }`}
+              >
+                <Sprout className="w-3 h-3" />
+                First bounty only
+              </span>
+            )}
             {b.isTest && (
               <span className={testPill}>
                 <FlaskConical className="w-3 h-3" />
@@ -180,6 +197,25 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: Boun
           </a>
         </div>
       </div>
+
+      {cta.kind === 'apply' && !applied && canApply && (
+        <div>
+          <label htmlFor={`note-${b.id}`} className={`block text-[12px] font-medium mb-1 ${muted}`}>
+            Anything you want to add (optional)
+          </label>
+          <textarea
+            id={`note-${b.id}`}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={2}
+            maxLength={2000}
+            placeholder="Optional. The draw does not weight this — it is read alongside your public code, never instead of it."
+            className={`w-full rounded-[10px] border px-3 py-2 text-[13px] ${
+              isDark ? 'bg-white/[0.06] border-white/15 text-[#f5f5f5] placeholder:text-[#8a7e70]' : 'bg-white/[0.5] border-black/15 text-[#2d2820] placeholder:text-[#9a8b7a]'
+            }`}
+          />
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <p className={`flex-1 text-[12.5px] ${muted}`}>

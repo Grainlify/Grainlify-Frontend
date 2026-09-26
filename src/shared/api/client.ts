@@ -1093,9 +1093,13 @@ export interface BountyApplied {
 
 /** Applies for a bounty. The browser sends no identity: Grainlify countersigns
  *  who is asking and relays it, exactly as it does for the wallet link. */
-export async function applyForBounty(bountyId: string): Promise<BountyApplied> {
+export async function applyForBounty(bountyId: string, applicationText?: string): Promise<BountyApplied> {
   try {
-    return await apiRequest<BountyApplied>(`/bounties/${encodeURIComponent(bountyId)}/apply`, { method: 'POST', requiresAuth: true });
+    return await apiRequest<BountyApplied>(`/bounties/${encodeURIComponent(bountyId)}/apply`, {
+      method: 'POST',
+      requiresAuth: true,
+      body: JSON.stringify({ application_text: applicationText ?? '' }),
+    });
   } catch (e) {
     const code = (e as ApiError)?.data?.error as string | undefined;
     if (code && BOUNTY_APPLY_REFUSALS[code]) throw new ApiError(BOUNTY_APPLY_REFUSALS[code], (e as ApiError).status, (e as ApiError).data);
@@ -1162,7 +1166,21 @@ export interface BountyDrawState {
     total: number;
     eligible: number;
     refused: number;
-    applications: { githubLogin: string; githubUserId: number; status: string; gateFailureReason: string | null; fit: string | null; appliedAt: string }[];
+    /** What Layer 2 cost for this bounty. null per-application when nothing
+     *  was bought — which is different from a call that cost nothing. */
+    fitCost: { assessed: number; totalMicro: number; perApplicationMicro: number | null };
+    applications: {
+      githubLogin: string;
+      githubUserId: number;
+      status: string;
+      gateFailureReason: string | null;
+      fit: string | null;
+      difficultyMatch: string | null;
+      fitEvidence: string | null;
+      fitConcerns: string[];
+      fitCostMicro: number | null;
+      appliedAt: string;
+    }[];
   };
   draws: (DrawResultView & { ranAt: string; winnerLogin: string | null; configSnapshot: Record<string, string> })[];
 }
