@@ -35,14 +35,25 @@ export const removeAuthToken = (): void => {
 
 // API request helper
 interface ApiRequestOptions extends RequestInit {
+  /** The endpoint genuinely requires a session. No token = fail before sending. */
   requiresAuth?: boolean;
+  /**
+   * Attach the token if there is one, and carry on without it if there is not.
+   *
+   * For endpoints that are deliberately NOT auth-gated but still want to know
+   * who you are: support requests, where somebody who cannot sign in is
+   * exactly the person most likely to need help. Distinct from requiresAuth
+   * because the two used to be the same flag, which meant an endpoint that
+   * merely *preferred* a token behaved like one that *demanded* it.
+   */
+  optionalAuth?: boolean;
 }
 
 async function apiRequest<T>(
   endpoint: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { requiresAuth = false, headers = {}, ...fetchOptions } = options;
+  const { requiresAuth = false, optionalAuth = false, headers = {}, ...fetchOptions } = options;
 
   const url = `${API_BASE_URL}${endpoint}`;
   const requestHeaders: Record<string, string> = {
@@ -64,12 +75,21 @@ async function apiRequest<T>(
     requestHeaders["Content-Type"] = "application/json";
   }
 
-  // Add auth token if required
-  if (requiresAuth) {
+  // Add auth token if required.
+  //
+  // A requiresAuth call with no token must fail HERE, not at the server. Sent
+  // without an Authorization header it earns a 401, and the 401 branch below
+  // clears the stored token -- so a call made a moment too early (a component
+  // mounting before AuthContext has settled) could sign a real, signed-in user
+  // out. There are 118 requiresAuth call sites; fixing each one to wait is not
+  // a guarantee, whereas refusing to send an unauthenticated "authenticated"
+  // request is.
+  if (requiresAuth || optionalAuth) {
     const token = getAuthToken();
-    if (token) {
-      requestHeaders["Authorization"] = `Bearer ${token}`;
+    if (!token && requiresAuth) {
+      throw new ApiError("Not signed in.", 401, { reason: "no_token_available" });
     }
+    if (token) requestHeaders["Authorization"] = `Bearer ${token}`;
   }
 
   let response: Response;
@@ -91,7 +111,10 @@ async function apiRequest<T>(
   // Handle errors
   if (!response.ok) {
     if (response.status === 401) {
-      // Token expired or invalid - clear it
+      // A 401 that comes back from the server means the token we DID send was
+      // rejected, so clearing it is right. The case that used to be wrong --
+      // no token sent at all -- can no longer reach here, because the guard
+      // above refuses to make that request.
       removeAuthToken();
       throw new Error("Authentication failed. Please sign in again.");
     }
@@ -1277,8 +1300,8 @@ export const submitSupportRequest = (payload: {
 }) =>
   apiRequest<{ ok: boolean; support_id: string; delivered: string[] }>("/support-requests", {
     method: "POST",
-    // requiresAuth is what actually attaches the token. Without it apiRequest
-    // defaults to false and never sets the Authorization header, so the
+    // optionalAuth is what attaches the token. Without it apiRequest
+    // never sets the Authorization header, so the
     // endpoint - which reads the JWT itself rather than sitting behind auth
     // middleware, because anonymous reports are legitimate - saw no
     // credentials and recorded every report as anonymous. All 8 support rows
@@ -1289,7 +1312,7 @@ export const submitSupportRequest = (payload: {
     // omitted and anonymous reporting still works, and the endpoint treats a
     // bad or expired token as anonymous rather than returning 401, so the
     // token-clearing branch in apiRequest cannot fire here.
-    requiresAuth: true,
+    optionalAuth: true,
     body: JSON.stringify(payload),
   });
 

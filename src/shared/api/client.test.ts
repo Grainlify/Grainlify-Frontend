@@ -10,6 +10,7 @@ import {
   getGitHubLoginUrl,
   captureReferralCodeFromURL,
   readStoredReferralCode,
+  submitSupportRequest,
 } from './client'
 
 // This codebase's convention is 100% manual fetch mocking (no msw). The base
@@ -113,10 +114,29 @@ describe('apiRequest (exercised through the exported endpoint functions)', () =>
     expect(init.body).toBeUndefined()
   })
 
-  it('omits the Authorization header when requiresAuth is true but no token is stored', async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'u1', role: 'contributor' }))
+  it('refuses to send a requiresAuth request with no token, rather than earning a 401', async () => {
+    // The old behaviour sent it anyway. The server answered 401, and the 401
+    // branch below clears the stored token -- so a call made a moment too
+    // early, before AuthContext had settled, could sign a real user out. With
+    // 118 requiresAuth call sites, refusing to send is the only guarantee.
+    await expect(getCurrentUser()).rejects.toMatchObject({ status: 401 })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 
-    await getCurrentUser()
+  it('does not clear a stored token when the failure was our own missing-token guard', async () => {
+    // Nothing was sent, so nothing was rejected: there is no reason to log
+    // anybody out.
+    localStorage.removeItem('patchwork_jwt')
+    await expect(getCurrentUser()).rejects.toMatchObject({ status: 401 })
+    expect(localStorage.getItem('patchwork_jwt')).toBeNull()
+  })
+
+  it('still sends an optionalAuth request with no token: anonymous support is legitimate', async () => {
+    // Somebody who cannot sign in is exactly the person most likely to need
+    // support, so this endpoint must keep working without a token.
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true, support_id: 's1', delivered: [] }))
+
+    await submitSupportRequest({ category: 'bug', message: 'the page is broken' })
 
     const [, init] = fetchMock.mock.calls[0] as [
       string,
