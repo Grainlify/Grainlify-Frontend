@@ -188,16 +188,26 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, mineLoading = fal
   const applied = isSettled(mine) || justApplied;
   const refusal = mine?.status === 'rejected_gate' ? refusalFor(mine.gateFailureReason) : null;
 
+  // A test bounty is marked with the brand's own sand, not a colour borrowed
+  // from somewhere else. The first version used a steel blue that exists
+  // nowhere in this palette; it stood out, which was the intent, but it stood
+  // out as a different product's component.
   const row = `flex flex-col gap-3 p-4 rounded-[16px] border transition-all ${
     b.isTest
-      ? isDark ? 'bg-[#4a7c8c]/[0.14] border-[#7fb4c4]/30' : 'bg-[#4a7c8c]/[0.10] border-[#4a7c8c]/30'
-      : isDark ? 'bg-white/[0.06] border-white/10' : 'bg-white/[0.35] border-white/30'
+      ? isDark
+        ? 'bg-[var(--brand-sand)]/[0.14] border-[var(--brand-sand)]/35 border-dashed'
+        : 'bg-[var(--brand-sand)]/[0.14] border-[var(--brand-gold-strong)]/35 border-dashed'
+      : isDark
+        ? 'bg-white/[0.06] border-white/10'
+        : 'bg-white/[0.35] border-white/30'
   }`;
   const strong = isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]';
   const muted = isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
   const pill = `px-3 py-1 rounded-full text-[11px] font-bold shrink-0 ${isDark ? 'bg-[#c9983a]/20 text-[#e8c571]' : 'bg-[#c9983a]/20 text-[#8b6f3a]'}`;
   const testPill = `inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold shrink-0 ${
-    isDark ? 'bg-[#7fb4c4]/25 text-[#bfe0ea]' : 'bg-[#4a7c8c]/20 text-[#2f5a68]'
+    isDark
+      ? 'bg-[var(--brand-sand)]/25 text-[var(--brand-cream)]'
+      : 'bg-[var(--brand-sand)]/30 text-[var(--brand-gold-text-deep)]'
   }`;
 
   const apply = async () => {
@@ -224,7 +234,9 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, mineLoading = fal
             {b.reservedForNewcomers && (
               <span
                 className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold shrink-0 ${
-                  isDark ? 'bg-[#6f9e5a]/25 text-[#cfe6bf]' : 'bg-[#6f9e5a]/20 text-[#3d5a2f]'
+                  isDark
+                    ? 'bg-[var(--brand-success)]/25 text-[var(--brand-success-text)]'
+                    : 'bg-[var(--brand-success)]/25 text-[var(--brand-success-text-deep)]'
                 }`}
               >
                 <Sprout className="w-3 h-3" />

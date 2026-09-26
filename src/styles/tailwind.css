@@ -2,3 +2,39 @@
 @source '../**/*.{js,ts,jsx,tsx}';
 
 @import 'tw-animate-css';
+
+/* ---------------------------------------------------------------------------
+   Repoint Tailwind's green scale at the brand's success colour.
+
+   Success is painted with `text-green-400`, `bg-green-500` and friends in
+   roughly 140 places across the product. Two things were wrong with that:
+   Tailwind's greens are cool and blue-leaning, so they read as borrowed next
+   to this warm gold palette; and they failed contrast, with text-green-500
+   measuring 1.72 on the cream page and text-green-400 measuring 1.32.
+
+   Overriding the scale here moves all of them at once. The alternative was
+   editing 140 call sites across dozens of features, which is the change most
+   likely to be done partially and leave the product in two greens.
+
+   The ramp keeps Tailwind's shape - light tints low, dark shades high - so
+   every existing choice still means what its author intended. What changes is
+   the hue (pulled toward yellow, ~100 degrees) and the saturation (down), and
+   the dark end is dark enough to pass AA on the cream page where the old one
+   did not. See src/styles/brand.css for the measured values.
+   --------------------------------------------------------------------------- */
+@theme {
+  --color-green-50: #f1f5ec;
+  --color-green-100: #dfe9d5;
+  --color-green-200: #c4d7b4;
+  --color-green-300: #a8cb8f;
+  --color-green-400: #96c479;
+  --color-green-500: #6f9e5a;
+  --color-green-600: #547a42;
+  --color-green-700: #3f6431;
+  --color-green-800: #37592a;
+  --color-green-900: #2c4d24;
+  --color-green-950: #1e2b18;
+  --color-emerald-400: #96c479;
+  --color-emerald-500: #6f9e5a;
+  --color-emerald-600: #547a42;
+}

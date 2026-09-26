@@ -102,6 +102,30 @@
   --brand-ink-muted: #4a4038;
   --brand-ink-faint: #b8a898;
 
+  /* --- Success. Warm green, so it sits with the gold rather than beside it.
+         The product painted success with Tailwind's greens, which are cool and
+         blue-leaning (green-500 is #22c55e) and looked borrowed next to this
+         palette. They also failed: measured against the cream page,
+         text-green-500 is 1.72 and text-green-400 is 1.32, both far below AA,
+         and between them they account for most success text in the product.
+
+         These are hue-shifted toward yellow (~100 deg) and desaturated, which
+         is what makes them read as ours. Structured exactly like the golds
+         above, and for the same reasons - surface, text-on-page, text-on-panel
+         and text-on-surface are four different problems. */
+  --brand-success: #6f9e5a;
+  --brand-success-strong: #547a42;
+  /* Success as TEXT on the page: 6.06 against the cream, comfortably past the
+     4.64 the gold text token manages. */
+  --brand-success-text: #37592a;
+  /* The panel companion, mirroring --brand-gold-text-deep. The warm beige
+     panel is darker than the page, so the page value drops to 4.73 there -
+     passing, but by the kind of margin brand.css already warns about. This
+     measures 5.66, alongside gold-text-deep's 5.53. */
+  --brand-success-text-deep: #2c4d24;
+  /* Text placed ON a success surface, same problem as --brand-gold-on. */
+  --brand-success-on: #1e2b18;
+
   /* --- Hairlines: grid and dot patterns, divider rules. Deliberately near
          invisible; a pattern that reads as a pattern competes with content. */
   --brand-hairline: rgba(45, 40, 32, 0.055);
@@ -134,6 +158,11 @@
   /* Gold on dark ground already passes as text; the light-mode darkening
      would be unreadable here, so it flips back to the bright value. */
   --brand-gold-text: #d4af37;
+  /* Same flip for success: #37592a measures 2.26 on the dark ground, so the
+     light-mode value would be unreadable. This is 9.03 there, and still the
+     warm, yellow-leaning green rather than Tailwind's. */
+  --brand-success-text: #96c479;
+  --brand-success-text-deep: #96c479;
   /* Dark mode's panels are dark, so gold-as-text has the opposite problem and
      the ordinary UI gold is already fine: #c9983a measures 4.82 on the dark
      modal panel. Kept rather than darkened - the rule is to change what
