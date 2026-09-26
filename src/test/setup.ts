@@ -1,3 +1,17 @@
+import { configure } from '@testing-library/react';
+
+// Testing Library waits one second by default. Nearly every findBy in this
+// suite is waiting on a mocked fetch plus a re-render, which is comfortably
+// under a second on a warm dev machine and is not on a cold CI runner. That
+// gap made contributorPath.test.tsx fail in CI while passing locally five runs
+// out of five -- and it failed on a commit with no source change at all, which
+// is what proved it was the clock and not the code.
+//
+// Raising the ceiling does not slow a passing test down: findBy polls and
+// resolves as soon as the element appears. It only changes how long a genuinely
+// slow render is given before it is called a failure.
+configure({ asyncUtilTimeout: 5000 });
+
 import '@testing-library/jest-dom/vitest'
 import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
