@@ -205,7 +205,13 @@ describe('contributor path from the GrainHack event page', () => {
 
       // Back returns to the event, not to an empty page.
       await user.click(screen.getByRole('button', { name: 'Back' }))
-      expect(await screen.findAllByRole('button', { name: 'View issue' })).toHaveLength(2)
+      // Going back refetches the event's issues, so this waits on a network
+      // round trip plus a re-render. Testing Library's default is one second,
+      // which holds on a warm dev machine and does not on a cold CI runner:
+      // this assertion passed locally five runs out of five while failing
+      // every time in CI. The wait is legitimate, so give it room rather than
+      // asserting on a race.
+      expect(await screen.findAllByRole('button', { name: 'View issue' }, { timeout: 5000 })).toHaveLength(2)
       expect(search().has('issue')).toBe(false)
     })
   }
