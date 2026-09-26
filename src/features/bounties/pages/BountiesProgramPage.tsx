@@ -45,8 +45,10 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
     getBounties()
       .then((res) => {
         if (!mounted) return;
-        setBounties(res.bounties);
-        setStatus(res.status);
+        // Same reasoning as the admin panel: an unexpected body must not
+        // crash the page, and "no bounties" is a truthful thing to render.
+        setBounties(res?.bounties ?? []);
+        setStatus(res?.status ?? null);
       })
       .catch((error) => {
         if (!mounted) return;

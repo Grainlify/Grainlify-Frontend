@@ -42,15 +42,26 @@ export function BountyDrawControls() {
   const [saving, setSaving] = useState<string | null>(null);
 
   useEffect(() => {
-    getDrawSettings().then((r) => setSettings(r.settings)).catch((e) => setError(String(e instanceof Error ? e.message : e)));
-    getBounties().then((r) => setBounties(r.bounties)).catch(() => setBounties([]));
+    // Defaulting to [] rather than trusting the shape: this section sits on
+    // the admin page beside the review queues, and an agent that answers with
+    // something unexpected must not take the page down with it. A browser
+    // test caught exactly that - an empty body made .map throw during render
+    // and the redemption queue above it disappeared.
+    getDrawSettings()
+      .then((r) => setSettings(r?.settings ?? []))
+      .catch((e) => setError(String(e instanceof Error ? e.message : e)));
+    getBounties()
+      .then((r) => setBounties(r?.bounties ?? []))
+      .catch(() => setBounties([]));
   }, []);
 
   useEffect(() => {
     if (!selected) return;
     setState(null);
     setResult(null);
-    getBountyDrawState(selected).then(setState).catch((e) => setError(String(e instanceof Error ? e.message : e)));
+    getBountyDrawState(selected)
+      .then((v) => setState(v?.applications ? v : null))
+      .catch((e) => setError(String(e instanceof Error ? e.message : e)));
   }, [selected]);
 
   const sections = useMemo(() => {
@@ -87,8 +98,9 @@ export function BountyDrawControls() {
     setConfirming(null);
     try {
       const r = await runBountyDraw(selected, simulate);
-      setResult(r);
-      setState(await getBountyDrawState(selected));
+      setResult(r?.pool ? r : null);
+      const next = await getBountyDrawState(selected);
+      setState(next?.applications ? next : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

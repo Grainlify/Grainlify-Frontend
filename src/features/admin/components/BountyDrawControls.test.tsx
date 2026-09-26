@@ -169,3 +169,28 @@ describe('changing the settings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/must be at least 1/i)
   })
 })
+
+describe('when the agent answers with something unexpected', () => {
+  // This section sits on the admin page beside the review queues. A browser
+  // test found that an empty body made .map throw during render and took the
+  // pending-redemption queue above it down with it.
+  it('renders, and does not take the rest of the admin page down', async () => {
+    vi.mocked(getDrawSettings).mockResolvedValue({} as never)
+    vi.mocked(getBounties).mockResolvedValue({} as never)
+    renderWithProviders(
+      <div>
+        <p>Redemption queue above</p>
+        <BountyDrawControls />
+      </div>,
+    )
+    expect(await screen.findByText('Redemption queue above')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Run draw now' })).toBeInTheDocument()
+  })
+
+  it('survives a bounty state with no applications block', async () => {
+    vi.mocked(getBountyDrawState).mockResolvedValue({} as never)
+    renderWithProviders(<BountyDrawControls />)
+    await userEvent.selectOptions(await screen.findByLabelText('Bounty'), 'b1')
+    expect(screen.getByRole('button', { name: 'Run draw now' })).toBeInTheDocument()
+  })
+})
