@@ -9,11 +9,16 @@ bounty" and "How the draw works". They are reference material, and reference
 material on a dashboard is read once and scrolled past forever. They belong in
 the docs.
 
-They have not been moved yet, because moving text to a page that does not
-exist deletes it. Instead the dashboard is now structured so the move is one
-constant.
+They have not been moved yet. `/docs` now exists and carries `welcome`,
+`create-your-account` and `contributors/link-solana-wallet`, but the three
+bounty pages below are still unwritten, and moving text to a page nobody has
+written deletes it. So the dashboard is structured for the move instead, and
+the switch stays off until those pages land.
 
 ## The switch
+
+Flip it when the three pages below exist — not when `/docs` exists, which it
+already does.
 
 `src/shared/docs/docsLinks.ts`:
 
