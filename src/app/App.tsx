@@ -17,6 +17,7 @@ const SignUpPage = lazy(() => import("../features/auth").then((m) => ({ default:
 const AuthCallbackPage = lazy(() => import("../features/auth").then((m) => ({ default: m.AuthCallbackPage })));
 const Dashboard = lazy(() => import("../features/dashboard").then((m) => ({ default: m.Dashboard })));
 const WalletLinkPage = lazy(() => import("../features/bounties/pages/WalletLinkPage").then((m) => ({ default: m.WalletLinkPage })));
+const BountyRulesPage = lazy(() => import("../features/bounties/pages/BountyRulesPage").then((m) => ({ default: m.BountyRulesPage })));
 const NotFoundPage = lazy(() => import("../features/not-found/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 
 // Suspense fallback for lazy-loaded routes — matches Dashboard's own background
@@ -92,6 +93,9 @@ export default function App() {
                   path="/bounties/ledger"
                   element={<Navigate to="/dashboard?tab=bounties&subtab=ledger" replace />}
                 />
+                {/* Public and unauthenticated, unlike the rest of /bounties:
+                    a rule you must sign in to read is not published. */}
+                <Route path="/bounties/rules" element={<BountyRulesPage />} />
                 <Route
                   path="/bounties/link"
                   element={

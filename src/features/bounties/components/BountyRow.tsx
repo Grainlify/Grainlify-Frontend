@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ExternalLink, FlaskConical } from 'lucide-react';
-import { applyForBounty } from '../../../shared/api/client';
+import { applyForBounty, type MyBountyApplication } from '../../../shared/api/client';
 import { formatBountyAmount, type PublicBounty } from '../../../shared/api/bountyAgent';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -9,6 +9,24 @@ const STATUS_LABELS: Record<string, string> = {
   payable: 'Awaiting approval',
   paid: 'Paid',
 };
+
+/** How busy the pool looks, in words. Coarse on purpose: a precise live
+ *  count makes the draw something to time rather than something to enter. */
+export function poolLine(b: PublicBounty): string | null {
+  if (b.applicantCount !== null) {
+    return `${b.applicantCount} ${b.applicantCount === 1 ? 'person' : 'people'} entered the draw.`;
+  }
+  switch (b.applicantBucket) {
+    case 'none':
+      return 'No applicants yet.';
+    case 'few':
+      return 'A few applicants so far.';
+    case 'many':
+      return 'Many applicants so far.';
+    default:
+      return null;
+  }
+}
 
 /** "in 5 hours", "in 12 minutes", or null once it has passed. */
 export function timeUntil(iso: string | null, now: Date): string | null {
@@ -39,10 +57,37 @@ export function callToAction(b: PublicBounty, now: Date): { kind: 'apply' | 'wai
   }
   if (b.applicationState === 'open') {
     const left = timeUntil(b.applicationsCloseAt, now);
-    return { kind: 'apply', line: left ? `Applications close ${left}. Everyone who applies in time goes into the draw.` : 'Applications are open.' };
+    const pool = poolLine(b);
+    const base = left ? `Applications close ${left}. Everyone who applies in time goes into the draw.` : 'Applications are open.';
+    // Said alongside the deadline because together they are what someone
+    // actually wants to know, and apart they invite refreshing for a number.
+    return { kind: 'apply', line: pool ? `${base} ${pool}` : base };
   }
   if (b.applicationState === 'closed') return { kind: 'wait', line: 'Applications have closed. The draw runs next.' };
   return { kind: 'wait', line: 'Not open for applications yet.' };
+}
+
+/** What the SERVER says about this viewer and this bounty. The row keeps no
+ *  opinion of its own beyond the in-flight click: local state is what made
+ *  "have I applied" unanswerable after a re-render. */
+export function applicationLine(mine: MyBountyApplication | undefined): string | null {
+  if (!mine) return null;
+  switch (mine.status) {
+    case 'applied':
+      return 'You are in the draw for this bounty. The result appears here when it runs.';
+    case 'won':
+      return 'You won the draw for this bounty. Open a pull request before the deadline.';
+    case 'lost':
+      return 'This bounty went to someone else in the draw.';
+    case 'withdrawn':
+      return 'You withdrew from this bounty.';
+    case 'rejected_gate':
+      return mine.gateFailureReason
+        ? `You could not enter the draw: ${mine.gateFailureReason}`
+        : 'You could not enter the draw for this bounty.';
+    default:
+      return null;
+  }
 }
 
 interface BountyRowProps {
@@ -51,14 +96,20 @@ interface BountyRowProps {
   /** Signed in AND with a GitHub account connected. Anything else and the
    *  button would only produce a refusal the person cannot act on. */
   canApply: boolean;
+  /** This viewer's application, from the server. */
+  mine?: MyBountyApplication;
   onApplied?: () => void;
 }
 
-export function BountyRow({ bounty: b, isDark, canApply, onApplied }: BountyRowProps) {
+export function BountyRow({ bounty: b, isDark, canApply, mine, onApplied }: BountyRowProps) {
   const [applying, setApplying] = useState(false);
-  const [applied, setApplied] = useState(false);
+  // Held only until the refreshed server state arrives, so the row says
+  // something the instant the click succeeds rather than after a round trip.
+  const [justApplied, setJustApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cta = callToAction(b, new Date());
+  const serverLine = applicationLine(mine);
+  const applied = Boolean(mine) || justApplied;
 
   const row = `flex flex-col gap-3 p-4 rounded-[16px] border transition-all ${
     b.isTest
@@ -77,7 +128,7 @@ export function BountyRow({ bounty: b, isDark, canApply, onApplied }: BountyRowP
     setError(null);
     try {
       await applyForBounty(b.id);
-      setApplied(true);
+      setJustApplied(true);
       onApplied?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not apply just now.');
@@ -132,7 +183,7 @@ export function BountyRow({ bounty: b, isDark, canApply, onApplied }: BountyRowP
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <p className={`flex-1 text-[12.5px] ${muted}`}>
-          {applied ? 'You are in the draw for this bounty. We will show the result here when it runs.' : cta.line}
+          {serverLine ?? (justApplied ? 'You are in the draw for this bounty. The result appears here when it runs.' : cta.line)}
           {b.isTest && b.waivedRules.length > 0 && !applied && (
             <>
               {' '}

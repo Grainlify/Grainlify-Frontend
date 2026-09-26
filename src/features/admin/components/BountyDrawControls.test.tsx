@@ -28,7 +28,7 @@ const bounty = (o: Partial<PublicBounty> = {}): PublicBounty => ({
   id: 'b1', repo: 'Grainlify/sandbox', issueNumber: 7, issueTitle: 't',
   issueUrl: 'u', amountMinor: '1000000', decimals: 6, currency: 'USDC', network: 'solana-mainnet',
   status: 'posted', postedAt: '2026-09-27T09:00:00.000Z', payout: null, isTest: false, waivedRules: [],
-  applicationsOpenAt: null, applicationsCloseAt: null, applicationState: 'closed', assignedTo: null, assignmentStaleAt: null, ...o,
+  applicationsOpenAt: null, applicationsCloseAt: null, applicationState: 'closed', assignedTo: null, assignmentStaleAt: null, applicantBucket: null, applicantCount: null, ...o,
 })
 
 const drawResult: DrawResultView = {

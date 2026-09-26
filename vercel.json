@@ -9,11 +9,11 @@
       "destination": "/index.html"
     },
     {
-      "source": "/(signin|signup|auth/callback|support|dashboard|notifications|bounties|bounties/ledger|bounties/link)",
+      "source": "/(signin|signup|auth/callback|support|dashboard|notifications|bounties|bounties/ledger|bounties/link|bounties/rules)",
       "destination": "/index.html"
     },
     {
-      "source": "/(signin|signup|auth/callback|support|dashboard|notifications|bounties|bounties/ledger|bounties/link)/",
+      "source": "/(signin|signup|auth/callback|support|dashboard|notifications|bounties|bounties/ledger|bounties/link|bounties/rules)/",
       "destination": "/index.html"
     }
   ],

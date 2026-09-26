@@ -5,6 +5,7 @@ import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { getBounties, type BountyAgentStatus, type PublicBounty } from '../../../shared/api/bountyAgent';
+import { getMyBountyState, type MyBountyState } from '../../../shared/api/client';
 import { StatusNotice } from '../components/StatusNotice';
 import { ConnectedWallet } from '../components/ConnectedWallet';
 import { BountyRow } from '../components/BountyRow';
@@ -31,10 +32,15 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
   const [status, setStatus] = useState<BountyAgentStatus | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
   const [attempt, setAttempt] = useState(0);
+  const [mine, setMine] = useState<MyBountyState | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    setIsLoading(true);
+    // Only the FIRST load shows the skeleton. A refresh used to blank the
+    // list, which unmounted every row and took its state with it: after
+    // applying, the button came back and the second click reported
+    // "already applied". The list stays on screen while it reloads.
+    setIsLoading((was) => (bounties.length === 0 ? true : was));
     setLoadError(null);
     getBounties()
       .then((res) => {
@@ -54,7 +60,25 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
     return () => {
       mounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
+
+  // Who has applied to what, from the server. Signed out, there is nothing to
+  // ask and nothing to show; a failure here leaves the rows as they are
+  // rather than claiming the viewer has not applied.
+  useEffect(() => {
+    let mounted = true;
+    if (!isAuthenticated) {
+      setMine(null);
+      return;
+    }
+    getMyBountyState()
+      .then((m) => mounted && setMine(m))
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthenticated, attempt]);
 
   const open = bounties.filter((b) => b.status !== 'paid');
   const paid = bounties.filter((b) => b.status === 'paid');
@@ -64,7 +88,14 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
   const eyebrow = `text-[11px] font-bold uppercase tracking-wide ${isDark ? 'text-[#b8a898]' : 'text-[#9a8b7a]'}`;
 
   const renderRow = (b: PublicBounty) => (
-    <BountyRow key={b.id} bounty={b} isDark={isDark} canApply={canApply} onApplied={() => setAttempt((n) => n + 1)} />
+    <BountyRow
+      key={b.id}
+      bounty={b}
+      isDark={isDark}
+      canApply={canApply}
+      mine={mine?.applications[b.id]}
+      onApplied={() => setAttempt((n) => n + 1)}
+    />
   );
 
   return (
@@ -165,8 +196,15 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
           application is written. There is no code path that reads them.
         </p>
         <p className={`mt-2 text-[13px] leading-[1.55] ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
-          Every draw stores its seed and the full ticket breakdown, so a result can be recomputed rather than argued about. How many people
-          applied is not published while a window is open — otherwise the draw becomes something to time.
+          Every draw stores its seed and the full ticket breakdown, so a result can be recomputed rather than argued about. While a window
+          is open the page says roughly how busy a bounty is, not exactly — otherwise the draw becomes something to time. The exact number
+          appears once the window closes.
+        </p>
+        <p className={`mt-3 text-[13px] ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a4038]'}`}>
+          <Link to="/bounties/rules" className={`underline underline-offset-2 font-medium ${isDark ? 'text-[#e8c571]' : 'text-[#5c4214]'}`}>
+            Read every rule and its current value
+          </Link>
+          {' '}— the live settings, not a copy.
         </p>
 
         <p className={`mt-4 text-[12.5px] ${muted}`}>

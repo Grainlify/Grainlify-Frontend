@@ -35,7 +35,7 @@ const bounty = (o: Partial<PublicBounty> = {}): PublicBounty => ({
   issueUrl: 'https://github.com/Grainlify/grainlify-agent-sandbox/issues/1', amountMinor: '20000000', decimals: 6,
   currency: 'USDC', network: 'solana-devnet', status: 'posted', postedAt: '2026-09-18T20:48:00.000Z', payout: null,
   isTest: false, waivedRules: [], applicationsOpenAt: null, applicationsCloseAt: null, applicationState: 'none',
-  assignedTo: null, assignmentStaleAt: null, ...o,
+  assignedTo: null, assignmentStaleAt: null, applicantBucket: null, applicantCount: null, ...o,
 })
 
 describe('BountiesProgramPage', () => {

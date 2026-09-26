@@ -67,6 +67,10 @@ export interface PublicBounty {
   /** Who holds it now. How many applied is deliberately not published. */
   assignedTo: string | null;
   assignmentStaleAt: string | null;
+  /** Coarse band while a window is open; null when hidden or once closed. */
+  applicantBucket: 'none' | 'few' | 'many' | null;
+  /** Exact size, released once the window closes. */
+  applicantCount: number | null;
 }
 
 export type LedgerEventKind = 'bounty_posted' | 'inference' | 'gate_passed' | 'gate_refused' | 'payout';
@@ -121,6 +125,34 @@ async function get<T>(path: string): Promise<T> {
 export const getBounties = () => get<{ status: BountyAgentStatus; bounties: PublicBounty[] }>('/public/bounties');
 export const getBounty = (id: string) => get<{ status: BountyAgentStatus; bounty: PublicBounty }>(`/public/bounties/${encodeURIComponent(id)}`);
 export const getBountyLedger = () => get<BountyLedger>('/public/ledger');
+
+export interface BountyRuleSetting {
+  key: string;
+  type: string;
+  section: string;
+  description: string;
+  default: string;
+  value: string;
+  overridden: boolean;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+export interface BountyRules {
+  status: BountyAgentStatus;
+  structural: {
+    priorCompletionCap: number;
+    priorCompletionCapNote: string;
+    neverWeighted: string[];
+    neverWeightedNote: string;
+  };
+  sections: string[];
+  settings: BountyRuleSetting[];
+}
+
+/** The odds, published. Unauthenticated: a rule you must sign in to read is
+ *  not really published. */
+export const getBountyRules = () => get<BountyRules>('/public/rules');
 
 /**
  * text/plain, deliberately, on every POST to the agent.

@@ -46,6 +46,7 @@ describe('top-level routes', () => {
     '/bounties': 'ALIAS ONLY — redirects to /dashboard?tab=bounties (the dashboard guard handles sign-in)',
     '/bounties/ledger': 'ALIAS ONLY — redirects to /dashboard?tab=bounties&subtab=ledger, the in-dashboard ledger',
     '/bounties/link': 'signed-in, behind ProtectedRoute — its own page because it opens inside a wallet app browser',
+    '/bounties/rules': 'deliberately anonymous — the published draw rules; one you must sign in to read is not published',
     '*': 'the not-found page, public and LAST so it only gets what nothing else claims',
   }
 

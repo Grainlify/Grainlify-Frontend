@@ -3,9 +3,9 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { BountiesProgramPage } from './pages/BountiesProgramPage'
-import { callToAction, timeUntil } from './components/BountyRow'
+import { callToAction, poolLine, timeUntil } from './components/BountyRow'
 import { getBounties, type PublicBounty } from '../../shared/api/bountyAgent'
-import { ApiError, applyForBounty } from '../../shared/api/client'
+import { ApiError, applyForBounty, getMyBountyState } from '../../shared/api/client'
 
 vi.mock('../../shared/api/bountyAgent', async (orig) => {
   const real = await orig<typeof import('../../shared/api/bountyAgent')>()
@@ -13,7 +13,12 @@ vi.mock('../../shared/api/bountyAgent', async (orig) => {
 })
 vi.mock('../../shared/api/client', async (orig) => {
   const real = await orig<typeof import('../../shared/api/client')>()
-  return { ...real, applyForBounty: vi.fn(), getBountyWalletLink: vi.fn().mockResolvedValue({ linked: false, wallet: null, linked_at: null }) }
+  return {
+    ...real,
+    applyForBounty: vi.fn(),
+    getMyBountyState: vi.fn(),
+    getBountyWalletLink: vi.fn().mockResolvedValue({ linked: false, wallet: null, linked_at: null }),
+  }
 })
 vi.mock('../../shared/contexts/AuthContext', async (orig) => {
   const real = await orig<typeof import('../../shared/contexts/AuthContext')>()
@@ -28,7 +33,7 @@ const bounty = (o: Partial<PublicBounty> = {}): PublicBounty => ({
   currency: 'USDC', network: 'solana-mainnet', status: 'posted', postedAt: '2026-09-27T09:00:00.000Z', payout: null,
   isTest: false, waivedRules: [], applicationsOpenAt: '2026-09-27T09:00:00.000Z',
   applicationsCloseAt: new Date(Date.now() + 5 * 3600_000).toISOString(), applicationState: 'open',
-  assignedTo: null, assignmentStaleAt: null, ...o,
+  assignedTo: null, assignmentStaleAt: null, applicantBucket: null, applicantCount: null, ...o,
 })
 
 describe('what a bounty tells a contributor they can do', () => {
@@ -60,6 +65,26 @@ describe('what a bounty tells a contributor they can do', () => {
     expect(c.line).toContain('octo')
   })
 
+  it('describes the pool coarsely while the window is open', () => {
+    // A precise live count turns the draw into something to time: apply late,
+    // when the odds look best. That rewards refreshing, not working.
+    expect(poolLine(bounty({ applicantBucket: 'none' }))).toBe('No applicants yet.')
+    expect(poolLine(bounty({ applicantBucket: 'few' }))).toBe('A few applicants so far.')
+    expect(poolLine(bounty({ applicantBucket: 'many' }))).toBe('Many applicants so far.')
+    expect(poolLine(bounty({ applicantBucket: null }))).toBeNull()
+  })
+
+  it('gives the exact number once the window has closed', () => {
+    expect(poolLine(bounty({ applicantCount: 4, applicantBucket: null }))).toBe('4 people entered the draw.')
+    expect(poolLine(bounty({ applicantCount: 1, applicantBucket: null }))).toBe('1 person entered the draw.')
+  })
+
+  it('says how busy it is alongside the deadline, not as a separate number to watch', () => {
+    const c = callToAction(bounty({ applicationsCloseAt: '2026-09-27T18:00:00Z', applicantBucket: 'few' }), now)
+    expect(c.line).toContain('in 6 hours')
+    expect(c.line).toContain('A few applicants')
+  })
+
   it('counts down in minutes, hours then days, and stops at zero', () => {
     expect(timeUntil('2026-09-27T12:30:00Z', now)).toBe('in 30 minutes')
     expect(timeUntil('2026-09-27T17:00:00Z', now)).toBe('in 5 hours')
@@ -70,7 +95,10 @@ describe('what a bounty tells a contributor they can do', () => {
 })
 
 describe('applying from the bounties page', () => {
-  beforeEach(() => vi.resetAllMocks())
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(getMyBountyState).mockResolvedValue({ applications: {}, assignments: {} })
+  })
 
   it('applies and says you are in the draw', async () => {
     vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty()] })
@@ -109,7 +137,10 @@ describe('applying from the bounties page', () => {
 })
 
 describe('how to claim, after the draw replaced comment-and-PR claiming', () => {
-  beforeEach(() => vi.resetAllMocks())
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(getMyBountyState).mockResolvedValue({ applications: {}, assignments: {} })
+  })
 
   it('describes applying and the draw, not claiming by comment or pull request', async () => {
     vi.mocked(getBounties).mockResolvedValue({ status, bounties: [] })
@@ -129,6 +160,70 @@ describe('how to claim, after the draw replaced comment-and-PR claiming', () => 
     renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
     expect(await screen.findByText(/follower count/i)).toBeInTheDocument()
     expect(screen.getByText(/applying early gives you no advantage/i)).toBeInTheDocument()
-    expect(screen.getByText(/not published while a window is open/i)).toBeInTheDocument()
+    // The claim moved when the page started publishing a coarse band: it now
+    // says roughly, not nothing, and exactly once the window closes.
+    expect(screen.getByText(/says roughly how busy a bounty is, not exactly/i)).toBeInTheDocument()
+  })
+})
+
+describe('"have I applied" survives a reload, because the server answers it', () => {
+  // The bug this closes: applying refreshed the list, the list blanked to a
+  // skeleton, every row unmounted, and the local "applied" flag went with it.
+  // The button came back and the second click reported "already applied".
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(getMyBountyState).mockResolvedValue({ applications: {}, assignments: {} })
+  })
+
+  it('shows you are in the draw on a cold load, with no click involved', async () => {
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty()] })
+    vi.mocked(getMyBountyState).mockResolvedValue({
+      applications: { b1: { status: 'applied', gateFailureReason: null, appliedAt: '2026-09-27T10:00:00Z' } },
+      assignments: {},
+    })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+    expect(await screen.findByText(/you are in the draw/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /apply for this bounty/i })).not.toBeInTheDocument()
+  })
+
+  it('keeps the row on screen while the list refreshes after applying', async () => {
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty()] })
+    vi.mocked(applyForBounty).mockResolvedValue({ applied: true, applicationId: 'a1', closesAt: null })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+
+    await userEvent.click(await screen.findByRole('button', { name: /apply for this bounty/i }))
+    // The message is there immediately and is still there once the refresh
+    // lands - it never flickers back to an Apply button.
+    expect(await screen.findByText(/you are in the draw/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /apply for this bounty/i })).not.toBeInTheDocument()
+    await screen.findByText(/you are in the draw/i)
+    expect(screen.queryByRole('button', { name: /apply for this bounty/i })).not.toBeInTheDocument()
+  })
+
+  it('tells you which rule refused you, from the stored application', async () => {
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty()] })
+    vi.mocked(getMyBountyState).mockResolvedValue({
+      applications: { b1: { status: 'rejected_gate', gateFailureReason: 'no_linked_wallet', appliedAt: 'x' } },
+      assignments: {},
+    })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+    expect(await screen.findByText(/could not enter the draw: no_linked_wallet/i)).toBeInTheDocument()
+  })
+
+  it('says you won, and what to do next', async () => {
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty({ assignedTo: 'Octocat', applicationState: 'closed' })] })
+    vi.mocked(getMyBountyState).mockResolvedValue({
+      applications: { b1: { status: 'won', gateFailureReason: null, appliedAt: 'x' } },
+      assignments: { b1: { status: 'active', staleAt: '2026-09-30T10:00:00Z' } },
+    })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+    expect(await screen.findByText(/you won the draw/i)).toBeInTheDocument()
+  })
+
+  it('a signed-out visitor is never told they have applied', async () => {
+    vi.mocked(getBounties).mockResolvedValue({ status, bounties: [bounty()] })
+    renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
+    await screen.findByRole('button', { name: /apply for this bounty/i })
+    expect(screen.queryByText(/you are in the draw/i)).not.toBeInTheDocument()
   })
 })

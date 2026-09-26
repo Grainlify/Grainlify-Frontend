@@ -1103,6 +1103,23 @@ export async function applyForBounty(bountyId: string): Promise<BountyApplied> {
   }
 }
 
+export interface MyBountyApplication {
+  status: 'applied' | 'rejected_gate' | 'won' | 'lost' | 'withdrawn' | string;
+  gateFailureReason: string | null;
+  appliedAt: string;
+}
+
+export interface MyBountyState {
+  githubLogin?: string;
+  /** Keyed by bounty id. */
+  applications: Record<string, MyBountyApplication>;
+  assignments: Record<string, { status: string; staleAt: string }>;
+}
+
+/** What this contributor has applied for and holds, from the server.
+ *  Client state cannot answer this: it does not survive a reload. */
+export const getMyBountyState = () => apiRequest<MyBountyState>('/me/bounty-applications', { requiresAuth: true });
+
 // ---------------------------------------------------------------- admin: draw
 
 export interface DrawSetting {
