@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { BountyDrawControls } from './BountyDrawControls'
 import { getBounties, type PublicBounty } from '../../../shared/api/bountyAgent'
-import { getBountyDrawState, getDrawSettings, resetDrawSetting, runBountyDraw, setDrawSetting } from '../../../shared/api/client'
+import { getBountyDrawState, getDrawSettings, resetDrawSetting, runBountyDraw, setDrawSetting, type DrawResultView } from '../../../shared/api/client'
 
 vi.mock('../../../shared/api/bountyAgent', async (orig) => {
   const real = await orig<typeof import('../../../shared/api/bountyAgent')>()
@@ -31,7 +31,7 @@ const bounty = (o: Partial<PublicBounty> = {}): PublicBounty => ({
   applicationsOpenAt: null, applicationsCloseAt: null, applicationState: 'closed', assignedTo: null, assignmentStaleAt: null, ...o,
 })
 
-const drawResult = {
+const drawResult: DrawResultView = {
   drawId: 'd1', seed: 12345, simulation: false, triggeredBy: 'Jagadeeshftw', poolSize: 2,
   pool: [
     { githubLogin: 'alice', githubUserId: 1, fit: 'strong', tickets: 3, weights: { fit_strong: 2, first_ever_application: 1.5 }, share: 0.75 },
