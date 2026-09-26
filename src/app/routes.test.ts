@@ -103,8 +103,20 @@ describe('top-level routes', () => {
   // being removed here would answer 200 for a page that no longer exists.
   it('matches the paths vercel.json serves with a 200', () => {
     const vercel = JSON.parse(readFileSync(join(__dirname, '../../vercel.json'), 'utf8')) as { rewrites: { source: string; destination: string }[] }
+    // Proxy rewrites send a path to another service rather than to the app.
+    // They are not routes and must not be counted as ones.
+    const proxies = vercel.rewrites.filter((r) => /^https?:\/\//.test(r.destination))
+    const spa = vercel.rewrites.filter((r) => !/^https?:\/\//.test(r.destination))
+
+    // The agent is proxied through this origin so the browser never makes a
+    // cross-origin call to it: wallet extensions break those, and the page
+    // then reports the agent as unreachable while it is answering correctly.
+    expect(proxies).toEqual([{ source: '/agent/:path*', destination: 'https://agent.grainlify.com/:path*' }])
+    // It must come first, because a rewrite list is evaluated in order.
+    expect(vercel.rewrites[0]).toEqual(proxies[0])
+
     const served = new Set<string>()
-    for (const r of vercel.rewrites) {
+    for (const r of spa) {
       expect(r.destination).toBe('/index.html')
       if (r.source === '/') served.add('/')
       const m = /^\/\(([^)]+)\)\/?$/.exec(r.source)
@@ -113,7 +125,7 @@ describe('top-level routes', () => {
     const routes = Object.keys(ALLOWED).filter((p) => p !== '*')
     expect([...served].sort()).toEqual(routes.sort())
     // Every alternation appears with and without a trailing slash.
-    const groups = vercel.rewrites.map((r) => r.source).filter((x) => x !== '/')
+    const groups = spa.map((r) => r.source).filter((x) => x !== '/')
     expect(groups.map((g) => g.replace(/\/$/, ''))).toEqual([groups[0], groups[0]])
   })
 })

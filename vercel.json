@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/agent/:path*",
+      "destination": "https://agent.grainlify.com/:path*"
+    },
+    {
       "source": "/",
       "destination": "/index.html"
     },

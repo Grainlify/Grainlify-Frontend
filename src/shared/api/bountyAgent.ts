@@ -9,17 +9,24 @@
  */
 
 /**
- * The agent's own subdomain, not its railway.app host.
+ * Same origin, through a proxy, deliberately.
  *
- * Wallet extensions and ad-block filter lists commonly block *.railway.app.
- * When they do, the browser's fetch throws before the request leaves, so there
- * is no status, no CORS error and nothing in the agent's logs -- it looks
- * exactly like the service being down. That cost three rounds of diagnosis on
- * the wallet card, and it would have hit contributors hardest, since the people
- * taking these bounties are the most likely to run a wallet extension.
+ * Every cross-origin call to the agent had to survive CORS, and in a browser
+ * running wallet extensions it did not. The extensions re-issue the page's
+ * fetch from their own context: the Origin changes or disappears, headers get
+ * added, and the browser then refuses to let the page read a reply the server
+ * had already sent correctly. It was diagnosed three times as "the agent is
+ * unreachable" while the agent was answering 400 with the right headers.
+ *
+ * `/agent/*` is rewritten to the agent by vercel.json, so the browser sees a
+ * same-origin request: no preflight, no Origin check, no allow-list, nothing
+ * for an extension to break. The CORS headers on the agent remain correct for
+ * anyone calling it directly; this simply stops depending on them.
+ *
+ * VITE_BOUNTY_AGENT_URL still overrides, for pointing a local build at a local
+ * agent.
  */
-export const BOUNTY_AGENT_URL: string =
-  (import.meta.env.VITE_BOUNTY_AGENT_URL as string | undefined) || 'https://agent.grainlify.com';
+export const BOUNTY_AGENT_URL: string = (import.meta.env.VITE_BOUNTY_AGENT_URL as string | undefined) || '/agent';
 
 export interface BountyAgentStatus {
   network: string;
