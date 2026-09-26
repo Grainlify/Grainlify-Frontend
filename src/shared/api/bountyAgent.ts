@@ -8,8 +8,18 @@
  * wallet's), never by a token. Only grainlify.com origins get CORS.
  */
 
+/**
+ * The agent's own subdomain, not its railway.app host.
+ *
+ * Wallet extensions and ad-block filter lists commonly block *.railway.app.
+ * When they do, the browser's fetch throws before the request leaves, so there
+ * is no status, no CORS error and nothing in the agent's logs -- it looks
+ * exactly like the service being down. That cost three rounds of diagnosis on
+ * the wallet card, and it would have hit contributors hardest, since the people
+ * taking these bounties are the most likely to run a wallet extension.
+ */
 export const BOUNTY_AGENT_URL: string =
-  (import.meta.env.VITE_BOUNTY_AGENT_URL as string | undefined) || 'https://agent-production-ba74.up.railway.app';
+  (import.meta.env.VITE_BOUNTY_AGENT_URL as string | undefined) || 'https://agent.grainlify.com';
 
 export interface BountyAgentStatus {
   network: string;
