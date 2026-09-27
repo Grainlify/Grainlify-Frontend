@@ -23,7 +23,7 @@ Say: [pleased] Save the fields. The requirements clear, and you can move the eve
 Do: Click **Save fields**. "Ready to transition." appears. Click **Move to Application period**; the badge changes to **Application period**.
 
 ## 6
-Say: [friendly] Uh, going live needs more than dates. Judging shadow mode must be off, and at least one issue must be published.
+Say: [friendly] Uh, going live, two steps on, needs more than dates: judging shadow mode off, and at least one published issue.
 Do: Move the pointer over the **Move to Issue prep** button, then scroll down to **Rule overrides for this event**.
 
 ## 7
@@ -32,4 +32,4 @@ Do: In **Contributor slots and caps**, change **Slots Per Contributor** to 3. Cl
 
 ## 8
 Say: [reassuring] Every override, reset and phase move is recorded in the audit trail at the bottom of the event page.
-Do: Scroll to **Audit trail**. It shows the `slots_per_contributor` change and a **Phase transition** entry.
+Do: Choose **Back to hackathons**, reopen the event, and scroll to **Audit trail**. It shows the `slots_per_contributor` change and a **Phase transition** entry.

@@ -8,7 +8,7 @@ Do: Show the **Issues** tab. Cut briefly to a title card: "On GitHub: add the ev
 
 ## 2
 Say: [matter-of-fact] Once Grainlify picks up the label, the issue shows a GrainHack panel... It stays pending, and nobody can apply, until two things are filled in.
-Do: Click the issue "Document the CLI flags" in owen-labs/ledgerkit. The panel headed **GrainHack:** shows pending, with **Missing before this publishes** listing **Acceptance criteria** and **Difficulty tier**.
+Do: Click the issue "Document the CLI flags" in tidewater-labs/ledgerline. The panel headed **GrainHack:** shows pending, with **Missing before this publishes** listing **Acceptance criteria** and **Difficulty tier**.
 
 ## 3
 Say: [thoughtful] First, the acceptance criteria: what must be true for a pull request to satisfy this issue. The work is checked against them, so be SPECIFIC.

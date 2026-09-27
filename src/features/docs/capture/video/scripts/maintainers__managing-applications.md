@@ -12,7 +12,7 @@ Do: Click the filter button next to **Search**. In **All Filters**, click **Yes*
 
 ## 3
 Say: [matter-of-fact] Open an issue. Its applications are listed with when each person applied... Expand one to read the message, or choose the name to see their profile.
-Do: Click the issue "Add retry with backoff to the webhook client" (3 applicants). On **Applications (3)**, click the arrow beside the first applicant to expand the message.
+Do: Click the issue #212 "Document the snapshot format" (3 applicants). On **Applications (3)**, click the arrow beside the first applicant to expand the message.
 
 ## 4
 Say: [gentle] To turn someone down, choose Reject. Grainlify comments on the issue and lets them know, so they can move on.
@@ -28,4 +28,4 @@ Do: Point at **Unassign** on the first application without clicking.
 
 ## 7
 Say: [thoughtful] These buttons appear only in the maintainer view, on projects you own. [pause] Everyone else sees the applications without them.
-Do: Click **CONTRIBUTOR** in the header. Go to **Browse**, open owen-labs/ledgerkit, and open the same issue: the expanded application has no buttons. Click **MAINTAINER** to switch back.
+Do: Click **CONTRIBUTOR** in the header. Go to **Browse**, **Repositories**, open tidewater-labs/ledgerline and open the same issue: the expanded application has no buttons. Click **MAINTAINER** to switch back.

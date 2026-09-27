@@ -28,4 +28,4 @@ Do: Scroll to **Settings**. In the **Weights** group, change `weight_first_ever_
 
 ## 7
 Say: [warmly] Reset returns it to the coded default. Contributors see the same settings, with their live values, on the public bounty rules page.
-Do: Click **Reset** on that row; the "Overridden" line disappears. Open /bounties/rules in a new tab and scroll to the weights.
+Do: Click **Reset** on that row; the "Overridden" line disappears. Go to /bounties/rules and scroll to the weights.

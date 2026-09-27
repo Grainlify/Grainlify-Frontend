@@ -8,11 +8,11 @@ Do: Show the Maintainers page on the **Dashboard** tab, signed in as owen-mainta
 
 ## 2
 Say: [friendly] Open the repository selector. Your repositories are grouped by owner, and Add a repository is at the bottom.
-Do: Click **Select repositories**. Click the owner name "owen-labs" to expand it. Move the pointer to **Add a repository**.
+Do: Click **Select repositories**. Click the owner name "tidewater-labs" to expand it. Move the pointer to **Add a repository**.
 
 ## 3
 Say: [matter-of-fact] Grainlify shows what the app asks GitHub for. [pause] It reads your code, pull requests and organisation members, and it can write to issues, so it can post comments and assign contributors.
-Do: Click **Add a repository**. The **Install Grainlify GitHub App** window opens. Scroll slowly past **Required permissions** to **You stay in control**.
+Do: Click **Add a repository**. The **Install Grainlify GitHub App** window opens. Move the pointer down from **Required permissions** to **You stay in control**.
 
 ## 4
 Say: [confident] Choose Install GitHub App and GitHub opens. Pick only the repositories you want on Grainlify, then install.
@@ -20,12 +20,12 @@ Do: Point at **Install GitHub App** without clicking, then click **Cancel**. Cut
 
 ## 5
 Say: [reassuring] GitHub sends you back to Grainlify's Discover page, in the contributor view. Your repositories are being added in the background.
-Do: Load /dashboard?github_app_installed=true (fixture with owen-labs/relay-sdk needing setup). Discover shows.
+Do: Load /dashboard?github_app_installed=true (fixture with tidewater-labs/harbor-bridge needing setup). Discover shows.
 
 ## 6
 Say: [warmly] Switch to the maintainer view... After a moment, a setup window opens for one of your new repositories.
-Do: Click **MAINTAINER**. Wait for the **New Project Setup** window for owen-labs/relay-sdk.
+Do: Click **MAINTAINER**. Wait for the **New Project Setup** window for tidewater-labs/harbor-bridge.
 
 ## 7
 Say: [pleased] Fill it in and save, and the project is listed for contributors. If you added several repositories, the others wait in the selector with Complete setup beside them.
-Do: Choose an ecosystem from **Select an ecosystem**, click **Save & Continue**. The window shows **Project details saved.** and closes. Click **Select repositories**, expand "owen-labs", and point at relay-sdk, which now shows **Edit**.
+Do: Choose an ecosystem from **Select an ecosystem**, click **Save & Continue**. The window shows **Project details saved.** and closes. Click **Select repositories**, expand "tidewater-labs", and point at relay-sdk, which now shows **Edit**.
