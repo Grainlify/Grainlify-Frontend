@@ -2,8 +2,8 @@ import { SkeletonLoader } from './SkeletonLoader';
 
 export function PRRowSkeleton() {
   return (
-    <div className="grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border bg-white/[0.08] border-white/15">
-      {/* Pull Request Info */}
+    <div className="grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border bg-white/[0.08] border-white/15 max-sm:grid-cols-1 max-sm:gap-3 max-sm:px-4 max-sm:py-4">
+      {/* Pull Request Info. On a phone the four columns stack as one card, like PRRow. */}
       <div>
         <div className="flex items-start gap-3 mb-2">
           {/* Icon Skeleton */}
