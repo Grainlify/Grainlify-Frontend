@@ -161,7 +161,7 @@ export function ApplyToIssuePanel({ projectId, issueNumber, onGrainHackChange }:
           <p className={`text-[11px] font-semibold uppercase tracking-wide mb-1 ${isDark ? 'text-[#8a7e70]' : 'text-[#9a8b7a]'}`}>
             Acceptance criteria
           </p>
-          <p className={`text-[13px] whitespace-pre-wrap ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a3f2f]'}`}>
+          <p className={`text-[13px] whitespace-pre-wrap max-sm:break-words ${isDark ? 'text-[#d4d4d4]' : 'text-[#4a3f2f]'}`}>
             {issue.acceptance_criteria}
           </p>
         </div>

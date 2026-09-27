@@ -119,7 +119,8 @@ export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeR
     // Same viewport budget as MaintainersPage (see its comment): 84px covers the
     // fixed header's pt-[68px] spacer plus <main>'s own my-2 margins, which is all
     // that's reliably known at this nesting depth.
-    <div className="flex flex-col gap-4 h-[calc(100vh-84px)]">
+    // Below lg the issue and its list stack and the page scrolls instead.
+    <div className="flex flex-col gap-4 h-[calc(100vh-84px)] max-lg:h-auto">
       <div className="flex items-center gap-3 flex-shrink-0">
         <button
           onClick={onClose}
@@ -141,7 +142,7 @@ export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeR
       <div className="flex-1 min-h-0">
         {isLoading ? (
           <div className="flex gap-6 h-full">
-            <div className="w-[450px] flex-shrink-0 flex flex-col h-full space-y-4">
+            <div className="w-[450px] flex-shrink-0 flex flex-col h-full space-y-4 max-lg:hidden">
               <SkeletonLoader className="h-12 w-full rounded-[16px]" />
               <div className="space-y-3 flex-1 overflow-hidden">
                 {[...Array(6)].map((_, idx) => (

@@ -786,9 +786,11 @@ Only applications submitted via the apply link above will be considered. Please 
   return (
     // h-full: fills the flex-1 tab-content region MaintainersPage now sizes for us,
     // rather than re-guessing a viewport-relative constant here too.
-    <div className="flex gap-6 h-full">
+    // Below lg there is no room for the 450px list beside the issue, so the
+    // two stack: the selected issue first at full width, the list under it.
+    <div className="flex gap-6 h-full max-lg:flex-col max-lg:gap-4 max-lg:h-auto">
       {/* Left Sidebar - Issues List */}
-      <div className="w-[450px] flex-shrink-0 flex flex-col h-full space-y-4">
+      <div className="w-[450px] flex-shrink-0 flex flex-col h-full space-y-4 max-lg:w-full max-lg:h-auto">
         {/* Search and Filter Row */}
         <div className="flex items-center gap-3 flex-shrink-0">
           {/* Search Bar */}
@@ -834,7 +836,7 @@ Only applications submitted via the apply link above will be considered. Please 
             (the outer flex row is already sized to h-[calc(100vh-220px)]);
             previously capped to ~5 cards regardless of screen size, hiding
             far more issues than necessary on anything but a short viewport. */}
-        <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-custom min-h-0">
+        <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-custom min-h-0 max-lg:flex-none max-lg:overflow-visible max-lg:pr-0">
           {isLoadingIssues ? (
             <div className="space-y-3">
               {[...Array(8)].map((_, idx) => (
@@ -930,18 +932,18 @@ Only applications submitted via the apply link above will be considered. Please 
       </div>
 
       {/* Right Content Area - Issue Detail or Placeholder */}
-      <div className={`flex-1 rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] relative overflow-y-auto scrollbar-custom transition-colors ${isDark
+      <div className={`flex-1 rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] relative overflow-y-auto scrollbar-custom transition-colors max-lg:flex-none max-lg:overflow-visible ${selectedIssue ? 'max-lg:order-first' : 'max-lg:hidden'} ${isDark
         ? 'bg-[#2d2820]/[0.4] border-white/10'
         : 'bg-white/[0.12] border-white/20'
         }`}>
         {!selectedIssue ? (
           <EmptyIssueState issueCount={visibleIssues.length} />
         ) : (
-          <div className="p-8">
+          <div className="p-8 max-sm:p-4">
             {/* Header */}
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-start justify-between mb-6 max-sm:gap-3">
+              <div className="flex-1 max-sm:min-w-0">
+                <div className="flex items-center gap-3 mb-3 max-sm:flex-wrap max-sm:gap-x-2 max-sm:gap-y-1">
                   <span className={`text-[24px] font-bold transition-colors ${isDark ? 'text-[#c9983a]' : 'text-[#8b6f3a]'
                     }`}>#{selectedIssue.number || selectedIssue.id}</span>
                   <h1 className={`text-[24px] font-bold transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
@@ -950,7 +952,7 @@ Only applications submitted via the apply link above will be considered. Please 
                   </h1>
                 </div>
 
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3 mb-4 max-sm:flex-wrap max-sm:gap-2">
                   {selectedIssueFromAPI && (selectedIssueFromAPI.state || '').toLowerCase() !== 'open' && (
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] border transition-colors ${isDark
                       ? 'bg-white/[0.08] border-white/20 text-[#b8a898]'
@@ -1041,10 +1043,10 @@ Only applications submitted via the apply link above will be considered. Please 
             )}
 
             {/* Tabs */}
-            <div className="flex items-center gap-2 mb-6 border-b border-white/20 pb-4">
+            <div className="flex items-center gap-2 mb-6 border-b border-white/20 pb-4 max-sm:flex-wrap">
               <button
                 onClick={() => setIssueDetailTab('applications')}
-                className={`px-4 py-2 rounded-t-[10px] text-[14px] font-semibold transition-all ${issueDetailTab === 'applications'
+                className={`px-4 py-2 rounded-t-[10px] text-[14px] font-semibold transition-all max-sm:px-3 max-sm:whitespace-nowrap ${issueDetailTab === 'applications'
                   ? 'bg-[#c9983a] text-white'
                   : isDark
                     ? 'text-[#d4d4d4] hover:bg-white/[0.05]'
@@ -1055,7 +1057,7 @@ Only applications submitted via the apply link above will be considered. Please 
               </button>
               <button
                 onClick={() => setIssueDetailTab('discussions')}
-                className={`px-4 py-2 rounded-t-[10px] text-[14px] font-semibold transition-all ${issueDetailTab === 'discussions'
+                className={`px-4 py-2 rounded-t-[10px] text-[14px] font-semibold transition-all max-sm:px-3 max-sm:whitespace-nowrap ${issueDetailTab === 'discussions'
                   ? 'bg-[#c9983a] text-white'
                   : isDark
                     ? 'text-[#d4d4d4] hover:bg-white/[0.05]'
@@ -1071,7 +1073,7 @@ Only applications submitted via the apply link above will be considered. Please 
               <>
                 {/* Apply CTA: any logged-in user with GitHub linked can apply when issue is open + unassigned + not author */}
                 {selectedIssueFromAPI && (
-                  <div className={`mb-6 rounded-[16px] border p-5 transition-colors ${isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'}`}>
+                  <div className={`mb-6 rounded-[16px] border p-5 max-sm:p-4 transition-colors ${isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/25'}`}>
                     {isGrainHackIssue === null ? (
                       <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
                         Couldn't check whether this issue is part of a GrainHack event, so applying is paused
@@ -1098,7 +1100,7 @@ Only applications submitted via the apply link above will be considered. Please 
                         return null;
                       })()
                     ) : (
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center justify-between gap-4 max-sm:flex-col max-sm:items-start max-sm:gap-3">
                         <p className={`text-[13px] ${isDark ? 'text-[#e8dfd0]' : 'text-[#2d2820]'}`}>
                           Interested in contributing? Apply to work on this issue; your message will be posted as a comment on GitHub.
                         </p>
@@ -1171,7 +1173,7 @@ Only applications submitted via the apply link above will be considered. Please 
                       return (
                         <div
                           key={application.id}
-                          className={`rounded-[16px] border p-6 transition-colors ${isDark ? 'bg-white/[0.15] border-white/25' : 'bg-white/[0.15] border-white/25'
+                          className={`rounded-[16px] border p-6 max-sm:p-4 transition-colors ${isDark ? 'bg-white/[0.15] border-white/25' : 'bg-white/[0.15] border-white/25'
                             }`}
                         >
                           {/* User Header - Always Visible */}
