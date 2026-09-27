@@ -248,8 +248,6 @@ export const SHOTS = [
   // admins/social-follow-review
   {
     id: 'admin-follow-queue',
-    // Desktop only: The rows overflow at phone width (the status badge is cut off).
-    widths: [1440],
     page: 'admins/social-follow-review',
     url: REVIEWS,
     ...ADMIN,
@@ -314,8 +312,6 @@ export const SHOTS = [
   // admins/ecosystems
   {
     id: 'admin-ecosystems-grid',
-    // Desktop only: At phone width the Add New Ecosystem button overflows the card.
-    widths: [1440],
     page: 'admins/ecosystems',
     url: REVIEWS,
     ...ADMIN,
@@ -376,7 +372,8 @@ export const SHOTS = [
   // admins/bounty-draw
   {
     id: 'admin-bountydraw-result',
-    // Desktop only: The result table does not fit a phone screen.
+    // Desktop only: At phone width the result table scrolls sideways and the
+    // Share and Weights columns are cut off.
     widths: [1440],
     page: 'admins/bounty-draw',
     url: REVIEWS,
@@ -422,8 +419,6 @@ export const SHOTS = [
   // admins/grainhack-events
   {
     id: 'admin-gh-list',
-    // Desktop only: At phone width the phase badges overlap the event names.
-    widths: [1440],
     page: 'admins/grainhack-events',
     url: HACKATHONS,
     ...ADMIN,
@@ -441,8 +436,6 @@ export const SHOTS = [
   },
   {
     id: 'admin-gh-overrides',
-    // Desktop only: At phone width each setting wraps one word per line.
-    widths: [1440],
     page: 'admins/grainhack-events',
     url: HACKATHONS,
     ...ADMIN,
@@ -648,8 +641,6 @@ export const SHOTS = [
   // admins/redemptions
   {
     id: 'admin-redemptions-queue',
-    // Desktop only: At phone width each request wraps one word per line.
-    widths: [1440],
     page: 'admins/redemptions',
     url: REVIEWS,
     ...ADMIN,

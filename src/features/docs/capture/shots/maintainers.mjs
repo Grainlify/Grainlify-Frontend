@@ -316,7 +316,6 @@ export const SHOTS = [
     page: 'maintainers/reviewing-pull-requests',
     url: `${M}&subtab=Pull%20Requests`,
     ...W,
-    widths: DESKTOP,
     ready: (page) => page.getByText('Retry channel close with capped backoff'),
     frame: () => 'viewport',
   },
@@ -325,6 +324,8 @@ export const SHOTS = [
     page: 'maintainers/reviewing-pull-requests',
     url: `${M}&subtab=Pull%20Requests`,
     ...W,
+    // At phone width the state menu opens leftwards under the rail, so its
+    // options are cut off. Desktop only until the menu is anchored on screen.
     widths: DESKTOP,
     steps: async (page) => {
       await page.getByText('Retry channel close with capped backoff').waitFor()

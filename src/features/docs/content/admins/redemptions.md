@@ -10,7 +10,7 @@ Only pending requests are listed. Each one shows the contributor's login, the po
 
 When the queue is empty it says **No pending redemptions.**
 
-![The Redemption Requests queue with pending requests](shot:admin-redemptions-queue?desktop "Redemption Requests")
+![The Redemption Requests queue with pending requests](shot:admin-redemptions-queue "Redemption Requests")
 
 The points were taken from the contributor's balance when they made the request, so the same points cannot be claimed twice.
 

@@ -32,7 +32,7 @@ Choose **See all notifications** in the bell to open it. Notifications are group
 
 Open the menu under your picture, choose **Settings**, then **Notifications**.
 
-![Notification Preferences, with In-App and Email switches for each type](shot:settings-notifications?desktop "Settings → Notifications")
+![Notification Preferences, with In-App and Email switches for each type](shot:settings-notifications "Settings → Notifications")
 
 1. **Find the type.** There's one row per type of notification, grouped under **Contributor**, **Maintainer** and **Other**, each with a short description.
 2. **Set its switches.** Each row has an **In-App** switch and an **Email** switch. **Enable all** and **Disable all** change every row at once.

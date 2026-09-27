@@ -11,7 +11,7 @@ The **Pull Requests** tab in **Maintainers** lists the pull requests across your
 
 The feed covers the repositories ticked in **Select repositories**. For each one, it shows the 50 most recently updated pull requests, newest activity first.
 
-![The Pull Requests tab listing pull requests from several repositories](shot:maint-prs-list?desktop "Pull Requests")
+![The Pull Requests tab listing pull requests from several repositories](shot:maint-prs-list "Pull Requests")
 
 ## What each row shows
 

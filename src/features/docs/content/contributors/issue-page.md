@@ -4,13 +4,13 @@ updated: 2026-09-27
 
 The issue page is where you read an issue, see who has applied for it, and apply yourself. You reach it by choosing an issue on [Discover](/docs/contributors/discover), on a [project page](/docs/contributors/project-page) or in [Search](/docs/contributors/search).
 
-The page has two parts: the project's issues down the left, and the issue you chose on the right.
+The page has two parts: the project's issues down the left, and the issue you chose on the right. On a phone the issue comes first, full width, and the project's issues are listed below it.
 
-![The issue page, with the project's issues listed on the left and the chosen issue open on the right](shot:issue-page-overview?desktop "The issue page")
+![The issue page with the chosen issue open, beside the project's issues on a computer and above them on a phone](shot:issue-page-overview "The issue page")
 
 ## The issue
 
-The top of the right-hand side shows the issue's number and title, who opened it, and its labels. A **Closed** badge appears if it's closed. **View on GitHub** opens the issue on GitHub in a new tab.
+The top of the issue shows the issue's number and title, who opened it, and its labels. A **Closed** badge appears if it's closed. **View on GitHub** opens the issue on GitHub in a new tab.
 
 Below that are two tabs: **Applications** and **Discussions**.
 
@@ -18,7 +18,7 @@ Below that are two tabs: **Applications** and **Discussions**.
 
 **Applications** shows the apply box and everyone who has applied through Grainlify. The number beside the tab is how many applications there are.
 
-![The Applications tab, with the apply box above three applications](shot:issue-page-applications?desktop "Applications")
+![The Applications tab, with the apply box above three applications](shot:issue-page-applications "Applications")
 
 The apply box tells you whether you can apply:
 
@@ -46,7 +46,7 @@ If nobody has applied, the tab says **No applications yet**.
 
 **Discussions** shows the issue's **Description**, then every comment on it. Comments are read from GitHub, so they include comments people post there directly.
 
-![The Discussions tab, showing the issue description and comments, one marked as an application](shot:issue-page-discussions?desktop "Discussions")
+![The Discussions tab, showing the issue description and comments, one marked as an application](shot:issue-page-discussions "Discussions")
 
 - The person who opened the issue is marked **AUTHOR**.
 - Comments that are Grainlify applications are marked **Applied for this contribution**.
@@ -55,7 +55,7 @@ To reply, choose **View on GitHub** and comment there. There's no comment box on
 
 ## The issue list
 
-The left-hand side lists the project's most recently updated issues. It shows open issues until you change the filter. Each card shows the issue's number, title, how many people have applied, and who opened it. Choose one to open it on the right.
+The left-hand side (below the issue, on a phone) lists the project's most recently updated issues. It shows open issues until you change the filter. Each card shows the issue's number, title, how many people have applied, and who opened it. Choose one to open it.
 
 - **Search** matches an issue's title or the username of whoever opened it.
 - The filter button opens **All Filters**. **Status** switches between **Open** and **Closed**. **Applicants**, **Assignee** and **Stale** each take **Yes** or **No**, and **Labels** narrows to issues with a label. A stale issue is one not updated for 30 days or more.

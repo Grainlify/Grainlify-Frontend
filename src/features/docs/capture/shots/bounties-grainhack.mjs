@@ -313,9 +313,6 @@ export const SHOTS = [
     id: 'grainhack-apply-panel',
     page: 'contributors/grainhack-apply',
     url: '/dashboard?tab=osw',
-    // At phone width the issue page keeps the project's issue list beside it
-    // and pushes the issue itself off the right edge, so this is desktop only.
-    widths: [1440],
     ...W({}, grainhackApplyApi()),
     steps: openApplyIssue,
     ready: (page) => ghPanel(page).getByRole('button', { name: 'Apply for this issue' }),
@@ -325,9 +322,6 @@ export const SHOTS = [
     id: 'grainhack-apply-done',
     page: 'contributors/grainhack-apply',
     url: '/dashboard?tab=osw',
-    // At phone width the issue page keeps the project's issue list beside it
-    // and pushes the issue itself off the right edge, so this is desktop only.
-    widths: [1440],
     ...W({}, grainhackApplyApi()),
     steps: async (page) => {
       await openApplyIssue(page)

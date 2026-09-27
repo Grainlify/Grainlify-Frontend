@@ -8,7 +8,7 @@ A GrainHack event starts as a draft that only admins can see. You fill in its da
 
 1. **Open GrainHack admin and choose New hackathon.**
 
-   ![The Hackathons list, each event with its phase, and the New hackathon button](shot:admin-gh-list?desktop "Every event and the phase it is in")
+   ![The Hackathons list, each event with its phase, and the New hackathon button](shot:admin-gh-list "Every event and the phase it is in")
 
 2. **Name it and choose Create draft.** The event is created in the **Draft** phase and opens straight away.
 
@@ -59,6 +59,6 @@ Moving to **Live** records a frozen copy of the event's settings. Set any overri
 2. **Choose Save changes.** Each changed setting becomes an override for this event and is marked **overridden**.
 3. **Undo an override with the reset icon.** Its tooltip is **Reset to default**. The setting goes back to the global default.
 
-![Rule overrides for this event, with one setting marked overridden](shot:admin-gh-overrides?desktop "Overrides apply to this event only")
+![Rule overrides for this event, with one setting marked overridden](shot:admin-gh-overrides "Overrides apply to this event only")
 
 To change the defaults for every new event, use the **Global Defaults** tab instead. Every setting change, reset and phase move is recorded in the [audit log](/docs/admins/audit-log).

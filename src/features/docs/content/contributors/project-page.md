@@ -8,7 +8,7 @@ A project page is one repository's page on Grainlify. It shows what the project 
 
 The top of the page shows the repository's name and its description from GitHub.
 
-![A project page header with the repository name, description, and the GitHub and Copy link buttons](shot:project-header?desktop "Project header")
+![A project page header with the repository name, description, and the GitHub and Copy link buttons](shot:project-header "Project header")
 
 - The arrow button opens the repository on GitHub.
 - **Copy link** copies a link to this project page. See [Share a project](#share-a-project) below.
@@ -23,7 +23,7 @@ The back button above the header says where it returns to, such as **Back to Bro
 
 **Issues** lists the project's open issues, most recently updated first.
 
-![The Issues section of a project page, with label tabs above the list](shot:project-issues?desktop "Open issues")
+![The Issues section of a project page, with label tabs above the list](shot:project-issues "Open issues")
 
 1. **Filter by label.** The row of tabs starts with **All issues**, followed by the six labels used most on this project's open issues. Each tab shows its count. Choose one to see only issues with that label.
 2. **Scan an issue.** Each row shows the title, up to four of its labels, when it was last updated, and who opened it.

@@ -120,9 +120,6 @@ const C = world('contributor')
 const contributor = { persona: C.persona, api: C.api, agent: C.agent, init: C.init }
 const withApi = (extra) => ({ ...contributor, api: { ...C.api, ...extra } })
 
-// DESKTOP_ONLY_ISSUE_PAGE: below the lg breakpoint the issue page keeps its
-// 450px issue list and squeezes the issue itself to nothing, so no phone
-// screenshot of it can show what the docs describe. Those shots are desktop only.
 const ISSUE = (pid, n) => `/dashboard?issue=${issueId(pid, n)}&iproject=${pid}`
 // Issues used below.
 const OWN_APPLICATION = ISSUE('p-tide', 57) // mira-dev has applied; noor-writes and felix-quay too
@@ -295,11 +292,18 @@ export const SHOTS = [
       await waitStable(page)
     },
     ready: (page) => page.getByText('orbit-wallet').first(),
-    frame: region((page) => [
-      page.locator('span.rounded-full', { hasText: 'TypeScript' }).first(),
-      page.getByRole('button', { name: 'Organizations', exact: true }),
-      repoCard(page, 'orbit-wallet'),
-    ]),
+    // The chips, the whole toggle and filter bar, and the first row of cards.
+    // Newest first, orbit-wallet leads the row; on a computer the row runs on
+    // to quill-docs, on a phone the cards stack and orbit-wallet is enough.
+    frame: (page, width) =>
+      region((page) => [
+        page.locator('span.rounded-full', { hasText: 'TypeScript' }).first(),
+        page.getByRole('button', { name: 'Organizations', exact: true }),
+        page.getByRole('button', { name: 'Repositories', exact: true }),
+        page.getByRole('button', { name: 'Tag', exact: true }),
+        repoCard(page, 'orbit-wallet'),
+        ...(width === 390 ? [] : [repoCard(page, 'quill-docs')]),
+      ])(page, width),
   },
 
   // Ecosystems ----------------------------------------------------------------------------
@@ -383,9 +387,6 @@ export const SHOTS = [
   // Project page ------------------------------------------------------------------------------
   {
     id: 'project-header',
-    // Below the lg breakpoint the project page shows only its side column;
-    // the header and Issues sit off-screen to the right.
-    widths: [1440],
     page: 'contributors/project-page',
     url: '/dashboard?tab=browse',
     ...contributor,
@@ -398,9 +399,6 @@ export const SHOTS = [
   },
   {
     id: 'project-issues',
-    // Below the lg breakpoint the project page shows only its side column;
-    // the header and Issues sit off-screen to the right.
-    widths: [1440],
     page: 'contributors/project-page',
     url: '/dashboard?tab=browse',
     ...contributor,
@@ -427,14 +425,12 @@ export const SHOTS = [
     page: 'contributors/issue-page',
     url: OWN_APPLICATION,
     ...withApi(tideIssuesWithThirdApplicant),
-    widths: [1440],
     steps: (page) => waitStable(page),
     ready: (page) => page.getByRole('heading', { level: 1, name: 'Typed errors for RPC timeouts' }),
     frame: () => 'viewport',
   },
   {
     id: 'issue-page-applications',
-    widths: [1440], // the issue page has no phone layout (see DESKTOP_ONLY_ISSUE_PAGE)
     page: 'contributors/issue-page',
     url: THREE_APPLICANTS,
     ...contributor,
@@ -447,7 +443,6 @@ export const SHOTS = [
   },
   {
     id: 'issue-page-discussions',
-    widths: [1440], // the issue page has no phone layout (see DESKTOP_ONLY_ISSUE_PAGE)
     page: 'contributors/issue-page',
     url: THREE_APPLICANTS,
     ...contributor,
@@ -470,7 +465,6 @@ export const SHOTS = [
   // Applying ------------------------------------------------------------------------------------
   {
     id: 'apply-button',
-    widths: [1440], // the issue page has no phone layout (see DESKTOP_ONLY_ISSUE_PAGE)
     page: 'contributors/applying-to-issues',
     url: TO_APPLY,
     ...contributor,
@@ -480,7 +474,9 @@ export const SHOTS = [
   },
   {
     id: 'apply-dialog',
-    widths: [1440], // the issue page has no phone layout (see DESKTOP_ONLY_ISSUE_PAGE)
+    // At phone width the dialog is placed partly off the left edge of the
+    // screen, cutting off its text. Desktop only until it is centred.
+    widths: [1440],
     page: 'contributors/applying-to-issues',
     url: TO_APPLY,
     ...contributor,
@@ -495,7 +491,6 @@ export const SHOTS = [
   },
   {
     id: 'apply-submitted',
-    widths: [1440], // the issue page has no phone layout (see DESKTOP_ONLY_ISSUE_PAGE)
     page: 'contributors/applying-to-issues',
     url: OWN_APPLICATION,
     ...withApi(tideIssuesWithThirdApplicant),
