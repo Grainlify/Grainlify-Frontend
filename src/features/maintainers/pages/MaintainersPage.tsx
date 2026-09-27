@@ -112,7 +112,11 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
     return getGitHubAvatarUrl(owner, size);
   };
 
-  const tabs: TabType[] = ['Dashboard', 'Issues', 'Pull Requests'];
+  // The same list the URL is validated against. They were two hardcoded
+  // arrays that had to agree, and adding a tab to one and not the other gave
+  // a tab that rendered from a URL but had no button - which is exactly what
+  // happened, and only a screenshot caught it.
+  const tabs: TabType[] = VALID_TABS;
 
   // Fetch pending setup projects (for New Project Setup modal after GitHub App install)
   const loadPendingSetup = async () => {
