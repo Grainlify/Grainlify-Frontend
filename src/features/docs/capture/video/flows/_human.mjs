@@ -95,7 +95,29 @@ export async function scrollTo(page, locator, { top = 110, ms = 900 } = {}) {
   const b = await locator.boundingBox()
   if (!b) return
   const dy = b.y - top
-  if (Math.abs(dy) > 4) await smooth(page, dy, ms)
+  if (Math.abs(dy) > 4) {
+    await overScroller(page, locator)
+    await smooth(page, dy, ms)
+  }
+}
+
+/**
+ * The wheel scrolls whatever is under the pointer. Some pages scroll a column
+ * of their own (the project page's right-hand side), so when the pointer is not
+ * over the element's scrolling ancestor, move it there first.
+ */
+async function overScroller(page, locator) {
+  const r = await locator.evaluate((el) => {
+    let s = el.parentElement
+    while (s && s !== document.body && !(s.scrollHeight > s.clientHeight + 5 && /auto|scroll/.test(getComputedStyle(s).overflowY))) s = s.parentElement
+    if (!s || s === document.body || s === document.documentElement) return null
+    const b = s.getBoundingClientRect()
+    return { x: b.x, y: Math.max(b.y, 0), width: b.width, height: Math.min(b.height, innerHeight - Math.max(b.y, 0)) }
+  })
+  if (!r) return
+  const p = pos.get(page) ?? { x: 0, y: 0 }
+  if (p.x >= r.x + 10 && p.x <= r.x + r.width - 10 && p.y >= r.y + 10 && p.y <= r.y + r.height - 10) return
+  await glide(page, r.x + r.width * 0.55, Math.min(Math.max(p.y, r.y + 60), r.y + r.height - 60), 600)
 }
 
 /** Scrolls smoothly only as far as needed to bring the locator fully into view. */
@@ -103,6 +125,7 @@ export async function scrollIntoView(page, locator, { margin = 90 } = {}) {
   const b = await locator.boundingBox()
   if (!b) return
   const h = page.viewportSize().height
+  if (b.y < margin || b.y + b.height > h - 30) await overScroller(page, locator)
   if (b.y < margin) await smooth(page, b.y - margin - 40)
   else if (b.y + b.height > h - 30) await smooth(page, Math.min(b.y - margin - 40, b.y + b.height - h + 120))
 }
