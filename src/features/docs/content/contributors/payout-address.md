@@ -1,0 +1,61 @@
+---
+updated: 2026-09-27
+---
+
+GrainHack and Founding Contributor Pool payouts go to an Aptos address you register in Settings. You register it by connecting the Petra wallet and signing one message, which proves the address is yours. Signing costs no gas and moves no funds.
+
+## Before you start
+
+- A browser with the [Petra](https://petra.app/) wallet installed. Petra is the wallet Grainlify has tested end to end. Other wallets that support the Aptos signing standard should work.
+- A standard single-key Petra account. Multi-key accounts can't be verified yet.
+
+## Register your address
+
+1. **Open Payout Preferences.** Open the menu under your picture, top right, choose **Settings**, then the **Payout Preferences** tab.
+2. **Choose Connect wallet and verify.** It's on the card titled **Register your payout address**. Petra asks you to connect: approve it.
+
+   ![The Register your payout address card with the Connect wallet and verify button](shot:payout-address-register?desktop "Register your payout address")
+
+3. **Sign the message.** Petra shows a message to sign. Approve it. While Petra is open, the button reads **Waiting for your wallet…**
+4. **You're done.** The card now says **Payout address verified** and shows the full address, the date you verified it, and the network it's registered for.
+
+   ![The Payout address verified card showing the address and verification date](shot:payout-address-verified "Payout address verified")
+
+If Petra isn't installed, the card says **A wallet is needed to receive payouts**. Install Petra, then reload the page.
+
+> [!NOTE]
+> Signing is not a transaction and can't move funds. Grainlify never asks for your recovery phrase. If a page does, close it.
+
+## Choose a wallet you'll keep
+
+> [!WARNING]
+> A payout is locked to whichever address was registered when it was published, and it can't be moved afterwards. This is the wallet you'll collect from, possibly months from now. Don't register a wallet you might lose access to.
+
+## Change your address
+
+Choose **Register a different address** on the verified card and go through the same steps. The new address replaces the old one, and a message names the address that is no longer your payout address. Payouts that were already published stay with the address they were locked to.
+
+## The payout contact field
+
+Once your address is verified, the card asks **How should we contact you about payouts?** It's optional.
+
+1. **Type an email address** in the box.
+2. **Choose Save.** You'll see **We'll use this to tell you about payouts.**
+
+   ![The payout contact field below the verified address](shot:payout-address-contact "How should we contact you about payouts?")
+
+Grainlify uses this address only for messages about your payouts. To delete it, choose **Remove**. Everything on the tab keeps working without it.
+
+## If something goes wrong
+
+| What you see | What to do |
+| --- | --- |
+| **That signature came from a different address.** | Petra switched to another account after connecting. Nothing was saved. Switch accounts in Petra and try again. |
+| **The signing request expired.** | A request lasts ten minutes. Start again. |
+| **You declined the signature in your wallet.** | Nothing was saved. Try again when you're ready. |
+| **This wallet is a multi-key account…** | Connect a standard single-key Petra account instead. |
+| **The signature didn't verify.** | Approve exactly the request Petra shows you, without changing it. |
+| **That address is already registered for this chain.** | Nothing to do. It's already your payout address. |
+| **No wallet detected.** | Install Petra, then reload the page. |
+
+Still stuck? [Get help](/support) and say which wallet you used.
