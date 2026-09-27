@@ -334,12 +334,14 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
         ? 'bg-[#2d2820]/[0.4] border-white/10'
         : 'bg-white/[0.12] border-white/25'
         }`}>
-        <div className="flex items-center gap-4">
+        {/* On a phone the selector takes its own full-width line and the four
+            tabs sit in a 2x2 grid under it, so none are cut off. */}
+        <div className="flex items-center gap-4 max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
           {/* Repository Selector */}
           <div className="relative z-50">
             <button
               type="button"
-              className={`flex items-center gap-3 px-5 py-3 rounded-[14px] border transition-all group cursor-pointer ${theme === 'dark'
+              className={`flex items-center gap-3 px-5 py-3 rounded-[14px] border transition-all group cursor-pointer max-sm:w-full max-sm:justify-between ${theme === 'dark'
                 ? 'bg-white/[0.08] border-white/20 hover:bg-white/[0.12] hover:border-[#c9983a]/40'
                 : 'bg-white/[0.15] border-white/30 hover:bg-white/[0.2] hover:border-[#c9983a]/30'
                 }`}
@@ -353,7 +355,7 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
 
             {/* Dropdown Menu */}
             {isRepoDropdownOpen && (
-              <div className={`absolute top-full left-0 mt-2 w-[380px] rounded-[20px] border-2 z-50 overflow-hidden transition-colors ${theme === 'dark'
+              <div className={`absolute top-full left-0 mt-2 w-[380px] max-sm:w-full rounded-[20px] border-2 z-50 overflow-hidden transition-colors ${theme === 'dark'
                 ? 'bg-[#3a3228] border-white/30'
                 : 'bg-[#d4c5b0] border-white/40'
                 }`}>
@@ -549,13 +551,13 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 flex-1">
+          <div className="flex items-center gap-2 flex-1 max-sm:grid max-sm:grid-cols-2">
             {tabs.map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`px-5 py-3 rounded-[14px] text-[14px] font-semibold transition-all cursor-pointer ${activeTab === tab
+                className={`px-5 py-3 rounded-[14px] text-[14px] font-semibold transition-all cursor-pointer max-sm:px-3 max-sm:py-2.5 max-sm:whitespace-nowrap ${activeTab === tab
                   ? theme === 'dark'
                     ? 'bg-gradient-to-br from-[#c9983a]/40 via-[#d4af37]/35 to-[#c9983a]/30 border-2 border-[#c9983a]/70 text-[#fef5e7]'
                     : 'bg-gradient-to-br from-[#c9983a]/30 via-[#d4af37]/25 to-[#c9983a]/20 border-2 border-[#c9983a]/50 text-[#2d2820]'

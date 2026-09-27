@@ -165,7 +165,7 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoa
   };
 
   return (
-    <div className={`rounded-[24px] border p-8 transition-colors ${
+    <div className={`rounded-[24px] border p-8 max-sm:p-4 transition-colors ${
       theme === 'dark'
         ? 'bg-[#2d2820]/[0.4] border-white/10'
         : 'bg-white/[0.12] border-white/20'
@@ -181,9 +181,9 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoa
       </div>
 
       {/* Search and Filters */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6 max-sm:flex-wrap">
         {/* Search Bar */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 max-sm:basis-full">
           <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${
             theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]'
           }`} />
@@ -211,7 +211,7 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoa
 
         {/* Clear Filters Button */}
         <button 
-          className={`px-5 py-3 rounded-[14px] border transition-all ${
+          className={`px-5 py-3 rounded-[14px] border transition-all max-sm:flex-1 max-sm:px-3 max-sm:whitespace-nowrap ${
             theme === 'dark'
               ? 'bg-white/[0.08] border-white/20 hover:bg-white/[0.12] hover:border-[#c9983a]/30 text-[#b8a898]'
               : 'bg-white/[0.15] border-white/25 hover:bg-white/[0.2] hover:border-[#c9983a]/30 text-[#7a6b5a]'
@@ -225,7 +225,8 @@ export function PullRequestsTab({ selectedProjects, onRefresh: _onRefresh, isLoa
       {/* Pull Requests Table */}
       <div className="space-y-4">
         {/* Table Header */}
-        <div className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-3 border-b-2 transition-colors ${
+        {/* Hidden on a phone, where each row stacks its columns as a card. */}
+        <div className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-3 border-b-2 transition-colors max-sm:hidden ${
           theme === 'dark' ? 'border-white/20' : 'border-white/20'
         }`}>
           <div className={`text-[12px] font-bold uppercase tracking-wide transition-colors ${
