@@ -12,8 +12,8 @@
  *   contributors/apply-for-a-bounty  "Apply while the window is open. The
  *                                     draw is weighted, not first-come."
  *   contributors/bounty-rules        "One wallet per GitHub account, one
- *                                     bounty at a time, accounts 30 days or
- *                                     older."
+ *                                     bounty at a time, a minimum account
+ *                                     age, no self-merges."
  *   contributors/bounty-payment      "From pull request to payment."
  *
  * DOCS_LIVE is the single switch. While it is false the dashboard keeps the
@@ -22,7 +22,7 @@
  * the links point at the docs. Nothing else needs editing, and nothing links
  * to a page that does not exist yet.
  */
-export const DOCS_LIVE = false;
+export const DOCS_LIVE = true;
 
 export const DOC_SLUGS = {
   applyForABounty: '/docs/contributors/apply-for-a-bounty',
