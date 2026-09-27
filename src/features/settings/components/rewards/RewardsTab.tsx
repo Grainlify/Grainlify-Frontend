@@ -41,7 +41,7 @@ const VALID_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 
 function Card({ children, theme }: { children: React.ReactNode; theme: string }) {
   return (
     <div
-      className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${
+      className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${
         theme === 'dark' ? 'bg-[#2d2820]/[0.4] border-white/10' : 'bg-white/[0.12] border-white/20'
       }`}
     >
@@ -130,7 +130,7 @@ function PlatformUploadRow({
 
   return (
     <div
-      className={`flex items-center gap-4 p-4 rounded-[16px] border transition-colors ${
+      className={`flex items-center gap-4 p-4 rounded-[16px] border transition-colors max-sm:flex-wrap max-sm:gap-3 ${
         theme === 'dark' ? 'bg-white/[0.04] border-white/10' : 'bg-white/[0.15] border-white/25'
       }`}
     >
@@ -158,7 +158,7 @@ function PlatformUploadRow({
         )}
       </div>
       <label
-        className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-[10px] border border-dashed text-[13px] font-medium cursor-pointer transition-colors ${
+        className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-[10px] border border-dashed max-sm:basis-full max-sm:justify-center text-[13px] font-medium cursor-pointer transition-colors ${
           theme === 'dark' ? 'border-[#c9983a]/50 bg-white/[0.06] hover:bg-white/[0.1] text-[#d4c5b0]' : 'border-[#c9983a]/50 bg-white/40 hover:bg-white/60 text-[#7a6b5a]'
         }`}
       >

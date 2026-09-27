@@ -193,12 +193,12 @@ export function NotificationsTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${
         theme === 'dark'
           ? 'bg-[#2d2820]/[0.4] border-white/10'
           : 'bg-white/[0.12] border-white/20'
       }`}>
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between mb-6 max-sm:flex-col max-sm:gap-4">
           <div>
             <h2 className={`text-[28px] font-bold mb-2 transition-colors ${
               theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'
@@ -232,7 +232,7 @@ export function NotificationsTab() {
         </div>
 
         {/* Column Headers */}
-        <div className="grid grid-cols-[1fr_140px_140px] gap-4 pb-4 border-b border-white/10">
+        <div className="grid grid-cols-[1fr_140px_140px] gap-4 pb-4 border-b border-white/10 max-sm:grid-cols-[minmax(0,1fr)_64px_64px] max-sm:gap-x-3">
           <div></div>
           <div className={`text-[13px] font-semibold text-center transition-colors ${
             theme === 'dark' ? 'text-[#f5efe5]' : 'text-[#2d2820]'

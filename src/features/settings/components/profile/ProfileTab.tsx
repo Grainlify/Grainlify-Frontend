@@ -294,7 +294,7 @@ export function ProfileTab() {
   return (
     <div className="space-y-6">
       {/* Profile Header */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-[#2d2820]/[0.4] border-white/10'
         : 'bg-white/[0.12] border-white/20'
         }`}>
@@ -305,7 +305,7 @@ export function ProfileTab() {
       </div>
 
       {/* GitHub Account Section */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-[#2d2820]/[0.4] border-white/10'
         : 'bg-white/[0.12] border-white/20'
         }`}>
@@ -316,11 +316,11 @@ export function ProfileTab() {
           To change your username or email, edit your account on Github, then resync your account.
         </p>
 
-        <div className={`flex items-center justify-between p-4 rounded-[16px] backdrop-blur-[30px] border transition-colors ${theme === 'dark'
+        <div className={`flex items-center justify-between p-4 rounded-[16px] backdrop-blur-[30px] border transition-colors max-sm:flex-col max-sm:items-stretch max-sm:gap-3 ${theme === 'dark'
           ? 'bg-[#3d342c]/[0.4] border-white/15'
           : 'bg-white/[0.15] border-white/25'
           }`}>
-          <span className={`text-[15px] font-medium transition-colors ${theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#2d2820]'
+          <span className={`text-[15px] font-medium transition-colors min-w-0 max-sm:[overflow-wrap:anywhere] ${theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#2d2820]'
             }`}>
             {isLoading ? (
               <span className="inline-block w-32 h-4 bg-white/10 rounded animate-pulse" />
@@ -330,11 +330,11 @@ export function ProfileTab() {
               'Not connected / Not connected'
             )}
           </span>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 max-sm:w-full">
             <button
               onClick={handleResync}
               disabled={isResyncing || !currentUser?.github}
-              className={`px-5 py-2.5 rounded-[12px] backdrop-blur-[30px] border font-medium text-[14px] hover:bg-white/[0.25] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark'
+              className={`px-5 py-2.5 rounded-[12px] backdrop-blur-[30px] border font-medium text-[14px] hover:bg-white/[0.25] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed max-sm:flex-1 max-sm:justify-center max-sm:px-3 ${theme === 'dark'
                 ? 'bg-[#3d342c]/[0.5] border-white/20 text-[#d4c5b0]'
                 : 'bg-white/[0.2] border-white/30 text-[#2d2820]'
                 }`}
@@ -344,7 +344,7 @@ export function ProfileTab() {
             </button>
             <button
               onClick={handleEditGitHub}
-              className="px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-medium text-[14px] shadow-[0_4px_16px_rgba(162,121,44,0.3)] hover:shadow-[0_6px_20px_rgba(162,121,44,0.4)] transition-all border border-white/10"
+              className="px-5 py-2.5 max-sm:flex-1 max-sm:px-3 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-medium text-[14px] shadow-[0_4px_16px_rgba(162,121,44,0.3)] hover:shadow-[0_6px_20px_rgba(162,121,44,0.4)] transition-all border border-white/10"
             >
               Edit
             </button>
@@ -353,7 +353,7 @@ export function ProfileTab() {
       </div>
 
       {/* Profile Picture */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-[#2d2820]/[0.4] border-white/10'
         : 'bg-white/[0.12] border-white/20'
         }`}>
@@ -406,7 +406,7 @@ export function ProfileTab() {
       </div>
 
       {/* Personal Information */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-[#2d2820]/[0.4] border-white/10'
         : 'bg-white/[0.12] border-white/20'
         }`}>
@@ -494,7 +494,7 @@ export function ProfileTab() {
       </div>
 
       {/* Contact Information */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-[#2d2820]/[0.4] border-white/10'
         : 'bg-white/[0.12] border-white/20'
         }`}>
