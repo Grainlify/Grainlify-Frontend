@@ -1,4 +1,5 @@
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { shotUrl } from '../media';
 
 // A screenshot captured by the docs capture tool in four variants: light and
 // dark, at 1440 and 390. The reader sees the one matching their theme and
@@ -11,7 +12,7 @@ export function Screenshot({ id: ref, alt, caption }: { id: string; alt: string;
   const { theme } = useTheme();
   const [id, flag] = ref.split('?');
   const desktopOnly = flag === 'desktop';
-  const src = (w: number) => `/docs-media/shots/${id}.${theme}.${w}.webp`;
+  const src = (w: 1440 | 390) => shotUrl(id, theme, w);
   return (
     <figure className="my-7">
       <picture>

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Info, TriangleAlert } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { Screenshot } from './Screenshot';
+import { VideoFrame } from './VideoFrame';
 import { slugify } from '../slugify';
 
 // Reading surface for docs pages. Typography, colours and spacing are the
@@ -69,9 +70,9 @@ export function DocsMarkdown({ source }: { source: string }) {
     <div className={`docs-article text-[16px] leading-[1.75] ${body}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        // shot: is this renderer's own embed; everything else goes through
-        // react-markdown's default URL sanitising.
-        urlTransform={(url) => (url.startsWith('shot:') ? url : defaultUrlTransform(url))}
+        // shot: and video: are this renderer's own embeds; everything else goes
+        // through react-markdown's default URL sanitising.
+        urlTransform={(url) => (/^(shot|video):/.test(url) ? url : defaultUrlTransform(url))}
         components={{
           h2: ({ children }) => {
             const id = slugify(textOf(children));
@@ -145,6 +146,7 @@ export function DocsMarkdown({ source }: { source: string }) {
             ),
           img: ({ src = '', alt = '', title }) => {
             if (src.startsWith('shot:')) return <Screenshot id={src.slice(5)} alt={alt} caption={title} />;
+            if (src.startsWith('video:')) return <VideoFrame slug={src.slice(6)} title={alt} duration={title} />;
             return <img src={src} alt={alt} className="my-6 rounded-[14px] border border-white/20" />;
           },
           hr: () => <hr className="my-10 border-0 h-px bg-white/15" />,
