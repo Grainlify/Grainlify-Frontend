@@ -1192,6 +1192,62 @@ export interface BountyDrawState {
   draws: (DrawResultView & { ranAt: string; winnerLogin: string | null; configSnapshot: Record<string, string> })[];
 }
 
+export interface BountyRepoProject {
+  project_id: string;
+  full_name: string;
+  verified: boolean;
+  github_app_installation_id: number | null;
+  /** Verified AND the App installed. Both, or bounties cannot be switched on. */
+  registered_project: boolean;
+}
+
+export interface AgentRepoState {
+  fullName: string;
+  allowlisted: boolean;
+  bountiesEnabled: boolean;
+  registeredProject: boolean;
+  testCarveOut: boolean;
+  mayHaveBounties: boolean;
+  whyNot: string | null;
+  lastChangedBy: string | null;
+  lastChangedAt: string | null;
+}
+
+export const getBountyRepos = () =>
+  apiRequest<{ projects: BountyRepoProject[]; agent: AgentRepoState[] | null }>('/admin/bounty-repos', { requiresAuth: true });
+
+export const setBountyRepo = (fullName: string, enabled: boolean) =>
+  apiRequest<{ ok: true; repos: AgentRepoState[] }>('/admin/bounty-repos', {
+    method: 'POST',
+    requiresAuth: true,
+    body: JSON.stringify({ full_name: fullName, enabled }),
+  });
+
+/** What a maintainer may see about one of their bounties. The shape changes
+ *  with the window: no names while it is open, by design. */
+export interface MaintainerBountyView {
+  bountyId: string;
+  repo: string;
+  issueNumber: number;
+  windowOpen: boolean;
+  applicationsCloseAt: string | null;
+  /** Always false. Stated by the server so the UI never has to infer it. */
+  canAssign: false;
+  assignmentIsByDraw: true;
+  applicantBucket: 'none' | 'few' | 'many' | null;
+  applicantCount: number | null;
+  applications:
+    | { githubLogin: string; status: string; gateFailureReason: string | null; fit: string | null; appliedAt: string }[]
+    | null;
+  draw: { winnerLogin: string | null; seed: number; ranAt: string; pool: DrawCandidate[]; noWinnerReason: string | null } | null;
+}
+
+export const getMaintainerBountyView = (bountyId: string, repo: string) =>
+  apiRequest<MaintainerBountyView>(
+    `/maintainer/bounties/${encodeURIComponent(bountyId)}/applications?repo=${encodeURIComponent(repo)}`,
+    { requiresAuth: true },
+  );
+
 export const getDrawSettings = () => apiRequest<{ settings: DrawSetting[] }>('/admin/bounty-draw/settings', { requiresAuth: true });
 export const setDrawSetting = (key: string, value: string) =>
   apiRequest<{ ok: true; settings: DrawSetting[] }>('/admin/bounty-draw/settings', { method: 'POST', requiresAuth: true, body: JSON.stringify({ key, value }) });

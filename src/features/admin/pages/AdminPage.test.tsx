@@ -28,6 +28,8 @@ vi.mock('../../../shared/api/client', () => ({
   resetDrawSetting: vi.fn(),
   getBountyDrawState: vi.fn(),
   runBountyDraw: vi.fn(),
+  getBountyRepos: vi.fn().mockResolvedValue({ projects: [], agent: [] }),
+  setBountyRepo: vi.fn(),
 }))
 
 vi.mock('../../../shared/api/bountyAgent', async (orig) => {

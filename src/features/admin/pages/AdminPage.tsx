@@ -9,6 +9,7 @@ import { SocialFollowReview } from '../components/SocialFollowReview';
 import { KYCReview } from '../components/KYCReview';
 import { RedemptionsReview } from '../components/RedemptionsReview';
 import { BountyDrawControls } from '../components/BountyDrawControls';
+import { BountyRepos } from '../components/BountyRepos';
 
 interface EcosystemLink {
   label: string;
@@ -1008,6 +1009,22 @@ export function AdminPage() {
             }`}>Application counts, the weighted draw and the settings behind it. Changes here take effect without a deploy.</p>
         </div>
         <BountyDrawControls />
+      </div>
+
+      {/* Which repositories may have bounties at all. Above the draw controls
+          would be tidier, but this is the rarer job: most visits here are to
+          run or inspect a draw, not to admit a project. */}
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+        ? 'bg-white/[0.08] border-white/10'
+        : 'bg-white/[0.15] border-white/20'
+        }`}>
+        <div className="mb-6">
+          <h2 className={`text-[24px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}>Bounty Repositories</h2>
+          <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}>Which repositories may have bounties. Verified projects with the GitHub App installed, switched on here; every change is recorded.</p>
+        </div>
+        <BountyRepos />
       </div>
 
       {/* Add Ecosystem Modal */}

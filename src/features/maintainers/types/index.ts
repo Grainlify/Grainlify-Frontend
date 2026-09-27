@@ -110,7 +110,7 @@ export interface PullRequest {
 export type PRFilterType = 'All states' | 'Open' | 'Merged' | 'Closed' | 'Draft';
 
 // Remove Waves from TabType
-export type TabType = 'Dashboard' | 'Issues' | 'Pull Requests';
+export type TabType = 'Dashboard' | 'Issues' | 'Pull Requests' | 'Bounties';
 
 // Shared types
 export interface Repository {

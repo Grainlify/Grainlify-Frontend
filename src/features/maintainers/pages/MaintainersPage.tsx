@@ -6,6 +6,7 @@ import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 import { DashboardTab } from '../components/dashboard/DashboardTab';
 import { IssuesTab } from '../components/issues/IssuesTab';
 import { PullRequestsTab } from '../components/pull-requests/PullRequestsTab';
+import { BountiesTab } from '../components/BountiesTab';
 import { TabType } from '../types';
 import { getMyProjects, getPendingSetupProjects, type PendingSetupProject } from '../../../shared/api/client';
 import { getGitHubAvatarUrl } from '../../../shared/utils/avatar';
@@ -13,7 +14,7 @@ import { InstallGitHubAppModal } from '../components/InstallGitHubAppModal';
 import { NewProjectSetupModal } from '../components/NewProjectSetupModal';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
 
-const VALID_TABS: TabType[] = ['Dashboard', 'Issues', 'Pull Requests'];
+const VALID_TABS: TabType[] = ['Dashboard', 'Issues', 'Pull Requests', 'Bounties'];
 
 interface MaintainersPageProps {
   onNavigate: (page: string) => void;
@@ -580,6 +581,13 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
           <LoadFailed what="your repositories" error={projectsLoadError ?? new Error(error)} onRetry={loadProjects} />
         ) : (
         <>
+        {activeTab === 'Bounties' && (
+          <BountiesTab
+            repoFullNames={selectedProjects.map((p) => p.github_full_name).filter(Boolean) as string[]}
+            isLoadingProjects={isLoading}
+          />
+        )}
+
         {activeTab === 'Dashboard' && (
           <DashboardTab
             selectedProjects={selectedProjects}
