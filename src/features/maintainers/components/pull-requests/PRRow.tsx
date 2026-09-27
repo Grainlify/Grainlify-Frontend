@@ -60,14 +60,14 @@ export function PRRow({ pr }: PRRowProps) {
   return (
     <div 
       onClick={handleClick}
-      className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] border transition-all cursor-pointer group ${
+      className={`grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] border transition-all cursor-pointer group max-sm:grid-cols-1 max-sm:gap-3 max-sm:px-4 max-sm:py-4 ${
         theme === 'dark'
           ? 'bg-white/[0.08] border-white/15 hover:bg-white/[0.15] hover:border-[#c9983a]/30'
           : 'bg-white/[0.08] border-white/15 hover:bg-white/[0.15] hover:border-[#c9983a]/20'
       }`}
     >
-      {/* Pull Request Info */}
-      <div>
+      {/* Pull Request Info. On a phone the four columns stack as one card. */}
+      <div className="max-sm:min-w-0">
         <div className="flex items-start gap-3 mb-2">
           <GitPullRequest className={`w-4 h-4 mt-0.5 flex-shrink-0 ${getPRStatusColor()}`} />
           <div className="flex-1 min-w-0">
@@ -86,7 +86,7 @@ export function PRRow({ pr }: PRRowProps) {
       </div>
 
       {/* Author Info */}
-      <div>
+      <div className="max-sm:min-w-0">
         <div className="flex items-center gap-2 mb-2">
           <img
             src={getGitHubAvatarUrl(pr.author.name, 28)}
@@ -118,7 +118,7 @@ export function PRRow({ pr }: PRRowProps) {
               }
             }}
           />
-          <span className={`text-[13px] font-semibold ${
+          <span className={`text-[13px] font-semibold max-sm:truncate ${
             theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
           }`}>{pr.author.name}</span>
         </div>
@@ -137,7 +137,7 @@ export function PRRow({ pr }: PRRowProps) {
       </div>
 
       {/* Repository Info */}
-      <div>
+      <div className="max-sm:min-w-0">
         <div className="flex items-center gap-2 mb-1">
           {(() => {
             const [owner] = pr.org ? [pr.org] : pr.repo.split('/');
@@ -175,7 +175,7 @@ export function PRRow({ pr }: PRRowProps) {
               />
             );
           })()}
-          <span className={`text-[13px] font-bold ${
+          <span className={`text-[13px] font-bold max-sm:truncate ${
             theme === 'dark' ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
           }`}>{pr.repo}</span>
         </div>
@@ -185,7 +185,7 @@ export function PRRow({ pr }: PRRowProps) {
       </div>
 
       {/* Indicators */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 max-sm:empty:hidden">
         {pr.indicators.map((indicator, idx) => {
           const { Icon, color } = getIndicatorIcon(indicator);
           return (
