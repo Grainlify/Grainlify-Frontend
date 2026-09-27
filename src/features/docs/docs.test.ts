@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync, statSync } from 'fs';
 import path from 'path';
 import { parseDoc, formatUpdated, headingsOf, plainText } from './doc';
 import { buildSearchIndex, search, markMatches, snippetAround, tokenize, type SearchEntry } from './search';
 import { DOCS_NAV, findPage, publishedNav, publishedPages } from './nav';
 import { searchEntries } from './entries';
 import { articleHtml, describe as describePage, pageHtml } from './prerender';
+import { hasMedia } from './media';
 
 const CONTENT = path.join(__dirname, 'content');
-const SHOTS = path.join(__dirname, '../../../public/docs-media/shots');
 
 function contentFiles(dir = CONTENT): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -122,17 +122,22 @@ describe('the pages as written', () => {
         const [id, flag] = ref.split('?');
         const widths = flag === 'desktop' ? [1440] : [1440, 390];
         for (const theme of ['light', 'dark'])
-          for (const w of widths) if (!existsSync(path.join(SHOTS, `${id}.${theme}.${w}.webp`))) missing.push(`${slug}: ${id}.${theme}.${w}.webp`);
+          for (const w of widths) if (!hasMedia(`shots/${id}.${theme}.${w}.webp`)) missing.push(`${slug}: ${id}.${theme}.${w}.webp`);
       }
     }
-    expect(missing, 'Run node src/features/docs/capture/run.mjs').toEqual([]);
+    expect(missing, 'Run node src/features/docs/capture/run.mjs, then capture/upload.mjs').toEqual([]);
   });
 
-  it('every link to another docs page goes to a published page', () => {
-    const published = new Set(publishedPages(available, false).map((p) => `/docs/${p.page.slug}`));
+  it('every link to another docs page goes to a page its reader can open', () => {
+    // A public page may only link to public pages; an admin page is read by an
+    // admin, who can open admin pages too.
+    const forEveryone = new Set(publishedPages(available, false).map((p) => `/docs/${p.page.slug}`));
+    const forAdmins = new Set(publishedPages(available, true).map((p) => `/docs/${p.page.slug}`));
     const broken: string[] = [];
-    for (const [slug, d] of Object.entries(docs))
-      for (const [, href] of d.body.matchAll(/\]\((\/docs[^ )#]*)/g)) if (href !== '/docs' && !published.has(href)) broken.push(`${slug} -> ${href}`);
+    for (const [slug, d] of Object.entries(docs)) {
+      const allowed = findPage(slug)?.section.adminOnly ? forAdmins : forEveryone;
+      for (const [, href] of d.body.matchAll(/\]\((\/docs[^ )#]*)/g)) if (href !== '/docs' && !allowed.has(href)) broken.push(`${slug} -> ${href}`);
+    }
     expect(broken).toEqual([]);
   });
 });

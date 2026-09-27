@@ -45,7 +45,8 @@ describe('DocsPage', () => {
     at('/docs/welcome');
     const contents = screen.getAllByRole('navigation', { name: 'Documentation' })[0];
     expect(within(contents).getByRole('link', { name: 'Create your account' })).toBeInTheDocument();
-    expect(within(contents).queryByText('Glossary')).toBeNull();
+    expect(within(contents).getByRole('link', { name: 'Glossary' })).toBeInTheDocument();
+    expect(within(contents).queryByText('Verify your identity')).toBeNull();
   });
 
   it('marks the current page in the contents', () => {
@@ -58,7 +59,7 @@ describe('DocsPage', () => {
     at('/docs/create-your-account');
     const pager = screen.getByRole('navigation', { name: 'Previous and next page' });
     expect(within(pager).getByRole('link', { name: /Previous\s*Welcome to Grainlify/ })).toHaveAttribute('href', '/docs/welcome');
-    expect(within(pager).getByRole('link', { name: /Next\s*Link your Solana wallet/ })).toBeInTheDocument();
+    expect(within(pager).getByRole('link', { name: /Next\s*Find your way around/ })).toHaveAttribute('href', '/docs/find-your-way-around');
   });
 
   it('says so when a page does not exist', () => {
