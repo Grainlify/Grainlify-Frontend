@@ -25,10 +25,12 @@ function avatarSvg(seed) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" fill="${bg}"/><text x="48" y="62" font-family="Inter,Arial,sans-serif" font-size="44" font-weight="700" fill="#fff8ec" text-anchor="middle">${letter}</text></svg>`
 }
 
-export async function openPage(browser, { base, theme, width, persona, api = {}, agent = {}, init = [], tour = false }) {
+export async function openPage(browser, { base, theme, width, persona, api = {}, agent = {}, init = [], tour = false, record = null }) {
   const ctx = await browser.newContext({
     viewport: VIEWPORTS[width],
-    deviceScaleFactor: 2,
+    // Screenshots at 2x for sharpness; video at 1x, the size it is shown at.
+    deviceScaleFactor: record ? 1 : 2,
+    ...(record ? { recordVideo: record } : {}),
     colorScheme: theme,
     reducedMotion: 'reduce',
     isMobile: width === 390,
