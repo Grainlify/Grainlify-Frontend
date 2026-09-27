@@ -41,12 +41,13 @@ export function MyGrainHackPage() {
           isDark ? 'bg-[#2d2820]/[0.4] border-white/10' : 'bg-white/[0.12] border-white/20'
         }`}
       >
-        <div className="flex items-center gap-2 p-2">
+        {/* On a phone the four tabs sit in a 2x2 grid, as on Maintainers, so none are cut off. */}
+        <div className="flex items-center gap-2 p-2 max-sm:grid max-sm:grid-cols-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-6 py-3 rounded-[16px] text-[14px] font-medium transition-all ${
+              className={`px-6 py-3 rounded-[16px] text-[14px] font-medium transition-all max-sm:px-3 max-sm:py-2.5 max-sm:whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-[#a2792c] text-white shadow-[0_4px_16px_rgba(162,121,44,0.25)]'
                   : isDark
@@ -65,7 +66,7 @@ export function MyGrainHackPage() {
         <GrainHackRulesPage />
       ) : (
         <div
-          className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 transition-colors ${
+          className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 max-sm:p-4 transition-colors ${
             isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
           }`}
         >
