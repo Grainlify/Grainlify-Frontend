@@ -417,7 +417,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
       {backButton}
 
       {/* Profile Header */}
-      <div className="bg-gradient-to-br from-white/[0.18] to-white/[0.10] rounded-[32px] border-2 border-white/30 shadow-[0_20px_60px_rgba(0,0,0,0.15),0_0_80px_rgba(201,152,58,0.08)] p-12 relative overflow-hidden z-20 group">
+      <div className="bg-gradient-to-br from-white/[0.18] to-white/[0.10] rounded-[32px] border-2 border-white/30 shadow-[0_20px_60px_rgba(0,0,0,0.15),0_0_80px_rgba(201,152,58,0.08)] p-12 max-sm:p-4 relative overflow-hidden z-20 group">
         {/* Ambient Background Glow - Enhanced. overflow-hidden above (not
             overflow-visible) is load-bearing: these are 400-600px blurred
             circles inside a 32px-rounded card - without clipping, they
@@ -427,11 +427,11 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-[#d4af37]/12 to-transparent rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-to-r from-[#c9983a]/5 via-transparent to-[#d4af37]/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative flex items-start justify-between gap-10">
+        <div className="relative flex items-start justify-between gap-10 max-sm:flex-col max-sm:items-stretch max-sm:gap-6">
           {/* Left Section - Profile Info */}
-          <div className="flex items-start gap-7">
+          <div className="flex items-start gap-7 max-sm:flex-col max-sm:gap-5">
             {/* Avatar with Enhanced Effects */}
-            <div className="relative group/avatar">
+            <div className="relative group/avatar flex-shrink-0">
               {isLoadingProfile ? (
                 <>
                   <SkeletonLoader variant="circle" width="128px" height="128px" className="border-[6px] border-white/40" />
@@ -466,12 +466,12 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
             </div>
 
             {/* User Details */}
-            <div className="flex-1 pt-1">
+            <div className="flex-1 pt-1 min-w-0 max-sm:w-full max-sm:pt-0">
               {/* Username with Glow */}
               {isLoadingProfile ? (
                 <SkeletonLoader variant="text" width="200px" height="42px" className="mb-3" />
               ) : (
-                <h1 className={`text-[42px] font-black mb-4 tracking-tight transition-colors ${theme === 'dark'
+                <h1 className={`text-[42px] font-black mb-4 tracking-tight transition-colors max-sm:text-[34px] max-sm:break-words ${theme === 'dark'
                     ? 'text-[#f5f5f5]'
                     : 'bg-gradient-to-r from-[#1a1410] via-[#2d2820] to-[#4a3f2f] bg-clip-text text-transparent drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)]'
                   }`}>
@@ -667,7 +667,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
               {/* Stats Grid - Inline Premium Style */}
               <div className="space-y-4 mb-6">
                 {/* Row 1 - Contributions & Rewards */}
-                <div className="flex items-center gap-8">
+                <div className="flex items-center gap-8 max-sm:flex-wrap max-sm:gap-x-6 max-sm:gap-y-4">
                   <div className="flex items-center gap-3 group/stat">
                     <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-[#c9983a]/30 via-[#d4af37]/25 to-[#c9983a]/20 border-2 border-[#c9983a]/50 flex items-center justify-center shadow-[0_4px_16px_rgba(201,152,58,0.25),inset_0_1px_2px_rgba(255,255,255,0.2)] group-hover/stat:scale-110 group-hover/stat:shadow-[0_6px_24px_rgba(201,152,58,0.4)] transition-all duration-300">
                       <GitPullRequest className="w-6 h-6 text-[#c9983a] drop-shadow-sm" />
@@ -714,7 +714,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                 </div>
 
                 {/* Row 2 - Projects Stats (clickable to open project list modals) */}
-                <div className="flex items-center gap-8">
+                <div className="flex items-center gap-8 max-sm:flex-col max-sm:items-start max-sm:gap-3">
                   <div className="relative flex items-center gap-3 group/stat">
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#c9983a]/30 to-[#d4af37]/20 border-2 border-[#c9983a]/50 flex items-center justify-center shadow-[0_3px_12px_rgba(201,152,58,0.25),inset_0_1px_2px_rgba(255,255,255,0.2)] group-hover/stat:scale-110 group-hover/stat:shadow-[0_5px_20px_rgba(201,152,58,0.4)] transition-all duration-300">
                       <Users className="w-5 h-5 text-[#c9983a] drop-shadow-sm" />
@@ -895,7 +895,11 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
               and sized itself to its content so "Unranked" and "1000th" produced
               different boxes. Both are fixed in the component; the ratios and the
               fixed dimensions are documented there. */}
-          <div className="flex-shrink-0">
+          {/* On a phone the fixed 300px card is wider than the header's
+              content box, so it is scaled down as a whole (0.88 -> 264px)
+              rather than resized; the component's fixed box is unchanged. */}
+          <div className="flex-shrink-0 max-sm:self-center max-sm:w-[264px] max-sm:h-[264px]">
+            <div className="max-sm:scale-[0.88] max-sm:origin-top-left">
             <RankBadgeCard
               isLoading={isLoadingProfile}
               position={profileData?.rank?.position}
@@ -910,12 +914,13 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
               }
               icon={getRankIcon(profileData?.rank?.tier_name || 'Unranked')}
             />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Projects Led / Most */}
-      <div className="bg-white/[0.12] rounded-[24px] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 relative overflow-hidden group/projects">
+      <div className="bg-white/[0.12] rounded-[24px] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 relative overflow-hidden group/projects">
         {/* Animated Background Glow */}
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-[#c9983a]/8 to-transparent rounded-full blur-3xl pointer-events-none group-hover/projects:scale-125 transition-transform duration-1000" />
 
@@ -932,7 +937,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
           </button>
         </div>
 
-        <div className={`relative grid gap-5 ${showAllProjects ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-3'}`}>
+        <div className={`relative grid gap-5 ${showAllProjects ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-3 max-sm:grid-cols-1 max-sm:gap-3'}`}>
           {isLoadingProjects ? (
             // Skeleton loaders for projects
             Array.from({ length: 3 }).map((_, idx) => (
@@ -1072,7 +1077,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
       </div>
 
       {/* Most active languages & ecosystems - Combined */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6 max-sm:grid-cols-1 max-sm:gap-4">
         {/* Most active languages */}
         <div className="bg-white/[0.12] rounded-[24px] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6">
           <div className="flex items-center gap-2 mb-5">
@@ -1201,7 +1206,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
       </div>
 
       {/* Rewards Distribution */}
-      <div className="bg-white/[0.12] rounded-[24px] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 relative overflow-hidden group/rewards">
+      <div className="bg-white/[0.12] rounded-[24px] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 relative overflow-hidden group/rewards">
         {/* Animated Background Glow */}
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-gradient-to-br from-[#c9983a]/10 to-transparent rounded-full blur-3xl pointer-events-none group-hover/rewards:scale-125 transition-transform duration-1000" />
 
@@ -1320,7 +1325,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
       </div>
 
       {/* Contribution Heatmap */}
-      <div className="bg-white/[0.18] rounded-[24px] border-2 border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8">
+      <div className="bg-white/[0.18] rounded-[24px] border-2 border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className={`text-[18px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
             }`}>
@@ -1349,9 +1354,10 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
 
         {/* GitHub-style Heatmap Grid */}
         {!calendarError && (
-          <div className="w-full bg-white/[0.12] rounded-[20px] border border-white/30 p-6">
-            {/* Month Labels */}
-            <div className="flex mb-4">
+          <div className="w-full bg-white/[0.12] rounded-[20px] border border-white/30 p-6 max-sm:p-4 max-sm:overflow-x-auto">
+            {/* Month Labels. On a phone the year keeps a readable square size
+                and scrolls sideways instead of squeezing 52 weeks into 250px. */}
+            <div className="flex mb-4 max-sm:min-w-[860px]">
               <div className="w-16" /> {/* Space for day labels */}
               <div className="flex-1 flex justify-between px-1">
                 {months.map((month, idx) => (
@@ -1364,7 +1370,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
             </div>
 
             {/* Grid Container */}
-            <div className="flex gap-3">
+            <div className="flex gap-3 max-sm:min-w-[860px]">
               {/* Day of week labels */}
               <div className="flex flex-col justify-between py-[3px]">
                 <div className={`h-[14px] text-[12px] font-bold flex items-center transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
@@ -1457,7 +1463,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
       </div>
 
       {/* Contributions Activity */}
-      <div className="bg-white/[0.12] rounded-[24px] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8">
+      <div className="bg-white/[0.12] rounded-[24px] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4">
         <h2 className={`text-[20px] font-bold mb-6 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
           }`}>Contributions Activity</h2>
 
@@ -1532,7 +1538,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
 
                 {/* Month Items */}
                 {expandedMonths[month] && (
-                  <div className="px-5 py-2">
+                  <div className="px-5 py-2 max-sm:px-3">
                     {items.map((item, idx) => {
                       // Determine icon and styling based on type
                       let IconComponent: LucideIcon | null = Circle;
@@ -1566,7 +1572,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                                 onIssueClick(item.id, item.project_id);
                               }
                             }}
-                            className={`flex items-center gap-4 py-2.5 hover:bg-white/[0.08] -mx-2 px-2 rounded-lg transition-all group/item ${item.type === 'issue' ? 'cursor-pointer' : 'cursor-default'
+                            className={`flex items-center gap-4 py-2.5 hover:bg-white/[0.08] -mx-2 px-2 rounded-lg transition-all group/item max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-2 ${item.type === 'issue' ? 'cursor-pointer' : 'cursor-default'
                               }`}
                           >
                             {/* Icon + Number Badge (only for issues and PRs) */}
@@ -1601,15 +1607,15 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                             )}
 
                             {/* Content */}
-                            <div className="flex-1 min-w-0">
-                              <h4 className={`text-[15px] font-medium transition-colors ${theme === 'dark' ? 'text-[#f5f5f5] group-hover/item:text-[#d4d4d4]' : 'text-[#2d2820] group-hover/item:text-[#4a3f2f]'
+                            <div className="flex-1 min-w-0 max-sm:order-last max-sm:basis-full max-sm:pl-[52px]">
+                              <h4 className={`text-[15px] font-medium transition-colors max-sm:break-words ${theme === 'dark' ? 'text-[#f5f5f5] group-hover/item:text-[#d4d4d4]' : 'text-[#2d2820] group-hover/item:text-[#4a3f2f]'
                                 }`}>
                                 {labelPrefix}{item.title}
                               </h4>
                             </div>
 
                             {/* Date */}
-                            <span className={`text-[13px] font-medium whitespace-nowrap flex-shrink-0 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+                            <span className={`text-[13px] font-medium whitespace-nowrap flex-shrink-0 transition-colors max-sm:ml-auto ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                               }`}>
                               {item.date}
                             </span>
