@@ -26,7 +26,7 @@ export function ConfigRow({ setting, value, onChange, onReset, showBorder = true
 
   return (
     <div
-      className={`grid grid-cols-[1fr_220px] gap-4 py-4 items-start ${
+      className={`grid grid-cols-[1fr_220px] gap-4 py-4 items-start max-sm:grid-cols-1 max-sm:gap-2 ${
         showBorder ? 'border-b border-white/10' : ''
       } ${setting.active ? '' : 'opacity-60'}`}
     >
@@ -63,7 +63,8 @@ export function ConfigRow({ setting, value, onChange, onReset, showBorder = true
         )}
       </div>
 
-      <div className="flex items-center gap-2 justify-end">
+      {/* On a phone the control goes under the description, full width. */}
+      <div className="flex items-center gap-2 justify-end max-sm:justify-start">
         {setting.type === 'bool' ? (
           <select
             value={value}

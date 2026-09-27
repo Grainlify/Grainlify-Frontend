@@ -116,7 +116,7 @@ export function HackathonConfigSettings({ hackathonId }: HackathonConfigSettings
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-sm:flex-col max-sm:items-start max-sm:gap-3">
         <p className={`text-[13px] transition-colors ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>
           {hackathonId
             ? "Overrides for this hackathon. Unset fields fall back to the global default."

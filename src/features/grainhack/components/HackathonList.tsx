@@ -66,15 +66,15 @@ export function HackathonList({ onSelect }: HackathonListProps) {
 
   return (
     <div
-      className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 transition-colors ${
+      className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 max-sm:p-4 transition-colors ${
         isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
       }`}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 max-sm:flex-wrap max-sm:gap-3">
         <h2 className={`text-[20px] font-bold ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>Hackathons</h2>
         <button
           onClick={() => setIsCreateOpen(true)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[13px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_24px_rgba(162,121,44,0.5)] transition-all border border-white/10"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[13px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] hover:shadow-[0_8px_24px_rgba(162,121,44,0.5)] transition-all border border-white/10 max-sm:whitespace-nowrap"
         >
           <Plus className="w-4 h-4" /> New hackathon
         </button>
@@ -93,10 +93,12 @@ export function HackathonList({ onSelect }: HackathonListProps) {
           {/* A refresh after creating one failed: keep the list, but say it's stale. */}
           {loadError != null && <LoadFailed what="the latest hackathons" error={loadError} onRetry={fetchHackathons} />}
           {hackathons.map((h) => (
+            // On a phone the phase badge goes under the name instead of
+            // squeezing it (it overlapped long names).
             <button
               key={h.id}
               onClick={() => onSelect(h.id)}
-              className={`w-full flex items-center gap-4 p-4 rounded-[16px] border text-left transition-all ${
+              className={`w-full flex items-center gap-4 p-4 rounded-[16px] border text-left transition-all max-sm:grid max-sm:grid-cols-[40px_minmax(0,1fr)] max-sm:gap-x-3 max-sm:gap-y-2 ${
                 isDark ? 'bg-white/[0.06] border-white/10 hover:bg-white/[0.1]' : 'bg-white/[0.12] border-white/20 hover:bg-white/[0.2]'
               }`}
             >
@@ -107,7 +109,7 @@ export function HackathonList({ onSelect }: HackathonListProps) {
                 <p className={`text-[14px] font-semibold ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>{h.name}</p>
               </div>
               <span
-                className={`px-3 py-1 rounded-full text-[11px] font-bold shrink-0 ${
+                className={`px-3 py-1 rounded-full text-[11px] font-bold shrink-0 max-sm:col-start-2 max-sm:justify-self-start ${
                   isDark ? 'bg-[#c9983a]/20 text-[#e8c571]' : 'bg-[#c9983a]/20 text-[#8b6f3a]'
                 }`}
               >
