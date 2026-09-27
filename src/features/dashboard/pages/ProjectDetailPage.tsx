@@ -427,16 +427,16 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-120px)] max-h-[calc(100vh-120px)]">
-      {/* Left Sidebar */}
-      <div className="w-[280px] flex-shrink-0 overflow-y-auto overflow-x-hidden space-y-6 scrollbar-hide">
+    <div className="flex gap-6 h-[calc(100vh-120px)] max-h-[calc(100vh-120px)] max-sm:flex-col max-sm:gap-4 max-sm:h-auto max-sm:max-h-none">
+      {/* Left Sidebar. On a phone the page is one column: this follows the main content. */}
+      <div className="w-[280px] flex-shrink-0 overflow-y-auto overflow-x-hidden space-y-6 scrollbar-hide max-sm:order-last max-sm:w-full max-sm:overflow-visible max-sm:space-y-4">
         {/* Project Logo */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
         }`}>
-          <div className="aspect-square rounded-[20px] overflow-hidden bg-gradient-to-br from-[#c9983a]/20 to-[#d4af37]/10">
+          <div className="aspect-square rounded-[20px] overflow-hidden bg-gradient-to-br from-[#c9983a]/20 to-[#d4af37]/10 max-sm:w-24">
             {isLoading ? (
               <SkeletonLoader className="w-full h-full" />
             ) : (
@@ -454,7 +454,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Community */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
@@ -491,7 +491,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Languages */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
@@ -541,7 +541,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Ecosystems */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
@@ -575,7 +575,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Categories */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
@@ -609,7 +609,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Owner */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
@@ -646,7 +646,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Contributors */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
@@ -701,7 +701,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 space-y-6 overflow-y-auto scrollbar-hide">
+      <div className="flex-1 space-y-6 overflow-y-auto scrollbar-hide max-sm:min-w-0 max-sm:overflow-visible max-sm:space-y-4">
         {/* Back Button */}
         {(onBack || onClose) && (
           <button
@@ -718,13 +718,13 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         )}
 
         {/* Header */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
         }`}>
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
+          <div className="flex items-start justify-between mb-4 max-sm:flex-col max-sm:gap-4 max-sm:mb-0">
+            <div className="flex-1 max-sm:min-w-0 max-sm:w-full">
               {isLoading ? (
                 <>
                   <SkeletonLoader className="h-9 w-64 mb-3" />
@@ -732,7 +732,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
                 </>
               ) : (
                 <>
-                  <h1 className={`text-[32px] font-bold mb-2 transition-colors ${
+                  <h1 className={`text-[32px] font-bold mb-2 transition-colors max-sm:text-[24px] max-sm:break-words ${
                     theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
                   }`}>{repoName}</h1>
                   <p className={`text-[15px] transition-colors ${
@@ -767,7 +767,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Overview */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.08] border-white/10'
             : 'bg-white/[0.12] border-white/20'
@@ -848,7 +848,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Issues */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
@@ -912,7 +912,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
                 {displayedIssues.map((issue) => (
               <div
                 key={issue.github_issue_id}
-                className={`p-6 rounded-[16px] backdrop-blur-[25px] border border-white/25 hover:bg-white/[0.15] transition-all cursor-pointer ${
+                className={`p-6 max-sm:p-4 rounded-[16px] backdrop-blur-[25px] border border-white/25 hover:bg-white/[0.15] transition-all cursor-pointer ${
                   theme === 'dark' ? 'bg-white/[0.08]' : 'bg-white/[0.08]'
                 }`}
                 onClick={() => {
@@ -931,8 +931,8 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
                     }`}>{issue.title}</h3>
                   </div>
                 </div>
-                <div className="flex items-center justify-between ml-8">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between ml-8 max-sm:flex-col max-sm:items-start max-sm:gap-2">
+                  <div className="flex items-center gap-2 max-sm:flex-wrap">
                     {(Array.isArray(issue.labels) ? issue.labels : [])
                       .map((l) => labelName(l))
                       .filter(Boolean)
@@ -948,7 +948,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
                       </span>
                     ))}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 max-sm:flex-wrap max-sm:gap-2">
                     <span className={`text-[12px] transition-colors ${
                       theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                     }`}>{timeAgo(issue.updated_at || issue.last_seen_at)}</span>
@@ -1008,7 +1008,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Recent Activity */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
