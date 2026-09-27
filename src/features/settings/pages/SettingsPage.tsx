@@ -47,12 +47,12 @@ export function SettingsPage() {
               : 'bg-white/[0.12] border-white/20'
           }`}
         >
-          <div className="flex items-center gap-2 p-2">
+          <div className="flex items-center gap-2 p-2 max-sm:grid max-sm:grid-cols-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-3 rounded-[16px] text-[14px] font-medium transition-all ${
+                className={`px-6 py-3 rounded-[16px] text-[14px] font-medium transition-all max-sm:px-3 max-sm:whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'bg-[#a2792c] text-white shadow-[0_4px_16px_rgba(162,121,44,0.25)]'
                     : theme === 'dark'
