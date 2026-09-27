@@ -16,12 +16,12 @@ export function BillingProfileCard({ profile, onClick }: BillingProfileCardProps
         return (
           <div className={`flex items-center gap-2 px-4 py-2 rounded-[12px] backdrop-blur-[20px] border transition-colors ${
             theme === 'dark'
-              ? 'bg-gradient-to-br from-[#10b981]/20 to-[#059669]/15 border-[#10b981]/40'
-              : 'bg-gradient-to-br from-[#10b981]/15 to-[#059669]/10 border-[#10b981]/35'
+              ? 'bg-gradient-to-br from-[var(--color-emerald-500)]/20 to-[var(--color-emerald-600)]/15 border-[var(--brand-success)]/40'
+              : 'bg-gradient-to-br from-[var(--color-emerald-500)]/15 to-[var(--color-emerald-600)]/10 border-[var(--brand-success)]/35'
           }`}>
-            <Circle className={`w-4 h-4 ${theme === 'dark' ? 'text-[#10b981] fill-[#10b981]' : 'text-[#059669] fill-[#059669]'}`} />
+            <Circle className={`w-4 h-4 ${theme === 'dark' ? 'text-[var(--brand-success-text)] fill-[var(--brand-success)]' : 'text-[var(--brand-success-text)] fill-[var(--brand-success-strong)]'}`} />
             <span className={`text-[13px] font-medium transition-colors ${
-              theme === 'dark' ? 'text-[#10b981]' : 'text-[#059669]'
+              theme === 'dark' ? 'text-[var(--brand-success-text)]' : 'text-[var(--brand-success-text)]'
             }`}>Verified</span>
           </div>
         );

@@ -13,9 +13,9 @@ export function InvoicesTab({ invoices }: InvoicesTabProps) {
     switch (status) {
       case 'paid':
         return {
-          bg: 'bg-[#22c55e]/20',
-          text: 'text-[#16a34a]',
-          border: 'border-[#22c55e]/30',
+          bg: 'bg-[var(--brand-success)]/20',
+          text: 'text-[var(--brand-success-text)]',
+          border: 'border-[var(--brand-success)]/30',
           icon: CheckCircle2,
         };
       case 'pending':

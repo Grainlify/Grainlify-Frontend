@@ -72,7 +72,7 @@ export function FoundingPosition({
       return (
         <div className={shell}>
           <div className="flex items-center gap-2 mb-1.5">
-            <CheckCircle2 className={`w-4 h-4 ${dark ? 'text-[#4ade80]' : 'text-[#16a34a]'}`} />
+            <CheckCircle2 className={`w-4 h-4 ${dark ? 'text-[var(--brand-success-text)]' : 'text-[var(--brand-success-text)]'}`} />
             <span className={`text-[15px] font-bold ${strong}`}>Approved · no position yet</span>
           </div>
           <p className={`text-[14px] ${muted}`}>

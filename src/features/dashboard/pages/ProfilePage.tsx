@@ -523,7 +523,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                   <div
                     className={
                       profileData?.kyc_verified
-                        ? "w-8 h-8 rounded-full bg-gradient-to-br from-[#4ade80]/30 to-[#16a34a]/30 border-2 border-[#22c55e]/60 flex items-center justify-center shadow-[0_4px_12px_rgba(34,197,94,0.5)]"
+                        ? "w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-green-400)]/30 to-[var(--color-green-600)]/30 border-2 border-[var(--brand-success)]/60 flex items-center justify-center shadow-[0_4px_12px_rgba(34,197,94,0.5)]"
                         : `w-8 h-8 rounded-full border-2 flex items-center justify-center ${
                             theme === 'dark'
                               ? 'bg-gradient-to-br from-gray-400/20 to-gray-500/10 border-gray-400/30 opacity-60'
@@ -535,7 +535,7 @@ export function ProfilePage({ viewingUserId, viewingUserLogin, onBack, onProject
                     <Shield
                       className={`w-4 h-4 ${
                         profileData?.kyc_verified
-                          ? 'text-[#16a34a]'
+                          ? 'text-[var(--brand-success-text)]'
                           : theme === 'dark'
                             ? 'text-[#9ca3af]'
                             : 'text-[#6b7280]'

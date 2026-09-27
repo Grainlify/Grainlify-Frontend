@@ -209,7 +209,7 @@ export function KYCReview() {
                   className={`p-1 rounded-[6px] flex-shrink-0 ${dark ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
                 >
                   {copiedId === row.user_id ? (
-                    <Check className={`w-3 h-3 ${dark ? 'text-[#4ade80]' : 'text-[#16a34a]'}`} />
+                    <Check className={`w-3 h-3 ${dark ? 'text-[var(--brand-success-text)]' : 'text-[var(--brand-success-text)]'}`} />
                   ) : (
                     <Copy className={`w-3 h-3 ${muted}`} />
                   )}

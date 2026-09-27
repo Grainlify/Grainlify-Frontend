@@ -46,7 +46,7 @@ export function Chip({ tone, children }: { tone: Tone; children: string }) {
   const c = {
     neutral: dark ? 'bg-white/10 text-[#ddd2c4]' : 'bg-black/[0.06] text-[#352c24]',
     gold: `bg-[#c9983a]/20 ${dark ? 'text-[#e8c571]' : 'text-[#5c4214]'}`,
-    green: `bg-[#22c55e]/20 ${dark ? 'text-[#4ade80]' : 'text-[#123f22]'}`,
+    green: `bg-[var(--brand-success)]/20 ${dark ? 'text-[var(--brand-success-text)]' : 'text-[var(--brand-success-on)]'}`,
     red: dark ? 'bg-[#ef4444]/20 text-[#fca5a5]' : 'bg-[#ef4444]/15 text-[#6f1818]',
   }[tone];
   return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-bold whitespace-nowrap ${c}`}>{children}</span>;

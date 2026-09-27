@@ -80,7 +80,7 @@ function CopyField({ value, label }: { value: string; label: string }) {
           }`}
         >
           {copied ? (
-            <CheckCircle2 className="w-4 h-4 text-[#22c55e]" />
+            <CheckCircle2 className="w-4 h-4 text-[var(--brand-success)]" />
           ) : (
             <Copy className={`w-4 h-4 transition-colors ${theme === 'dark' ? 'text-[#d4c5b0]' : 'text-[#7a6b5a]'}`} />
           )}

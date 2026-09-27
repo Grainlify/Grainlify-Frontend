@@ -1052,10 +1052,10 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
                       badgeBorderColor = 'border-[#8b5cf6]/40';
                     } else if (activity.status === 'open') {
                       // Open PR: Green
-                      iconBgColor = 'bg-[#22c55e]/50';
-                      iconColor = 'text-[#22c55e]';
-                      badgeBgColor = 'bg-[#22c55e]/50';
-                      badgeBorderColor = 'border-[#22c55e]/40';
+                      iconBgColor = 'bg-[var(--brand-success)]/50';
+                      iconColor = 'text-[var(--brand-success)]';
+                      badgeBgColor = 'bg-[var(--brand-success)]/50';
+                      badgeBorderColor = 'border-[var(--brand-success)]/40';
                     } else {
                       // Closed PR: Gray/Red
                       iconBgColor = theme === 'dark' ? 'bg-white/[0.15]' : 'bg-white/[0.2]';

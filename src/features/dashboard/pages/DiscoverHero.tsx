@@ -114,7 +114,7 @@ export function DiscoverHero({
                 {steps.map((step) => (
                   <div key={step.n} className="flex items-center gap-1.5">
                     {step.done ? (
-                      <CheckCircle2 className="w-4 h-4 text-[#4ade80] flex-shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-[var(--brand-success-text)] flex-shrink-0" />
                     ) : (
                       <step.icon
                         className={`w-4 h-4 flex-shrink-0 ${
@@ -125,7 +125,7 @@ export function DiscoverHero({
                     <span
                       className={`text-[12.5px] font-semibold transition-colors ${
                         step.done
-                          ? isDark ? "text-[#d4d4d4] line-through decoration-[#4ade80]/60" : "text-[#7a6b5a] line-through decoration-[#4ade80]/60"
+                          ? isDark ? "text-[#d4d4d4] line-through decoration-[var(--brand-success)]/60" : "text-[#7a6b5a] line-through decoration-[var(--brand-success)]/60"
                           : step.n === currentStep
                             ? isDark ? "text-[#f5f5f5]" : "text-[#2d2820]"
                             : isDark ? "text-[#6b5f52]" : "text-[#b8a898]"

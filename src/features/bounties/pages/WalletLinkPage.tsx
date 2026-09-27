@@ -76,12 +76,12 @@ export function WalletLinkPage() {
     notice: dark ? 'bg-white/[0.06] border-white/10' : 'bg-white/[0.12] border-white/20',
     picker: dark ? 'border-white/15 bg-black/25 text-[#f5efe5]' : 'border-black/15 bg-white/[0.35] text-[#2d2820]',
     msg: dark ? 'border-white/12 bg-black/25 text-[#f5efe5]' : 'border-black/12 bg-white/[0.45] text-[#2d2820]',
-    green: dark ? 'text-[#4ade80]' : 'text-[#123f22]',
+    green: dark ? 'text-[var(--brand-success-text)]' : 'text-[var(--brand-success-on)]',
     secondary: dark ? 'border-white/15 text-[#b8a898] hover:bg-white/[0.06]' : 'border-black/15 text-[#4a4038] hover:bg-white/[0.30]',
   };
   const primary = 'min-h-[52px] w-full rounded-[12px] border border-white/10 bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[16px] shadow-[0_6px_20px_rgba(162,121,44,0.35)] disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center justify-center';
   const row = `flex min-h-[52px] items-center gap-3 rounded-[12px] border px-3 py-2 text-left hover:border-[#c9983a]/60 ${c.picker}`;
-  const pill = `rounded-full bg-[#22c55e]/20 px-2.5 py-1 text-[12px] font-bold ${c.green}`;
+  const pill = `rounded-full bg-[var(--brand-success)]/20 px-2.5 py-1 text-[12px] font-bold ${c.green}`;
 
   const here = window.location.href;
   const origin = window.location.origin;
@@ -175,7 +175,7 @@ export function WalletLinkPage() {
               <li key={s.id} className="flex items-center gap-1.5" aria-current={i === stepIndex ? 'step' : undefined}>
                 <span
                   className={`flex h-[22px] w-[22px] items-center justify-center rounded-full text-[12px] font-bold ${
-                    i < stepIndex ? `bg-[#22c55e]/20 ${c.green}` : i === stepIndex ? 'bg-[#7d5c20] text-white' : `border-[1.5px] ${dark ? 'border-white/30' : 'border-black/25'} ${c.muted}`
+                    i < stepIndex ? `bg-[var(--brand-success)]/20 ${c.green}` : i === stepIndex ? 'bg-[#7d5c20] text-white' : `border-[1.5px] ${dark ? 'border-white/30' : 'border-black/25'} ${c.muted}`
                   }`}
                 >
                   {i < stepIndex ? <Check className="w-3.5 h-3.5" /> : i + 1}
@@ -283,7 +283,7 @@ export function WalletLinkPage() {
                   Bounties you win as <span className={`font-semibold ${c.strong}`}>@{linked.githubLogin}</span> are paid here.
                 </p>
               </div>
-              <div className={`flex flex-col gap-1 rounded-[12px] border border-[#22c55e]/30 bg-[#22c55e]/[0.08] p-3 text-[13px] leading-[1.5] ${c.strong}`}>
+              <div className={`flex flex-col gap-1 rounded-[12px] border border-[var(--brand-success)]/30 bg-[var(--brand-success)]/[0.08] p-3 text-[13px] leading-[1.5] ${c.strong}`}>
                 <span className={`font-semibold ${c.green}`}>{linked.unchanged ? 'Already linked' : 'Linked just now'}</span>
                 <span className="font-mono break-all">{linked.wallet}</span>
               </div>

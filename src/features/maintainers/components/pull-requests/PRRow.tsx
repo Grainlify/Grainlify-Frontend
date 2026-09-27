@@ -12,7 +12,7 @@ export function PRRow({ pr }: PRRowProps) {
 
   const getBadgeColor = (badge: string) => {
     if (badge.includes('Excellent') || badge.includes('High')) {
-      return 'bg-[#22c55e]/20 text-[#16a34a] border-[#22c55e]/30';
+      return 'bg-[var(--brand-success)]/20 text-[var(--brand-success-text)] border-[var(--brand-success)]/30';
     } else if (badge.includes('Moderate')) {
       return 'bg-[#eab308]/20 text-[#ca8a04] border-[#eab308]/30';
     } else if (badge.includes('Low') || badge.includes('No')) {
@@ -24,7 +24,7 @@ export function PRRow({ pr }: PRRowProps) {
   const getIndicatorIcon = (indicator: string) => {
     switch (indicator) {
       case 'check':
-        return { Icon: CircleCheck, color: 'text-[#22c55e]' };
+        return { Icon: CircleCheck, color: 'text-[var(--brand-success)]' };
       case 'x':
         return { Icon: CircleX, color: 'text-[#ef4444]' };
       case 'trophy':
@@ -45,7 +45,7 @@ export function PRRow({ pr }: PRRowProps) {
       case 'draft':
         return theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
       case 'open':
-        return 'text-[#22c55e]';
+        return 'text-[var(--brand-success)]';
       default:
         return theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
     }

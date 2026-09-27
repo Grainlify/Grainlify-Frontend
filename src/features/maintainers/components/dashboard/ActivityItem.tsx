@@ -18,7 +18,7 @@ export function ActivityItem({ activity, index, onClick }: ActivityItemProps) {
       case 'Merged':
         return 'text-[#8b5cf6]';
       case 'Open':
-        return 'text-[#22c55e]';
+        return 'text-[var(--brand-success)]';
       case 'Closed':
         return theme === 'dark' ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
       default:
