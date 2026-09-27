@@ -35,7 +35,8 @@ mkdirSync(out, { recursive: true })
 const POSITIONS = ['top', 'middle', 'bottom']
 let browser
 try {
-  browser = await chromium.launch()
+  // DOCS_CHROMIUM: a browser binary, for when Playwright's own build is not the installed one.
+  browser = await chromium.launch(process.env.DOCS_CHROMIUM ? { executablePath: process.env.DOCS_CHROMIUM } : {})
 } catch {
   browser = await chromium.launch({ channel: 'chrome' })
 }

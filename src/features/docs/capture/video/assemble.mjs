@@ -8,7 +8,7 @@
 // loudness is normalised to -16 LUFS, and captions are built from ElevenLabs'
 // character timings (or evenly spread over the estimate for a silent cut).
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
@@ -104,6 +104,6 @@ for (const theme of ['light', 'dark']) {
   // Poster: the first frame of the first segment.
   execFileSync('ffmpeg', ['-y', '-ss', LEAD.toFixed(2), '-i', `${base}.mp4`, '-frames:v', '1', '-q:v', '80', `${base}.poster.webp`], { stdio: 'ignore' })
   writeFileSync(`${base}.vtt`, 'WEBVTT\n\n' + allCues.map((c, i) => `${i + 1}\n${stamp(c.from)} --> ${stamp(c.to)}\n${c.text}\n`).join('\n'))
-  const mb = (Number(execFileSync('stat', ['-f', '%z', `${base}.mp4`]).toString()) / 1e6).toFixed(1)
+  const mb = (statSync(`${base}.mp4`).size / 1e6).toFixed(1)
   console.log(`${slug} ${theme}: ${duration.toFixed(1)}s, ${mb} MB${tl.silent ? ' (silent cut)' : ''}`)
 }
