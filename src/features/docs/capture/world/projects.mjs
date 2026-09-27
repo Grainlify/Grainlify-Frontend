@@ -487,7 +487,10 @@ function listProjects(req) {
       (!lang || p.language === lang) &&
       (!cat || p.category === cat) &&
       tags.every((t) => p.tags.includes(t)),
-  ).map(publicProject)
+  )
+    // Newest first, as the backend's List() orders them (created_at DESC).
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .map(publicProject)
   return { projects: list, total: list.length, limit: Number(q.get('limit') ?? 50), offset: 0 }
 }
 
