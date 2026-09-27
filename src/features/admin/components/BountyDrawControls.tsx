@@ -223,30 +223,34 @@ export function BountyDrawControls() {
               {result.staleAt && <span className={`font-normal ${muted}`}> — pull request due by {new Date(result.staleAt).toLocaleString()}</span>}
             </p>
           )}
-          <table className="w-full text-[12.5px]">
-            <thead>
-              <tr className={muted}>
-                <th className="text-left font-semibold py-1">Applicant</th>
-                <th className="text-left font-semibold py-1">Fit</th>
-                <th className="text-right font-semibold py-1">Tickets</th>
-                <th className="text-right font-semibold py-1">Share</th>
-                <th className="text-left font-semibold py-1 pl-3">Weights</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.pool.map((c) => (
-                <tr key={c.githubUserId} className={strong}>
-                  <td className="py-1">{c.githubLogin}</td>
-                  <td className="py-1">{c.fit}</td>
-                  <td className="py-1 text-right tabular-nums">{c.tickets.toFixed(3)}</td>
-                  <td className="py-1 text-right tabular-nums">{(c.share * 100).toFixed(1)}%</td>
-                  <td className={`py-1 pl-3 ${muted}`}>
-                    {Object.entries(c.weights).map(([k, v]) => `${k} ×${v}`).join(', ') || 'base only'}
-                  </td>
+          {/* On a phone the table keeps its columns and scrolls sideways
+              inside the card rather than squashing them. */}
+          <div className="max-sm:overflow-x-auto">
+            <table className="w-full text-[12.5px] max-sm:min-w-[560px] max-sm:whitespace-nowrap max-sm:[&_th]:px-2 max-sm:[&_td]:px-2">
+              <thead>
+                <tr className={muted}>
+                  <th className="text-left font-semibold py-1">Applicant</th>
+                  <th className="text-left font-semibold py-1">Fit</th>
+                  <th className="text-right font-semibold py-1">Tickets</th>
+                  <th className="text-right font-semibold py-1">Share</th>
+                  <th className="text-left font-semibold py-1 pl-3">Weights</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {result.pool.map((c) => (
+                  <tr key={c.githubUserId} className={strong}>
+                    <td className="py-1">{c.githubLogin}</td>
+                    <td className="py-1">{c.fit}</td>
+                    <td className="py-1 text-right tabular-nums">{c.tickets.toFixed(3)}</td>
+                    <td className="py-1 text-right tabular-nums">{(c.share * 100).toFixed(1)}%</td>
+                    <td className={`py-1 pl-3 ${muted}`}>
+                      {Object.entries(c.weights).map(([k, v]) => `${k} ×${v}`).join(', ') || 'base only'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

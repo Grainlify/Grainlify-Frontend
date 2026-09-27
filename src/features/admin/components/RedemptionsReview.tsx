@@ -71,7 +71,7 @@ export function RedemptionsReview() {
   };
 
   return (
-    <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${
+    <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${
       theme === 'dark' ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
     }`}>
       <div className="mb-6">
@@ -92,11 +92,12 @@ export function RedemptionsReview() {
           {redemptions.map((r) => (
             <div
               key={r.id}
-              className={`flex items-center gap-4 p-4 rounded-[16px] border ${
+              className={`flex items-center gap-4 p-4 rounded-[16px] border max-sm:flex-col max-sm:items-start max-sm:gap-2 ${
                 theme === 'dark' ? 'bg-white/[0.06] border-white/10' : 'bg-white/[0.12] border-white/20'
               }`}
             >
-              <div className="flex-1 min-w-0">
+              {/* On a phone the approve/reject buttons go under the request. */}
+              <div className="flex-1 min-w-0 max-sm:w-full max-sm:flex-none">
                 <p className={`text-[14px] font-semibold ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>
                   {r.login ? `@${r.login}` : r.user_id} - {r.points_spent.toLocaleString()} points → ${formatUsdAmount(r.usdc_amount) ?? r.usdc_amount} USDC
                 </p>

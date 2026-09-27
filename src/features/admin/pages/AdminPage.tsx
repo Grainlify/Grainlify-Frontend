@@ -591,7 +591,7 @@ export function AdminPage() {
   return (
     <div className="space-y-6">
       {/* Admin Header */}
-      <div className={`backdrop-blur-[40px] bg-gradient-to-br rounded-[28px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-10 transition-all overflow-hidden relative ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] bg-gradient-to-br rounded-[28px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-10 max-sm:p-4 transition-all overflow-hidden relative ${theme === 'dark'
         ? 'from-white/[0.08] to-white/[0.04] border-white/10'
         : 'from-white/[0.15] to-white/[0.08] border-white/20'
         }`}>
@@ -599,7 +599,7 @@ export function AdminPage() {
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-gradient-to-br from-[#c9983a]/20 to-transparent rounded-full blur-3xl"></div>
 
         <div className="relative z-10">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between max-sm:flex-col max-sm:gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] shadow-[0_6px_20px_rgba(162,121,44,0.35)] border border-white/10">
@@ -626,11 +626,12 @@ export function AdminPage() {
       </div>
 
       {/* Ecosystem Management Section */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
         : 'bg-white/[0.15] border-white/20'
         }`}>
-        <div className="flex items-center justify-between mb-6">
+        {/* On a phone the Add button goes under the heading instead of past the card's edge. */}
+        <div className="flex items-center justify-between mb-6 max-sm:flex-col max-sm:items-start max-sm:gap-4">
           <div>
             <h2 className={`text-[24px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
               }`}>Ecosystem Management</h2>
@@ -869,7 +870,7 @@ export function AdminPage() {
       </div>
 
       {/* Open Source Week Events Section */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
         : 'bg-white/[0.15] border-white/20'
         }`}>
@@ -953,7 +954,7 @@ export function AdminPage() {
           pills under the events card - which is a poor place to put the only
           screen where a contributor's submission gets a decision. Titled like
           every other section so it can be found by scrolling. */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
         : 'bg-white/[0.15] border-white/20'
         }`}>
@@ -969,7 +970,7 @@ export function AdminPage() {
       {/* Identity verification. Sits with the other review queues rather than
           on its own page: it is the same job - somebody is waiting on a
           decision only a human can make. */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
         : 'bg-white/[0.15] border-white/20'
         }`}>
@@ -982,7 +983,7 @@ export function AdminPage() {
         <KYCReview />
       </div>
 
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
         : 'bg-white/[0.15] border-white/20'
         }`}>
@@ -998,7 +999,7 @@ export function AdminPage() {
       {/* The bounty draw. Not a review queue - nobody is waiting on a decision
           here - but it belongs on this page for the same reason: it is the
           only screen where a person changes how the programme behaves. */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
         : 'bg-white/[0.15] border-white/20'
         }`}>
@@ -1014,7 +1015,7 @@ export function AdminPage() {
       {/* Which repositories may have bounties at all. Above the draw controls
           would be tidier, but this is the rarer job: most visits here are to
           run or inspect a draw, not to admit a project. */}
-      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${theme === 'dark'
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
         : 'bg-white/[0.15] border-white/20'
         }`}>
