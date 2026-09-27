@@ -11,7 +11,7 @@ Bounties are paid in USDC or $ANSEM on Solana, to the wallet linked to your GitH
 
 ## Link from a computer
 
-1. **Open the wallet page.** In **Bounties**, choose **open the wallet page**, or go straight to [grainlify.com/bounties/link](/bounties/link).
+1. **Open the wallet page.** In **Bounties**, choose **Link your wallet**, or go straight to [grainlify.com/bounties/link](/bounties/link).
 2. **Choose your wallet.** Wallets installed in this browser are listed under **Found in this browser**, marked **Detected**. Choose yours and approve the connection in the wallet.
 
    ![The wallet page, with Phantom detected in this browser](shot:walletlink-connect "Step 1 of 3: Connect")
