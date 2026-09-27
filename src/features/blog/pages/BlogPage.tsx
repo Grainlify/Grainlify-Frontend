@@ -17,7 +17,7 @@ export function BlogPage() {
 
   if (openPost) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <BlogPostView post={openPost} onBack={() => setOpenSlug(null)} />
         <BlogStyles />
       </div>
@@ -25,7 +25,7 @@ export function BlogPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <BlogHero />
 
       <FeaturedPost post={featuredPost} onOpen={() => setOpenSlug(featuredPost.slug)} />

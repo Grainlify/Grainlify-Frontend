@@ -216,12 +216,11 @@ export function NotificationsPage() {
   );
 
   return (
-    // No page shell and no background: Dashboard supplies both. Centred rather
-    // than left-aligned — the content area is max-w-[1400px], so a left-aligned
-    // 768px column pinned ~630px of dead space to the right of every row, which
-    // is what made the page read as unfinished. 640px keeps the body near a
-    // 70-character measure.
-    <div className="max-w-[840px] mx-auto">
+    // No page shell and no background: Dashboard supplies both. Full width, like
+    // every other tab: a left-aligned 768px column pinned ~630px of dead space
+    // to the right of every row, and centring it at 840px moved the same dead
+    // space to both sides, which read as a separate page floating in the middle.
+    <div>
       <div className="flex items-baseline justify-between gap-4 mb-4">
         <div className="flex items-baseline gap-2.5">
           <h1 className={`text-[22px] font-bold tracking-tight ${strong}`}>Notifications</h1>
