@@ -205,6 +205,36 @@ read hex from `brand.css`, which contains no `oklch`, and compare hex to hex.
 
 ---
 
+## Spacing: the measured standard
+
+Measured on 27 September 2026 on the pages treated as correct (Discover, the
+Bounties programme page, the Leaderboard), at 1440 and 390, by reading the
+rendered boxes rather than the class names. Every dashboard tab gets the first
+four from the shell, so a page only has to follow the rest.
+
+| What | Value | Where it comes from |
+|---|---|---|
+| Page gutters | 8px left and right of everything | `top-2 left-2`, `right-2`, `mr-2` in `Dashboard.tsx` |
+| Rail to content | 8px (rail 65px wide at x 8-73, content from x 81) | `ml-[81px]` |
+| Header | 52px pill at y 8 (72px on a phone), 8px from the rail and the right edge | `top-2 right-2 left-[81px]` |
+| Header to content | 16px (content starts at y 76; 96 on a phone) | `pt-[88px] lg:pt-[68px]` |
+| Content width | fills the area, capped at 1400px | `max-w-[1400px]` |
+| Between sections | 24px (`space-y-6`); some browse pages use 16px on a phone | page root |
+| Card radius | 24px for panels, 16px for cards inside them, 12px for controls | `GlassCard`, rows, inputs |
+| Card padding | 20-32px on a computer (32px for a page's main panel), 16px on a phone | |
+| Column gaps | 16px between layout columns and card grids, 12px in lists, 8px inline | |
+
+Standalone public pages (`/support`, `/bounties/link`, not found) centre one
+card and keep 16px gutters on a phone. The docs follow the dashboard shell:
+contents panel where the rail sits (x 8, 272px wide), the header pill 8px from
+it, the article card 16px under the header with 32px padding (16px on a phone).
+
+Before this was written down the docs had 104px gutters and 40px gaps, and
+Notifications sat in a centred 840px column; both read as a separate page
+floating in the app. Check new pages against the table, and measure rather
+than read class names: `src/features/docs/capture/review.mjs` captures
+every page at the top, halfway and the bottom for comparison.
+
 ## Tiers
 
 Treatment follows what a page is *for*, not how important it is.
