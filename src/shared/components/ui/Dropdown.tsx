@@ -74,9 +74,10 @@ export function Dropdown({
         <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown. On a phone it is as wide as the content column (the
+          viewport less the 81px rail and the 8px right gutter), not 340px. */}
       {isOpen && (
-        <div className={`absolute top-full left-0 mt-2 w-[340px] rounded-[16px] border-[1.5px] shadow-[0_20px_60px_rgba(0,0,0,0.4)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${
+        <div className={`absolute top-full left-0 mt-2 w-[340px] max-sm:w-[calc(100vw-89px)] rounded-[16px] border-[1.5px] shadow-[0_20px_60px_rgba(0,0,0,0.4)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${
           theme === 'dark'
             ? 'bg-[#2d2820]/[0.95] border-[#c9983a]/30'
             : 'bg-[#d4c5b0]/[0.95] border-[#c9983a]/30'
