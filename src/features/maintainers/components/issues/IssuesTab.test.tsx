@@ -280,6 +280,68 @@ describe('IssuesTab - closed issue display', () => {
     expect(screen.queryByRole('button', { name: 'Apply for this issue' })).not.toBeInTheDocument()
   })
 
+  // Reported from another session: the button kept saying "Apply for this
+  // issue" to somebody who had already applied, and the only way to find out
+  // was to apply a second time. The page already derives the applicant list
+  // from the issue's comments, so the viewer's own application was on screen
+  // while the button denied it.
+  it('does not offer the apply button to somebody who has already applied', async () => {
+    grainhack.value = false
+    mockedGetProjectIssues.mockResolvedValue({
+      issues: [
+        makeApiIssue({
+          github_issue_id: 810,
+          title: 'Already applied',
+          author_login: 'someone-else',
+          comments_count: 1,
+          comments: [
+            {
+              id: 901,
+              user: { login: 'octocat' },
+              created_at: '2026-01-01T00:00:00Z',
+              body: '**@octocat has applied to work on this issue as part of the Grainlify program.**\n\n> Happy to take this',
+            },
+          ],
+        }),
+      ],
+    })
+
+    renderWithProviders(
+      <IssuesTab onNavigate={vi.fn()} selectedProjects={[PROJECT]} initialSelectedIssueId="810" initialSelectedProjectId={PROJECT.id} />
+    )
+
+    expect(await screen.findByText(/You have already applied for this issue/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Apply for this issue' })).not.toBeInTheDocument()
+  })
+
+  it('still offers the button when somebody ELSE has applied', async () => {
+    grainhack.value = false
+    mockedGetProjectIssues.mockResolvedValue({
+      issues: [
+        makeApiIssue({
+          github_issue_id: 811,
+          title: 'Someone else applied',
+          author_login: 'someone-else',
+          comments_count: 1,
+          comments: [
+            {
+              id: 902,
+              user: { login: 'other-person' },
+              created_at: '2026-01-01T00:00:00Z',
+              body: '**@other-person has applied to work on this issue as part of the Grainlify program.**\n\n> Me please',
+            },
+          ],
+        }),
+      ],
+    })
+
+    renderWithProviders(
+      <IssuesTab onNavigate={vi.fn()} selectedProjects={[PROJECT]} initialSelectedIssueId="811" initialSelectedProjectId={PROJECT.id} />
+    )
+
+    expect(await screen.findByRole('button', { name: 'Apply for this issue' })).toBeInTheDocument()
+  })
+
   it('still offers the generic apply on an ordinary issue', async () => {
     grainhack.value = false
     mockedGetProjectIssues.mockResolvedValue({

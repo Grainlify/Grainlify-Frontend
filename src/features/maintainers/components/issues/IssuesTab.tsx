@@ -384,12 +384,23 @@ Only applications submitted via the apply link above will be considered. Please 
   const applicationData = getApplicationData(selectedIssue, selectedIssueFromAPI);
   const isDark = theme === 'dark';
 
+  /** Whether the signed-in viewer already has an application on this issue.
+   *
+   *  Read from the applications the page has already derived from the issue's
+   *  comments, so it needs no extra request. Without it the button said
+   *  "Apply for this issue" to somebody who had applied minutes earlier, and
+   *  the only way to find out was to apply again. */
+  const viewerLogin = user?.github?.login?.toLowerCase();
+  const alreadyApplied = Boolean(
+    viewerLogin && applicationData?.applications.some((a) => a.login?.toLowerCase() === viewerLogin),
+  );
+
   const canApplyToSelectedIssue = selectedIssueFromAPI && (() => {
     const isOpen = (selectedIssueFromAPI.state || '').toLowerCase() === 'open';
     const assigneesCount = Array.isArray(selectedIssueFromAPI.assignees) ? selectedIssueFromAPI.assignees.length : 0;
     const unassigned = assigneesCount === 0;
-    const notAuthor = !user?.github?.login || user.github.login.toLowerCase() !== (selectedIssueFromAPI.author_login || '').toLowerCase();
-    return isOpen && unassigned && notAuthor;
+    const notAuthor = !viewerLogin || viewerLogin !== (selectedIssueFromAPI.author_login || '').toLowerCase();
+    return isOpen && unassigned && notAuthor && !alreadyApplied;
   })();
 
   const handleSubmitApplication = useCallback(async () => {
@@ -1094,11 +1105,17 @@ Only applications submitted via the apply link above will be considered. Please 
                         const isOpen = (selectedIssueFromAPI.state || '').toLowerCase() === 'open';
                         const assigneesCount = Array.isArray(selectedIssueFromAPI.assignees) ? selectedIssueFromAPI.assignees.length : 0;
                         const unassigned = assigneesCount === 0;
-                        const notAuthor = !user?.github?.login || user.github.login.toLowerCase() !== (selectedIssueFromAPI.author_login || '').toLowerCase();
+                        const notAuthor = !viewerLogin || viewerLogin !== (selectedIssueFromAPI.author_login || '').toLowerCase();
                         if (!isOpen) return <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>This issue is closed. Applications are disabled.</p>;
                         if (!unassigned) return <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>This issue is already assigned. Applications are disabled.</p>;
                         if (!notAuthor) return <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>You can't apply to your own issue.</p>;
-                        return null;
+                        // Reached whenever the button is withheld for a reason
+                        // not listed above. It used to return null, so adding
+                        // a new reason would have shown an empty space where
+                        // the button had been - which reads as broken rather
+                        // than as deliberate.
+                        if (alreadyApplied) return <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>You have already applied for this issue. The maintainer decides who is assigned.</p>;
+                        return <p className={`text-[13px] ${isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]'}`}>Applications are not open for this issue.</p>;
                       })()
                     ) : (
                       <div className="flex items-center justify-between gap-4 max-sm:flex-col max-sm:items-stretch max-sm:gap-3">
