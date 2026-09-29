@@ -128,11 +128,16 @@ describe('the pages as written', () => {
     expect(missing, 'Run node src/features/docs/capture/run.mjs').toEqual([]);
   });
 
-  it('every link to another docs page goes to a published page', () => {
-    const published = new Set(publishedPages(available, false).map((p) => `/docs/${p.page.slug}`));
+  it('every link to another docs page goes to a page its reader can open', () => {
+    // A public page may only link to public pages; an admin page is read by an
+    // admin, who can open admin pages too.
+    const forEveryone = new Set(publishedPages(available, false).map((p) => `/docs/${p.page.slug}`));
+    const forAdmins = new Set(publishedPages(available, true).map((p) => `/docs/${p.page.slug}`));
     const broken: string[] = [];
-    for (const [slug, d] of Object.entries(docs))
-      for (const [, href] of d.body.matchAll(/\]\((\/docs[^ )#]*)/g)) if (href !== '/docs' && !published.has(href)) broken.push(`${slug} -> ${href}`);
+    for (const [slug, d] of Object.entries(docs)) {
+      const allowed = findPage(slug)?.section.adminOnly ? forAdmins : forEveryone;
+      for (const [, href] of d.body.matchAll(/\]\((\/docs[^ )#]*)/g)) if (href !== '/docs' && !allowed.has(href)) broken.push(`${slug} -> ${href}`);
+    }
     expect(broken).toEqual([]);
   });
 });

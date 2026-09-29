@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm';
 import type { Plugin } from 'vite';
 import { parseDoc, plainText, type ParsedDoc } from './doc';
 import { publishedPages, type PageRef } from './nav';
+import { shotUrl } from './media';
 
 // Static HTML for every published docs page, written next to the app at build
 // time: dist/docs/index.html and dist/docs/<slug>/index.html.
@@ -45,12 +46,14 @@ export function articleHtml(body: string): string {
       ReactMarkdown,
       {
         remarkPlugins: [remarkGfm],
-        urlTransform: (url: string) => (url.startsWith('shot:') ? url : defaultUrlTransform(url)),
+        urlTransform: (url: string) => (/^(shot|video):/.test(url) ? url : defaultUrlTransform(url)),
         components: {
           img: ({ src = '', alt = '' }: { src?: string; alt?: string }) =>
             src.startsWith('shot:')
-              ? createElement('img', { src: `/docs-media/shots/${src.slice(5).split('?')[0]}.light.1440.webp`, alt, loading: 'lazy' })
-              : createElement('img', { src, alt }),
+              ? createElement('img', { src: shotUrl(src.slice(5).split('?')[0], 'light', 1440), alt, loading: 'lazy' })
+              : src.startsWith('video:')
+                ? createElement('p', null, `Video: ${alt}`)
+                : createElement('img', { src, alt }),
         },
       },
       // The callout marker is a rendering instruction, not text.
