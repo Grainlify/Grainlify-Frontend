@@ -133,6 +133,14 @@ export function linkLabel(type: string): string {
     case 'issue_application_submitted':
     case 'issue_application_rejected':
       return 'Go to the issue';
+    case 'bounty_draw_won':
+    case 'bounty_paid':
+    case 'bounty_application_received':
+    case 'bounty_draw_lost':
+    case 'bounty_review_posted':
+      return 'Go to bounties';
+    case 'bounty_assignment_expiring':
+      return 'Read the rules';
     case 'pr_merged':
       return 'Go to the project';
     default:

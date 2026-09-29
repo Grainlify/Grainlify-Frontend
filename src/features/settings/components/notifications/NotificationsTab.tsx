@@ -33,6 +33,41 @@ const NOTIFICATION_TYPE_INFO: Record<string, NotificationTypeInfo> = {
     title: 'Application received',
     description: 'When your application to an issue is recorded and is waiting on the maintainer.',
   },
+  bounty_draw_won: {
+    section: 'Bounties',
+    title: 'You won the draw',
+    description: 'When a bounty is drawn and it comes to you. Includes the amount and the deadline for opening a pull request.',
+  },
+  bounty_assignment_expiring: {
+    section: 'Bounties',
+    title: 'Assignment about to expire',
+    description: 'A warning before a bounty you hold lapses. Letting it lapse counts as an abandon and lowers your odds on future bounties.',
+  },
+  bounty_paid: {
+    section: 'Bounties',
+    title: 'Bounty paid',
+    description: 'When a bounty payment is confirmed on-chain, with the transaction link.',
+  },
+  bounty_application_received: {
+    section: 'Bounties',
+    title: 'Bounty application received',
+    description: 'When your application for a bounty is recorded and you are in the draw.',
+  },
+  bounty_draw_lost: {
+    section: 'Bounties',
+    title: 'Draw went to someone else',
+    description: 'When a bounty you applied for is drawn and goes to another applicant.',
+  },
+  grainhack_assignment_expiring: {
+    section: 'GrainHack',
+    title: 'Assignment about to expire',
+    description: 'A warning before a GrainHack assignment lapses. Letting it lapse counts as an abandon.',
+  },
+  bounty_review_posted: {
+    section: 'Bounties',
+    title: 'Agent reviewed your pull request',
+    description: "When the agent's advisory review is posted on a pull request you opened.",
+  },
   pr_merged: {
     section: 'Contributor',
     title: 'Pull request merged',
