@@ -3,7 +3,10 @@
 //   node src/features/docs/capture/review.mjs --before http://127.0.0.1:5251 --after http://127.0.0.1:5250 \
 //        --out /tmp/review --pages pages.json
 //
-// pages.json: [{ "id": "docs-wallet", "url": "/docs/contributors/link-solana-wallet", "persona": "contributor" | null }]
+// pages.json: [{ "id": "docs-wallet", "url": "/docs/contributors/link-solana-wallet",
+//               "persona": "contributor" | "maintainer" | "admin" | null, "opts": { world options }, "phantom": true }]
+// Signed-in pages are answered from the fixture world (world/index.mjs), for
+// both builds, so a difference between before and after is the code's.
 //
 // Every page is captured in light and dark, at 1440 and 390, from both builds,
 // at THREE scroll positions: the top, halfway, and the bottom. The middle and
@@ -25,8 +28,8 @@ const before = arg('before')
 const after = arg('after')
 const out = arg('out', path.resolve('review-out'))
 const pages = JSON.parse(readFileSync(arg('pages'), 'utf8'))
-const worldPath = arg('world')
-const world = worldPath ? await import(path.resolve(worldPath)) : null
+const { world } = await import('./world/index.mjs')
+const { phantomWallet } = await import('./fixtures.mjs')
 mkdirSync(out, { recursive: true })
 
 const POSITIONS = ['top', 'middle', 'bottom']
@@ -43,10 +46,9 @@ for (const p of pages) {
     for (const width of [1440, 390]) {
       for (const [label, base] of [['before', before], ['after', after]]) {
         if (!base) continue
-        const persona = p.persona && world ? world.personas[p.persona] : null
-        const api = p.persona && world ? world.apiFor(p.persona) : {}
-        const agent = world?.agent ?? {}
-        const { ctx, page } = await openPage(browser, { base, theme, width, persona, api, agent })
+        const w = world(p.persona ?? 'contributor', p.opts ?? {})
+        const init = [...(Array.isArray(w.init) ? w.init : w.init ? [w.init] : []), ...(p.phantom ? [phantomWallet()] : [])]
+        const { ctx, page } = await openPage(browser, { base, theme, width, persona: p.persona ? w.persona : null, api: w.api, agent: w.agent, init })
         try {
           const res = await page.goto(base + p.url)
           await page.waitForTimeout(1500)

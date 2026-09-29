@@ -2,6 +2,7 @@
 //
 //   node src/features/docs/capture/run.mjs            every shot
 //   node src/features/docs/capture/run.mjs signin     only the named shots
+//   node src/features/docs/capture/run.mjs --section maintainers   one shots/<section>.mjs file
 //
 // Starts its own Vite dev server, captures every shot in shots.mjs in light and
 // dark at 1440 and 390, and writes WebP files to public/docs-media/shots/.
@@ -27,8 +28,10 @@ const REVIEW = path.join(HERE, 'out')
 const THEMES = ['light', 'dark']
 const WIDTHS = [1440, 390]
 
-const only = process.argv.slice(2)
-const shots = only.length ? SHOTS.filter((s) => only.includes(s.id)) : SHOTS
+const argv = process.argv.slice(2)
+const section = argv.includes('--section') ? argv[argv.indexOf('--section') + 1] : null
+const only = argv.filter((a, i) => !a.startsWith('--') && argv[i - 1] !== '--section')
+const shots = SHOTS.filter((s) => (!section || s.section === section) && (!only.length || only.includes(s.id)))
 if (only.length && shots.length !== only.length) {
   console.error('Unknown shot id. Known ids:', SHOTS.map((s) => s.id).join(', '))
   process.exit(1)
@@ -100,7 +103,7 @@ const rows = shots
   )
   .join('\n')
 writeFileSync(
-  path.join(REVIEW, 'review.html'),
+  path.join(REVIEW, section ? `review-${section}.html` : 'review.html'),
   `<!doctype html><meta charset="utf-8"><title>Docs screenshots</title><style>body{font:14px Inter,system-ui,sans-serif;background:#e8dfd0;color:#2d2820;padding:24px}h2{font-size:16px}small{font-weight:400;color:#7a6b5a}.row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}figure{margin:0}img{max-width:560px;max-height:640px;border:1px solid #0002;border-radius:10px}figcaption{color:#7a6b5a;margin-top:4px}</style>${rows}`,
 )
 
