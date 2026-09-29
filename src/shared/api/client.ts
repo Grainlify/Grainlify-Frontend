@@ -1242,6 +1242,13 @@ export interface MaintainerBountyView {
   draw: { winnerLogin: string | null; seed: number; ranAt: string; pool: DrawCandidate[]; noWinnerReason: string | null } | null;
 }
 
+/** The bounties this person maintains, decided by the server from GitHub
+ *  permission. The tab used to filter the public list against the caller's
+ *  Grainlify projects, which is a different question and hid any repository
+ *  they maintain without having registered it. */
+export const getMaintainerBounties = () =>
+  apiRequest<{ bounties: { bountyId: string; repo: string; issueNumber: number }[] }>('/maintainer/bounties', { requiresAuth: true });
+
 export const getMaintainerBountyView = (bountyId: string, repo: string) =>
   apiRequest<MaintainerBountyView>(
     `/maintainer/bounties/${encodeURIComponent(bountyId)}/applications?repo=${encodeURIComponent(repo)}`,

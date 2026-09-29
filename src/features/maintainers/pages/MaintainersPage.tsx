@@ -587,12 +587,10 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
           <LoadFailed what="your repositories" error={projectsLoadError ?? new Error(error)} onRetry={loadProjects} />
         ) : (
         <>
-        {activeTab === 'Bounties' && (
-          <BountiesTab
-            repoFullNames={selectedProjects.map((p) => p.github_full_name).filter(Boolean) as string[]}
-            isLoadingProjects={isLoading}
-          />
-        )}
+        {/* Deliberately takes no props from the picker: which bounties a
+            maintainer may see is the server's answer, not a filter over
+            whatever repositories happen to be ticked. */}
+        {activeTab === 'Bounties' && <BountiesTab />}
 
         {activeTab === 'Dashboard' && (
           <DashboardTab
