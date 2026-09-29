@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
-import { segmentFiles } from './narrate.mjs'
+import { segmentFiles, voiceId } from './narrate.mjs'
 import { spoken } from './script.mjs'
 import sharp from 'sharp'
 
@@ -80,7 +80,7 @@ for (const theme of ['light', 'dark']) {
   const mixes = []
   const allCues = []
   let voice = null
-  if (!tl.silent) voice = readFileSync(process.env.ELEVENLABS_ENV ?? path.resolve(ROOT, '../../.elevenlabs.env'), 'utf8').match(/ELEVENLABS_VOICE_ID\s*=\s*['"]?([^'"\s]+)/)?.[1]
+  if (!tl.silent) voice = voiceId()
   tl.timeline.forEach((seg, i) => {
     const at = seg.start - trim
     let alignment = null

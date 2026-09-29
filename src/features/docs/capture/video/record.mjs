@@ -19,7 +19,7 @@ import { createServer } from 'vite'
 import { chromium } from '@playwright/test'
 import { openPage, settle } from '../lib.mjs'
 import { readScript, estimateSeconds } from './script.mjs'
-import { segmentFiles } from './narrate.mjs'
+import { segmentFiles, voiceId } from './narrate.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../../../../..')
@@ -35,7 +35,7 @@ if (flow.segments.length !== segments.length) throw new Error(`${slug}: script h
 // The length of each segment's audio, read from the mp3 via ffprobe-free parsing:
 // duration = decoded samples / sample rate is what ffmpeg reports; here we ask ffprobe.
 import { execFileSync } from 'node:child_process'
-const voice = silent ? null : readFileSync(process.env.ELEVENLABS_ENV ?? path.resolve(ROOT, '../../.elevenlabs.env'), 'utf8').match(/ELEVENLABS_VOICE_ID\s*=\s*['"]?([^'"\s]+)/)?.[1]
+const voice = silent ? null : voiceId()
 const lengths = segments.map((s) => {
   if (silent) return estimateSeconds(s.say)
   const { mp3 } = segmentFiles(voice, s.say)

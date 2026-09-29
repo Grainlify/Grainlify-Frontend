@@ -13,7 +13,8 @@
 //         - they fit in what is left of this month's allowance.
 //
 // The key and voice are read from ELEVENLABS_ENV (default: the AnsemHack
-// folder's .elevenlabs.env, outside every repository). The key is never
+// folder's .elevenlabs.env, outside every repository). ELEVENLABS_VOICE, if
+// set, picks another voice by its (public) ID, e.g. a built-in one. The key is never
 // printed or written anywhere. Audio is cached by a hash of the text, voice,
 // model and settings, so an unchanged sentence is never billed twice; editing
 // one sentence regenerates only that segment. Never run from CI.
@@ -43,8 +44,12 @@ function loadEnv() {
       .map((l) => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim().replace(/^['"]|['"]$/g, '')]),
   )
   if (!env.ELEVENLABS_API_KEY || !env.ELEVENLABS_VOICE_ID) throw new Error(`ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID must both be set in ${file}`)
+  if (process.env.ELEVENLABS_VOICE) env.ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE
   return env
 }
+
+/** The voice the narration is made with; record and assemble look audio up by it. */
+export const voiceId = () => loadEnv().ELEVENLABS_VOICE_ID
 
 export const cacheKey = (voice, text) => createHash('sha256').update(JSON.stringify({ voice, model: MODEL, settings: SETTINGS, text })).digest('hex').slice(0, 24)
 
