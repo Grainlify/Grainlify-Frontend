@@ -70,6 +70,30 @@ export default defineConfig({
   esbuild: {
     pure: ['console.log', 'console.debug', 'console.info'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // simple-icons out of the entry chunk.
+        //
+        // Three lazy pages import from it - the language icons, the rewards
+        // tab's X icon, the token icons - and because the module is shared,
+        // Rollup hoisted it to their common parent, which is the entry. That
+        // put 39,803 bytes of SVG path data in the 586 kB chunk that blocks
+        // rendering on every route, including the landing page, where none of
+        // it is used. Every anonymous visitor downloaded 36 programming
+        // language logos.
+        //
+        // Tree-shaking was not the problem and subpath imports are not the
+        // fix: in v16 the package ships icons as .svg files, not as importable
+        // modules, so the whole set arrives through one entry point. Giving it
+        // its own chunk is what stops the sharing from promoting it.
+        manualChunks(id: string) {
+          if (id.includes('node_modules/simple-icons')) return 'simple-icons';
+          return undefined;
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       // Ensure a single React instance is used everywhere
