@@ -12,11 +12,22 @@ describe('where "read more" points', () => {
     }
   })
 
-  it('falls back to a page that is real and covers the same ground', () => {
-    // /bounties/rules already publishes the weights, the cap and what the
-    // draw cannot read, so the fallback is not a consolation prize.
-    expect(docHref('applyForABounty')).toBe(BOUNTY_RULES_PAGE)
-    expect(docHref('bountyRules')).toBe(BOUNTY_RULES_PAGE)
+  it('points at the docs once they are live, and at a real page before', () => {
+    // Before: /bounties/rules already publishes the weights, the cap and what
+    // the draw cannot read, so the fallback is not a consolation prize.
+    // After: the three docs pages exist (src/features/docs/content/contributors/).
+    expect(docHref('applyForABounty')).toBe(DOCS_LIVE ? DOC_SLUGS.applyForABounty : BOUNTY_RULES_PAGE)
+    expect(docHref('bountyRules')).toBe(DOCS_LIVE ? DOC_SLUGS.bountyRules : BOUNTY_RULES_PAGE)
+  })
+
+  it('only goes live when every page it links to has been written', () => {
+    const { existsSync } = require('fs') as typeof import('fs')
+    const { join } = require('path') as typeof import('path')
+    if (DOCS_LIVE) {
+      for (const slug of Object.values(DOC_SLUGS)) {
+        expect(existsSync(join(__dirname, '../../features/docs/content', `${slug.replace('/docs/', '')}.md`)), slug).toBe(true)
+      }
+    }
   })
 
   it('uses the slugs the docs navigation actually declares', () => {

@@ -6,6 +6,7 @@ import { BountiesProgramPage } from './pages/BountiesProgramPage'
 import { callToAction, poolLine, timeUntil } from './components/BountyRow'
 import { getBounties, type PublicBounty } from '../../shared/api/bountyAgent'
 import { ApiError, applyForBounty, getMyBountyState } from '../../shared/api/client'
+import { DOCS_LIVE, docHref } from '../../shared/docs/docsLinks'
 
 vi.mock('../../shared/api/bountyAgent', async (orig) => {
   const real = await orig<typeof import('../../shared/api/bountyAgent')>()
@@ -184,7 +185,9 @@ describe('how to claim, after the draw replaced comment-and-PR claiming', () => 
     // The old instructions told people to open a PR to claim, which under the
     // draw earns nothing and wastes their work.
     expect(screen.queryByText(/up to \$50 per bounty/i)).not.toBeInTheDocument()
-    expect(screen.getByText(/do not open a pull request yet/i)).toBeInTheDocument()
+    // The numbered steps live on the dashboard only until the docs page exists.
+    if (DOCS_LIVE) expect(screen.queryByText(/do not open a pull request yet/i)).not.toBeInTheDocument()
+    else expect(screen.getByText(/do not open a pull request yet/i)).toBeInTheDocument()
   })
 
   it('links out for the detail rather than printing it on the dashboard', async () => {
@@ -193,8 +196,8 @@ describe('how to claim, after the draw replaced comment-and-PR claiming', () => 
     // from one constant when it ships.
     vi.mocked(getBounties).mockResolvedValue({ status, bounties: [] })
     renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
-    expect(await screen.findByRole('link', { name: /how the draw works, and what it cannot see/i })).toHaveAttribute('href', '/bounties/rules')
-    expect(screen.getByRole('link', { name: /rules and limits/i })).toHaveAttribute('href', '/bounties/rules')
+    expect(await screen.findByRole('link', { name: /how the draw works, and what it cannot see/i })).toHaveAttribute('href', docHref('applyForABounty'))
+    expect(screen.getByRole('link', { name: /rules and limits/i })).toHaveAttribute('href', docHref('bountyRules'))
   })
 
   it('still states the limits people are caught by, on the page itself', async () => {
