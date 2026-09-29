@@ -340,7 +340,7 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
         </p>
       )}
       {/* Stats Cards */}
-      <div className="grid grid-cols-5 gap-5 mb-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5 lg:gap-5 mb-6">
         {showLoading ? (
           [...Array(5)].map((_, idx) => (
             <StatsCardSkeleton key={idx} />
@@ -353,9 +353,9 @@ export function DashboardTab({ selectedProjects, isLoadingProjects = false, onRe
       </div>
 
       {/* Main Content: Last Activity & Applications History */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         {/* Last Activity */}
-        <div className={`rounded-[24px] border p-8 relative overflow-hidden group/activity transition-colors ${theme === 'dark'
+        <div className={`rounded-[24px] border p-5 sm:p-8 relative overflow-hidden group/activity transition-colors ${theme === 'dark'
           ? 'bg-[#2d2820]/[0.4] border-white/10'
           : 'bg-white/[0.12] border-white/20'
           }`}>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { renderWithProviders } from '../../test/renderWithProviders'
@@ -556,5 +556,43 @@ describe('Dashboard admin pill visibility', () => {
     })
     renderWithProviders(<Dashboard />)
     expect(await screen.findByRole('button', { name: 'ADMIN' })).toBeInTheDocument()
+  })
+})
+
+describe('Dashboard: the phone layout', () => {
+  // The icon rail is `fixed w-[65px]` and had no responsive hiding, so on a
+  // phone it took a sixth of the screen off every page and the content beside
+  // it wrapped to two and three words a line. Hiding it is only safe because
+  // the mobile menu now carries the same destinations - it previously held the
+  // role switcher, theme, notifications and profile and no page links at all,
+  // so the rail was the only way to navigate.
+  it('keeps every rail destination reachable from the mobile menu', async () => {
+    // showMobileNav is gated on deviceWidth < 1024, and jsdom reports 1024.
+    // Without this the menu never opens and the test passes or fails for a
+    // reason that has nothing to do with the menu.
+    Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true })
+    window.dispatchEvent(new Event('resize'))
+    const user = userEvent.setup()
+    renderWithProviders(<Dashboard />)
+    await screen.findByRole('button', { name: /open menu/i })
+    await user.click(screen.getByRole('button', { name: /open menu/i }))
+
+    const nav = await screen.findByRole('navigation', { name: /pages/i })
+    for (const label of ['Discover', 'Browse', 'Ecosystems', 'Get help']) {
+      expect(within(nav).getByRole('button', { name: new RegExp(`^${label}$`, 'i') })).toBeInTheDocument()
+    }
+  })
+
+  it('does not reserve the rail width at phone size', async () => {
+    const { container } = renderWithProviders(<Dashboard />)
+    await screen.findByRole('button', { name: /open menu/i })
+    const aside = container.querySelector('aside')
+    // Present in the tree, hidden until lg - a hidden rail and a rail that is
+    // not rendered look the same on a phone, and this is the cheaper of the two.
+    expect(aside?.className).toMatch(/\bhidden\b/)
+    expect(aside?.className).toMatch(/lg:block/)
+    const main = container.querySelector('main')
+    expect(main?.className).toMatch(/lg:ml-\[81px\]/)
+    expect(main?.className).not.toMatch(/(^|\s)ml-\[81px\]/)
   })
 })

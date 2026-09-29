@@ -753,8 +753,12 @@ export function Dashboard() {
         />
       </div>
 
-      {/* Sidebar — permanently collapsed to an icon rail; labels show via hover tooltip */}
-      <aside className="fixed top-2 left-2 bottom-2 z-50 w-[65px] mr-2">
+      {/* Sidebar — permanently collapsed to an icon rail; labels show via hover
+          tooltip. Desktop only: on a phone a fixed 65px rail plus its margins
+          took a sixth of the screen off every page, and the content beside it
+          wrapped to two and three words a line. The same destinations are in
+          the mobile menu below, so nothing is lost by hiding it. */}
+      <aside className="hidden lg:block fixed top-2 left-2 bottom-2 z-50 w-[65px] mr-2">
         <div
           className={`h-full backdrop-blur-[90px] rounded-[29px] border shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] relative overflow-y-auto scrollbar-hide transition-colors ${
             darkTheme
@@ -845,23 +849,36 @@ export function Dashboard() {
       )}
 
       {/* Main Content */}
-      <main className="mr-2 my-2 relative z-10 ml-[81px]">
+      <main className="mr-2 my-2 relative z-10 ml-2 lg:ml-[81px]">
         <div className="max-w-[1400px] mx-auto">
           {/* Premium Pill-Style Header - Greatest of All Time */}
           <div
-            className={`fixed top-2 right-2 left-[81px] z-[9999] flex items-center gap-1 md:gap-2 lg:gap-3 lg:h-[52px] py-3 rounded-[26px] backdrop-blur-[90px] border transition-all duration-300 ${
+            className={`fixed top-2 right-2 left-2 lg:left-[81px] z-[9999] flex items-center gap-1 md:gap-2 lg:gap-3 lg:h-[52px] py-3 rounded-[26px] backdrop-blur-[90px] border transition-all duration-300 ${
               darkTheme
                 ? "bg-[#2d2820]/[0.4] border-white/10 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25),inset_0px_0px_9px_0px_rgba(201,152,58,0.1)]"
                 : "bg-white/[0.35] border-white shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25),inset_0px_0px_9px_0px_rgba(255,255,255,0.5)]"
             }
           ${showMobileNav? "h-screen flex-col":"" } 
           `}
-            // Pinned by both edges to the same box as <main> (ml-[81px] mr-2).
+            // Pinned by both edges to the same box as <main> (ml-2 lg:ml-[81px], mr-2).
             // It used to be right-anchored with width calc(100vw - 97px), which
             // put its left edge at 89px, 8px right of the content below it at
             // every width, and counted a desktop scrollbar as page width.
           >
           
+          {/* Closed mobile header.
+              Everything else in this bar is desktop-only, so on a phone it
+              rendered as an empty rounded box with a hamburger floating in it.
+              The wordmark fills it and doubles as the way home. */}
+          {!showMobileNav && (
+            <Link to="/" className="lg:hidden flex items-center gap-2 pl-1 mr-auto">
+              <img src={grainlifyLogo} alt="" aria-hidden="true" className="w-8 h-8 grainlify-logo" />
+              <span className={`text-[17px] font-semibold transition-colors ${
+                darkTheme ? 'text-[#e8dfd0]' : 'text-[#2d2820]'
+              }`}>Grainlify</span>
+            </Link>
+          )}
+
           {/* opened mobile nav view header  */}
          {showMobileNav &&  
           <div className="flex items-center justify-between w-full px-4"> 
@@ -965,6 +982,39 @@ export function Dashboard() {
             </button>
                
           
+            {/* The pages, in the mobile menu.
+                The icon rail is hidden below lg, and this menu previously held
+                only the role switcher, theme, notifications and profile - so
+                on a phone there was no way to reach Discover, Browse,
+                GrainHack or anything else. These are the same navItems the
+                rail renders, with their labels shown rather than hidden behind
+                a hover tooltip a touchscreen cannot produce. */}
+            {showMobileNav && (
+              <nav className="w-[80%] max-w-[800px] mt-1 flex flex-col gap-1.5" aria-label="Pages">
+                {[...navItems, { id: 'support', icon: LifeBuoy, label: 'Get help' }].map((item) => {
+                  const Icon = item.icon as any;
+                  const isActive = currentPage === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => { handleNavigation(item.id); closeMobileNav(); }}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`min-h-[46px] w-full px-4 flex items-center gap-3 rounded-sm text-[15px] font-medium transition-colors ${
+                        isActive
+                          ? 'bg-[var(--brand-gold)] text-[#2d2820]'
+                          : darkTheme
+                            ? 'bg-[#2d2820] text-[#e8dfd0]'
+                            : 'bg-[#d4c5b0] text-[#2d2820]'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
+
             {/* Role Switcher */}
             <RoleSwitcher
               currentRole={activeRole}
