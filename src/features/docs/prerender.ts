@@ -7,7 +7,7 @@ import remarkGfm from 'remark-gfm';
 import type { Plugin } from 'vite';
 import { parseDoc, plainText, type ParsedDoc } from './doc';
 import { publishedPages, type PageRef } from './nav';
-import { shotUrl } from './media';
+import { PUBLISHED_VIDEOS, shotUrl } from './media';
 
 // Static HTML for every published docs page, written next to the app at build
 // time: dist/docs/index.html and dist/docs/<slug>/index.html.
@@ -52,7 +52,7 @@ export function articleHtml(body: string): string {
             src.startsWith('shot:')
               ? createElement('img', { src: shotUrl(src.slice(5).split('?')[0], 'light', 1440), alt, loading: 'lazy' })
               : src.startsWith('video:')
-                ? createElement('p', null, `Video: ${alt}`)
+                ? PUBLISHED_VIDEOS.has(src.slice(6)) ? createElement('p', null, `Video: ${alt}`) : null
                 : createElement('img', { src, alt }),
         },
       },

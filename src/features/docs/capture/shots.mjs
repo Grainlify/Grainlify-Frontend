@@ -1,7 +1,7 @@
 // Every screenshot the docs use, gathered from shots/*.mjs (one file per docs
 // section, so sections can be worked on separately). A Markdown page embeds a
 // shot as ![alt](shot:<id> "caption"), and run.mjs writes four files for it:
-// public/docs-media/shots/<id>.<light|dark>.<1440|390>.webp (or two, for a
+// capture/out/shots/<id>.<light|dark>.<1440|390>.webp (or two, for a
 // shot with widths: [1440]).
 //
 // Each entry: { id, page, url, persona?, api?, agent?, init?, tour?, widths?,

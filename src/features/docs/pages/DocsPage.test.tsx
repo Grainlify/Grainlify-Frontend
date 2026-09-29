@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders, screen, within } from '../../../test/renderWithProviders';
 import { DocsPage } from './DocsPage';
+import { MEDIA_BASE } from '../media';
 
 let role: 'contributor' | 'admin' | null = null;
 vi.mock('../../../shared/contexts/AuthContext', () => ({
@@ -37,7 +38,7 @@ describe('DocsPage', () => {
     expect(screen.getByText(/Signing is free/)).toBeInTheDocument();
     expect(screen.getByText(/already linked to another GitHub account/)).toBeInTheDocument();
     const shot = screen.getByAltText('The message your wallet will show, with the Sign message button');
-    expect(shot).toHaveAttribute('src', '/docs-media/shots/walletlink-sign.light.1440.webp');
+    expect(shot).toHaveAttribute('src', `${MEDIA_BASE}/shots/walletlink-sign.light.1440.webp`);
     expect(document.title).toBe('Link your Solana wallet · Grainlify Docs');
   });
 

@@ -1,14 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync, statSync } from 'fs';
 import path from 'path';
 import { parseDoc, formatUpdated, headingsOf, plainText } from './doc';
 import { buildSearchIndex, search, markMatches, snippetAround, tokenize, type SearchEntry } from './search';
 import { DOCS_NAV, findPage, publishedNav, publishedPages } from './nav';
 import { searchEntries } from './entries';
 import { articleHtml, describe as describePage, pageHtml } from './prerender';
+import { MEDIA_BASE, PUBLISHED_VIDEOS } from './media';
+import published from './capture/published.json';
 
 const CONTENT = path.join(__dirname, 'content');
-const SHOTS = path.join(__dirname, '../../../public/docs-media/shots');
+const SHOTS = new Set(published.shots);
 
 function contentFiles(dir = CONTENT): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -115,17 +117,26 @@ describe('the pages as written', () => {
     expect(undated).toEqual([]);
   });
 
-  it('every screenshot a page uses has been captured, in every variant it needs', () => {
+  it('every screenshot a page uses is on Blob, in every variant it needs', () => {
     const missing: string[] = [];
     for (const [slug, d] of Object.entries(docs)) {
       for (const [, ref] of d.body.matchAll(/\]\(shot:([^ )]+)/g)) {
         const [id, flag] = ref.split('?');
         const widths = flag === 'desktop' ? [1440] : [1440, 390];
         for (const theme of ['light', 'dark'])
-          for (const w of widths) if (!existsSync(path.join(SHOTS, `${id}.${theme}.${w}.webp`))) missing.push(`${slug}: ${id}.${theme}.${w}.webp`);
+          for (const w of widths) if (!SHOTS.has(`${id}.${theme}.${w}.webp`)) missing.push(`${slug}: ${id}.${theme}.${w}.webp`);
       }
     }
-    expect(missing, 'Run node src/features/docs/capture/run.mjs').toEqual([]);
+    expect(missing, 'Capture them (capture/run.mjs), then upload them (capture/publish.mjs)').toEqual([]);
+  });
+
+  it('every video marked published is on Blob, and its page embeds it', () => {
+    expect(published.base).toBe(MEDIA_BASE);
+    const embedded = new Set(Object.values(docs).flatMap((d) => [...d.body.matchAll(/\]\(video:([^ )]+)/g)].map((m) => m[1])));
+    for (const slug of PUBLISHED_VIDEOS) {
+      expect(published.videos, `${slug} is not on Blob: run capture/publish.mjs videos`).toContain(slug);
+      expect(embedded.has(slug), `no page embeds video:${slug}`).toBe(true);
+    }
   });
 
   it('every link to another docs page goes to a page its reader can open', () => {
@@ -156,7 +167,7 @@ describe('the prerendered HTML', () => {
 
   it('renders the article, with screenshots and without callout markers', () => {
     const html = articleHtml('Intro.\n\n![Alt](shot:signin "Cap")\n\n> [!NOTE]\n> Careful.');
-    expect(html).toContain('src="/docs-media/shots/signin.light.1440.webp"');
+    expect(html).toContain(`src="${MEDIA_BASE}/shots/signin.light.1440.webp"`);
     expect(html).not.toContain('[!NOTE]');
     expect(html).toContain('Careful.');
   });

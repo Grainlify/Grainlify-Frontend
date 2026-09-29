@@ -21,7 +21,7 @@ const ROOT = path.resolve(HERE, '../../../../..')
 const WORK = path.join(HERE, 'out')
 const args = process.argv.slice(2)
 const slug = args[0]
-const outDir = args.includes('--out') ? args[args.indexOf('--out') + 1] : path.join(ROOT, 'public/docs-media/videos')
+const outDir = args.includes('--out') ? args[args.indexOf('--out') + 1] : path.join(HERE, '../out/videos')
 const file = slug.replace(/\//g, '__')
 mkdirSync(outDir, { recursive: true })
 

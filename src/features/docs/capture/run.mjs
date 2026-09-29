@@ -5,7 +5,8 @@
 //   node src/features/docs/capture/run.mjs --section maintainers   one shots/<section>.mjs file
 //
 // Starts its own Vite dev server, captures every shot in shots.mjs in light and
-// dark at 1440 and 390, and writes WebP files to public/docs-media/shots/.
+// dark at 1440 and 390, and writes WebP files to capture/out/shots/ (gitignored;
+// publish.mjs uploads them to Vercel Blob, where the docs read them).
 // Nothing is committed for you: the run ends by listing which files changed
 // and writing a review sheet (both themes, both widths, side by side) to
 // src/features/docs/capture/out/review.html.
@@ -23,7 +24,7 @@ import { openPage, settle, assertRendered } from './lib.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../../../..')
-const OUT = path.join(ROOT, 'public/docs-media/shots')
+const OUT = path.join(HERE, 'out/shots')
 const REVIEW = path.join(HERE, 'out')
 const THEMES = ['light', 'dark']
 const WIDTHS = [1440, 390]
@@ -98,7 +99,7 @@ await server.close()
 const rows = shots
   .map(
     (s) => `<section><h2>${s.id} <small>used on /docs/${s.page}</small></h2><div class="row">${THEMES.map((t) =>
-      (s.widths ?? WIDTHS).map((w) => `<figure><img src="../../../../../public/docs-media/shots/${s.id}.${t}.${w}.webp" alt=""><figcaption>${t} · ${w}</figcaption></figure>`).join(''),
+      (s.widths ?? WIDTHS).map((w) => `<figure><img src="shots/${s.id}.${t}.${w}.webp" alt=""><figcaption>${t} · ${w}</figcaption></figure>`).join(''),
     ).join('')}</div></section>`,
   )
   .join('\n')
