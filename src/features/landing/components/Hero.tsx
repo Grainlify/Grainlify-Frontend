@@ -111,8 +111,10 @@ export function Hero() {
           </a>
         </motion.div>
 
-        {/* The product shot: the real GrainHack event page, captured from the
-            deployed dashboard rather than mocked up. */}
+        {/* The product shot: the real Bounties page, captured from the deployed
+            dashboard against the live bounty list rather than mocked up. It
+            replaced the GrainHack event page when bounties went live on
+            mainnet - the hero should show the thing somebody can act on today. */}
         <div className="mt-12 flex w-full justify-center">
           <motion.div
             initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 20, filter: "blur(10px)" }}
@@ -123,8 +125,8 @@ export function Hero() {
             }`}
           >
             <img
-              src={isDark ? "/grainhack-event-dark.webp" : "/grainhack-event-light.webp"}
-              alt="The GrainHack event page in the Grainlify dashboard: First GrainHack Event (Base Sepolia), live, showing an $8.00 contributor pool and two assigned issues in Jagadeeshftw/grainhack-sandbox - Fix the flaky retry loop in the sandbox worker, tagged Easy, and Validate --concurrency instead of silently starting zero workers, tagged Standard."
+              src={isDark ? "/bounties-open-dark.webp" : "/bounties-open-light.webp"}
+              alt="The Bounties page in the Grainlify dashboard, showing three open bounties on Grainlify/grainlify-bounty-agent, each worth 1 USDC: #34 Record the real network fee in the ledger, not only the capped estimate; #35 Expose inference cost metrics on the public ledger endpoint; #36 Generate a human-readable x402 error reference from the recorded fixtures. Each row carries a countdown to when applications close, a note that everyone who applies in time goes into the draw, and an Apply for this bounty button."
               className="h-auto w-full object-cover"
               width={1440}
               height={900}
