@@ -61,6 +61,8 @@ export async function openPage(browser, { base, theme, width, persona, api = {},
     const u = new URL(req.url())
     if (u.origin === base && !u.pathname.startsWith('/agent/')) return route.continue()
     if (/^fonts\.(googleapis|gstatic)\.com$/.test(u.hostname)) return route.continue()
+    // The docs' own screenshots and videos, on Vercel Blob (MEDIA_BASE in media.ts).
+    if (u.hostname.endsWith('.public.blob.vercel-storage.com')) return route.continue()
     if (u.pathname.startsWith('/agent/') || u.hostname === 'agent.grainlify.com') {
       const body = agent[u.pathname.replace(/^\/agent/, '')]
       return route.fulfill({ json: body ?? {} })
