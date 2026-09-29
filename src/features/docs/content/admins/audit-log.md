@@ -23,7 +23,7 @@ The event form (dates, grace period and sponsor total) is not part of the audit 
 
 It lists the most recent 100 entries across Grainlify: changes to the global defaults and to every event, newest first.
 
-![The Global Audit tab listing setting changes and phase transitions](shot:admin-gh-global-audit?desktop "Global Audit")
+![The Global Audit tab listing setting changes and phase transitions](shot:admin-gh-global-audit "Global Audit")
 
 ## One event's audit trail
 

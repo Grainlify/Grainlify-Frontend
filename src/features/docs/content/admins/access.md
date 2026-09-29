@@ -26,7 +26,7 @@ The admin view hides the contributor and maintainer shortcuts from the rail, so 
 **Reviews** and **GrainHack admin** stay in your rail in every view, not only while ADMIN is selected.
 
 > [!NOTE]
-> The admin pages are laid out for a computer. On a phone, wide tables such as the draw breakdown and the social follow queue don't fit the screen, so the screenshots in these pages are taken at desktop width.
+> The admin pages work on a phone, but some are easier to read on a computer. On a phone, the ticket table in a draw result scrolls sideways: swipe it to see every column. The screenshots of draw results, the **Draws** list and pending project applications are taken at desktop width.
 
 ## Who has admin access
 

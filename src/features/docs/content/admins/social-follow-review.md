@@ -8,13 +8,13 @@ Contributors follow Grainlify on LinkedIn and X and submit a screenshot of each,
 
 Choose **Pending**, **Approved** or **All** above the list. **Pending** is the default. Each row shows the contributor's login, the date they submitted and the status. A decided row also shows the reason, if one was given, and who decided it and when. Use **Previous** and **Next** when there is more than one page.
 
-![Social Follow Review on the Pending filter, with the selection bar and several submissions](shot:admin-follow-queue?desktop "The pending queue")
+![Social Follow Review on the Pending filter, with the selection bar and several submissions](shot:admin-follow-queue "The pending queue")
 
 ## View the proofs
 
 Select a contributor's name to open their row. The LinkedIn and X screenshots appear side by side. Select a screenshot to open it full size in a new tab. One row is open at a time.
 
-![An open submission showing the LinkedIn and X screenshots side by side](shot:admin-follow-proofs?desktop "Both proofs, one decision")
+![An open submission showing the LinkedIn and X screenshots side by side](shot:admin-follow-proofs "Both proofs, one decision")
 
 ## Approve
 

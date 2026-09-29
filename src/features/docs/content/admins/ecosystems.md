@@ -4,7 +4,7 @@ updated: 2026-09-27
 
 Ecosystems group projects on the [Ecosystems](/docs/contributors/ecosystems) page and in the Browse filters. You add, edit and remove them in **Ecosystem Management**, the first section of the **Reviews** page.
 
-![Ecosystem Management, showing ecosystem cards with project and contributor counts](shot:admin-ecosystems-grid?desktop "Ecosystem Management")
+![Ecosystem Management, showing ecosystem cards with project and contributor counts](shot:admin-ecosystems-grid "Ecosystem Management")
 
 Each card shows the ecosystem's logo, name, number of **Projects** and **Contributors**, its description, a **Visit Website** link if it has one, and its status.
 
