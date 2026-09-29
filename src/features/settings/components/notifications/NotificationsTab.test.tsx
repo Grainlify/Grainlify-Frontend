@@ -5,10 +5,18 @@ import { NotificationsTab } from './NotificationsTab'
 
 const mockGetPreferences = vi.fn()
 const mockUpdatePreferences = vi.fn()
+// The tab also renders EmailAddressCard, which reads the stored address. These
+// three are stubbed so this file keeps testing the switches; the card has its
+// own tests in EmailAddressCard.test.tsx.
+const NO_EMAIL = { address: '', captured_at: '', enabled: true, declined: false }
 vi.mock('../../../../shared/api/client', () => ({
   getNotificationPreferences: (...args: unknown[]) => mockGetPreferences(...args),
   updateNotificationPreferences: (...args: unknown[]) => mockUpdatePreferences(...args),
+  getStoredEmail: () => Promise.resolve({ address: '', captured_at: '', enabled: true, declined: false }),
+  updateStoredEmail: () => Promise.resolve({ address: '', captured_at: '', enabled: true, declined: false }),
+  removeStoredEmail: () => Promise.resolve({ address: '', captured_at: '', enabled: true, declined: true }),
 }))
+void NO_EMAIL
 
 const BASE_PREFERENCES = [
   { type: 'issue_assigned', in_app: true, email: true },
@@ -44,8 +52,17 @@ describe('NotificationsTab', () => {
   // a real, pre-existing accessibility gap, not something these tests
   // introduce. Toggles are located by their distinctive class fingerprint
   // rather than an accessible role/name, since none exists to query by.
+  //
+  // Scoped past the email card: its master switch is also a
+  // `button.rounded-full` and sits above every preference row, so an unscoped
+  // query returned it as toggles[0] and clicking it changed no preference -
+  // Save stayed disabled and both tests below failed for a reason that had
+  // nothing to do with what they test.
   function getToggleButtons(container: HTMLElement): HTMLButtonElement[] {
-    return Array.from(container.querySelectorAll('button.rounded-full'))
+    const card = container.querySelector('[data-testid="email-address-card"]')
+    return Array.from(container.querySelectorAll<HTMLButtonElement>('button.rounded-full')).filter(
+      (b) => !card?.contains(b)
+    )
   }
 
   it('Save is disabled until a preference actually changes', async () => {

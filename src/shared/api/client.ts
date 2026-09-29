@@ -1944,6 +1944,36 @@ export const updateNotificationPreferences = (preferences: NotificationPreferenc
     body: JSON.stringify({ preferences }),
   });
 
+// The stored email address and the two controls over it.
+//
+// There is deliberately no call that sets an address: the address comes from
+// GitHub at sign-in and nowhere else. One somebody typed here would be
+// unverified, and an unverified address is a way to have Grainlify email a
+// stranger.
+export interface StoredEmail {
+  /** The address on file, or "" when there is none. */
+  address: string;
+  /** When it was last read from GitHub, RFC3339, or "" when there is none. */
+  captured_at: string;
+  /** The master switch. False means no email from Grainlify at all. */
+  enabled: boolean;
+  /** True once the address has been removed. Signing in does not put it back. */
+  declined: boolean;
+}
+
+export const getStoredEmail = () =>
+  apiRequest<StoredEmail>("/me/email", { requiresAuth: true });
+
+export const updateStoredEmail = (change: { enabled?: boolean; allow?: boolean }) =>
+  apiRequest<StoredEmail>("/me/email", {
+    requiresAuth: true,
+    method: "PUT",
+    body: JSON.stringify(change),
+  });
+
+export const removeStoredEmail = () =>
+  apiRequest<StoredEmail>("/me/email", { requiresAuth: true, method: "DELETE" });
+
 // My Projects (for maintainers)
 export const getMyProjects = () =>
   apiRequest<

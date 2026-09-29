@@ -47,3 +47,37 @@ describe('TermsTab', () => {
     expect(screen.getByRole('button', { name: 'Accepted' })).toBeInTheDocument()
   })
 })
+
+describe('TermsTab: the email disclosure', () => {
+  // Storing somebody's address without saying so is the part of this that
+  // cannot be undone by a later fix. These pin the three things the text has
+  // to say, so a reword cannot quietly drop one.
+  it('says what is stored, why, and that it is not shown to anybody else', async () => {
+    renderWithProviders(<TermsTab />)
+    const what = await screen.findByText(/we store the primary email address/i)
+    expect(what).toHaveTextContent(/notifications you have switched on/i)
+    expect(what).toHaveTextContent(/never show it to maintainers/i)
+    expect(what).toHaveTextContent(/do not use it to market/i)
+  })
+
+  it('says how to turn it off and how to delete it', async () => {
+    renderWithProviders(<TermsTab />)
+    const how = await screen.findByText(/switch off every email from us/i)
+    expect(how).toHaveTextContent(/you can delete the address/i)
+    expect(how).toHaveTextContent(/signing in again does not\s*store it again/i)
+  })
+
+  it('says what happens to somebody who signed up before this, and to one who never returns', async () => {
+    renderWithProviders(<TermsTab />)
+    const backfill = await screen.findByText(/before we began storing addresses/i)
+    expect(backfill).toHaveTextContent(/next\s*time you sign in/i)
+    expect(backfill).toHaveTextContent(/never sign in again/i)
+  })
+
+  it('does not claim deletion reaches backups', async () => {
+    renderWithProviders(<TermsTab />)
+    // An absolute claim we cannot keep is worse than the honest one.
+    expect(screen.queryByText(/nothing retains a copy/i)).not.toBeInTheDocument()
+    expect(await screen.findByText(/encrypted database backups/i)).toBeInTheDocument()
+  })
+})

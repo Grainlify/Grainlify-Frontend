@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Info, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NotificationSection } from './NotificationSection';
+import { EmailAddressCard } from './EmailAddressCard';
 import { NotificationRow } from './NotificationRow';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import {
@@ -296,6 +297,10 @@ export function NotificationsTab() {
           </div>
         </div>
       </div>
+
+      {/* Above the switches, because what we hold is the first question and
+          which messages you get is the second. */}
+      <EmailAddressCard />
 
       {sections.map(({ section, types }) => (
         <NotificationSection key={section} title={section}>

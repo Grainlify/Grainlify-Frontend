@@ -330,9 +330,20 @@ const SECTIONS: SectionData[] = [
     title: 'Privacy Policy',
     body: (
       <>
-        <p><strong>What we collect.</strong> Your GitHub profile (username, avatar, public profile data), contribution
-          activity synced from repositories you interact with through the Platform, points and redemption history,
-          billing-profile details you provide, and a verification status (not raw documents) from our KYC provider.</p>
+        <p><strong>What we collect.</strong> Your GitHub profile (username, avatar, public profile data), the primary
+          email address on your GitHub account, contribution activity synced from repositories you interact with
+          through the Platform, points and redemption history, billing-profile details you provide, and a
+          verification status (not raw documents) from our KYC provider.</p>
+        <p><strong>Your email address.</strong> When you sign in with GitHub we store the primary email address on
+          your GitHub account. We use it for one thing: sending you the notifications you have switched on in
+          Settings &rarr; Notifications. We never show it to maintainers or to other contributors, we do not share
+          it with anyone outside the providers listed below, and we do not use it to market anything to you.</p>
+        <p>You can switch off every email from us at Settings &rarr; Notifications, and notifications keep arriving
+          in the app. On the same screen you can delete the address: we remove it, and signing in again does not
+          store it again unless you ask us to. If you change the address on GitHub, ours follows the next time you
+          sign in or press Resync on your profile.</p>
+        <p>If you last signed in before we began storing addresses, we hold none for you and will store one the next
+          time you sign in. If you never sign in again, we never store one, and we send you no email.</p>
         <p><strong>How we use it.</strong> To operate your account, calculate and display rankings, process
           redemption requests, comply with KYC/AML obligations, prevent fraud, and communicate with you about your
           account.</p>
@@ -343,7 +354,9 @@ const SECTIONS: SectionData[] = [
           deletion, subject to records we are legally required to retain (for example, KYC and redemption records for
           AML compliance). Contact us using the details below to exercise these rights.</p>
         <p><strong>Retention.</strong> We retain account and redemption data for as long as your account is active
-          and for a reasonable period afterward to meet legal, tax, and anti-fraud obligations.</p>
+          and for a reasonable period afterward to meet legal, tax, and anti-fraud obligations. Your email address
+          is not part of that: when you delete it we erase it from your account and keep no separate copy of it,
+          though it may persist in routine encrypted database backups until those age out.</p>
       </>
     ),
   },
