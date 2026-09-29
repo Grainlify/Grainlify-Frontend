@@ -25,7 +25,15 @@ vi.mock('../../../shared/api/client', () => ({
 // Covered in their own test suites — stub them so MaintainersPage tests focus on
 // tab switching, the repo dropdown, and the post-GitHub-App-install flow.
 vi.mock('../components/dashboard/DashboardTab', () => ({
-  DashboardTab: () => <div data-testid="dashboard-tab">Dashboard Tab Stub</div>,
+  // Records every distinct `selectedProjects` array it is handed, so a test
+  // below can assert the identity is stable. The real tab uses this value as
+  // an effect dependency; a new array means a full refetch.
+  DashboardTab: (props: { selectedProjects?: unknown }) => {
+    const g = globalThis as { __selectedProjectsSeen?: unknown[] }
+    g.__selectedProjectsSeen = g.__selectedProjectsSeen ?? []
+    if (props.selectedProjects !== undefined) g.__selectedProjectsSeen.push(props.selectedProjects)
+    return <div data-testid="dashboard-tab">Dashboard Tab Stub</div>
+  },
 }))
 
 vi.mock('../components/issues/IssuesTab', () => ({
@@ -97,6 +105,7 @@ describe('MaintainersPage', () => {
     vi.mocked(getMyProjects).mockResolvedValue([])
     vi.mocked(getPendingSetupProjects).mockResolvedValue([])
     vi.mocked(getAuthToken).mockReturnValue(null)
+    ;(globalThis as { __selectedProjectsSeen?: unknown[] }).__selectedProjectsSeen = []
   })
 
   it('renders the Dashboard tab by default', async () => {
@@ -263,5 +272,50 @@ describe('MaintainersPage', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+// The tabs take `selectedProjects` as a raw effect dependency, so a rebuild of
+// that array with identical contents costs a full refetch of every repo. It
+// used to happen on every load: repos arrive, an effect seeds selectedRepoIds
+// with all of them, the memo recomputes, and all three tabs fetched twice -
+// 52 requests and 664 kB where 28 and 335 kB would do, with nothing visibly
+// wrong because the second answer matched the first.
+//
+// This renders a probe in place of a tab and counts how many distinct arrays
+// it is handed. Identity, not contents, is what React compares and therefore
+// what has to be pinned.
+describe('MaintainersPage: selectedProjects identity', () => {
+  it('hands the tabs one array, not a new one once the repos are selected', async () => {
+    vi.mocked(getMyProjects).mockResolvedValue([
+      makeProject({ id: '1', github_full_name: 'acme/widgets' }),
+      makeProject({ id: '2', github_full_name: 'acme/gadgets' }),
+      makeProject({ id: '3', github_full_name: 'other-org/tool' }),
+    ])
+
+    renderWithProviders(<MaintainersPage onNavigate={vi.fn()} />)
+    await screen.findByTestId('dashboard-tab')
+    // Let the seeding effect run and any re-render settle.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    const seen = ((globalThis as { __selectedProjectsSeen?: unknown[] }).__selectedProjectsSeen ??
+      []) as Array<Array<{ id: string }>>
+    expect(seen.length).toBeGreaterThan(0)
+
+    // Distinct identities, in the order the tab saw them.
+    const identities: Array<Array<{ id: string }>> = []
+    for (const a of seen) if (identities[identities.length - 1] !== a) identities.push(a)
+
+    // The defect is not "the array changed" - it legitimately changes when the
+    // repos arrive and when the filter changes. It is a NEW array holding
+    // exactly the same repos, which costs a refetch and buys nothing.
+    const ids = (a: Array<{ id: string }>) => a.map((p) => p.id).join(',')
+    const wasteful = identities
+      .map((a, i) => (i > 0 && ids(a) === ids(identities[i - 1]) ? ids(a) : null))
+      .filter(Boolean)
+
+    expect(wasteful).toEqual([])
   })
 })

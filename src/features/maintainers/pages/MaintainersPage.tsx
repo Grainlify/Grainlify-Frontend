@@ -252,14 +252,33 @@ export function MaintainersPage({ onNavigate, viewMode }: MaintainersPageProps) 
     });
   };
 
-  // Get selected projects
-  const selectedProjects = useMemo(() => {
-    if (selectedRepoIds.size === 0) {
-      // If no repos selected, return all verified projects
-      return projects.filter(p => p.status === 'verified');
-    }
-    return projects.filter(p => selectedRepoIds.has(p.id) && p.status === 'verified');
+  // The selection, as a string, so this array's identity changes only when the
+  // selection really does.
+  //
+  // Every tab below uses `selectedProjects` as a raw effect dependency, and the
+  // array used to be rebuilt on a change that selected nothing new: repos load,
+  // the effect above seeds selectedRepoIds with every id, and the memo
+  // recomputes to a NEW array holding exactly the same projects. React compares
+  // by identity, so all three tabs refetched - every per-project call went out
+  // twice, for 52 requests and 664 kB where 28 and 335 kB would do. Nothing
+  // looked wrong on screen, because the second answer matched the first.
+  //
+  // Keying on the ids rather than memoising harder is what makes that
+  // structural: a future change that reselects the same repos cannot
+  // reintroduce it.
+  const selectedProjectIds = useMemo(() => {
+    const verified = projects.filter(p => p.status === 'verified');
+    // An empty selection means "all", not "none" - a maintainer landing here
+    // sees every repo they maintain before touching the filter.
+    const chosen = selectedRepoIds.size === 0 ? verified : verified.filter(p => selectedRepoIds.has(p.id));
+    return chosen.map(p => p.id).join(',');
   }, [projects, selectedRepoIds]);
+
+  const selectedProjects = useMemo(() => {
+    if (selectedProjectIds === '') return [];
+    const byId = new Map(projects.map(p => [p.id, p]));
+    return selectedProjectIds.split(',').map(id => byId.get(id)).filter((p): p is Project => p !== undefined);
+  }, [projects, selectedProjectIds]);
 
   const handleNavigateToIssue = (issueId: string, projectId: string) => {
     setTargetIssueId(issueId);
