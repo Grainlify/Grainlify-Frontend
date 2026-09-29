@@ -136,3 +136,32 @@ describe('top-level routes', () => {
     expect(groups.map((g) => g.replace(/\/$/, ''))).toEqual([groups[0], groups[0]])
   })
 })
+
+describe('vercel.json: caching', () => {
+  // Vite gives every file in /assets a content hash, so the bytes at a given
+  // URL never change. They were served `max-age=0, must-revalidate` anyway, so
+  // every return visit paid a conditional request per file before anything
+  // rendered: measured 4 on the landing page, 13 on docs, and 29 on a
+  // maintainer page, which loads 29 separate chunks.
+  it('tells browsers the hashed assets never change', () => {
+    const vercel = JSON.parse(readFileSync(join(__dirname, '../../vercel.json'), 'utf8')) as {
+      headers: { source: string; headers: { key: string; value: string }[] }[]
+    }
+    const assets = vercel.headers.find((h) => h.source === '/assets/(.*)')
+    expect(assets, 'no Cache-Control rule for /assets/').toBeDefined()
+    const cacheControl = assets!.headers.find((h) => h.key.toLowerCase() === 'cache-control')
+    expect(cacheControl?.value).toMatch(/immutable/)
+    expect(cacheControl?.value).toMatch(/max-age=31536000/)
+  })
+
+  // Vercel applies the first matching rule, so a broad /(.*) rule placed above
+  // this one would silently take precedence and the assets would go back to
+  // revalidating on every visit.
+  it('puts the assets rule before the catch-all', () => {
+    const vercel = JSON.parse(readFileSync(join(__dirname, '../../vercel.json'), 'utf8')) as {
+      headers: { source: string }[]
+    }
+    const sources = vercel.headers.map((h) => h.source)
+    expect(sources.indexOf('/assets/(.*)')).toBeLessThan(sources.indexOf('/(.*)'))
+  })
+})
