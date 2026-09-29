@@ -128,3 +128,61 @@ describe('NotificationsTab: types the label map does not know', () => {
     expect(await screen.findByText('Application received')).toBeInTheDocument()
   })
 })
+
+describe('NotificationsTab: sections', () => {
+  // SECTION_ORDER was once the list of sections allowed to render, so a type
+  // whose section was not one of the three hardcoded names was dropped - the
+  // seven Bounties rows below were written, shipped, and invisible.
+  const BOUNTY_ROWS: Array<[string, string]> = [
+    ['bounty_draw_won', 'You won the draw'],
+    ['bounty_assignment_expiring', 'Assignment about to expire'],
+    ['bounty_paid', 'Bounty paid'],
+    ['bounty_application_received', 'Bounty application received'],
+    ['bounty_draw_lost', 'Draw went to someone else'],
+    ['bounty_review_posted', 'Agent reviewed your pull request'],
+  ]
+
+  it('shows a control for every bounty notification type', async () => {
+    mockGetPreferences.mockResolvedValue({
+      preferences: BOUNTY_ROWS.map(([type]) => ({ type, in_app: true, email: true })),
+    })
+    renderWithProviders(<NotificationsTab />)
+
+    expect(await screen.findByText('Bounties')).toBeInTheDocument()
+    for (const [, title] of BOUNTY_ROWS) {
+      // getAllByText, not getByText: "Assignment about to expire" is the title
+      // of both the bounty row and the GrainHack row, told apart by the section
+      // heading above them rather than by the wording.
+      expect(screen.getAllByText(title).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('shows the GrainHack expiry warning under its own section', async () => {
+    mockGetPreferences.mockResolvedValue({
+      preferences: [{ type: 'grainhack_assignment_expiring', in_app: true, email: true }],
+    })
+    renderWithProviders(<NotificationsTab />)
+
+    expect(await screen.findByText('GrainHack')).toBeInTheDocument()
+  })
+
+  it('"Disable all" reaches the bounty types too', async () => {
+    const user = userEvent.setup()
+    mockGetPreferences.mockResolvedValue({
+      preferences: BOUNTY_ROWS.map(([type]) => ({ type, in_app: true, email: true })),
+    })
+    renderWithProviders(<NotificationsTab />)
+    await waitFor(() => expect(mockGetPreferences).toHaveBeenCalled())
+
+    await user.click(await screen.findByRole('button', { name: 'Disable all' }))
+    await user.click(await screen.findByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(mockUpdatePreferences).toHaveBeenCalledTimes(1))
+    const payload = mockUpdatePreferences.mock.calls[0][0] as Array<{ type: string; in_app: boolean; email: boolean }>
+    for (const [type] of BOUNTY_ROWS) {
+      const row = payload.find((p) => p.type === type)
+      expect(row).toBeDefined()
+      expect(row).toMatchObject({ in_app: false, email: false })
+    }
+  })
+})

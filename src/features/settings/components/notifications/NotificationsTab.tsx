@@ -105,7 +105,15 @@ const NOTIFICATION_TYPE_INFO: Record<string, NotificationTypeInfo> = {
   },
 };
 
-const SECTION_ORDER = ['Contributor', 'Maintainer', 'Other'];
+/** The order sections appear in, not the set of sections that may exist.
+ *
+ *  It used to be both, and that made it a second silent filter: an entry whose
+ *  `section` was not one of these three was dropped from the screen entirely -
+ *  the same disappearing act `infoFor` exists to prevent, one level up. The
+ *  seven Bounties rows were written and invisible for exactly this reason.
+ *  Anything named here is placed; anything else is appended in the order it is
+ *  first met, so a new section shows up rather than vanishing. */
+const SECTION_ORDER = ['Contributor', 'Bounties', 'GrainHack', 'Maintainer', 'Other'];
 
 /** A label for a type this map does not know about.
  *
@@ -210,12 +218,18 @@ export function NotificationsTab() {
   const allTypes = Array.from(
     new Set([...Object.keys(NOTIFICATION_TYPE_INFO), ...Object.keys(preferences)])
   );
-  const sections = SECTION_ORDER.map((section) => ({
-    section,
-    types: allTypes
-      .map((type) => [type, infoFor(type)] as [string, NotificationTypeInfo])
-      .filter(([, info]) => info.section === section),
-  })).filter(({ types }) => types.length > 0);
+  const withInfo = allTypes.map((type) => [type, infoFor(type)] as [string, NotificationTypeInfo]);
+  const present = Array.from(new Set(withInfo.map(([, info]) => info.section)));
+  const ordered = [
+    ...SECTION_ORDER.filter((s) => present.includes(s)),
+    ...present.filter((s) => !SECTION_ORDER.includes(s)),
+  ];
+  const sections = ordered
+    .map((section) => ({
+      section,
+      types: withInfo.filter(([, info]) => info.section === section),
+    }))
+    .filter(({ types }) => types.length > 0);
 
   if (isLoading) {
     return (
