@@ -30,7 +30,7 @@ When one isn't true, the issue page says which, in place of the **Apply for this
    ![The Apply for this issue dialog with a message typed in](shot:apply-dialog "Write your message")
 
 4. **Choose Submit application.** You can't choose it until you've written something.
-5. **Check it's there.** The dialog closes and your application appears in the list on the **Applications** tab.
+5. **Check it's there.** The dialog closes and your application appears in the list on the **Applications** tab. The apply box now says you have already applied.
 
    ![Your application in the Applications list, expanded to show your message and the Withdraw button](shot:apply-submitted?desktop "Your application")
 

@@ -21,7 +21,7 @@
 //   claim:         false (default) | true                   a published Founding Pool claim waiting on the payout tab
 
 import { personas } from './people.mjs'
-import { projectsApi } from './projects.mjs'
+import { projectsApi, mineFor } from './projects.mjs'
 import { grainhackApi } from './grainhack.mjs'
 import { bountiesApi, agent, walletVariants, SOLANA_ADDRESS, DRAW_DEMO_BOUNTY_ID, BOUNTIES } from './bounties.mjs'
 import { accountApi, followVariants, APTOS_ADDRESS } from './account.mjs'
@@ -40,7 +40,16 @@ export function apiFor(personaKey, opts = {}) {
     ...bountiesApi(personaKey, opts),
     ...accountApi(personaKey, opts),
     ...(personaKey === 'admin' ? adminApi() : {}),
+    'GET /maintainer/bounties': maintainedBounties(personaKey, BOUNTIES),
   }
+}
+
+/** The server's answer to "which bounties do I maintain": every bounty on a
+ *  repository the persona can write to on GitHub, here every repository of the
+ *  organisations they own projects in, registered on Grainlify or not. */
+export function maintainedBounties(personaKey, bounties) {
+  const orgs = new Set(mineFor(personaKey).map((p) => p.github_full_name.split('/')[0]))
+  return { bounties: bounties.filter((b) => orgs.has(b.repo.split('/')[0])).map((b) => ({ bountyId: b.id, repo: b.repo, issueNumber: b.issueNumber })) }
 }
 
 // Endpoints whose "nothing here" answer is a 404, and the body the app reads.

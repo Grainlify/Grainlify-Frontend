@@ -18,7 +18,7 @@
 //   ledgerline #240  drawn (the world's existing bounty): winner and ticket breakdown
 //   tide-sdk #61     drawn (the world's existing payable bounty)
 
-import { world, BOUNTIES } from './index.mjs'
+import { world, BOUNTIES, maintainedBounties } from './index.mjs'
 import { ago, ahead, uuidFor } from './util.mjs'
 import { personas } from './people.mjs'
 
@@ -168,7 +168,7 @@ export function maintainerBountiesWorld() {
     [`/public/bounties/${OPEN.id}`]: { status: w.agent['/public/status'], bounty: OPEN },
     [`/public/bounties/${CLOSED.id}`]: { status: w.agent['/public/status'], bounty: CLOSED },
   }
-  const api = { ...w.api }
+  const api = { ...w.api, 'GET /maintainer/bounties': maintainedBounties('maintainer', bounties) }
   for (const [id, view] of Object.entries(VIEWS)) api[`GET /maintainer/bounties/${id}/applications`] = view
   return { ...w, api, agent }
 }

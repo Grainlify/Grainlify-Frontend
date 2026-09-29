@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 Grainlify tells you when something happens that concerns you: an application is received or decided, a pull request is merged, a follow proof is reviewed, a referral completes. This page covers the bell, the Notifications page, and how to choose what you get.
@@ -34,7 +34,7 @@ Open the menu under your picture, choose **Settings**, then **Notifications**.
 
 ![Notification Preferences, with In-App and Email switches for each type](shot:settings-notifications "Settings → Notifications")
 
-1. **Find the type.** There's one row per type of notification, grouped under **Contributor**, **Maintainer** and **Other**, each with a short description.
+1. **Find the type.** There's one row per type of notification, grouped under **Contributor**, **Bounties**, **GrainHack**, **Maintainer** and **Other**, each with a short description.
 2. **Set its switches.** Each row has an **In-App** switch and an **Email** switch. **Enable all** and **Disable all** change every row at once.
 3. **Choose Save.** Nothing changes until you do. You'll see **Notification preferences saved.**
 

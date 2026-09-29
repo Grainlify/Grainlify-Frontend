@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 The issue page is where you read an issue, see who has applied for it, and apply yourself. You reach it by choosing an issue on [Discover](/docs/contributors/discover), on a [project page](/docs/contributors/project-page) or in [Search](/docs/contributors/search).
@@ -28,6 +28,7 @@ The apply box tells you whether you can apply:
 | This issue is closed. Applications are disabled. | Nobody can apply to a closed issue. |
 | This issue is already assigned. Applications are disabled. | Someone is assigned on GitHub. It reopens if they're unassigned. |
 | You can't apply to your own issue. | You opened this issue on GitHub. |
+| You have already applied for this issue. The maintainer decides who is assigned. | Your application is in the list below. You can [withdraw it](/docs/contributors/applying-to-issues) there. |
 | This issue is part of a GrainHack event. | It's allocated by a weighted draw instead. See [Apply for a GrainHack issue](/docs/contributors/grainhack-apply). |
 
 [Apply for an issue](/docs/contributors/applying-to-issues) walks through applying.

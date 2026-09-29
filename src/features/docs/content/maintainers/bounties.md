@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 Grainlify Bounties pay contributors for fixing selected issues. On a repository where bounties are switched on, the Grainlify bounty agent posts bounties, reviews the pull requests that claim them, and reports on each merge. You stay in charge of your code: nothing is paid unless you merge, and a person approves every payout. This page covers what you'll see as the maintainer, on GitHub and on the **Bounties** tab in **Maintainers**. For the contributor's side, read [How Grainlify Bounties work](/docs/contributors/bounties).
@@ -30,7 +30,7 @@ The agent's comments end with a line signed **Grainlify Agent**.
 
 ## The Bounties tab
 
-Switch to **MAINTAINER** and choose the **Bounties** tab in **Maintainers**. It lists the bounties on the repositories you've selected in **Select repositories**, or on all your repositories if you haven't selected any. Each bounty shows its issue title and amount. If none of your repositories has a bounty, the tab says **No bounties on the repositories you have selected.**
+Switch to **MAINTAINER** and choose the **Bounties** tab in **Maintainers**. It lists the bounties on every repository you have write access to on GitHub, whatever you've chosen in **Select repositories**. Each bounty shows its issue title and amount. If none of your repositories has a bounty, the tab says **No bounties on the repositories you have selected.**
 
 What you can see about the people who applied depends on where the bounty is.
 
