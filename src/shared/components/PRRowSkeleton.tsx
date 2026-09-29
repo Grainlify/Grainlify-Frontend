@@ -2,9 +2,9 @@ import { SkeletonLoader } from './SkeletonLoader';
 
 export function PRRowSkeleton() {
   return (
-    <div className="grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 rounded-[16px] backdrop-blur-[25px] border bg-white/[0.08] border-white/15">
-      {/* Pull Request Info */}
-      <div>
+    <div className="grid grid-cols-[2fr_1.5fr_1fr_0.5fr] gap-6 px-6 py-5 max-sm:grid-cols-1 max-sm:gap-3 max-sm:px-4 max-sm:py-4 rounded-[16px] backdrop-blur-[25px] border bg-white/[0.08] border-white/15">
+      {/* Pull Request Info. Stacks at max-sm like PRRow. */}
+      <div className="max-sm:min-w-0">
         <div className="flex items-start gap-3 mb-2">
           {/* Icon Skeleton */}
           <SkeletonLoader variant="circle" width="16px" height="16px" />
@@ -18,7 +18,7 @@ export function PRRowSkeleton() {
       </div>
 
       {/* Author Info */}
-      <div>
+      <div className="max-sm:min-w-0">
         <div className="flex items-center gap-2 mb-2">
           {/* Avatar Skeleton */}
           <SkeletonLoader variant="circle" width="28px" height="28px" />
@@ -33,7 +33,7 @@ export function PRRowSkeleton() {
       </div>
 
       {/* Repository Info */}
-      <div>
+      <div className="max-sm:min-w-0">
         <div className="flex items-center gap-2 mb-1">
           {/* Repo Avatar Skeleton */}
           <SkeletonLoader variant="default" width="20px" height="20px" className="rounded-md" />
