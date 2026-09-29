@@ -16,7 +16,7 @@ Do: Point at the apply box, then click **Apply for this issue**.
 
 ## 4
 Say: [encouraging] Write a short message. Say how you'd tackle the issue, or point to similar work you've done. The dialog shows how your comment will begin.
-Do: Type "I'd start by reproducing this with a failing test, then fix the parser. I fixed a similar bug in my own CLI last month." in the text box.
+Do: Type "I'd read through the snapshot code first, then write up the format with a worked example. I documented a similar file format for my own CLI last month." in the text box.
 
 ## 5
 Say: [confident] Choose Submit application. Grainlify posts your message on the GitHub issue as a comment from your own account, so the maintainer sees it where they already work.

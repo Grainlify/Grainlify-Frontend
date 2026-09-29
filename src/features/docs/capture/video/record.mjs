@@ -57,7 +57,16 @@ try {
 const GAP = 0.35 // seconds of quiet after each segment
 for (const theme of ['light', 'dark']) {
   const tmp = path.join(WORK, `tmp-${file}-${theme}`)
-  const { ctx, page } = await openPage(browser, { base, theme, width: 1440, persona: flow.start.persona, api: flow.start.api, agent: flow.start.agent, init: flow.start.init ?? [], record: { dir: tmp, size: { width: 1440, height: 900 } } })
+  // Without Element.animate, framer-motion animates on the main thread, which
+  // follows the page clock. With it, animations run on the browser's own
+  // timeline, out of step with the clock, and can stay invisible.
+  const mainThreadAnimations = { fn: () => { try { delete Element.prototype.animate } catch {} }, arg: null }
+  const init = [mainThreadAnimations, ...(Array.isArray(flow.start.init) ? flow.start.init : flow.start.init ? [flow.start.init] : [])]
+  const { ctx, page } = await openPage(browser, { base, theme, width: 1440, persona: flow.start.persona, api: flow.start.api, agent: flow.start.agent, init, record: { dir: tmp, size: { width: 1440, height: 900 } } })
+  // Screenshots freeze the clock; a video needs it to run. It starts at the
+  // same fixed moment (so relative times read the same as in the screenshots)
+  // and then moves in real time, so animations play rather than jump.
+  await page.clock.resume()
   const t0 = Date.now()
   await page.goto(base + flow.start.url)
   await (flow.start.ready ? flow.start.ready(page) : page.locator('body')).waitFor({ timeout: 20000 })
@@ -70,9 +79,11 @@ for (const theme of ['light', 'dark']) {
     // Hold until the narration for this segment has finished.
     const spent = (Date.now() - t0) / 1000 - start
     const wait = Math.max(0, lengths[i] + GAP - spent)
-    await page.clock.runFor(Math.round(wait * 1000)).catch(() => {})
     await page.waitForTimeout(Math.round(wait * 1000))
   }
+  // A beat on the final screen. The recorder can trail the page by a second
+  // under load, and closing straight after the last action lost that action.
+  await page.waitForTimeout(1000)
   const end = (Date.now() - t0) / 1000
   const video = page.video()
   await ctx.close()

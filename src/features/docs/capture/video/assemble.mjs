@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { segmentFiles } from './narrate.mjs'
 import { spoken } from './script.mjs'
+import sharp from 'sharp'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../../../../..')
@@ -102,7 +103,9 @@ for (const theme of ['light', 'dark']) {
     execFileSync('ffmpeg', [...common, '-filter_complex', graph, ...video, '-map', '[aout]', '-c:a', 'aac', '-b:a', '128k', `${base}.mp4`], { stdio: 'ignore' })
   }
   // Poster: the first frame of the first segment.
-  execFileSync('ffmpeg', ['-y', '-ss', LEAD.toFixed(2), '-i', `${base}.mp4`, '-frames:v', '1', '-q:v', '80', `${base}.poster.webp`], { stdio: 'ignore' })
+  // (This ffmpeg build has no WebP encoder: take a PNG, and let sharp write the WebP.)
+  const png = execFileSync('ffmpeg', ['-v', 'error', '-ss', LEAD.toFixed(2), '-i', `${base}.mp4`, '-frames:v', '1', '-f', 'image2pipe', '-c:v', 'png', '-'], { maxBuffer: 64 << 20 })
+  await sharp(png).webp({ quality: 80 }).toFile(`${base}.poster.webp`)
   writeFileSync(`${base}.vtt`, 'WEBVTT\n\n' + allCues.map((c, i) => `${i + 1}\n${stamp(c.from)} --> ${stamp(c.to)}\n${c.text}\n`).join('\n'))
   const mb = (Number(execFileSync('stat', ['-f', '%z', `${base}.mp4`]).toString()) / 1e6).toFixed(1)
   console.log(`${slug} ${theme}: ${duration.toFixed(1)}s, ${mb} MB${tl.silent ? ' (silent cut)' : ''}`)
