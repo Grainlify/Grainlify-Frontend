@@ -1,8 +1,10 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 The bounty ledger is the record of the programme's money: bounties posted, the model calls the agent pays for, the checks merged pull requests go through, and payouts. Every row links to its proof, so you can check a payout without taking anyone's word for it.
+
+![The bounty ledger](video:contributors/bounty-ledger "1:26")
 
 ## Open the ledger
 

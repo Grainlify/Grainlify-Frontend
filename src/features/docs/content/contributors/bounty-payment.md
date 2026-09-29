@@ -1,8 +1,10 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 You won the draw for a bounty. This page takes you from opening your pull request to seeing the payment on-chain. Only the person the draw assigned can be paid for a bounty, and a person approves every payout before it's sent.
+
+![From pull request to payment](video:contributors/bounty-payment "1:19")
 
 ## From pull request to payment
 

@@ -1,8 +1,10 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 Listing your project on Grainlify puts its issues in front of people looking for work, and gives you one place to decide who does it. This page takes you from nothing to your first assigned issue. Each step links to a page with the detail.
+
+![Maintainer quick start](video:maintainers "1:24")
 
 ## Before you start
 

@@ -1,8 +1,10 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 On most issues, the project's maintainer chooses who works on it. You ask by applying with a short message. Grainlify posts your message on the GitHub issue as a comment from your own GitHub account, so the maintainer sees it where they already work.
+
+![Apply for an issue](video:contributors/applying-to-issues "1:18")
 
 GrainHack issues work differently: a weighted draw decides who is assigned, and you apply from a separate panel. See [Apply for a GrainHack issue](/docs/contributors/grainhack-apply).
 

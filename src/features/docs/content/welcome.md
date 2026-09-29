@@ -1,8 +1,10 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 Grainlify is where open-source projects list work and people do it. You sign in with your GitHub account, find an issue on a project that wants help, and apply for it. When a maintainer assigns it to you, you open a pull request on GitHub as usual. Once it's merged, it counts on your Grainlify profile and on the leaderboard. Some work is also paid.
+
+![Welcome to Grainlify](video:welcome "1:28")
 
 ![The Grainlify home page](shot:landing-hero "grainlify.com")
 

@@ -1,8 +1,10 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 You sign in to Grainlify with your GitHub account. There's no separate form and no password: the first time you sign in, your account is created.
+
+![Create your account](video:create-your-account "1:13")
 
 ## Sign in with GitHub
 

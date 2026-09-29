@@ -1,8 +1,10 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 Browse lists the projects on Grainlify, newest first, and lets you narrow them by language, ecosystem, category and tag. Use it when you know the kind of work you want and would rather filter than scroll Discover. Open it from **Browse** in the rail.
+
+![Browse projects and organizations](video:contributors/browse "1:17")
 
 ## Organizations or Repositories
 

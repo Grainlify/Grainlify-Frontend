@@ -1,8 +1,10 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 You apply for a bounty while its application window is open. When the window closes, one applicant is drawn and assigned. The draw is weighted, not first-come, so there's no reason to rush: applying early gives you no advantage, and applying to more bounties doesn't change your odds on any of them.
+
+![Apply for a bounty](video:contributors/apply-for-a-bounty "1:29")
 
 The whole path, from applying to being paid:
 
