@@ -126,8 +126,11 @@ export function EmailAddressCard() {
         </button>
       )}
 
+      {/* min-w-0 on the text and shrink-0 on the switch: without them the text
+          column cannot shrink at 390px and pushes the switch out past the edge
+          of the card, where half of it is clipped. */}
       <div className="flex items-center justify-between gap-4 pt-5 border-t border-white/10">
-        <div>
+        <div className="min-w-0">
           <div className={`text-[15px] font-semibold mb-1 transition-colors ${heading}`}>
             Email notifications
           </div>
@@ -136,12 +139,14 @@ export function EmailAddressCard() {
             Notifications keep arriving in the app.
           </div>
         </div>
-        <ToggleSwitch
-          enabled={state.enabled}
-          onChange={(value) =>
-            run(() => updateStoredEmail({ enabled: value }), 'Could not save that.')
-          }
-        />
+        <div className="shrink-0">
+          <ToggleSwitch
+            enabled={state.enabled}
+            onChange={(value) =>
+              run(() => updateStoredEmail({ enabled: value }), 'Could not save that.')
+            }
+          />
+        </div>
       </div>
 
       {confirmingRemoval && (
