@@ -26,7 +26,7 @@ Signing up and signing in are the same thing. The **Sign up with GitHub** button
 | GitHub permission | What Grainlify uses it for |
 | --- | --- |
 | Your profile | Your GitHub username and picture become your Grainlify identity. |
-| Your email addresses | Your primary email address, even if it's private on GitHub. Grainlify reads it when you sign in but doesn't store it, and sends no email today. |
+| Your email addresses | Your primary email address, even if it's private on GitHub. Grainlify stores it when you sign in, to send the notification emails you turn on, and uses it for nothing else. You can see or remove it in **Settings → Notifications**. |
 | Organization membership, read-only | Checking whether you belong to an organization, for example before you rate one. |
 | Public repositories | Listing pull requests on public repositories, and posting your application as a comment from your account when you apply for an issue. |
 

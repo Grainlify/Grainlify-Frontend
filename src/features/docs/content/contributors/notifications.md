@@ -40,7 +40,15 @@ Open the menu under your picture, choose **Settings**, then **Notifications**.
 
 Every type is switched on for both until you change it. Turning **In-App** off for a type stops new notifications of that type reaching the bell and the page. Ones you already have stay.
 
-> [!NOTE]
-> Grainlify doesn't currently hold an email address for your account, so notification emails aren't being sent. Your notifications arrive in the app. Your **Email** choices are saved all the same.
-
 For the full list of types and what triggers each, see [Notification types](/docs/reference/notification-types).
+
+## Your email address
+
+The **Email address** card at the top of **Settings → Notifications** shows the address notification emails go to. Grainlify takes it from your GitHub account when you sign in: your primary address, even if it's private on GitHub. It's used only for these emails. It isn't shown to maintainers or shared.
+
+![The Email address card, with the stored address and the Email notifications switch](shot:settings-email-address "Your email address")
+
+- **Email notifications** turns off all email at once, whatever the rows below say. Notifications keep arriving in the app.
+- **Remove this address** deletes it once you confirm. Signing in again won't store it again unless you choose **Let Grainlify store it again at my next sign-in**.
+
+If the card says Grainlify holds no email address for you yet, it's stored the next time you sign in with GitHub.

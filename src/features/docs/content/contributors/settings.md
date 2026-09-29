@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 Settings is where you manage your account: your profile, what you're told about, your referrals, your Founding Contributor Pool place and where payouts go. This page gives each tab a short tour and links to the page that covers it in full.
@@ -18,7 +18,7 @@ See [Edit your profile](/docs/contributors/edit-profile).
 
 ## Notifications
 
-A row for each type of notification, with an **In-App** and an **Email** switch, plus **Enable all** and **Disable all**. Choose **Save** to keep your changes.
+The email address notifications are sent to, with a switch that turns off all email. Then a row for each type of notification, with an **In-App** and an **Email** switch, plus **Enable all** and **Disable all**. Choose **Save** to keep your changes.
 
 See [Notifications](/docs/contributors/notifications).
 

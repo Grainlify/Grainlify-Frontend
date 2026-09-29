@@ -26,6 +26,7 @@ import { grainhackApi } from './grainhack.mjs'
 import { bountiesApi, agent, walletVariants, SOLANA_ADDRESS, DRAW_DEMO_BOUNTY_ID, BOUNTIES } from './bounties.mjs'
 import { accountApi, followVariants, APTOS_ADDRESS } from './account.mjs'
 import { adminApi } from './admin.mjs'
+import { ago } from './util.mjs'
 
 export { personas, agent, walletVariants, followVariants, SOLANA_ADDRESS, APTOS_ADDRESS, DRAW_DEMO_BOUNTY_ID, BOUNTIES }
 export { PROJECTS, ISSUES, PRS, ECOSYSTEMS, issueId, PENDING_PROJECT } from './projects.mjs'
@@ -41,6 +42,8 @@ export function apiFor(personaKey, opts = {}) {
     ...accountApi(personaKey, opts),
     ...(personaKey === 'admin' ? adminApi() : {}),
     'GET /maintainer/bounties': maintainedBounties(personaKey, BOUNTIES),
+    // The address notification emails go to, stored at sign-in (Settings → Notifications).
+    'GET /me/email': { address: `${personas[personaKey].login}@example.com`, captured_at: ago(3), enabled: true, declined: false },
   }
 }
 

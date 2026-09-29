@@ -11,7 +11,7 @@ Every kind of notification Grainlify sends, what sets it off, and where its link
 - **Email switch** says whether the **Email** switch applies. Where it says **In-app only**, the notification is shown in the app whatever the email switch says.
 
 > [!NOTE]
-> For now, notifications reach you in the app only. Grainlify doesn't yet store an address to send notification emails to, so none are sent, whatever your switches say. Your **Email** choices are saved for when that changes.
+> Emails go to the address in the **Email address** card at the top of **Settings → Notifications**, and only while its **Email notifications** switch is on. See [Notifications](/docs/contributors/notifications).
 
 ## As a contributor
 

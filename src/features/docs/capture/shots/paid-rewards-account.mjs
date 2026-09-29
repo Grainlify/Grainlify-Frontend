@@ -384,6 +384,14 @@ const accountShots = [
       ], { bottom: page.locator('div[class*="grid-cols-[1fr_140px_140px]"]').filter({ has: page.getByText('Pull request merged', { exact: true }) }).last(), bottomPad: 4 }),
   },
   {
+    id: 'settings-email-address',
+    page: 'contributors/notifications',
+    url: '/dashboard?tab=settings&subtab=notifications',
+    ...mira(),
+    ready: (page) => page.getByTestId('email-address-card').getByText('mira-dev@example.com'),
+    frame: (page) => frameAround(page, [page.getByTestId('email-address-card')], { bottomPad: 16 }),
+  },
+  {
     id: 'settings-menu',
     page: 'contributors/settings',
     url: '/dashboard?tab=discover',
