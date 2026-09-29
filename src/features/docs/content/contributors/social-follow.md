@@ -11,7 +11,7 @@ Following Grainlify on LinkedIn and X is required to be eligible for the [Foundi
 3. **Take a screenshot of each.** It should show the Grainlify account and that your account follows it, such as a "Following" button while you're signed in.
 4. **Choose both screenshots.** Choose **Choose screenshot** on each row. Use a PNG, JPG, GIF or WEBP image under 5MB. The row then says **Screenshot ready**, and **Replace** swaps it.
 
-   ![The Social Follow card with a screenshot ready for both platforms](shot:social-follow-ready?desktop "Both screenshots ready")
+   ![The Social Follow card with a screenshot ready for both platforms](shot:social-follow-ready "Both screenshots ready")
 
 5. **Choose Submit both for review.** The button only works once both rows have a screenshot. You'll see **Both screenshots submitted for review.**
 

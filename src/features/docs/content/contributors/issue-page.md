@@ -18,7 +18,7 @@ Below that are two tabs: **Applications** and **Discussions**.
 
 **Applications** shows the apply box and everyone who has applied through Grainlify. The number beside the tab is how many applications there are.
 
-![The Applications tab, with the apply box above three applications](shot:issue-page-applications?desktop "Applications")
+![The Applications tab, with the apply box above three applications](shot:issue-page-applications "Applications")
 
 The apply box tells you whether you can apply:
 

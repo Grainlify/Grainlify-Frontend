@@ -69,9 +69,14 @@ export function calendar(seed, intensity = 1) {
   return { calendar: days, total }
 }
 
-/** A tiny PNG-free "screenshot" for proof uploads: an SVG data URL with a caption. */
+/**
+ * A tiny PNG-free "screenshot" for proof uploads: an SVG data URL with a caption.
+ * The admin review shows it with object-fit: cover in a fixed-height box, which
+ * crops the sides on a phone and the top and bottom on a computer, so what
+ * matters (name, handle, the Following button) sits in the middle.
+ */
 export function proofImage(title, handle) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#f6f1e8"/><rect x="0" y="0" width="640" height="56" fill="#2d2820"/><text x="24" y="36" font-family="Inter,Arial,sans-serif" font-size="20" fill="#f5efe5">${title}</text><circle cx="84" cy="140" r="44" fill="#c9983a"/><text x="150" y="130" font-family="Inter,Arial,sans-serif" font-size="24" font-weight="700" fill="#2d2820">Grainlify</text><text x="150" y="162" font-family="Inter,Arial,sans-serif" font-size="16" fill="#7a6b5a">Followed by @${handle}</text><rect x="480" y="116" width="120" height="40" rx="20" fill="#a67c2e"/><text x="540" y="142" font-family="Inter,Arial,sans-serif" font-size="16" fill="#fff" text-anchor="middle">Following</text><rect x="24" y="220" width="592" height="14" rx="7" fill="#e3d8c6"/><rect x="24" y="250" width="420" height="14" rx="7" fill="#e3d8c6"/><rect x="24" y="280" width="510" height="14" rx="7" fill="#e3d8c6"/></svg>`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#f6f1e8"/><rect x="0" y="0" width="640" height="56" fill="#2d2820"/><text x="112" y="36" font-family="Inter,Arial,sans-serif" font-size="20" fill="#f5efe5">${title}</text><circle cx="148" cy="140" r="36" fill="#c9983a"/><text x="198" y="132" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="700" fill="#2d2820">Grainlify</text><text x="198" y="160" font-family="Inter,Arial,sans-serif" font-size="15" fill="#7a6b5a">Followed by @${handle}</text><rect x="112" y="196" width="112" height="36" rx="18" fill="#a67c2e"/><text x="168" y="219" font-family="Inter,Arial,sans-serif" font-size="15" fill="#fff" text-anchor="middle">Following</text><rect x="112" y="252" width="416" height="12" rx="6" fill="#e3d8c6"/><rect x="112" y="276" width="300" height="12" rx="6" fill="#e3d8c6"/></svg>`
   return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64')
 }
 

@@ -174,8 +174,6 @@ const rankShots = [
     id: 'profile-rank-card',
     page: 'contributors/ranks-and-leaderboard',
     url: '/dashboard?tab=profile',
-    // The profile header does not fit a phone: the rank card is pushed off screen.
-    widths: [1440],
     ...mira(),
     ready: (page) => page.getByTestId('rank-position'),
     frame: (page) => frameAround(page, page.getByTestId('rank-badge-card'), { padX: 16, padY: 16 }),
@@ -244,8 +242,6 @@ const rewardsShots = [
     id: 'social-follow-ready',
     page: 'contributors/social-follow',
     url: REWARDS,
-    // On a phone the Replace button covers "Screenshot ready".
-    widths: [1440],
     ...mira({ follow: 'none' }),
     steps: async (page) => {
       await page.getByLabel('LinkedIn screenshot').waitFor({ state: 'attached' })
@@ -298,8 +294,6 @@ const profileShots = [
     id: 'profile-header',
     page: 'contributors/profile',
     url: '/dashboard?tab=profile',
-    // On a phone the header overflows its card (picture, counts and rank card cut off).
-    widths: [1440],
     ...mira(),
     steps: async (page) => {
       await page.getByTestId('rank-position').waitFor()
@@ -312,8 +306,6 @@ const profileShots = [
     id: 'profile-activity',
     page: 'contributors/profile',
     url: '/dashboard?tab=profile',
-    // On a phone the calendar collapses and activity titles overlap their dates.
-    widths: [1440],
     ...mira(),
     steps: async (page) => {
       await page.getByText('contributions last year').waitFor()
@@ -331,8 +323,6 @@ const profileShots = [
     id: 'settings-profile-github',
     page: 'contributors/edit-profile',
     url: '/dashboard?tab=settings&subtab=profile',
-    // On a phone the Resync and Edit buttons overflow the card.
-    widths: [1440],
     ...mira(),
     ready: (page) => page.getByRole('button', { name: /Resync/ }),
     frame: (page) =>
@@ -385,8 +375,6 @@ const accountShots = [
     id: 'settings-notifications',
     page: 'contributors/notifications',
     url: '/dashboard?tab=settings&subtab=notifications',
-    // On a phone the rows overflow the card and the Email switches are cut off.
-    widths: [1440],
     ...mira(),
     ready: (page) => page.getByRole('heading', { name: 'Contributor', exact: true }),
     frame: (page) =>

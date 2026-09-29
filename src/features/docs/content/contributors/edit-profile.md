@@ -11,7 +11,7 @@ The **GitHub account** card shows your GitHub username and email address. Grainl
 1. **Choose Edit.** It opens your profile settings on GitHub in a new tab. Make your change there.
 2. **Come back and choose Resync.** Grainlify fetches your username and picture from GitHub again. You'll see **GitHub profile synced successfully!**
 
-   ![The GitHub account card with the Resync and Edit buttons, and the Profile Picture card](shot:settings-profile-github?desktop "GitHub account and profile picture")
+   ![The GitHub account card with the Resync and Edit buttons, and the Profile Picture card](shot:settings-profile-github "GitHub account and profile picture")
 
 ## Your profile picture
 

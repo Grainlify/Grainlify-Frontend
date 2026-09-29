@@ -21,11 +21,11 @@ When one isn't true, the issue page says which, in place of the **Apply for this
 1. **Open the issue.** Choose it on [Discover](/docs/contributors/discover), a [project page](/docs/contributors/project-page) or in [Search](/docs/contributors/search). It opens on the **Applications** tab.
 2. **Choose Apply for this issue.**
 
-   ![The apply box on an issue, with the Apply for this issue button](shot:apply-button?desktop "Apply for this issue")
+   ![The apply box on an issue, with the Apply for this issue button](shot:apply-button "Apply for this issue")
 
 3. **Write your message.** The dialog shows how your GitHub comment will begin. Say how you'd approach the issue, or point to similar work you've done. "I'll take this" gives the maintainer nothing to compare.
 
-   ![The Apply for this issue dialog with a message typed in](shot:apply-dialog?desktop "Write your message")
+   ![The Apply for this issue dialog with a message typed in](shot:apply-dialog "Write your message")
 
 4. **Choose Submit application.** You can't choose it until you've written something.
 5. **Check it's there.** The dialog closes and your application appears in the list on the **Applications** tab.

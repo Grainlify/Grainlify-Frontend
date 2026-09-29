@@ -14,12 +14,12 @@ You apply for a GrainHack issue from the panel on the issue itself. Applying is 
    - **Newcomers only**, if the issue is reserved for contributors who haven't completed a GrainHack issue yet.
    - **Acceptance criteria**: what the work must do to be accepted. Your pull request is graded against these.
 
-   ![The GrainHack panel on an issue, with the window, acceptance criteria and the Apply for this issue button](shot:grainhack-apply-panel?desktop "The GrainHack panel")
+   ![The GrainHack panel on an issue, with the window, acceptance criteria and the Apply for this issue button](shot:grainhack-apply-panel "The GrainHack panel")
 
 3. **Add a note if you like.** **Anything you want to add (optional)** is for the maintainer. The draw doesn't weight it.
 4. **Choose Apply for this issue.** The panel changes to "You've applied. The draw runs when the window closes."
 
-   ![The panel after applying](shot:grainhack-apply-done?desktop "Applied")
+   ![The panel after applying](shot:grainhack-apply-done "Applied")
 
 If a check stops you, the panel says **You can't be assigned this issue** and gives the reason. [Who can take part](/docs/contributors/grainhack-eligibility) lists them all.
 

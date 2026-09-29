@@ -248,8 +248,6 @@ export const SHOTS = [
   // admins/social-follow-review
   {
     id: 'admin-follow-queue',
-    // Desktop only: The rows overflow at phone width (the status badge is cut off).
-    widths: [1440],
     page: 'admins/social-follow-review',
     url: REVIEWS,
     ...ADMIN,
@@ -264,8 +262,6 @@ export const SHOTS = [
   },
   {
     id: 'admin-follow-proofs',
-    // Desktop only: The row overflows at phone width.
-    widths: [1440],
     page: 'admins/social-follow-review',
     url: REVIEWS,
     ...ADMIN,
@@ -314,8 +310,6 @@ export const SHOTS = [
   // admins/ecosystems
   {
     id: 'admin-ecosystems-grid',
-    // Desktop only: At phone width the Add New Ecosystem button overflows the card.
-    widths: [1440],
     page: 'admins/ecosystems',
     url: REVIEWS,
     ...ADMIN,
@@ -376,7 +370,8 @@ export const SHOTS = [
   // admins/bounty-draw
   {
     id: 'admin-bountydraw-result',
-    // Desktop only: The result table does not fit a phone screen.
+    // The result table scrolls sideways on a phone, so Share and the
+    // weights are off screen: desktop only.
     widths: [1440],
     page: 'admins/bounty-draw',
     url: REVIEWS,
@@ -422,8 +417,6 @@ export const SHOTS = [
   // admins/grainhack-events
   {
     id: 'admin-gh-list',
-    // Desktop only: At phone width the phase badges overlap the event names.
-    widths: [1440],
     page: 'admins/grainhack-events',
     url: HACKATHONS,
     ...ADMIN,
@@ -441,8 +434,6 @@ export const SHOTS = [
   },
   {
     id: 'admin-gh-overrides',
-    // Desktop only: At phone width each setting wraps one word per line.
-    widths: [1440],
     page: 'admins/grainhack-events',
     url: HACKATHONS,
     ...ADMIN,
@@ -461,7 +452,8 @@ export const SHOTS = [
   // admins/grainhack-applications
   {
     id: 'admin-gh-applications',
-    // Desktop only: The expanded application does not fit a phone screen.
+    // On a phone the application row squeezes its description to one
+    // word per line and the signal values run into their labels: desktop only.
     widths: [1440],
     page: 'admins/grainhack-applications',
     url: HACKATHONS,
@@ -496,7 +488,8 @@ export const SHOTS = [
   // admins/grainhack-draws
   {
     id: 'admin-gh-draws-list',
-    // Desktop only: The draw rows are built for a computer screen.
+    // On a phone a row with a badge squeezes its summary to one word
+    // per line: desktop only.
     widths: [1440],
     page: 'admins/grainhack-draws',
     url: HACKATHONS,
@@ -513,7 +506,8 @@ export const SHOTS = [
   },
   {
     id: 'admin-gh-draw-breakdown',
-    // Desktop only: The ticket table scrolls sideways on a phone.
+    // The ticket table scrolls sideways on a phone, so Tickets and Odds
+    // are off screen: desktop only.
     widths: [1440],
     page: 'admins/grainhack-draws',
     url: HACKATHONS,
@@ -529,7 +523,8 @@ export const SHOTS = [
   },
   {
     id: 'admin-gh-simulation',
-    // Desktop only: The ticket table scrolls sideways on a phone.
+    // The ticket table scrolls sideways on a phone, so Tickets and Odds
+    // are off screen: desktop only.
     widths: [1440],
     page: 'admins/grainhack-draws',
     url: HACKATHONS,
@@ -620,8 +615,6 @@ export const SHOTS = [
   // admins/audit-log
   {
     id: 'admin-gh-global-audit',
-    // Desktop only: The tab bar is cut off at phone width.
-    widths: [1440],
     page: 'admins/audit-log',
     url: '/dashboard?tab=grainhack&view=admin&subtab=global-audit',
     ...ADMIN,
@@ -648,8 +641,6 @@ export const SHOTS = [
   // admins/redemptions
   {
     id: 'admin-redemptions-queue',
-    // Desktop only: At phone width each request wraps one word per line.
-    widths: [1440],
     page: 'admins/redemptions',
     url: REVIEWS,
     ...ADMIN,

@@ -45,7 +45,7 @@ The board opens on **This season**: merged in the last 90 days. **All time** cou
 
 The rank card on your profile shows your position and tier this season, and your all-time tier and position on the line beneath. If your merges are all older than 90 days, it says **Unranked** this season and still shows where you stand all time.
 
-![The rank card on a profile, with the all-time line](shot:profile-rank-card?desktop "Your rank card")
+![The rank card on a profile, with the all-time line](shot:profile-rank-card "Your rank card")
 
 ## Contributors and Projects
 

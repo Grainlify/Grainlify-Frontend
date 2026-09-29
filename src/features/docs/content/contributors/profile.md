@@ -11,7 +11,7 @@ Your profile page is your public record on Grainlify. Anyone signed in to Grainl
 
 ## What other people see
 
-![The top of a profile: picture, username, bio, contact icons, counts and the rank card](shot:profile-header?desktop "The profile header")
+![The top of a profile: picture, username, bio, contact icons, counts and the rank card](shot:profile-header "The profile header")
 
 **At the top**
 
@@ -30,7 +30,7 @@ Your profile page is your public record on Grainlify. Anyone signed in to Grainl
 - A calendar of your contributions over the last year, headed with how many there were.
 - **Contributions Activity**: your issues and pull requests grouped by month, with a search box.
 
-![The contribution calendar and the Contributions Activity list](shot:profile-activity?desktop "Your contribution history")
+![The contribution calendar and the Contributions Activity list](shot:profile-activity "Your contribution history")
 
 The counts, the calendar and the activity list come from your work on projects listed on Grainlify, read from GitHub, so there's nothing to report by hand.
 

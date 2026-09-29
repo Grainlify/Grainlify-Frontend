@@ -120,9 +120,8 @@ const C = world('contributor')
 const contributor = { persona: C.persona, api: C.api, agent: C.agent, init: C.init }
 const withApi = (extra) => ({ ...contributor, api: { ...C.api, ...extra } })
 
-// DESKTOP_ONLY_ISSUE_PAGE: below the lg breakpoint the issue page keeps its
-// 450px issue list and squeezes the issue itself to nothing, so no phone
-// screenshot of it can show what the docs describe. Those shots are desktop only.
+// On a phone the issue page shows the chosen issue full width and hides the
+// issue list, so its shots crop to the issue panel at both widths.
 const ISSUE = (pid, n) => `/dashboard?issue=${issueId(pid, n)}&iproject=${pid}`
 // Issues used below.
 const OWN_APPLICATION = ISSUE('p-tide', 57) // mira-dev has applied; noor-writes and felix-quay too
@@ -383,9 +382,6 @@ export const SHOTS = [
   // Project page ------------------------------------------------------------------------------
   {
     id: 'project-header',
-    // Below the lg breakpoint the project page shows only its side column;
-    // the header and Issues sit off-screen to the right.
-    widths: [1440],
     page: 'contributors/project-page',
     url: '/dashboard?tab=browse',
     ...contributor,
@@ -398,9 +394,6 @@ export const SHOTS = [
   },
   {
     id: 'project-issues',
-    // Below the lg breakpoint the project page shows only its side column;
-    // the header and Issues sit off-screen to the right.
-    widths: [1440],
     page: 'contributors/project-page',
     url: '/dashboard?tab=browse',
     ...contributor,
@@ -427,6 +420,8 @@ export const SHOTS = [
     page: 'contributors/issue-page',
     url: OWN_APPLICATION,
     ...withApi(tideIssuesWithThirdApplicant),
+    // Shows the list beside the issue, a layout only a computer has: on a
+    // phone the list is hidden while an issue is open.
     widths: [1440],
     steps: (page) => waitStable(page),
     ready: (page) => page.getByRole('heading', { level: 1, name: 'Typed errors for RPC timeouts' }),
@@ -434,7 +429,6 @@ export const SHOTS = [
   },
   {
     id: 'issue-page-applications',
-    widths: [1440], // the issue page has no phone layout (see DESKTOP_ONLY_ISSUE_PAGE)
     page: 'contributors/issue-page',
     url: THREE_APPLICANTS,
     ...contributor,
@@ -443,11 +437,15 @@ export const SHOTS = [
       await growIssuePanelTo(page, applicationCard(page, 'tomas-rivet'))
     },
     ready: (page) => page.getByRole('button', { name: 'Apply for this issue' }),
-    frame: region((page) => issuePanel(page), { pad: 16 }),
+    // On a phone the Back button sits 18px above the panel: keep it out.
+    frame: (page, width) => region((page) => issuePanel(page), { pad: width === 390 ? 12 : 16 })(page, width),
   },
   {
     id: 'issue-page-discussions',
-    widths: [1440], // the issue page has no phone layout (see DESKTOP_ONLY_ISSUE_PAGE)
+    // On a phone the review link in the application comment is one long
+    // unbroken URL that runs out of its card (the comment body does not wrap
+    // long words), so this shot stays desktop only.
+    widths: [1440],
     page: 'contributors/issue-page',
     url: THREE_APPLICANTS,
     ...contributor,
@@ -470,7 +468,6 @@ export const SHOTS = [
   // Applying ------------------------------------------------------------------------------------
   {
     id: 'apply-button',
-    widths: [1440], // the issue page has no phone layout (see DESKTOP_ONLY_ISSUE_PAGE)
     page: 'contributors/applying-to-issues',
     url: TO_APPLY,
     ...contributor,
@@ -480,7 +477,6 @@ export const SHOTS = [
   },
   {
     id: 'apply-dialog',
-    widths: [1440], // the issue page has no phone layout (see DESKTOP_ONLY_ISSUE_PAGE)
     page: 'contributors/applying-to-issues',
     url: TO_APPLY,
     ...contributor,
@@ -491,11 +487,14 @@ export const SHOTS = [
       await box.fill("I'd start by reproducing this with a failing test, then fix the parser. I fixed a similar bug in my own CLI last month.")
     },
     ready: (page) => page.getByRole('button', { name: 'Submit application' }),
-    frame: region((page) => applyDialog(page), { pad: 16 }),
+    // The dialog sits over the icon rail on a phone, so the frame may too.
+    frame: region((page) => applyDialog(page), { pad: 16, rail: true }),
   },
   {
     id: 'apply-submitted',
-    widths: [1440], // the issue page has no phone layout (see DESKTOP_ONLY_ISSUE_PAGE)
+    // On a phone the expanded application's CONTRIBUTIONS label runs past the
+    // edge of its box, so this shot stays desktop only.
+    widths: [1440],
     page: 'contributors/applying-to-issues',
     url: OWN_APPLICATION,
     ...withApi(tideIssuesWithThirdApplicant),
