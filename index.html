@@ -19,6 +19,19 @@
       <link rel="preconnect" href="%VITE_API_BASE_URL%" crossorigin />
       <link rel="preconnect" href="https://github.com" />
       <link rel="preconnect" href="https://images.unsplash.com" />
+      <!-- Inter, requested here rather than @import-ed from src/styles/fonts.css.
+           An @import is inlined into the built stylesheet, so the request could
+           not be discovered until 336 kB of CSS had downloaded and parsed -
+           about 1.1 seconds in series on every page. Both preconnects are
+           needed: googleapis serves the CSS, gstatic serves the font files,
+           and the second is crossorigin because fonts are fetched in CORS
+           mode. -->
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      />
       <title>Grainlify</title>
     </head>
 
