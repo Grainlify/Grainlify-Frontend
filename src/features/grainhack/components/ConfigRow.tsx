@@ -26,7 +26,7 @@ export function ConfigRow({ setting, value, onChange, onReset, showBorder = true
 
   return (
     <div
-      className={`grid grid-cols-[1fr_220px] gap-4 py-4 items-start ${
+      className={`grid grid-cols-[1fr_220px] gap-4 py-4 items-start max-sm:grid-cols-1 max-sm:gap-3 ${
         showBorder ? 'border-b border-white/10' : ''
       } ${setting.active ? '' : 'opacity-60'}`}
     >
@@ -35,7 +35,7 @@ export function ConfigRow({ setting, value, onChange, onReset, showBorder = true
           <span className={`text-[14px] font-semibold transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>
             {humanizeKey(setting.key)}
           </span>
-          <code className={`text-[11px] px-1.5 py-0.5 rounded-[4px] ${isDark ? 'bg-white/[0.08] text-[#b8a898]' : 'bg-black/[0.05] text-[#7a6b5a]'}`}>
+          <code className={`text-[11px] px-1.5 py-0.5 rounded-[4px] max-sm:[overflow-wrap:anywhere] ${isDark ? 'bg-white/[0.08] text-[#b8a898]' : 'bg-black/[0.05] text-[#7a6b5a]'}`}>
             {setting.key}
           </code>
           {!setting.active && (
@@ -63,7 +63,7 @@ export function ConfigRow({ setting, value, onChange, onReset, showBorder = true
         )}
       </div>
 
-      <div className="flex items-center gap-2 justify-end">
+      <div className="flex items-center gap-2 justify-end max-sm:justify-start">
         {setting.type === 'bool' ? (
           <select
             value={value}

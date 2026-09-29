@@ -108,7 +108,7 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
       {loadError != null && <LoadFailed what="the latest state of this hackathon" error={loadError} onRetry={load} />}
 
       <div
-        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 transition-colors ${
+        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 max-sm:p-4 transition-colors ${
           isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
         }`}
       >
@@ -161,7 +161,7 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
       <ApplicationsReview hackathonId={hackathonId} />
 
       <div
-        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 transition-colors ${
+        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 max-sm:p-4 transition-colors ${
           isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
         }`}
       >
@@ -170,7 +170,7 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
       </div>
 
       <div
-        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 transition-colors ${
+        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 max-sm:p-4 transition-colors ${
           isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
         }`}
       >
@@ -179,7 +179,7 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
       </div>
 
       <div
-        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 transition-colors ${
+        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 max-sm:p-4 transition-colors ${
           isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
         }`}
       >
@@ -190,7 +190,7 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
       <KeeperHubPayoutPanel hackathonId={hackathonId} />
 
       <div
-        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 transition-colors ${
+        className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 max-sm:p-4 transition-colors ${
           isDark ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
         }`}
       >

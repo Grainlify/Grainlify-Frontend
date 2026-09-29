@@ -223,7 +223,9 @@ export function BountyDrawControls() {
               {result.staleAt && <span className={`font-normal ${muted}`}> — pull request due by {new Date(result.staleAt).toLocaleString()}</span>}
             </p>
           )}
-          <table className="w-full text-[12.5px]">
+          {/* Scrolls sideways on a phone rather than squashing the columns. */}
+          <div className="overflow-x-auto">
+          <table className="w-full text-[12.5px] max-sm:whitespace-nowrap max-sm:[&_th]:pr-3 max-sm:[&_td]:pr-3">
             <thead>
               <tr className={muted}>
                 <th className="text-left font-semibold py-1">Applicant</th>
@@ -247,6 +249,7 @@ export function BountyDrawControls() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

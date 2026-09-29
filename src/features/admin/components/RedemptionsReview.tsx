@@ -71,7 +71,7 @@ export function RedemptionsReview() {
   };
 
   return (
-    <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 transition-colors ${
+    <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${
       theme === 'dark' ? 'bg-white/[0.08] border-white/10' : 'bg-white/[0.15] border-white/20'
     }`}>
       <div className="mb-6">
@@ -92,7 +92,7 @@ export function RedemptionsReview() {
           {redemptions.map((r) => (
             <div
               key={r.id}
-              className={`flex items-center gap-4 p-4 rounded-[16px] border ${
+              className={`flex items-center gap-4 p-4 rounded-[16px] border max-sm:flex-col max-sm:items-stretch max-sm:gap-3 ${
                 theme === 'dark' ? 'bg-white/[0.06] border-white/10' : 'bg-white/[0.12] border-white/20'
               }`}
             >
@@ -110,7 +110,7 @@ export function RedemptionsReview() {
                   <Copy className="w-3 h-3 shrink-0" /> {r.stellar_wallet_address}
                 </button>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 max-sm:justify-end">
                 <button
                   onClick={() => handleMarkPaid(r)}
                   disabled={actioningId === r.id}

@@ -420,7 +420,7 @@ export function SocialFollowReview() {
                   `revoked` shares the red branch with `rejected`, so it is
                   covered by the same values rather than falling through to
                   something unmeasured. */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 max-sm:shrink max-sm:min-w-0 max-sm:flex-wrap">
               {s.status === 'pending' && (
                 <>
                   <button
