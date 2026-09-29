@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, AlertTriangle, FlaskConical } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import {
+  ApiError,
   getBountyRepos,
   setBountyRepo,
   type AgentRepoState,
@@ -23,6 +24,35 @@ import {
  * interesting case legible: a project that has lost its verification while its
  * bounties are still switched on.
  */
+/** A refusal code is not a sentence.
+ *
+ *  This screen printed whatever the API put in `error` straight onto the page,
+ *  so an admin looking for their projects was shown the word "lookup_failed"
+ *  and nothing else - no indication of what had failed, whether it was their
+ *  doing, or what to try. The code stays in the network tab where it is useful;
+ *  the page gets words.
+ */
+function plainly(e: unknown): string {
+  const code = e instanceof ApiError ? String(e.data?.error ?? e.message) : e instanceof Error ? e.message : String(e);
+  switch (code) {
+    case 'lookup_failed':
+      return 'Could not read the list of projects. This is a fault on our side, not something you did — the list below may be incomplete or empty until it is fixed.';
+    case 'agent_unreachable':
+      return 'The bounty agent did not answer, so what is currently switched on is unknown. Nothing has been changed.';
+    case 'agent_refused':
+      return 'The bounty agent refused the request. Nothing has been changed.';
+    case 'bounty_draw_unconfigured':
+      return 'This deployment has no signing key for the bounty agent, so admin actions cannot be sent to it.';
+    case 'not_a_registered_project':
+      return 'That repository is not a verified Grainlify project with our GitHub App installed, so bounties cannot be switched on for it.';
+    case 'forbidden':
+    case 'unauthorized':
+      return 'You are not signed in as an admin.';
+    default:
+      return `Something went wrong (${code}).`;
+  }
+}
+
 export function BountyRepos() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -39,7 +69,7 @@ export function BountyRepos() {
       setProjects(r?.projects ?? []);
       setAgent(r?.agent ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(plainly(e));
     } finally {
       setLoading(false);
     }
@@ -55,7 +85,7 @@ export function BountyRepos() {
       const r = await setBountyRepo(fullName, enabled);
       setAgent(r?.repos ?? agent);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(plainly(e));
     } finally {
       setSaving(null);
     }

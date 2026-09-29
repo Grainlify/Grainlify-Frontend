@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { BountyRepos } from './BountyRepos'
-import { getBountyRepos, setBountyRepo, type AgentRepoState, type BountyRepoProject } from '../../../shared/api/client'
+import { ApiError, getBountyRepos, setBountyRepo, type AgentRepoState, type BountyRepoProject } from '../../../shared/api/client'
 
 vi.mock('../../../shared/api/client', async (orig) => {
   const real = await orig<typeof import('../../../shared/api/client')>()
@@ -86,5 +86,44 @@ describe('choosing which repositories may have bounties', () => {
     vi.mocked(getBountyRepos).mockResolvedValue({ projects: [project()], agent: [agentState()] })
     renderWithProviders(<BountyRepos />)
     expect(await screen.findByText(/does not trust this screen/i)).toBeInTheDocument()
+  })
+})
+
+describe('BountyRepos: refusals are shown in words', () => {
+  // The screen printed whatever the API put in `error` straight onto the page.
+  // In production that meant an admin opening Bounty Repositories was shown
+  // the word "lookup_failed" above an empty list, with nothing to say what had
+  // failed or whether it was their doing.
+  it('does not print the raw refusal code as the whole message', async () => {
+    vi.mocked(getBountyRepos).mockRejectedValue(new ApiError('lookup_failed', 500, { error: 'lookup_failed' }))
+    renderWithProviders(<BountyRepos />)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).not.toHaveTextContent(/^lookup_failed$/)
+    expect(alert).toHaveTextContent(/could not read the list of projects/i)
+    // And it says whose fault it is, because an admin's first question is
+    // whether they broke something.
+    expect(alert).toHaveTextContent(/not something you did/i)
+  })
+
+  it('says nothing was changed when the agent cannot be reached', async () => {
+    vi.mocked(getBountyRepos).mockRejectedValue(
+      new ApiError('agent_unreachable', 502, { error: 'agent_unreachable' }),
+    )
+    renderWithProviders(<BountyRepos />)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/did not answer/i)
+    expect(alert).toHaveTextContent(/nothing has been changed/i)
+  })
+
+  it('still names an unrecognised code rather than swallowing it', async () => {
+    vi.mocked(getBountyRepos).mockRejectedValue(new ApiError('some_new_code', 500, { error: 'some_new_code' }))
+    renderWithProviders(<BountyRepos />)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/something went wrong/i)
+    // The code stays visible: an unmapped refusal is still diagnosable.
+    expect(alert).toHaveTextContent(/some_new_code/)
   })
 })
