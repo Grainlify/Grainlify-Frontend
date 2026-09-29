@@ -23,12 +23,17 @@ const agentState = (o: Partial<AgentRepoState> = {}): AgentRepoState => ({
 beforeEach(() => vi.resetAllMocks())
 
 describe('choosing which repositories may have bounties', () => {
-  it('switches bounties on for a verified project', async () => {
+  it('adds a verified project once it is searched for', async () => {
     vi.mocked(getBountyRepos).mockResolvedValue({ projects: [project()], agent: [agentState()] })
     vi.mocked(setBountyRepo).mockResolvedValue({ ok: true, repos: [agentState({ bountiesEnabled: true })] })
     renderWithProviders(<BountyRepos />)
 
-    await userEvent.click(await screen.findByRole('button', { name: /enable bounties for Grainlify\/Grainlify-Backend/i }))
+    // Nothing is offered until something is typed: there are hundreds.
+    await screen.findByLabelText(/add a repository/i)
+    expect(screen.queryByRole('button', { name: /add bounties for/i })).not.toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText(/add a repository/i), 'backend')
+    await userEvent.click(await screen.findByRole('button', { name: /add bounties for Grainlify\/Grainlify-Backend/i }))
     expect(vi.mocked(setBountyRepo)).toHaveBeenCalledWith('Grainlify/Grainlify-Backend', true)
   })
 
@@ -40,8 +45,9 @@ describe('choosing which repositories may have bounties', () => {
       agent: [agentState({ fullName: 'Someone/unverified', registeredProject: false })],
     })
     renderWithProviders(<BountyRepos />)
+    await userEvent.type(await screen.findByLabelText(/add a repository/i), 'unverified')
     expect(await screen.findByText(/not a verified project with the app installed/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /enable bounties for Someone\/unverified/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /add bounties for Someone\/unverified/i })).toBeDisabled()
   })
 
   // The state worth noticing, and the one neither side can see alone.
@@ -51,9 +57,10 @@ describe('choosing which repositories may have bounties', () => {
       agent: [agentState({ bountiesEnabled: true, registeredProject: false })],
     })
     renderWithProviders(<BountyRepos />)
+    // It is switched on, so it is in the "Bounties on" list without searching.
     expect(await screen.findByText(/bounties are on, but this repository is not eligible/i)).toBeInTheDocument()
-    // Still switch-off-able: that is the fix.
-    expect(screen.getByRole('button', { name: /disable bounties for/i })).toBeEnabled()
+    // Still removable: that is the fix.
+    expect(screen.getByRole('button', { name: /remove bounties for/i })).toBeEnabled()
   })
 
   it('shows who last changed a repository', async () => {
@@ -125,5 +132,62 @@ describe('BountyRepos: refusals are shown in words', () => {
     expect(alert).toHaveTextContent(/something went wrong/i)
     // The code stays visible: an unmapped refusal is still diagnosable.
     expect(alert).toHaveTextContent(/some_new_code/)
+  })
+})
+
+describe('BountyRepos: search rather than a wall of rows', () => {
+  // 486 projects are eligible. Rendering all of them made the screen a thing
+  // to scroll past rather than a thing to use, and buried the handful that
+  // actually have bounties switched on.
+  const many = (n: number): BountyRepoProject[] =>
+    Array.from({ length: n }, (_, i) => project({ project_id: `p${i}`, full_name: `owner${i}/repo${i}` }))
+  const manyAgent = (n: number): AgentRepoState[] =>
+    Array.from({ length: n }, (_, i) => agentState({ fullName: `owner${i}/repo${i}` }))
+
+  it('lists none of the eligible repositories until something is typed', async () => {
+    vi.mocked(getBountyRepos).mockResolvedValue({ projects: many(40), agent: manyAgent(40) })
+    renderWithProviders(<BountyRepos />)
+
+    expect(await screen.findByText(/40 repositories are eligible/i)).toBeInTheDocument()
+    expect(screen.queryByText('owner7/repo7')).not.toBeInTheDocument()
+    expect(screen.queryAllByRole('button', { name: /add bounties for/i })).toHaveLength(0)
+  })
+
+  it('always shows what is switched on, without searching for it', async () => {
+    vi.mocked(getBountyRepos).mockResolvedValue({
+      projects: [...many(30), project({ project_id: 'live', full_name: 'Grainlify/live-one' })],
+      agent: [...manyAgent(30), agentState({ fullName: 'Grainlify/live-one', bountiesEnabled: true })],
+    })
+    renderWithProviders(<BountyRepos />)
+
+    expect(await screen.findByText('Grainlify/live-one')).toBeInTheDocument()
+    expect(screen.getByText(/bounties on \(1\)/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /remove bounties for Grainlify\/live-one/i })).toBeInTheDocument()
+    // And it is not offered again in the search results.
+    expect(screen.queryByRole('button', { name: /add bounties for Grainlify\/live-one/i })).not.toBeInTheDocument()
+  })
+
+  it('caps how many matches it shows and says how many it held back', async () => {
+    vi.mocked(getBountyRepos).mockResolvedValue({ projects: many(40), agent: manyAgent(40) })
+    renderWithProviders(<BountyRepos />)
+
+    await userEvent.type(await screen.findByLabelText(/add a repository/i), 'repo')
+    expect(screen.getAllByRole('button', { name: /add bounties for/i })).toHaveLength(8)
+    expect(screen.getByText(/32 more match/i)).toBeInTheDocument()
+  })
+
+  it('says plainly when nothing matches, and why a repository might be absent', async () => {
+    vi.mocked(getBountyRepos).mockResolvedValue({ projects: many(5), agent: manyAgent(5) })
+    renderWithProviders(<BountyRepos />)
+
+    await userEvent.type(await screen.findByLabelText(/add a repository/i), 'nothing-like-this')
+    expect(screen.getByText(/nothing matches/i)).toBeInTheDocument()
+    expect(screen.getByText(/once Grainlify has verified the project/i)).toBeInTheDocument()
+  })
+
+  it('tells an admin with nothing switched on where to start', async () => {
+    vi.mocked(getBountyRepos).mockResolvedValue({ projects: many(3), agent: manyAgent(3) })
+    renderWithProviders(<BountyRepos />)
+    expect(await screen.findByText(/no repository has bounties switched on/i)).toBeInTheDocument()
   })
 })

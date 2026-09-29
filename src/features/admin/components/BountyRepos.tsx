@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, AlertTriangle, FlaskConical } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, FlaskConical, Search } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import {
   ApiError,
@@ -53,6 +53,16 @@ function plainly(e: unknown): string {
   }
 }
 
+/** A repository this screen can offer, whether or not the agent knows it yet. */
+interface Candidate {
+  fullName: string;
+  registered: boolean;
+  state: AgentRepoState | undefined;
+}
+
+/** Enough matches to choose from, few enough to read without scrolling. */
+const MAX_MATCHES = 8;
+
 export function BountyRepos() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -61,6 +71,7 @@ export function BountyRepos() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
 
   const load = async () => {
     setError(null);
@@ -97,9 +108,31 @@ export function BountyRepos() {
   const btn = 'inline-flex items-center justify-center min-h-[40px] px-4 rounded-[10px] text-[13px] font-semibold border transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0';
 
   const stateFor = (fullName: string) => agent?.find((a) => a.fullName.toLowerCase() === fullName.toLowerCase());
-  // Repos the agent knows about that are not Grainlify projects. The sandbox
-  // lives here, and so would anything switched on before it was verified.
-  const extras = (agent ?? []).filter((a) => !(projects ?? []).some((p) => p.full_name.toLowerCase() === a.fullName.toLowerCase()));
+
+  // Every repository this screen can talk about: Grainlify's projects, plus
+  // anything the agent already knows that is not one (the sandbox lives here,
+  // and so would anything switched on before it was verified).
+  const candidates: Candidate[] = [
+    ...(projects ?? []).map((p) => ({ fullName: p.full_name, registered: p.registered_project, state: stateFor(p.full_name) })),
+    ...(agent ?? [])
+      .filter((a) => !(projects ?? []).some((p) => p.full_name.toLowerCase() === a.fullName.toLowerCase()))
+      .map((a) => ({ fullName: a.fullName, registered: a.registeredProject, state: a })),
+  ];
+
+  // What is switched on is the list worth always showing; everything else is
+  // found by searching. There are hundreds of the latter.
+  const on = candidates
+    .filter((c) => c.state?.bountiesEnabled === true)
+    .sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+  const needle = query.trim().toLowerCase();
+  const allMatches = needle
+    ? candidates
+        .filter((c) => c.state?.bountiesEnabled !== true && c.fullName.toLowerCase().includes(needle))
+        .sort((a, b) => a.fullName.localeCompare(b.fullName))
+    : [];
+  const matches = allMatches.slice(0, MAX_MATCHES);
+  const hiddenMatchCount = allMatches.length - matches.length;
 
   if (loading) {
     return (
@@ -135,7 +168,6 @@ export function BountyRepos() {
                 <AlertTriangle className="w-3 h-3" /> not a verified project with the App installed
               </span>
             )}
-            {s?.allowlisted === false && <span>· not allowlisted with the agent</span>}
             {s?.lastChangedBy && (
               <span>
                 · last changed by {s.lastChangedBy}
@@ -150,18 +182,21 @@ export function BountyRepos() {
             </p>
           )}
         </div>
+        {/* Add and Remove, not a state label you have to interpret.
+            "Bounties off" read as a status, so the button that would turn them
+            ON was labelled with the thing it was not. */}
         <button
           type="button"
-          aria-label={`${on ? 'Disable' : 'Enable'} bounties for ${fullName}`}
+          aria-label={`${on ? 'Remove' : 'Add'} bounties for ${fullName}`}
           disabled={saving === fullName || (!eligible && !on)}
           onClick={() => toggle(fullName, !on)}
           className={
             on
-              ? `${btn} bg-[var(--brand-success)]/25 border-[var(--brand-success)]/40 ${isDark ? 'text-[var(--brand-success-text)]' : 'text-[var(--brand-success-text-deep)]'}`
-              : `${btn} ${isDark ? 'border-white/15 bg-white/[0.06] text-[#d4d4d4]' : 'border-black/15 bg-white/[0.20] text-[#2d2820]'}`
+              ? `${btn} ${isDark ? 'border-white/15 bg-white/[0.06] text-[#d4d4d4]' : 'border-black/15 bg-white/[0.20] text-[#2d2820]'}`
+              : `${btn} bg-[var(--brand-success)]/25 border-[var(--brand-success)]/40 ${isDark ? 'text-[var(--brand-success-text)]' : 'text-[var(--brand-success-text-deep)]'}`
           }
         >
-          {saving === fullName ? 'Saving…' : on ? 'Bounties on' : 'Bounties off'}
+          {saving === fullName ? 'Saving…' : on ? 'Remove' : 'Add'}
         </button>
       </div>
     );
@@ -181,23 +216,67 @@ export function BountyRepos() {
       )}
 
       <div className={box}>
-        <p className={`text-[12.5px] mb-2 ${muted}`}>
+        <p className={`text-[12.5px] mb-3 ${muted}`}>
           A repository needs both: Grainlify has verified the project and our GitHub App is installed, and an admin has switched bounties on.
           Turning one off is enough to stop new bounties and to make the payout gate refuse existing ones.
         </p>
-        {(projects ?? []).length === 0 ? (
-          <p className={`text-[13px] ${muted}`}>No projects yet.</p>
+
+        <p className={`text-[11px] font-bold uppercase tracking-wide mb-2 ${muted}`}>
+          Bounties on ({on.length})
+        </p>
+        {on.length === 0 ? (
+          <p className={`text-[13px] ${muted}`}>
+            No repository has bounties switched on. Search below to add one.
+          </p>
         ) : (
-          (projects ?? []).map((p) => row(p.full_name, p.registered_project, stateFor(p.full_name)))
+          on.map((r) => row(r.fullName, r.registered, r.state))
         )}
       </div>
 
-      {extras.length > 0 && (
-        <div className={box}>
-          <p className={`text-[11px] font-bold uppercase tracking-wide mb-2 ${muted}`}>Known to the agent, not a Grainlify project</p>
-          {extras.map((a) => row(a.fullName, a.registeredProject, a))}
+      <div className={box}>
+        <label htmlFor="bounty-repo-search" className={`block text-[11px] font-bold uppercase tracking-wide mb-2 ${muted}`}>
+          Add a repository
+        </label>
+        <div className="relative">
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${muted}`} />
+          <input
+            id="bounty-repo-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by owner or repository name"
+            autoComplete="off"
+            className={`w-full min-h-[40px] pl-9 pr-3 rounded-[10px] border text-[13.5px] outline-none transition-colors ${
+              isDark
+                ? 'bg-white/[0.06] border-white/15 text-[#f5f5f5] placeholder:text-[#8a7e70] focus:border-white/30'
+                : 'bg-white/[0.35] border-black/15 text-[#2d2820] placeholder:text-[#9a8b7a] focus:border-black/30'
+            }`}
+          />
         </div>
-      )}
+
+        {/* Nothing is listed until something is typed. There are hundreds of
+            projects; rendering them all was a wall an admin had to scroll
+            rather than a list they could use. */}
+        {query.trim() === '' ? (
+          <p className={`text-[12.5px] mt-3 ${muted}`}>
+            {candidates.length} repositories are eligible. Type to find one.
+          </p>
+        ) : matches.length === 0 ? (
+          <p className={`text-[12.5px] mt-3 ${muted}`}>
+            Nothing matches “{query.trim()}”. A repository appears here once Grainlify has verified the project and our GitHub App is
+            installed on it.
+          </p>
+        ) : (
+          <div className="mt-2">
+            {matches.map((r) => row(r.fullName, r.registered, r.state))}
+            {hiddenMatchCount > 0 && (
+              <p className={`text-[12px] pt-3 ${muted}`}>
+                {hiddenMatchCount} more match “{query.trim()}”. Narrow the search to see them.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       <p className={`text-[12px] ${muted}`}>
         The payout signer keeps its own short list of repositories as a coarse backstop. It is edited rarely and by hand, deliberately: the
