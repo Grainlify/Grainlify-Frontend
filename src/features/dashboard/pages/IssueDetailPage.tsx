@@ -118,8 +118,9 @@ export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeR
   return (
     // Same viewport budget as MaintainersPage (see its comment): 84px covers the
     // fixed header's pt-[68px] spacer plus <main>'s own my-2 margins, which is all
-    // that's reliably known at this nesting depth.
-    <div className="flex flex-col gap-4 h-[calc(100vh-84px)]">
+    // that's reliably known at this nesting depth. Below lg IssuesTab stacks
+    // the issue over its list, so the page takes its content's height instead.
+    <div className="flex flex-col gap-4 h-[calc(100vh-84px)] max-lg:h-auto">
       <div className="flex items-center gap-3 flex-shrink-0">
         <button
           onClick={onClose}
@@ -140,8 +141,8 @@ export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeR
 
       <div className="flex-1 min-h-0">
         {isLoading ? (
-          <div className="flex gap-6 h-full">
-            <div className="w-[450px] flex-shrink-0 flex flex-col h-full space-y-4">
+          <div className="flex gap-6 h-full max-lg:flex-col-reverse max-lg:h-auto">
+            <div className="w-[450px] flex-shrink-0 flex flex-col h-full space-y-4 max-lg:w-full max-lg:h-auto">
               <SkeletonLoader className="h-12 w-full rounded-[16px]" />
               <div className="space-y-3 flex-1 overflow-hidden">
                 {[...Array(6)].map((_, idx) => (
@@ -150,11 +151,11 @@ export function IssueDetailPage({ issueId, projectId, onClose, userRole, activeR
               </div>
             </div>
             <div
-              className={`flex-1 rounded-[24px] border overflow-hidden ${
+              className={`flex-1 rounded-[24px] border overflow-hidden max-lg:flex-none ${
                 isDark ? 'bg-[#2d2820]/[0.4] border-white/10' : 'bg-white/[0.12] border-white/20'
               }`}
             >
-              <div className="p-8 space-y-4">
+              <div className="p-8 space-y-4 max-sm:p-4">
                 <SkeletonLoader className="h-8 w-3/4 rounded-[10px]" />
                 <SkeletonLoader className="h-4 w-full rounded-[10px]" />
                 <SkeletonLoader className="h-4 w-full rounded-[10px]" />

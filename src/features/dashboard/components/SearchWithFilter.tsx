@@ -88,7 +88,7 @@ export function SearchWithFilter({
           />
 
           {/* Filter Panel */}
-          <div className={`fixed top-0 right-0 h-full w-[400px] border-l z-50 shadow-[0_0_40px_rgba(0,0,0,0.15)] p-6 flex flex-col animate-slide-in-right ${
+          <div className={`fixed top-0 right-0 h-full w-[400px] max-w-full border-l z-50 shadow-[0_0_40px_rgba(0,0,0,0.15)] p-6 flex flex-col animate-slide-in-right ${
             theme === 'dark'
               ? 'bg-[#2d2820]/95 border-white/30'
               : 'bg-[#e5ddd1]/95 border-white/30'

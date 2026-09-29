@@ -427,9 +427,11 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-120px)] max-h-[calc(100vh-120px)]">
+    // Below lg the two columns stack: the main column first (Back, header,
+    // issues), the side column after it, and the page scrolls as a whole.
+    <div className="flex gap-6 h-[calc(100vh-120px)] max-h-[calc(100vh-120px)] max-lg:flex-col max-lg:h-auto max-lg:max-h-none">
       {/* Left Sidebar */}
-      <div className="w-[280px] flex-shrink-0 overflow-y-auto overflow-x-hidden space-y-6 scrollbar-hide">
+      <div className="w-[280px] flex-shrink-0 overflow-y-auto overflow-x-hidden space-y-6 scrollbar-hide max-lg:order-last max-lg:w-full max-lg:overflow-visible">
         {/* Project Logo */}
         <div className={`backdrop-blur-[40px] rounded-[24px] border p-6 transition-colors ${
           theme === 'dark'
@@ -701,7 +703,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 space-y-6 overflow-y-auto scrollbar-hide">
+      <div className="flex-1 space-y-6 overflow-y-auto scrollbar-hide max-lg:overflow-visible max-lg:min-w-0">
         {/* Back Button */}
         {(onBack || onClose) && (
           <button
@@ -718,21 +720,21 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         )}
 
         {/* Header */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
         }`}>
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
+          <div className="flex items-start justify-between mb-4 max-sm:flex-col max-sm:gap-4">
+            <div className="flex-1 max-sm:w-full max-sm:min-w-0">
               {isLoading ? (
                 <>
-                  <SkeletonLoader className="h-9 w-64 mb-3" />
+                  <SkeletonLoader className="h-9 w-64 max-w-full mb-3" />
                   <SkeletonLoader className="h-5 w-full max-w-md" />
                 </>
               ) : (
                 <>
-                  <h1 className={`text-[32px] font-bold mb-2 transition-colors ${
+                  <h1 className={`text-[32px] font-bold mb-2 transition-colors max-sm:text-[24px] max-sm:[overflow-wrap:anywhere] ${
                     theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
                   }`}>{repoName}</h1>
                   <p className={`text-[15px] transition-colors ${
@@ -767,7 +769,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Overview */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.08] border-white/10'
             : 'bg-white/[0.12] border-white/20'
@@ -848,7 +850,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Issues */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
@@ -912,7 +914,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
                 {displayedIssues.map((issue) => (
               <div
                 key={issue.github_issue_id}
-                className={`p-6 rounded-[16px] backdrop-blur-[25px] border border-white/25 hover:bg-white/[0.15] transition-all cursor-pointer ${
+                className={`p-6 max-sm:p-4 rounded-[16px] backdrop-blur-[25px] border border-white/25 hover:bg-white/[0.15] transition-all cursor-pointer ${
                   theme === 'dark' ? 'bg-white/[0.08]' : 'bg-white/[0.08]'
                 }`}
                 onClick={() => {
@@ -921,7 +923,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
                 }}
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-3 flex-1">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
                     {/* Issue Icon - Same as maintainers */}
                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#c9983a]/50 to-[#d4af37]/40 flex items-center justify-center border border-[#c9983a]/40 flex-shrink-0 mt-0.5">
                       <Circle className="w-2.5 h-2.5 text-white fill-white" strokeWidth={0} />
@@ -931,8 +933,8 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
                     }`}>{issue.title}</h3>
                   </div>
                 </div>
-                <div className="flex items-center justify-between ml-8">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between ml-8 max-sm:flex-col max-sm:items-start max-sm:gap-3">
+                  <div className="flex items-center gap-2 max-sm:flex-wrap">
                     {(Array.isArray(issue.labels) ? issue.labels : [])
                       .map((l) => labelName(l))
                       .filter(Boolean)
@@ -948,7 +950,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
                       </span>
                     ))}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 max-sm:flex-wrap max-sm:gap-2">
                     <span className={`text-[12px] transition-colors ${
                       theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
                     }`}>{timeAgo(issue.updated_at || issue.last_seen_at)}</span>
@@ -1008,7 +1010,7 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
         </div>
 
         {/* Recent Activity */}
-        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 transition-colors ${
+        <div className={`backdrop-blur-[40px] rounded-[24px] border p-8 max-sm:p-4 transition-colors ${
           theme === 'dark'
             ? 'bg-white/[0.12] border-white/20'
             : 'bg-white/[0.12] border-white/20'
@@ -1090,11 +1092,11 @@ export function ProjectDetailPage({ onBack, onIssueClick, projectId: propProject
                     <div
                       key={idx}
                       onClick={handleClick}
-                      className={`flex items-center justify-between p-4 rounded-[12px] backdrop-blur-[20px] border border-white/20 hover:bg-white/[0.15] transition-all cursor-pointer ${
+                      className={`flex items-center justify-between p-4 rounded-[12px] backdrop-blur-[20px] border border-white/20 hover:bg-white/[0.15] transition-all cursor-pointer max-sm:flex-col max-sm:items-start max-sm:gap-2 ${
                         theme === 'dark' ? 'bg-white/[0.05]' : 'bg-white/[0.05]'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 max-sm:items-start max-sm:min-w-0">
                         {activity.type === 'issue' ? (
                           // Issue Icon
                           <div className={`w-5 h-5 rounded-full ${iconBgColor} flex items-center justify-center border ${badgeBorderColor} flex-shrink-0`}>

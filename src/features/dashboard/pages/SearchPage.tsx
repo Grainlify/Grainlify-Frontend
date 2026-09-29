@@ -159,8 +159,8 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
               : 'bg-white/60 border border-black/10'
           }`}
         >
-          <div className="absolute inset-0 flex items-center px-6">
-            <Search className={`w-5 h-5 mr-4 flex-shrink-0 transition-colors ${
+          <div className="absolute inset-0 flex items-center px-6 max-sm:px-4">
+            <Search className={`w-5 h-5 mr-4 max-sm:mr-3 flex-shrink-0 transition-colors ${
               darkTheme ? 'text-white/50' : 'text-black/50'
             }`} />
             <input
@@ -169,7 +169,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search issues, projects, contributors..."
               autoFocus
-              className={`flex-1 bg-transparent outline-none text-[16px] transition-colors ${
+              className={`flex-1 min-w-0 bg-transparent outline-none text-[16px] transition-colors ${
                 darkTheme
                   ? 'text-white placeholder:text-white/40'
                   : 'text-[#2d2820] placeholder:text-black/40'
@@ -183,7 +183,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className={`w-8 h-8 rounded-full flex items-center justify-center ml-4 flex-shrink-0 transition-all hover:scale-105 ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center ml-4 max-sm:ml-2 flex-shrink-0 transition-all hover:scale-105 ${
                   darkTheme
                     ? 'bg-white/10 hover:bg-white/20 text-white/60'
                     : 'bg-black/10 hover:bg-black/20 text-black/60'
@@ -193,7 +193,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
               </button>
             )}
             <button
-              className={`w-10 h-10 rounded-full flex items-center justify-center ml-3 flex-shrink-0 transition-all hover:scale-105 ${
+              className={`w-10 h-10 rounded-full flex items-center justify-center ml-3 max-sm:ml-2 flex-shrink-0 transition-all hover:scale-105 ${
                 darkTheme
                   ? 'bg-[#c9983a] hover:bg-[#d4a645]'
                   : 'bg-[#c9983a] hover:bg-[#e8c571]'
@@ -217,7 +217,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
                 <button
                   key={`${result.type}-${result.id}-${index}`}
                   onClick={() => handleResultClick(result)}
-                  className={`group w-full flex items-center gap-4 px-6 py-4 rounded-[16px] transition-all hover:scale-[1.01] ${
+                  className={`group w-full flex items-center gap-4 px-6 py-4 rounded-[16px] transition-all hover:scale-[1.01] max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-2 max-sm:px-4 ${
                     darkTheme
                       ? 'bg-[#2d2820]/40 hover:bg-[#2d2820]/60 border border-white/5 hover:border-white/10'
                       : 'bg-white/40 hover:bg-white/60 border border-black/5 hover:border-black/10'
@@ -230,7 +230,7 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
                       darkTheme ? 'text-[#e8c77f]' : 'text-[#a2792c]'
                     }`} />
                   </div>
-                  <div className="flex-1 text-left">
+                  <div className="flex-1 text-left min-w-0 max-sm:basis-[calc(100%-52px)]">
                     <div className={`font-medium text-[15px] mb-1 transition-colors ${
                       darkTheme ? 'text-[#f5efe5]' : 'text-[#2d2820]'
                     }`}>
@@ -244,14 +244,14 @@ export function SearchPage({ onBack, onIssueClick, onProjectClick, onContributor
                       </div>
                     )}
                   </div>
-                  <div className={`px-3 py-1.5 rounded-[8px] text-[11px] font-medium transition-colors ${
+                  <div className={`px-3 py-1.5 rounded-[8px] text-[11px] font-medium transition-colors max-sm:ml-[52px] ${
                     darkTheme
                       ? 'bg-[#c9983a]/20 text-[#e8c77f]'
                       : 'bg-[#c9983a]/30 text-[#a2792c]'
                   }`}>
                     {result.type.charAt(0).toUpperCase() + result.type.slice(1)}
                   </div>
-                  <ArrowRight className={`w-4 h-4 flex-shrink-0 transition-all group-hover:translate-x-1 ${
+                  <ArrowRight className={`w-4 h-4 flex-shrink-0 transition-all group-hover:translate-x-1 max-sm:ml-auto ${
                     darkTheme ? 'text-[#c9983a]' : 'text-[#a2792c]'
                   }`} />
                 </button>

@@ -408,7 +408,7 @@ export function BrowsePage({ onProjectClick, onOrgClick }: BrowsePageProps) {
           keeping every selected value across all 4 types active at once
           (shown below in Active Filters). */}
       <div className="flex items-center flex-wrap gap-3">
-        <div className={`inline-flex items-center gap-1 p-1 rounded-[12px] border ${isDark ? "bg-white/[0.06] border-white/15" : "bg-white/[0.2] border-white/30"}`}>
+        <div className={`inline-flex items-center gap-1 p-1 rounded-[12px] border max-sm:grid max-sm:grid-cols-2 max-sm:w-full ${isDark ? "bg-white/[0.06] border-white/15" : "bg-white/[0.2] border-white/30"}`}>
           {FILTER_TYPES.map(({ key, label }) => (
             <button
               key={key}
