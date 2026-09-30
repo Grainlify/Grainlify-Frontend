@@ -5,7 +5,9 @@ import {
   getDrawSettings,
   resetDrawSetting,
   runBountyDraw,
+  setBountyDeadline,
   setDrawSetting,
+  unassignBounty,
   type BountyDrawState,
   type DrawResultView,
   type DrawSetting,
@@ -37,6 +39,12 @@ export function BountyDrawControls() {
   const [state, setState] = useState<BountyDrawState | null>(null);
   const [result, setResult] = useState<DrawResultView | null>(null);
   const [confirming, setConfirming] = useState<null | { simulate: boolean }>(null);
+  /** Hours until the pull-request deadline, blank meaning the global setting. */
+  const [staleHours, setStaleHours] = useState('');
+  const [unassignReason, setUnassignReason] = useState('');
+  const [deadlineAt, setDeadlineAt] = useState('');
+  const [deadlineReason, setDeadlineReason] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
@@ -97,7 +105,7 @@ export function BountyDrawControls() {
     setError(null);
     setConfirming(null);
     try {
-      const r = await runBountyDraw(selected, simulate);
+      const r = await runBountyDraw(selected, simulate, staleHours ? Number(staleHours) : undefined);
       setResult(r?.pool ? r : null);
       const next = await getBountyDrawState(selected);
       setState(next?.applications ? next : null);
@@ -118,12 +126,48 @@ export function BountyDrawControls() {
 
   const selectedBounty = bounties.find((b) => b.id === selected);
 
+  /** Shown to a contributor, so it must read the way they will see it. */
+  const humanDate = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return `${d.getUTCDate()} ${d.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} ${d.getUTCFullYear()} at ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
+  };
+
+  const doUnassign = async () => {
+    if (!selected || !unassignReason.trim()) return;
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      const r = await unassignBounty(selected, unassignReason.trim());
+      setNotice(`Unassigned ${r.contributor}. They have been told why, nothing is counted against them, and the next draw on this bounty will skip them.`);
+      setUnassignReason('');
+      setState(await getBountyDrawState(selected));
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    } finally { setBusy(false); }
+  };
+
+  const doDeadline = async () => {
+    if (!selected || !deadlineAt || !deadlineReason.trim()) return;
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      const r = await setBountyDeadline(selected, new Date(deadlineAt).toISOString(), deadlineReason.trim());
+      setNotice(`Deadline moved from ${humanDate(r.previousAt)} to ${humanDate(r.staleAt)}. The contributor has been told.`);
+      setDeadlineReason('');
+      setState(await getBountyDrawState(selected));
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    } finally { setBusy(false); }
+  };
+
   return (
     <div className="space-y-6">
       {error && (
         <p role="alert" className={`text-[13px] ${isDark ? 'text-[#f0b4a8]' : 'text-[#8a3a28]'}`}>
           {error}
         </p>
+      )}
+      {notice && (
+        <p role="status" className={`text-[13px] ${isDark ? 'text-[#7fc08d]' : 'text-[#3f7d4e]'}`}>{notice}</p>
       )}
 
       <div className={box}>
@@ -142,6 +186,15 @@ export function BountyDrawControls() {
               </option>
             ))}
           </select>
+          <input
+            aria-label="Hours until the pull-request deadline"
+            className={`${input} sm:w-[210px]`}
+            type="number"
+            min="1"
+            placeholder="Deadline (hours, optional)"
+            value={staleHours}
+            onChange={(e) => setStaleHours(e.target.value)}
+          />
           <button type="button" className={secondary} disabled={!selected || busy} onClick={() => setConfirming({ simulate: true })}>
             Simulate
           </button>
@@ -168,6 +221,50 @@ export function BountyDrawControls() {
           </div>
         )}
       </div>
+
+      {selected && selectedBounty?.assignedTo && (
+        <div className={box}>
+          <h3 className={`text-[15px] font-bold mb-1 ${strong}`}>The current assignment</h3>
+          <p className={`text-[12.5px] mb-3 ${muted}`}>
+            Held by <b className={strong}>{selectedBounty.assignedTo}</b>
+            {selectedBounty.assignmentStaleAt ? <> until {humanDate(selectedBounty.assignmentStaleAt)}</> : null}.
+            Ending it here is our decision, not theirs: no abandon is recorded, their odds are untouched, and they go back in
+            the pool. The next draw on this bounty skips them, so nobody is unassigned and reassigned in the same minute.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 mb-2">
+            <input
+              aria-label="Reason for unassigning"
+              className={`${input} flex-1`}
+              placeholder="Why — the contributor is shown this"
+              value={unassignReason}
+              onChange={(e) => setUnassignReason(e.target.value)}
+            />
+            <button type="button" className={secondary} disabled={busy || !unassignReason.trim()} onClick={doUnassign}>
+              {busy ? 'Working…' : 'Unassign'}
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <input
+              aria-label="New pull-request deadline"
+              className={`${input} sm:w-[230px]`}
+              type="datetime-local"
+              value={deadlineAt}
+              onChange={(e) => setDeadlineAt(e.target.value)}
+            />
+            <input
+              aria-label="Reason for changing the deadline"
+              className={`${input} flex-1`}
+              placeholder="Why — the contributor is told this too"
+              value={deadlineReason}
+              onChange={(e) => setDeadlineReason(e.target.value)}
+            />
+            <button type="button" className={secondary} disabled={busy || !deadlineAt || !deadlineReason.trim()} onClick={doDeadline}>
+              Move the deadline
+            </button>
+          </div>
+        </div>
+      )}
 
       {state && (
         <div className={box}>

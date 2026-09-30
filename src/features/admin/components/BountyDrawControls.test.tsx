@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { BountyDrawControls } from './BountyDrawControls'
 import { getBounties, type PublicBounty } from '../../../shared/api/bountyAgent'
-import { getBountyDrawState, getDrawSettings, resetDrawSetting, runBountyDraw, setDrawSetting, type DrawResultView } from '../../../shared/api/client'
+import { getBountyDrawState, getDrawSettings, resetDrawSetting, runBountyDraw, setBountyDeadline, setDrawSetting, unassignBounty, type DrawResultView } from '../../../shared/api/client'
 
 vi.mock('../../../shared/api/bountyAgent', async (orig) => {
   const real = await orig<typeof import('../../../shared/api/bountyAgent')>()
@@ -12,7 +12,7 @@ vi.mock('../../../shared/api/bountyAgent', async (orig) => {
 })
 vi.mock('../../../shared/api/client', async (orig) => {
   const real = await orig<typeof import('../../../shared/api/client')>()
-  return { ...real, getDrawSettings: vi.fn(), setDrawSetting: vi.fn(), resetDrawSetting: vi.fn(), getBountyDrawState: vi.fn(), runBountyDraw: vi.fn() }
+  return { ...real, getDrawSettings: vi.fn(), setDrawSetting: vi.fn(), resetDrawSetting: vi.fn(), getBountyDrawState: vi.fn(), runBountyDraw: vi.fn(), unassignBounty: vi.fn(), setBountyDeadline: vi.fn() }
 })
 
 const setting = (o: Partial<Parameters<typeof settingOf>[0]> = {}) => settingOf(o)
@@ -69,7 +69,7 @@ describe('running a draw by hand', () => {
     expect(await screen.findByRole('alertdialog')).toHaveTextContent(/cannot be undone from here/i)
 
     await userEvent.click(screen.getByRole('button', { name: 'Yes, run the draw' }))
-    expect(vi.mocked(runBountyDraw)).toHaveBeenCalledWith('b1', false)
+    expect(vi.mocked(runBountyDraw)).toHaveBeenCalledWith('b1', false, undefined)
   })
 
   it('can be cancelled without running', async () => {
@@ -103,7 +103,7 @@ describe('running a draw by hand', () => {
     expect(await screen.findByRole('alertdialog')).toHaveTextContent(/nobody will be assigned/i)
     await userEvent.click(screen.getByRole('button', { name: 'Yes, simulate' }))
 
-    expect(vi.mocked(runBountyDraw)).toHaveBeenCalledWith('b1', true)
+    expect(vi.mocked(runBountyDraw)).toHaveBeenCalledWith('b1', true, undefined)
     expect(await screen.findByText(/simulated draw/i)).toBeInTheDocument()
     expect(screen.queryByText(/^Winner:/)).not.toBeInTheDocument()
   })
@@ -192,5 +192,84 @@ describe('when the agent answers with something unexpected', () => {
     renderWithProviders(<BountyDrawControls />)
     await userEvent.selectOptions(await screen.findByLabelText('Bounty'), 'b1')
     expect(screen.getByRole('button', { name: 'Run draw now' })).toBeInTheDocument()
+  })
+})
+
+describe('ending an assignment by choice', () => {
+  const held = () => bounty({ assignedTo: 'jotel-dev', assignmentStaleAt: '2026-10-03T01:17:12.000Z' })
+
+  beforeEach(() => {
+    vi.mocked(getDrawSettings).mockResolvedValue({ settings: [setting()] })
+    vi.mocked(getBounties).mockResolvedValue({ status: {} as never, bounties: [held()] })
+    // The same shape the real endpoint returns; an empty array here made the
+    // Applications block throw during render, which is not what these test.
+    vi.mocked(getBountyDrawState).mockResolvedValue({
+      applications: {
+        total: 0, eligible: 0, refused: 0,
+        fitCost: { assessed: 0, totalMicro: 0, perApplicationMicro: null },
+        applications: [],
+      },
+      draws: [],
+    } as never)
+  })
+
+  const choose = async (user: ReturnType<typeof userEvent.setup>) => {
+    renderWithProviders(<BountyDrawControls />)
+    await screen.findByRole('combobox', { name: 'Bounty' })
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Bounty' }), 'b1')
+  }
+
+  it('will not unassign without a reason, because the contributor is shown it', async () => {
+    const user = userEvent.setup()
+    await choose(user)
+    const btn = await screen.findByRole('button', { name: /^unassign$/i })
+    expect(btn).toBeDisabled()
+
+    await user.type(screen.getByRole('textbox', { name: /reason for unassigning/i }), 'Changed the plan')
+    expect(btn).toBeEnabled()
+  })
+
+  it('says plainly that nothing is counted against them', async () => {
+    const user = userEvent.setup()
+    await choose(user)
+    const panel = await screen.findByText(/no abandon is recorded/i)
+    expect(panel).toHaveTextContent(/their odds are untouched/i)
+    // The exclusion is stated here too, so an admin is not surprised by it.
+    expect(panel).toHaveTextContent(/next draw on this bounty skips them/i)
+  })
+
+  it('sends the reason and reports what the contributor was told', async () => {
+    const user = userEvent.setup()
+    vi.mocked(unassignBounty).mockResolvedValue({ ok: true, contributor: 'jotel-dev', reason: 'Changed the plan' })
+    await choose(user)
+    await user.type(screen.getByRole('textbox', { name: /reason for unassigning/i }), 'Changed the plan')
+    await user.click(screen.getByRole('button', { name: /^unassign$/i }))
+
+    expect(vi.mocked(unassignBounty)).toHaveBeenCalledWith('b1', 'Changed the plan')
+    expect(await screen.findByRole('status')).toHaveTextContent(/unassigned jotel-dev/i)
+  })
+
+  it('will not move a deadline without both a date and a reason', async () => {
+    const user = userEvent.setup()
+    await choose(user)
+    const btn = await screen.findByRole('button', { name: /move the deadline/i })
+    expect(btn).toBeDisabled()
+    await user.type(screen.getByRole('textbox', { name: /reason for changing the deadline/i }), 'They asked')
+    expect(btn).toBeDisabled()          // a reason alone is not enough
+  })
+
+  it('reports the move in the same words a contributor reads', async () => {
+    const user = userEvent.setup()
+    vi.mocked(setBountyDeadline).mockResolvedValue({
+      ok: true, previousAt: '2026-10-03T01:17:12.000Z', staleAt: '2026-10-06T01:17:12.000Z',
+    })
+    await choose(user)
+    await user.type(screen.getByRole('textbox', { name: /reason for changing the deadline/i }), 'They asked')
+    const date = screen.getByLabelText(/new pull-request deadline/i)
+    await user.type(date, '2026-10-06T01:17')
+    await user.click(screen.getByRole('button', { name: /move the deadline/i }))
+
+    // Written dates, the same format the notification uses.
+    expect(await screen.findByRole('status')).toHaveTextContent(/6 October 2026 at 01:17 UTC/)
   })
 })
