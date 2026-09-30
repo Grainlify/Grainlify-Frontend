@@ -1262,8 +1262,26 @@ export const resetDrawSetting = (key: string) =>
   apiRequest<{ ok: true; settings: DrawSetting[] }>('/admin/bounty-draw/settings/reset', { method: 'POST', requiresAuth: true, body: JSON.stringify({ key }) });
 export const getBountyDrawState = (bountyId: string) =>
   apiRequest<BountyDrawState>(`/admin/bounty-draw/${encodeURIComponent(bountyId)}/state`, { requiresAuth: true });
-export const runBountyDraw = (bountyId: string, simulate: boolean) =>
-  apiRequest<DrawResultView>(`/admin/bounty-draw/${encodeURIComponent(bountyId)}/run`, { method: 'POST', requiresAuth: true, body: JSON.stringify({ simulate }) });
+export const runBountyDraw = (bountyId: string, simulate: boolean, staleHours?: number) =>
+  apiRequest<DrawResultView>(`/admin/bounty-draw/${encodeURIComponent(bountyId)}/run`, {
+    method: 'POST',
+    requiresAuth: true,
+    // stale_hours is omitted rather than sent as 0, or every draw would
+    // override the global setting with nothing.
+    body: JSON.stringify(staleHours ? { simulate, stale_hours: staleHours } : { simulate }),
+  });
+
+/** End an assignment by choice. The reason reaches the contributor. */
+export const unassignBounty = (bountyId: string, reason: string) =>
+  apiRequest<{ ok: true; contributor: string; reason: string }>(
+    `/admin/bounty-draw/${encodeURIComponent(bountyId)}/unassign`,
+    { method: 'POST', requiresAuth: true, body: JSON.stringify({ reason }) });
+
+/** Move the pull-request deadline on a live assignment. */
+export const setBountyDeadline = (bountyId: string, deadline: string, reason: string) =>
+  apiRequest<{ ok: true; previousAt: string; staleAt: string }>(
+    `/admin/bounty-draw/${encodeURIComponent(bountyId)}/deadline`,
+    { method: 'POST', requiresAuth: true, body: JSON.stringify({ deadline, reason }) });
 
 export async function postBountyWalletLink(body: { message: string; countersignature: string; walletSignature: string }) {
   try {

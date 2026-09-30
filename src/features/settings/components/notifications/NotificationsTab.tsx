@@ -64,6 +64,16 @@ const NOTIFICATION_TYPE_INFO: Record<string, NotificationTypeInfo> = {
     title: 'Assignment about to expire',
     description: 'A warning before a GrainHack assignment lapses. Letting it lapse counts as an abandon.',
   },
+  bounty_unassigned: {
+    section: 'Bounties',
+    title: 'Your assignment ended',
+    description: 'When a maintainer ends your assignment by choice. Nothing is counted against you; the message carries their reason.',
+  },
+  bounty_deadline_changed: {
+    section: 'Bounties',
+    title: 'Your deadline moved',
+    description: 'When the deadline for opening a pull request on a bounty you hold is changed, either way, with the reason.',
+  },
   bounty_review_posted: {
     section: 'Bounties',
     title: 'Agent reviewed your pull request',
