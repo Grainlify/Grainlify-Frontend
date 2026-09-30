@@ -862,8 +862,15 @@ export function Dashboard() {
                 ? "bg-[#2d2820]/[0.4] border-white/10 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25),inset_0px_0px_9px_0px_rgba(201,152,58,0.1)]"
                 : "bg-white/[0.35] border-white shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25),inset_0px_0px_9px_0px_rgba(255,255,255,0.5)]"
             }
-          ${showMobileNav? "h-screen flex-col":"" } 
+          ${showMobileNav? "h-[calc(100dvh-1rem)] flex-col overflow-y-auto [&>*]:shrink-0":"" } 
           `}
+            // Open on a phone, this bar is the menu. It scrolls rather than
+            // squeezing: a flex column that cannot overflow shrinks its
+            // children to fit, which flattened the theme and notification
+            // buttons to half height once the page list grew. The height is
+            // the visible screen less the 8px inset at each edge - h-screen
+            // from top-2 ran past the bottom and cut off the account button.
+            //
             // Pinned by both edges to the same box as <main> (ml-2 lg:ml-[81px], mr-2).
             // It used to be right-anchored with width calc(100vw - 97px), which
             // put its left edge at 89px, 8px right of the content below it at
