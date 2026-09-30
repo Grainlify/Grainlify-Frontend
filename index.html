@@ -4,6 +4,12 @@
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <!-- The saved theme, applied before first paint. It used to be set only
+           once React ran, so a dark-mode visitor saw the light background and
+           then a flip to dark. Kept above the stylesheet: an inline script
+           placed after a stylesheet stops the parser until that stylesheet
+           has downloaded. -->
+      <script>try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
       <!-- The commit this build came from, injected by Vite from the
            platform's build environment. It exists so "is it deployed" is a
            fetch and a string comparison rather than somebody loading the page
