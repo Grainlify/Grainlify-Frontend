@@ -60,16 +60,30 @@ export function ConnectedWallet() {
   const strong = isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]';
   const muted = isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
 
-  if (authLoading) {
-    return (
-      <div className={card}>
-        <div className="animate-pulse flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-[12px] ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+  // The "No wallet linked" layout, because that is what a new visitor gets,
+  // held invisible under the pulse. The words are neutral ones of the same
+  // length rather than the real ones: "No wallet linked" must never be in the
+  // page before the answer is known, even hidden. The old placeholder was one 40px row, and the
+  // real panel stacks text over a 44px button on a phone: 58px of jump for
+  // everything below it. A linked wallet is taller again (icon, text and two
+  // buttons stacked) and still moves, by less than it did.
+  const placeholder = (
+    <div className={card} aria-busy="true" aria-label="Checking whether a wallet is linked">
+      <div className="relative flex flex-col sm:flex-row sm:items-center gap-3" aria-hidden="true">
+        <div className="flex-1 invisible">
+          <p className="text-[15px] font-bold">Checking wallet…</p>
+          <p className="text-[13px]">Looking for a wallet linked to this GitHub account</p>
+        </div>
+        <div className={`animate-pulse min-h-[44px] w-full sm:w-[168px] rounded-[12px] ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+        <div className="absolute left-0 top-0 animate-pulse flex flex-col gap-2 pt-1 w-2/3">
           <div className={`h-4 w-40 rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+          <div className={`h-3 w-full rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+
+  if (authLoading) return placeholder;
   if (failed) {
     const where = 'Grainlify';
     return (
@@ -82,16 +96,7 @@ export function ConnectedWallet() {
       </div>
     );
   }
-  if (state === null) {
-    return (
-      <div className={card}>
-        <div className="animate-pulse flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-[12px] ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
-          <div className={`h-4 w-40 rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
-        </div>
-      </div>
-    );
-  }
+  if (state === null) return placeholder;
   if (!state.linked || !state.wallet) {
     return (
       <div className={card}>

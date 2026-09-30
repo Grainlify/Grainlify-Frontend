@@ -32,18 +32,27 @@ export function StatusNotice({
   const Icon = live && paidOnMainnet ? CircleCheck : FlaskConical;
 
   if (loading) {
+    // The loaded notice's own markup, with words of the same length as its
+    // usual ones held invisible under the pulse - neutral words, because a
+    // claim about payouts must not be in the page before the status is known. Two thin bars were about 36px where the notice wraps
+    // to 84px on a phone, so everything below it jumped 48px when the status
+    // arrived - most of the page's layout shift. Real text sizes itself at
+    // every width, which no fixed skeleton height does.
     return (
       <div
         role="status"
         aria-busy="true"
         aria-label="Checking the bounty programme status"
-        className={`rounded-[16px] border p-4 sm:p-5 ${isDark ? 'border-[#c9983a]/35 bg-[#c9983a]/[0.08]' : 'border-[#c9983a]/40 bg-[#c9983a]/10'}`}
+        className={`relative flex items-start gap-3 rounded-[16px] border p-4 sm:p-5 ${isDark ? 'border-[#c9983a]/35 bg-[#c9983a]/[0.08]' : 'border-[#c9983a]/40 bg-[#c9983a]/10'}`}
       >
-        <div className="animate-pulse flex items-start gap-3">
-          <div className={`w-5 h-5 rounded shrink-0 mt-0.5 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
-          <div className="flex-1 space-y-2">
+        <div className={`animate-pulse w-5 h-5 rounded shrink-0 mt-0.5 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+        <div className="relative" aria-hidden="true">
+          <p className="text-[15px] font-bold invisible">Checking the state of the bounty programme.</p>
+          <p className="text-[13px] leading-[1.5] invisible">Reading the bounty agent's current status, which says whether payouts have settled yet.</p>
+          <div className="absolute inset-0 animate-pulse flex flex-col gap-2 pt-1">
             <div className={`h-4 w-64 max-w-full rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
-            <div className={`h-3 w-80 max-w-full rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+            <div className={`h-3 w-full rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+            <div className={`h-3 w-2/3 rounded ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
           </div>
         </div>
       </div>
