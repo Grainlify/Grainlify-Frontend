@@ -673,6 +673,21 @@ describe('DiscoverPage', () => {
       await new Promise((r) => setTimeout(r, 30))
       expect(mockedGetPublicProjectIssues).toHaveBeenCalledTimes(3)
     })
+
+    it("holds the setup card's space while KYC loads, without saying anything about KYC", async () => {
+      // Inserted a second late, the card pushed the page down ~216px. Held as a
+      // placeholder instead - but "Verify KYC" must not be in the page before
+      // the status is known, not even hidden.
+      mockedGetUserProfile.mockImplementation(() => new Promise(() => {}))
+      mockedGetRecommendedProjects.mockResolvedValue({ projects: [] })
+
+      const { container } = renderWithProviders(<DiscoverPage />, { withAuth: true })
+
+      await screen.findByText('No recommended projects found')
+      expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument()
+      expect(screen.queryByText(/Verify KYC/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Finish setup/i)).not.toBeInTheDocument()
+    })
   })
 })
 

@@ -7,7 +7,7 @@ import {
   Zap,
   ChevronDown,
 } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { IssueCard } from "../../../shared/components/ui/IssueCard";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -200,7 +200,6 @@ export function DiscoverPage({
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const { user } = useAuth();
-  const prefersReducedMotion = useReducedMotion();
   const [searchParams, setSearchParams] = useSearchParams();
   // Issue selection is NOT held here. Opening an issue is reported upward and
   // Dashboard drives the shared IssueDetailPage from ?issue=/?project=, the
@@ -513,7 +512,10 @@ export function DiscoverPage({
     <motion.div
       className="space-y-4 md:space-y-6 px-4 md:px-0 pb-8"
       variants={sectionContainerVariants}
-      initial={prefersReducedMotion ? false : "hidden"}
+      // Rendered in place, not faded up from nothing. On a slow phone every
+      // section and card starting at opacity 0 was the "empty space, then it
+      // pops in" people saw while scrolling.
+      initial={false}
       animate="visible"
     >
       {/* Welcome + setup nudge — compact by design: this is the first thing a user
@@ -524,6 +526,11 @@ export function DiscoverPage({
           login={user?.github?.login}
           avatarUrl={user?.github?.avatar_url}
           isLoadingStatus={isLoadingSetupStatus || kycVerified === null}
+          // With no billing profile the nudge is all but certain to appear,
+          // so its space is held while KYC loads. Inserting it a second after
+          // the page rendered pushed everything down ~216px - most of
+          // Discover's layout shift.
+          reserveNudgeSpace={!hasBillingProfile && isLoadingSetupStatus}
           hasBillingProfile={hasBillingProfile}
           kycVerified={kycVerified === true}
           onGoToBilling={onGoToBilling}
@@ -590,10 +597,12 @@ export function DiscoverPage({
           <Zap className="w-5 h-5 md:w-6 md:h-6 text-[#c9983a] drop-shadow-sm" />
           <h3 className={`text-xl md:text-[24px] font-bold transition-colors ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
             }`}>
-            Recommended Projects ({projects.length})
+            Recommended Projects{isLoadingProjects ? '' : ` (${projects.length})`}
           </h3>
         </div>
-        {isLoadingProjects && (
+        {/* Always present, so the grid below does not jump up by this line's
+            height when loading ends; only the verb changes. */}
+        {(
           <p className={`text-[13px] md:text-[14px] mb-6 transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
             }`}>
             {/* Says what the query does. It is ORDER BY contributors_count
@@ -601,7 +610,7 @@ export function DiscoverPage({
                 projects for every user, with no input from their profile.
                 The previous copy promised matching on interests and
                 expertise, which nothing implements. */}
-            Finding the most active projects on Grainlify
+            {isLoadingProjects ? 'Finding the most active projects on Grainlify' : 'The most active projects on Grainlify'}
           </p>
         )}
 
@@ -667,7 +676,7 @@ export function DiscoverPage({
           <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mt-6"
             variants={cardContainerVariants}
-            initial={prefersReducedMotion ? false : "hidden"}
+            initial={false}
             animate="visible"
           >
             {projects.map((project) => (
@@ -790,7 +799,7 @@ export function DiscoverPage({
           <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"
             variants={cardContainerVariants}
-            initial={prefersReducedMotion ? false : "hidden"}
+            initial={false}
             animate="visible"
           >
             {recommendedIssues.map((issue) => (

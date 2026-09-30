@@ -1,5 +1,5 @@
 import { CheckCircle2, CreditCard, ShieldCheck, Sparkles, ArrowUpRight } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { AuroraBackground } from "../../../shared/components/ui/aceternity/AuroraBackground";
 import { GridBackground } from "../../../shared/components/ui/aceternity/GridBackground";
@@ -10,6 +10,8 @@ interface DiscoverHeroProps {
   /** True until we know the user's real billing/KYC status — the setup card stays
    * hidden during this window instead of flashing "incomplete" then disappearing. */
   isLoadingStatus: boolean;
+  /** Hold the nudge's space while its status loads - see DiscoverPage. */
+  reserveNudgeSpace?: boolean;
   hasBillingProfile: boolean;
   kycVerified: boolean;
   onGoToBilling?: () => void;
@@ -26,20 +28,101 @@ export function DiscoverHero({
   login,
   avatarUrl,
   isLoadingStatus,
+  reserveNudgeSpace = false,
   hasBillingProfile,
   kycVerified,
   onGoToBilling,
 }: DiscoverHeroProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const prefersReducedMotion = useReducedMotion();
   const setupComplete = hasBillingProfile && kycVerified;
   const currentStep = !hasBillingProfile ? 1 : 2;
 
   const steps = [
-    { n: 1, label: "Billing profile", icon: CreditCard, done: hasBillingProfile },
-    { n: 2, label: "Verify KYC", icon: ShieldCheck, done: kycVerified },
+    { n: 1, label: "Billing profile", placeholderLabel: "Checking step 1", icon: CreditCard, done: hasBillingProfile },
+    { n: 2, label: "Verify KYC", placeholderLabel: "Checking 2", icon: ShieldCheck, done: kycVerified },
   ];
+
+  const renderNudge = (placeholder: boolean) => (
+    <div
+      className={placeholder ? "relative" : undefined}
+      aria-hidden={placeholder || undefined}
+      aria-busy={placeholder || undefined}
+    >
+      <div className={placeholder ? "invisible" : undefined}>
+        <motion.div
+          // No fade from nothing: that was the empty-then-pop. It either
+          // replaces a placeholder of its own shape or simply appears.
+          initial={false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className={`relative overflow-hidden backdrop-blur-[40px] rounded-[20px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-colors ${
+            isDark ? "bg-white/[0.08] border-white/10" : "bg-white/[0.12] border-white/20"
+          }`}
+        >
+          <div className="absolute -top-16 -right-16 w-[220px] h-[220px] rounded-full bg-[#c9983a]/20 blur-[80px] pointer-events-none" />
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 px-5 md:px-7 py-5">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Sparkles className="w-4 h-4 text-[#c9983a] flex-shrink-0" />
+                <h2 className={`text-[15px] md:text-base font-bold transition-colors ${isDark ? "text-[#f5f5f5]" : "text-[#2d2820]"}`}>
+                  {placeholder ? "Checking your account setup" : "Finish setup to get matched"}
+                </h2>
+              </div>
+              <p className={`text-[13px] md:text-[13.5px] mb-3 transition-colors ${isDark ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>
+                {placeholder
+                  ? "Looking up which steps are still open on this account so we can show them here"
+                  : "Add your billing profile and verify your KYC so we can route rewards on-chain."}
+              </p>
+              <div className="flex items-center gap-4 flex-wrap">
+                {steps.map((step) => (
+                  <div key={step.n} className="flex items-center gap-1.5">
+                    {step.done ? (
+                      <CheckCircle2 className="w-4 h-4 text-[var(--brand-success-text)] flex-shrink-0" />
+                    ) : (
+                      <step.icon
+                        className={`w-4 h-4 flex-shrink-0 ${
+                          step.n === currentStep ? "text-[#c9983a]" : isDark ? "text-[#6b5f52]" : "text-[#b8a898]"
+                        }`}
+                      />
+                    )}
+                    <span
+                      className={`text-[12.5px] font-semibold transition-colors ${
+                        step.done
+                          ? isDark ? "text-[#d4d4d4] line-through decoration-[var(--brand-success)]/60" : "text-[#7a6b5a] line-through decoration-[var(--brand-success)]/60"
+                          : step.n === currentStep
+                            ? isDark ? "text-[#f5f5f5]" : "text-[#2d2820]"
+                            : isDark ? "text-[#6b5f52]" : "text-[#b8a898]"
+                      }`}
+                    >
+                      {placeholder ? step.placeholderLabel : step.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={onGoToBilling}
+              disabled={!onGoToBilling}
+              // min-h-[44px] rather than more padding: the button is already
+              // the right shape, it was just 42px tall - two short of the
+              // 44x44 minimum, on the primary call to action of the page.
+              className={`flex-shrink-0 px-5 py-2.5 min-h-[44px] rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[13.5px] shadow-[0_4px_14px_rgba(162,121,44,0.35)] hover:shadow-[0_6px_20px_rgba(162,121,44,0.45)] transition-all inline-flex items-center justify-center gap-1.5 border border-white/10 ${
+                !onGoToBilling ? "opacity-70 cursor-default" : ""
+              }`}
+            >
+              <span>{placeholder ? "Checking setup" : hasBillingProfile ? "Verify KYC" : "Continue setup"}</span>
+              <ArrowUpRight className="w-4 h-4 flex-shrink-0" />
+            </button>
+          </div>
+        </motion.div>
+      </div>
+      {placeholder && (
+        <div className={`absolute inset-0 animate-pulse rounded-[20px] border ${isDark ? "bg-white/[0.06] border-white/10" : "bg-white/[0.12] border-white/20"}`} />
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -88,72 +171,14 @@ export function DiscoverHero({
       </AuroraBackground>
 
       {/* Setup nudge — only while something's actually incomplete; disappears for good
-          once billing + KYC are both done, handing this space back to real content. */}
-      {!isLoadingStatus && !setupComplete && (
-        <motion.div
-          initial={prefersReducedMotion ? false : { opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className={`relative overflow-hidden backdrop-blur-[40px] rounded-[20px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-colors ${
-            isDark ? "bg-white/[0.08] border-white/10" : "bg-white/[0.12] border-white/20"
-          }`}
-        >
-          <div className="absolute -top-16 -right-16 w-[220px] h-[220px] rounded-full bg-[#c9983a]/20 blur-[80px] pointer-events-none" />
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 px-5 md:px-7 py-5">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1.5">
-                <Sparkles className="w-4 h-4 text-[#c9983a] flex-shrink-0" />
-                <h2 className={`text-[15px] md:text-base font-bold transition-colors ${isDark ? "text-[#f5f5f5]" : "text-[#2d2820]"}`}>
-                  Finish setup to get matched
-                </h2>
-              </div>
-              <p className={`text-[13px] md:text-[13.5px] mb-3 transition-colors ${isDark ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>
-                Add your billing profile and verify your KYC so we can route rewards on-chain.
-              </p>
-              <div className="flex items-center gap-4 flex-wrap">
-                {steps.map((step) => (
-                  <div key={step.n} className="flex items-center gap-1.5">
-                    {step.done ? (
-                      <CheckCircle2 className="w-4 h-4 text-[var(--brand-success-text)] flex-shrink-0" />
-                    ) : (
-                      <step.icon
-                        className={`w-4 h-4 flex-shrink-0 ${
-                          step.n === currentStep ? "text-[#c9983a]" : isDark ? "text-[#6b5f52]" : "text-[#b8a898]"
-                        }`}
-                      />
-                    )}
-                    <span
-                      className={`text-[12.5px] font-semibold transition-colors ${
-                        step.done
-                          ? isDark ? "text-[#d4d4d4] line-through decoration-[var(--brand-success)]/60" : "text-[#7a6b5a] line-through decoration-[var(--brand-success)]/60"
-                          : step.n === currentStep
-                            ? isDark ? "text-[#f5f5f5]" : "text-[#2d2820]"
-                            : isDark ? "text-[#6b5f52]" : "text-[#b8a898]"
-                      }`}
-                    >
-                      {step.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={onGoToBilling}
-              disabled={!onGoToBilling}
-              // min-h-[44px] rather than more padding: the button is already
-              // the right shape, it was just 42px tall - two short of the
-              // 44x44 minimum, on the primary call to action of the page.
-              className={`flex-shrink-0 px-5 py-2.5 min-h-[44px] rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[13.5px] shadow-[0_4px_14px_rgba(162,121,44,0.35)] hover:shadow-[0_6px_20px_rgba(162,121,44,0.45)] transition-all inline-flex items-center justify-center gap-1.5 border border-white/10 ${
-                !onGoToBilling ? "opacity-70 cursor-default" : ""
-              }`}
-            >
-              <span>{hasBillingProfile ? "Verify KYC" : "Continue setup"}</span>
-              <ArrowUpRight className="w-4 h-4 flex-shrink-0" />
-            </button>
-          </div>
-        </motion.div>
-      )}
+          once billing + KYC are both done, handing this space back to real content.
+          While its status loads it can hold its space as a placeholder of the
+          same shape: same markup, neutral words of the same length held
+          invisible, so it wraps identically at every width. The words are not
+          the real ones because "Verify KYC" must not be in the page before
+          the KYC status is known - not even hidden. */}
+      {!isLoadingStatus && !setupComplete && renderNudge(false)}
+      {isLoadingStatus && reserveNudgeSpace && renderNudge(true)}
     </>
   );
 }
