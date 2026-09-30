@@ -33,6 +33,9 @@ function renderWidget() {
 
 async function openWidget(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: /get help or report a problem/i }))
+  // The dialog is its own chunk, fetched when first opened (or once the
+  // page is idle), so it arrives a moment after the click.
+  await screen.findByRole('textbox')
 }
 
 describe('SupportWidget', () => {

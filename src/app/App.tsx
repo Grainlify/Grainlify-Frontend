@@ -1,10 +1,8 @@
 import { useEffect, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/contexts/AuthContext";
-import { SupportRoutePage } from "../features/support/pages/SupportRoutePage";
 import { ThemeProvider, useTheme } from "../shared/contexts/ThemeContext";
 import { LandingPage } from "../features/landing";
-import Toast from "../shared/components/Toast";
 import { SupportProvider } from "../shared/components/SupportWidget";
 import { captureReferralCodeFromURL } from "../shared/api/client";
 import { RootErrorBoundary } from "../shared/components/RootErrorBoundary";
@@ -20,6 +18,11 @@ const WalletLinkPage = lazy(() => import("../features/bounties/pages/WalletLinkP
 const BountyRulesPage = lazy(() => import("../features/bounties/pages/BountyRulesPage").then((m) => ({ default: m.BountyRulesPage })));
 const DocsPage = lazy(() => import("../features/docs/pages/DocsPage").then((m) => ({ default: m.DocsPage })));
 const NotFoundPage = lazy(() => import("../features/not-found/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
+const SupportRoutePage = lazy(() => import("../features/support/pages/SupportRoutePage").then((m) => ({ default: m.SupportRoutePage })));
+// The toast host: 33 kB of sonner that no page needs to paint. It loads
+// straight after the entry script, off the path to first paint, and is
+// mounted long before anything can raise a toast - those all follow a click.
+const Toast = lazy(() => import("../shared/components/Toast"));
 
 // Suspense fallback for lazy-loaded routes — matches Dashboard's own background
 // gradient so the swap from "loading" to "loaded" doesn't flash a different backdrop.
@@ -130,7 +133,9 @@ export default function App() {
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>
-            <Toast />
+            <Suspense fallback={null}>
+              <Toast />
+            </Suspense>
           </div>
           </SupportProvider>
         </AuthProvider>
