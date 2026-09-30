@@ -372,6 +372,9 @@ describe('Dashboard', () => {
       const { container } = renderWithProviders(<Dashboard />)
       expect(await screen.findByTestId('discover-page')).toBeInTheDocument()
 
+      // It lives in the admin view's rail, not the contributor one.
+      await user.click(screen.getByRole('button', { name: /ADMIN/i }))
+      await waitFor(() => expect(container.querySelector('[data-icon="Flag"]')).toBeTruthy())
       const grainhackNavButton = container.querySelector('[data-icon="Flag"]')?.closest('button')
       expect(grainhackNavButton).toBeTruthy()
 
@@ -410,6 +413,41 @@ describe('Dashboard', () => {
 
       expect(await screen.findByText('Admin Access Required')).toBeInTheDocument()
       expect(screen.queryByTestId('data-page')).not.toBeInTheDocument()
+    })
+
+    it('keeps admin surfaces out of the Contributor and Maintainer rails, even for an admin', async () => {
+      // An admin in the Contributor view saw Reviews, Data and GrainHack admin
+      // alongside Discover - so that view was not what any contributor sees.
+      // The pages still refuse a non-admin on their own; this is about the
+      // view being honest, not about access.
+      mockUseAuth.mockReturnValue({
+        userRole: 'admin',
+        userId: 'admin-user-id',
+        user: null,
+        isAuthenticated: true,
+        isLoading: false,
+        login: mockLogin,
+        logout: mockLogout,
+      })
+      const user = userEvent.setup()
+      const { container } = renderWithProviders(<Dashboard />)
+      expect(await screen.findByTestId('discover-page')).toBeInTheDocument()
+
+      const railIds = () =>
+        Array.from(container.querySelectorAll('nav [data-tour-id]')).map((el) =>
+          el.getAttribute('data-tour-id'),
+        )
+
+      expect(railIds()).toEqual(expect.arrayContaining(['discover', 'browse', 'leaderboard']))
+      for (const adminOnly of ['data', 'grainhack', 'admin']) {
+        expect(railIds()).not.toContain(adminOnly)
+      }
+
+      await user.click(screen.getByRole('button', { name: /MAINTAINER/i }))
+      await waitFor(() => expect(railIds()).toContain('maintainers'))
+      for (const adminOnly of ['data', 'grainhack', 'admin']) {
+        expect(railIds()).not.toContain(adminOnly)
+      }
     })
 
     it('shows only admin surfaces in the sidebar while the ADMIN view is selected', async () => {

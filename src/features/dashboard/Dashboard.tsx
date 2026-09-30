@@ -648,15 +648,19 @@ export function Dashboard() {
   // role switch look decorative: the same ten icons in all three modes, with
   // one extra. Switching role should change what you are looking at.
   //
-  // Reading a non-admin page is still allowed; this hides the shortcuts, it is
-  // not an authorization boundary. The real boundary is the server, which
-  // re-reads the role on every admin request.
+  // It works the other way too. An admin looking at the Contributor or
+  // Maintainer view sees what a contributor or maintainer sees: Reviews in the
+  // contributor rail made that view a preview of nobody's actual screen.
+  //
+  // Either way this hides shortcuts; it is not an authorization boundary. The
+  // pages themselves refuse a non-admin, and the server re-reads the role on
+  // every admin request.
   const ADMIN_NAV_IDS = new Set(["data", "grainhack", "admin"]);
 
   const navItems =
     activeRole === "admin"
       ? allNavItems.filter((item) => ADMIN_NAV_IDS.has(item.id))
-      : allNavItems;
+      : allNavItems.filter((item) => !ADMIN_NAV_IDS.has(item.id));
 
   const darkTheme = theme === "dark";
     const closeMobileNav = () => {
