@@ -5,6 +5,7 @@ import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { getBounties, type BountyAgentStatus, type PublicBounty } from '../../../shared/api/bountyAgent';
+import { PREFETCH_KEYS, takePrefetched } from '../../../shared/api/prefetch';
 import { getMyBountyState, type MyBountyState } from '../../../shared/api/client';
 import { docHref, DOCS_LIVE } from '../../../shared/docs/docsLinks';
 import { StatusNotice } from '../components/StatusNotice';
@@ -46,7 +47,7 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
     // "already applied". The list stays on screen while it reloads.
     setIsLoading((was) => (bounties.length === 0 ? true : was));
     setLoadError(null);
-    getBounties()
+    takePrefetched(PREFETCH_KEYS.bounties, getBounties)
       .then((res) => {
         if (!mounted) return;
         // Same reasoning as the admin panel: an unexpected body must not

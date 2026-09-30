@@ -23,6 +23,7 @@ import { AuroraBackground } from "../../../shared/components/ui/aceternity/Auror
 import { GridBackground } from "../../../shared/components/ui/aceternity/GridBackground";
 import { SpotlightCard } from "../../../shared/components/ui/aceternity/SpotlightCard";
 import { SkeletonLoader } from "../../../shared/components/SkeletonLoader";
+import { PREFETCH_KEYS, takePrefetched } from "../../../shared/api/prefetch";
 import { useOptimisticData } from "../../../shared/hooks/useOptimisticData";
 import { EmptyState } from "../../../shared/components/EmptyState";
 import { LoadFailed } from "../../../shared/components/LoadFailed";
@@ -322,7 +323,9 @@ export function DiscoverPage({
         setProjectsError(null);
         let response: Awaited<ReturnType<typeof getRecommendedProjects>>;
         try {
-          response = await getRecommendedProjects(50);
+          // Usually already in flight: started from the entry script while
+          // this page's code was downloading. See shared/api/prefetch.ts.
+          response = await takePrefetched(PREFETCH_KEYS.recommendedProjects, () => getRecommendedProjects(50));
         } catch (err) {
           setProjectsError(err);
           throw err;
