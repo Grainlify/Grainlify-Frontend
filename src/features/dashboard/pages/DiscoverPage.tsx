@@ -199,7 +199,7 @@ export function DiscoverPage({
 }: DiscoverPageProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const { user } = useAuth();
+  const { user, isLoading: isUserLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   // Issue selection is NOT held here. Opening an issue is reported upward and
   // Dashboard drives the shared IssueDetailPage from ?issue=/?project=, the
@@ -525,6 +525,7 @@ export function DiscoverPage({
         <DiscoverHero
           login={user?.github?.login}
           avatarUrl={user?.github?.avatar_url}
+          isUserLoading={isUserLoading}
           isLoadingStatus={isLoadingSetupStatus || kycVerified === null}
           // With no billing profile the nudge is all but certain to appear,
           // so its space is held while KYC loads. Inserting it a second after

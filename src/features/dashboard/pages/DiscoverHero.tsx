@@ -10,6 +10,8 @@ interface DiscoverHeroProps {
   /** True until we know the user's real billing/KYC status — the setup card stays
    * hidden during this window instead of flashing "incomplete" then disappearing. */
   isLoadingStatus: boolean;
+  /** The signed-in user is still being fetched: hold the name's place. */
+  isUserLoading?: boolean;
   /** Hold the nudge's space while its status loads - see DiscoverPage. */
   reserveNudgeSpace?: boolean;
   hasBillingProfile: boolean;
@@ -28,6 +30,7 @@ export function DiscoverHero({
   login,
   avatarUrl,
   isLoadingStatus,
+  isUserLoading = false,
   reserveNudgeSpace = false,
   hasBillingProfile,
   kycVerified,
@@ -142,6 +145,11 @@ export function DiscoverHero({
               alt={login || "Your avatar"}
               className="w-12 h-12 md:w-14 md:h-14 rounded-full border-2 border-[#c9983a]/50 flex-shrink-0 shadow-[0_4px_16px_rgba(162,121,44,0.25)]"
             />
+          ) : isUserLoading && !login ? (
+            // Same size, no "?": a question mark where the person's initial
+            // goes read as "we don't know who you are". Static, not pulsing -
+            // nothing may animate inside glass (docs/design-system.md).
+            <div aria-hidden="true" className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex-shrink-0 ${isDark ? "bg-white/10" : "bg-black/10"}`} />
           ) : (
             <div className="w-12 h-12 md:w-14 md:h-14 rounded-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-bold text-lg border-2 border-[#c9983a]/50 shadow-[0_4px_16px_rgba(162,121,44,0.25)]">
               {(login || "?").charAt(0).toUpperCase()}
@@ -149,14 +157,27 @@ export function DiscoverHero({
           )}
           <div className="min-w-0">
             {/* No `truncate`: at the larger size this clipped the user's own
-                name to "Good morning, j…" on a 390px screen. It wraps instead. */}
+                name to "Good morning, j…" on a 390px screen. It wraps instead.
+
+                On a phone the name has a line of its own. Inline, whether the
+                greeting took one line or two depended on the name, which
+                arrives after the page renders - so the page jumped 24px when
+                it did. A line of its own is the same height either way, and
+                a bar holds it while the name loads. */}
             <h1 className={`text-xl sm:text-2xl md:text-[34px] font-bold leading-tight tracking-[-0.01em] break-words transition-colors ${isDark ? "text-[#f5f5f5]" : "text-[#2d2820]"}`}>
               {getGreeting()}
               {login ? (
                 <>
-                  ,{" "}
-                  <span className="bg-gradient-to-r from-[#c9983a] to-[#d4af37] bg-clip-text text-transparent">
+                  ,<span className="hidden sm:inline"> </span>
+                  <span className="block sm:inline bg-gradient-to-r from-[#c9983a] to-[#d4af37] bg-clip-text text-transparent">
                     {login}
+                  </span>
+                </>
+              ) : isUserLoading ? (
+                <>
+                  ,<span className="hidden sm:inline"> </span>
+                  <span className="block sm:inline" aria-hidden="true">
+                    <span className={`inline-block align-middle h-[0.8em] w-32 max-w-full rounded ${isDark ? "bg-white/10" : "bg-black/10"}`} />
                   </span>
                 </>
               ) : (
