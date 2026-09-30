@@ -630,4 +630,49 @@ describe('DiscoverPage', () => {
       expect(screen.queryByTestId('project-detail-page')).not.toBeInTheDocument()
     })
   })
+  describe('loading on a slow phone', () => {
+    const deferred = <T,>() => {
+      let resolve!: (v: T) => void
+      const promise = new Promise<T>((r) => { resolve = r })
+      return { promise, resolve }
+    }
+    const issuesFor = (id: number, title: string) => ({ issues: [makeApiIssue({ github_issue_id: id, title }), makeApiIssue({ github_issue_id: id + 1, title: `${title} (2)` })] }) as IssuesResponse
+
+    it("asks for the first projects' issues together, and still lists them in project order", async () => {
+      // One after another, three round trips back to back cost 2.5-3.7s on a
+      // throttled phone before the first issue showed.
+      mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA, projectB, projectC] })
+      const pending = { 'proj-a': deferred<IssuesResponse>(), 'proj-b': deferred<IssuesResponse>(), 'proj-c': deferred<IssuesResponse>() }
+      mockedGetPublicProjectIssues.mockImplementation((id: string) => pending[id as keyof typeof pending].promise)
+
+      renderWithProviders(<DiscoverPage />, { withAuth: true })
+
+      // All three asked for before any has answered.
+      await waitFor(() => expect(mockedGetPublicProjectIssues).toHaveBeenCalledTimes(3))
+
+      // Answering last-first must not reorder them.
+      pending['proj-c'].resolve(issuesFor(300, 'Issue from C'))
+      pending['proj-b'].resolve(issuesFor(200, 'Issue from B'))
+      pending['proj-a'].resolve(issuesFor(100, 'Issue from A'))
+
+      await screen.findByText('Issue from C')
+      const titles = screen.getAllByText(/^Issue from [ABC]$/).map((el) => el.textContent)
+      expect(titles).toEqual(['Issue from A', 'Issue from B', 'Issue from C'])
+    })
+
+    it('makes no more issue requests than before when every project has enough issues', async () => {
+      // Two per project, six in all: three projects fill the list, so a fourth
+      // and fifth are never asked - batching must not change that.
+      const extra = [4, 5].map((n) => makeApiProject({ id: `proj-${n}`, github_full_name: `org${n}/repo` }))
+      mockedGetRecommendedProjects.mockResolvedValue({ projects: [projectA, projectB, projectC, ...extra] })
+      mockedGetPublicProjectIssues.mockImplementation(async (id: string) => issuesFor(Number(id.replace(/\D/g, '') || 9) * 10, `Issue ${id}`))
+
+      renderWithProviders(<DiscoverPage />, { withAuth: true })
+
+      await screen.findByText('Issue proj-a')
+      await new Promise((r) => setTimeout(r, 30))
+      expect(mockedGetPublicProjectIssues).toHaveBeenCalledTimes(3)
+    })
+  })
 })
+

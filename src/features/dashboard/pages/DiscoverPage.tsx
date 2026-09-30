@@ -423,11 +423,32 @@ export function DiscoverPage({
         const failed: { name: string; error: unknown }[] = [];
         setIssuesError(null);
 
-        // Try to get issues from projects, moving to next if a project has no issues
-        for (const project of projects) {
-          if (issues.length >= totalCap) break;
-          try {
-            const issuesResponse = await getPublicProjectIssues(project.id);
+        // Fetched a batch at a time, consumed in project order. It used to be
+        // one project after another, each waiting on the last: three round
+        // trips back to back before the first screen of issues, measured at
+        // 2.5-3.7s on a throttled phone. The batch is the fewest projects
+        // that can fill the list, so when every project has issues the
+        // requests are exactly the ones the sequential loop made; a project
+        // with none pulls in the next batch, as it pulled in the next project.
+        const batchSize = Math.ceil(totalCap / perProjectCap);
+        for (let start = 0; start < projects.length && issues.length < totalCap; start += batchSize) {
+          const batch = projects.slice(start, start + batchSize);
+          const results = await Promise.allSettled(batch.map((p) => getPublicProjectIssues(p.id)));
+          for (let k = 0; k < batch.length; k++) {
+            // Anything past the cap is ignored, failures included, exactly
+            // as the sequential loop never reached it.
+            if (issues.length >= totalCap) break;
+            const project = batch[k];
+            const result = results[k];
+            if (result.status === 'rejected') {
+              // Recorded, not swallowed: this used to `continue` silently, so a
+              // run where every project failed rendered "No recommended issues
+              // found".
+              console.warn(`Failed to fetch issues for project ${project.id}:`, result.reason);
+              failed.push({ name: project.name, error: result.reason });
+              continue;
+            }
+            const issuesResponse = result.value;
             if (issuesResponse?.issues && Array.isArray(issuesResponse.issues) && issuesResponse.issues.length > 0) {
               // Take up to perProjectCap issues from this project
               const projectIssues = issuesResponse.issues.slice(0, perProjectCap);
@@ -448,12 +469,6 @@ export function DiscoverPage({
                 });
               }
             }
-          } catch (err) {
-            // Recorded, not swallowed: this used to `continue` silently, so a
-            // run where every project failed rendered "No recommended issues
-            // found".
-            console.warn(`Failed to fetch issues for project ${project.id}:`, err);
-            failed.push({ name: project.name, error: err });
           }
         }
 
