@@ -7,13 +7,8 @@ import {
   type DrawResultView,
   type MaintainerBountyView,
 } from '../../../shared/api/client';
+import { humanDate } from '../../../shared/utils/humanDate';
 
-/** Shown to a contributor too, so it reads the way they will see it. */
-export const humanDate = (iso: string) => {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return `${d.getUTCDate()} ${d.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} ${d.getUTCFullYear()} at ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
-};
 
 /**
  * The draw controls for one bounty, for whoever maintains its repository.

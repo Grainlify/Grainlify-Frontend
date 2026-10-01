@@ -43,6 +43,10 @@ export interface BountyAgentStatus {
   statusLine: string;
 }
 
+export type BountyHistoryEntry =
+  | { kind: 'draw'; at: string; by: string; drawn: string | null }
+  | { kind: 'unassign'; at: string; by: string; contributor: string };
+
 export interface PublicBounty {
   id: string;
   repo: string;
@@ -67,6 +71,10 @@ export interface PublicBounty {
   /** Who holds it now. How many applied is deliberately not published. */
   assignedTo: string | null;
   assignmentStaleAt: string | null;
+  /** Every real draw and unassign, oldest first - public so that redrawing until
+   *  a preferred contributor wins happens in plain sight. Optional: an older
+   *  agent does not send it. */
+  history?: BountyHistoryEntry[];
   /** Only contributors with no completed bounty can win it. */
   reservedForNewcomers: boolean;
   /** Coarse band while a window is open; null when hidden or once closed. */

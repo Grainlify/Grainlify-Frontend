@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { humanDate } from '../../../shared/utils/humanDate';
 import { ExternalLink, FlaskConical, Sprout } from 'lucide-react';
 import { applyForBounty, type MyBountyApplication } from '../../../shared/api/client';
 import { formatBountyAmount, type PublicBounty } from '../../../shared/api/bountyAgent';
@@ -342,6 +343,28 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, mineLoading = fal
         <p className={`text-[12.5px] ${isDark ? 'text-[#f0b4a8]' : 'text-[#8a3a28]'}`} role="alert">
           {error}
         </p>
+      )}
+
+      {/* The public record of every draw and unassign. Maintainers can redraw
+          as often as they like; doing it here, in view, is the check on
+          redrawing until a preferred contributor wins. */}
+      {(b.history?.length ?? 0) > 0 && (
+        <details className="mt-3">
+          <summary className={`text-[12.5px] cursor-pointer select-none ${muted}`}>
+            Draw history ({b.history!.length})
+          </summary>
+          <ol className={`mt-2 space-y-1 text-[12.5px] ${muted}`}>
+            {b.history!.map((h, i) => (
+              <li key={i}>
+                <span className="tabular-nums">{humanDate(h.at)}</span>
+                {' — '}
+                {h.kind === 'draw'
+                  ? <>{h.by === 'automatic' ? 'drawn automatically' : <>drawn by <b className={strong}>{h.by}</b></>}: {h.drawn ? <b className={strong}>{h.drawn}</b> : 'nobody was eligible'}</>
+                  : <><b className={strong}>{h.by}</b> unassigned <b className={strong}>{h.contributor}</b></>}
+              </li>
+            ))}
+          </ol>
+        </details>
       )}
     </div>
   );

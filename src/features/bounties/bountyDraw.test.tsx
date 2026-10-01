@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { BountiesProgramPage } from './pages/BountiesProgramPage'
-import { callToAction, poolLine, timeUntil } from './components/BountyRow'
+import { BountyRow, callToAction, poolLine, timeUntil } from './components/BountyRow'
 import { getBounties, type PublicBounty } from '../../shared/api/bountyAgent'
 import { ApiError, applyForBounty, getMyBountyState } from '../../shared/api/client'
 import { DOCS_LIVE, docHref } from '../../shared/docs/docsLinks'
@@ -297,5 +297,37 @@ describe('"have I applied" survives a reload, because the server answers it', ()
     renderWithProviders(<BountiesProgramPage ledgerHref="/ledger" />)
     await screen.findByRole('button', { name: /apply for this bounty/i })
     expect(screen.queryByText(/you are in the draw/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('the public draw history', () => {
+  // Maintainers can unassign and redraw as often as they like; the check on
+  // redrawing until a preferred contributor wins is that it happens in view.
+  it('lists every draw and unassign, with who did it and who was drawn', async () => {
+    renderWithProviders(
+      <BountyRow
+        bounty={bounty({
+          history: [
+            { kind: 'draw', at: '2026-10-01T10:00:00Z', by: 'automatic', drawn: 'first' },
+            { kind: 'unassign', at: '2026-10-01T10:05:00Z', by: 'maint', contributor: 'first' },
+            { kind: 'draw', at: '2026-10-01T10:09:00Z', by: 'maint', drawn: 'second' },
+          ],
+        })}
+        isDark={false}
+        canApply={false}
+      />,
+    )
+    await userEvent.click(screen.getByText('Draw history (3)'))
+    const items = screen.getAllByRole('listitem').map((li) => li.textContent)
+    expect(items).toEqual([
+      '1 October 2026 at 10:00 UTC — drawn automatically: first',
+      '1 October 2026 at 10:05 UTC — maint unassigned first',
+      '1 October 2026 at 10:09 UTC — drawn by maint: second',
+    ])
+  })
+
+  it('shows nothing when there is no history, or the agent does not send one', () => {
+    renderWithProviders(<BountyRow bounty={bounty({ history: [] })} isDark={false} canApply={false} />)
+    expect(screen.queryByText(/Draw history/)).not.toBeInTheDocument()
   })
 })
