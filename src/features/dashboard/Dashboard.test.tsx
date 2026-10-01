@@ -439,13 +439,13 @@ describe('Dashboard', () => {
         )
 
       expect(railIds()).toEqual(expect.arrayContaining(['discover', 'browse', 'leaderboard']))
-      for (const adminOnly of ['data', 'grainhack', 'admin']) {
+      for (const adminOnly of ['data', 'grainhack', 'admin-social', 'admin-kyc', 'admin-bounty-settings']) {
         expect(railIds()).not.toContain(adminOnly)
       }
 
       await user.click(screen.getByRole('button', { name: /MAINTAINER/i }))
       await waitFor(() => expect(railIds()).toContain('maintainers'))
-      for (const adminOnly of ['data', 'grainhack', 'admin']) {
+      for (const adminOnly of ['data', 'grainhack', 'admin-social', 'admin-kyc', 'admin-bounty-settings']) {
         expect(railIds()).not.toContain(adminOnly)
       }
     })
@@ -482,7 +482,7 @@ describe('Dashboard', () => {
       // rail icon for a day, and nothing else navigated to it, so a submitted
       // proof sat on a screen no admin could open without typing ?tab=admin.
       await waitFor(() => {
-        expect(railIds()).toEqual(['data', 'grainhack', 'admin'])
+        expect(railIds()).toEqual(['data', 'grainhack', 'admin-social', 'admin-kyc', 'admin-redemptions', 'admin-bounty-repos', 'admin-bounty-settings', 'admin-ecosystems', 'admin-osw'])
       })
       for (const gone of ['discover', 'browse', 'ecosystems', 'leaderboard', 'blog', 'my-grainhack']) {
         expect(railIds()).not.toContain(gone)
@@ -510,7 +510,7 @@ describe('Dashboard', () => {
       await user.click(screen.getByRole('button', { name: /ADMIN/i }))
 
       const reviews = await waitFor(() => {
-        const el = container.querySelector('nav [data-tour-id="admin"]')
+        const el = container.querySelector('nav [data-tour-id="admin-social"]')
         expect(el).not.toBeNull()
         return el as HTMLElement
       })

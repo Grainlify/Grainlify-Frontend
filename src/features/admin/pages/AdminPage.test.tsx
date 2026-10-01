@@ -141,14 +141,14 @@ describe('AdminPage', () => {
         ecosystems: [makeEcosystem({ id: 'eco-1', name: 'Acme' }), makeEcosystem({ id: 'eco-2', name: 'Globex' })],
       })
 
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="ecosystems" />)
 
       expect(await screen.findByText('Acme')).toBeInTheDocument()
       expect(screen.getByText('Globex')).toBeInTheDocument()
     })
 
     it('shows an empty state when there are no ecosystems', async () => {
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="ecosystems" />)
 
       expect(
         await screen.findByText('No ecosystems found. Add your first ecosystem above.')
@@ -160,7 +160,7 @@ describe('AdminPage', () => {
         makeCreateEcosystemResult({ id: 'eco-new', name: 'New Eco' })
       )
       const user = userEvent.setup()
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="ecosystems" />)
 
       await screen.findByText('No ecosystems found. Add your first ecosystem above.')
 
@@ -209,7 +209,7 @@ describe('AdminPage', () => {
       })
       vi.mocked(deleteEcosystem).mockResolvedValue({ ok: true })
       const user = userEvent.setup()
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="ecosystems" />)
 
       await screen.findByText('Acme')
 
@@ -236,7 +236,7 @@ describe('AdminPage', () => {
     it('surfaces an error message without crashing when the ecosystems fetch fails', async () => {
       vi.mocked(getAdminEcosystems).mockRejectedValue(new Error('Failed to load ecosystems'))
 
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="ecosystems" />)
 
       expect(await screen.findByText('Failed to load ecosystems')).toBeInTheDocument()
       // The rest of the page still renders fine.
@@ -250,13 +250,13 @@ describe('AdminPage', () => {
         events: [makeOswEvent({ id: 'osw-1', title: 'Hack Week' })],
       })
 
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="osw" />)
 
       expect(await screen.findByText('Hack Week')).toBeInTheDocument()
     })
 
     it('shows an empty state when there are no events', async () => {
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="osw" />)
 
       expect(await screen.findByText(/No Open-Source Week events yet/)).toBeInTheDocument()
     })
@@ -264,7 +264,7 @@ describe('AdminPage', () => {
     it('creates an event: fills the form, submits, calls the create API with the right payload, and refreshes the list', async () => {
       vi.mocked(createOpenSourceWeekEvent).mockResolvedValue({ id: 'osw-new' })
       const user = userEvent.setup()
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="osw" />)
 
       await screen.findByText(/No Open-Source Week events yet/)
 
@@ -302,7 +302,7 @@ describe('AdminPage', () => {
       })
       vi.mocked(deleteOpenSourceWeekEvent).mockResolvedValue({ ok: true })
       const user = userEvent.setup()
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="osw" />)
 
       await screen.findByText('Hack Week')
 
@@ -326,7 +326,7 @@ describe('AdminPage', () => {
     it('does not crash and falls back to the empty state (without an error banner) when the events fetch fails', async () => {
       vi.mocked(getAdminOpenSourceWeekEvents).mockRejectedValue(new Error('boom'))
 
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="osw" />)
 
       expect(await screen.findByText(/No Open-Source Week events yet/)).toBeInTheDocument()
       expect(screen.queryByText('boom')).not.toBeInTheDocument()
@@ -339,7 +339,7 @@ describe('AdminPage', () => {
       })
       vi.mocked(deleteOpenSourceWeekEvent).mockRejectedValue(new Error('Cannot delete a running event'))
       const user = userEvent.setup()
-      renderWithProviders(<AdminPage />)
+      renderWithProviders(<AdminPage section="osw" />)
 
       await screen.findByText('Hack Week')
       await user.click(screen.getByRole('button', { name: 'Delete event' }))

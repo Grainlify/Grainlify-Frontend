@@ -19,10 +19,26 @@ import {
   Menu,
   Flag,
   Ticket,
-  ClipboardCheck,
   LifeBuoy,
   Coins,
+  AtSign,
+  BadgeCheck,
+  Banknote,
+  FolderGit2,
+  SlidersHorizontal,
+  CalendarDays,
 } from "lucide-react";
+import { ADMIN_SECTIONS, adminTabId, sectionForTab, type AdminSection } from "../admin/sections";
+
+const ADMIN_SECTION_ICONS: Record<AdminSection, typeof AtSign> = {
+  social: AtSign,
+  kyc: BadgeCheck,
+  redemptions: Banknote,
+  "bounty-repos": FolderGit2,
+  "bounty-settings": SlidersHorizontal,
+  ecosystems: Globe,
+  osw: CalendarDays,
+};
 import { SUPPORT_TRIGGER_LABEL } from "../../shared/components/supportContext";
 import { RailButton } from "./components/RailButton";
 import { MaintainerViewRequired } from "./components/MaintainerViewRequired";
@@ -239,6 +255,8 @@ export function Dashboard() {
     // outside the product, and landing on "page not found" tells somebody
     // their rewards vanished.
     if (tabFromUrl === RETIRED_REDEEM_TAB) return REDEEM_REPLACEMENT_TAB;
+    // Old links to the single Review page open its first area, highlighted.
+    if (tabFromUrl === "admin") return adminTabId(ADMIN_SECTIONS[0]!.id);
     if (tabFromUrl) return tabFromUrl;
 
     return "discover";
@@ -528,7 +546,7 @@ export function Dashboard() {
       setShowAdminPasswordModal(false);
       setAdminPassword("");
       setActiveRole("admin");
-      handleNavigation("admin");
+      handleNavigation(adminTabId(ADMIN_SECTIONS[0]!.id));
     } catch (error) {
       console.error("Admin authentication failed:", error);
       // Keep UI clean: show a simple message; avoid browser alert spam.
@@ -555,8 +573,9 @@ export function Dashboard() {
         //
         // This was "data" for a while because the console had no rail icon and
         // landing on it left nothing selected. It has one now ("Reviews"), so
-        // the reason no longer holds.
-        handleNavigation("admin");
+        // the reason no longer holds. The console is now one entry per area;
+        // this opens the first queue.
+        handleNavigation(adminTabId(ADMIN_SECTIONS[0]!.id));
       }
       return;
     }
@@ -634,8 +653,11 @@ export function Dashboard() {
     //
     // Two branches fixed this independently and the merge briefly produced
     // BOTH entries, putting "admin" in the rail twice. One entry, here.
+    // Each admin area is its own entry rather than one Review page that held
+    // them all. Ids are "admin-<section>"; a bare "admin" still opens the
+    // first queue, for old links.
     ...(userRole === "admin"
-      ? [{ id: "admin", icon: ClipboardCheck, label: "Reviews" }]
+      ? ADMIN_SECTIONS.map((x) => ({ id: adminTabId(x.id), icon: ADMIN_SECTION_ICONS[x.id], label: x.label }))
       : []),
     { id: "bounties", icon: Coins, label: "Bounties" },
     { id: "leaderboard", icon: Trophy, label: "Leaderboard" },
@@ -655,7 +677,10 @@ export function Dashboard() {
   // Either way this hides shortcuts; it is not an authorization boundary. The
   // pages themselves refuse a non-admin, and the server re-reads the role on
   // every admin request.
-  const ADMIN_NAV_IDS = new Set(["data", "grainhack", "admin"]);
+  const ADMIN_NAV_IDS = new Set(["data", "grainhack", "admin", ...ADMIN_SECTIONS.map((x) => adminTabId(x.id))]);
+
+  // Which admin area the current tab is, if it is one.
+  const adminSection: AdminSection | null = sectionForTab(currentPage);
 
   const navItems =
     activeRole === "admin"
@@ -1308,9 +1333,9 @@ export function Dashboard() {
                     indistinguishable from a dead site. An admin needs to know
                     the site is alive and what failed, because they are usually
                     the person who can act on it. */}
-                {currentPage === "admin" && userRole === "admin" && (
+                {adminSection && userRole === "admin" && (
                   <ErrorBoundary surface="The admin tab">
-                    <AdminPage />
+                    <AdminPage section={adminSection} />
                   </ErrorBoundary>
                 )}
                 {/* isAuthLoading, not just userRole.
@@ -1326,7 +1351,7 @@ export function Dashboard() {
                     Only the denial is gated. The admin branch above stays
                     conditioned on the resolved role alone, so a loading state
                     can never render the admin page speculatively. */}
-                {currentPage === "admin" && !isAuthLoading && userRole !== "admin" && (
+                {adminSection && !isAuthLoading && userRole !== "admin" && (
                   <AdminAccessRequired
                     surface="the admin dashboard"
                     onAuthenticate={openAdminAuthModal}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { Shield, Globe, Plus, Sparkles, Trash2, ExternalLink, Calendar, Pencil, X } from 'lucide-react';
+import { Globe, Plus, Sparkles, Trash2, ExternalLink, Calendar, Pencil, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal, ModalFooter, ModalButton, ModalInput, ModalSelect } from '../../../shared/components/ui/Modal';
 import { DatePicker } from '../../../shared/components/ui/DatePicker';
@@ -9,6 +9,7 @@ import { SocialFollowReview } from '../components/SocialFollowReview';
 import { KYCReview } from '../components/KYCReview';
 import { RedemptionsReview } from '../components/RedemptionsReview';
 import { BountyDrawSettings } from '../components/BountyDrawSettings';
+import type { AdminSection } from '../sections';
 import { BountyRepos } from '../components/BountyRepos';
 
 interface EcosystemLink {
@@ -38,7 +39,7 @@ interface Ecosystem {
   technologies?: string[] | null;
 }
 
-export function AdminPage() {
+export function AdminPage({ section = 'social' }: { section?: AdminSection }) {
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [ecosystems, setEcosystems] = useState<Ecosystem[]>([]);
@@ -249,8 +250,10 @@ export function AdminPage() {
   };
 
   useEffect(() => {
-    fetchEcosystems();
-    fetchOswEvents();
+    // Only the open section's data: a review queue does not need every
+    // ecosystem and event loaded behind it.
+    if (section === 'ecosystems') fetchEcosystems();
+    if (section === 'osw') fetchOswEvents();
 
     // Listen for ecosystem updates
     const handleEcosystemsUpdated = () => {
@@ -260,7 +263,7 @@ export function AdminPage() {
     return () => {
       window.removeEventListener('ecosystems-updated', handleEcosystemsUpdated);
     };
-  }, []);
+  }, [section]);
 
   const confirmDeleteOsw = (id: string, title: string) => {
     setOswDeleteConfirm({ id, title });
@@ -590,41 +593,19 @@ export function AdminPage() {
 
   return (
     <div className="space-y-6">
-      {/* Admin Header */}
-      <div className={`backdrop-blur-[40px] bg-gradient-to-br rounded-[28px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-10 transition-all overflow-hidden relative ${theme === 'dark'
-        ? 'from-white/[0.08] to-white/[0.04] border-white/10'
-        : 'from-white/[0.15] to-white/[0.08] border-white/20'
-        }`}>
-        {/* Decorative gradient */}
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-gradient-to-br from-[#c9983a]/20 to-transparent rounded-full blur-3xl"></div>
-
-        <div className="relative z-10">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-[12px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] shadow-[0_6px_20px_rgba(162,121,44,0.35)] border border-white/10">
-                  <Shield className="w-6 h-6 text-white" />
-                </div>
-                <h1 className={`text-[36px] font-bold transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-                  }`}>Admin Panel</h1>
-              </div>
-              <p className={`text-[16px] max-w-3xl transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-                }`}>
-                Manage ecosystems, review requests, and oversee platform operations.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className={`px-4 py-2 rounded-[12px] backdrop-blur-[20px] border transition-colors ${theme === 'dark'
-                ? 'bg-white/[0.08] border-white/15 text-[#d4d4d4]'
-                : 'bg-white/[0.15] border-white/25 text-[#7a6b5a]'
-                }`}>
-                <span className="text-[13px] font-medium">Admin Access</span>
-              </div>
-            </div>
-          </div>
+      {/* Inline error (avoid ugly alerts). At the top of the page rather than
+          inside the ecosystems section where it used to sit: the page is one
+          section at a time now, and an error from the events section would
+          otherwise have had nowhere to show. */}
+      {errorMessage && (
+        <div role="alert" className={`rounded-[16px] border px-4 py-3 text-[13px] ${theme === 'dark'
+          ? 'bg-red-500/10 border-red-500/20 text-red-200'
+          : 'bg-red-500/10 border-red-500/20 text-red-700'
+          }`}>
+          {errorMessage}
         </div>
-      </div>
-
+      )}
+      {section === 'ecosystems' && (<>
       {/* Ecosystem Management Section */}
       <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
@@ -647,15 +628,6 @@ export function AdminPage() {
           </button>
         </div>
 
-        {/* Inline error (avoid ugly alerts) */}
-        {errorMessage && (
-          <div className={`mb-4 rounded-[16px] border px-4 py-3 text-[13px] ${theme === 'dark'
-            ? 'bg-red-500/10 border-red-500/20 text-red-200'
-            : 'bg-red-500/10 border-red-500/20 text-red-700'
-            }`}>
-            {errorMessage}
-          </div>
-        )}
 
         {/* Ecosystems List */}
         <div className="mt-6">
@@ -867,7 +839,9 @@ export function AdminPage() {
           </div>
         </div>
       </div>
+      </>)}
 
+      {section === 'osw' && (<>
       {/* Open Source Week Events Section */}
       <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
@@ -948,7 +922,9 @@ export function AdminPage() {
           </div>
         )}
       </div>
+      </>)}
 
+      {section === 'social' && (<>
       {/* Review queues. These used to render bare - three unlabelled filter
           pills under the events card - which is a poor place to put the only
           screen where a contributor's submission gets a decision. Titled like
@@ -965,7 +941,9 @@ export function AdminPage() {
         </div>
         <SocialFollowReview />
       </div>
+      </>)}
 
+      {section === 'kyc' && (<>
       {/* Identity verification. Sits with the other review queues rather than
           on its own page: it is the same job - somebody is waiting on a
           decision only a human can make. */}
@@ -981,7 +959,9 @@ export function AdminPage() {
         </div>
         <KYCReview />
       </div>
+      </>)}
 
+      {section === 'redemptions' && (<>
       <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
         : 'bg-white/[0.15] border-white/20'
@@ -994,10 +974,11 @@ export function AdminPage() {
         </div>
         <RedemptionsReview />
       </div>
+      </>)}
 
-      {/* The bounty draw. Not a review queue - nobody is waiting on a decision
-          here - but it belongs on this page for the same reason: it is the
-          only screen where a person changes how the programme behaves. */}
+      {section === 'bounty-settings' && (<>
+      {/* The draw's platform-wide settings. Running the draw, unassigning,
+          redrawing and deadlines are the maintainer's, on the Maintainer tab. */}
       <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
         ? 'bg-white/[0.08] border-white/10'
         : 'bg-white/[0.15] border-white/20'
@@ -1010,7 +991,9 @@ export function AdminPage() {
         </div>
         <BountyDrawSettings />
       </div>
+      </>)}
 
+      {section === 'bounty-repos' && (<>
       {/* Which repositories may have bounties at all. Above the draw controls
           would be tidier, but this is the rarer job: most visits here are to
           run or inspect a draw, not to admit a project. */}
@@ -1026,6 +1009,7 @@ export function AdminPage() {
         </div>
         <BountyRepos />
       </div>
+      </>)}
 
       {/* Add Ecosystem Modal */}
       <Modal
