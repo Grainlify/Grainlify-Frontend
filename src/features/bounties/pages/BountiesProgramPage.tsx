@@ -119,7 +119,7 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
           <p className={`${eyebrow} mb-1`}>Grainlify Bounties</p>
           <h1 className={`text-[24px] sm:text-[32px] font-bold mb-2 transition-colors ${strong}`}>Open bounties</h1>
           <p className={`text-[14px] sm:text-[16px] max-w-2xl transition-colors ${isDark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
-            Fixed bounties on open-source issues, funded by GRAIN creator fees. An agent prices each issue and reviews the pull request; a maintainer merges and a person approves every payout.
+            Fixed bounties on open-source issues, funded by GRAIN creator fees. An agent posts each bounty, assesses applicants and reviews the pull request; a maintainer merges and a person approves every payout.
           </p>
         </div>
         <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-[#c9983a] to-[#a67c2e] flex items-center justify-center shadow-[0_8px_24px_rgba(162,121,44,0.3)] border border-white/15 shrink-0">
