@@ -3,12 +3,13 @@
  * The page renders the one section it was opened for. The order here is the
  * sidebar's: the queues somebody is waiting on first.
  */
-export type AdminSection = 'social' | 'kyc' | 'redemptions' | 'bounty-repos' | 'bounty-settings' | 'ecosystems' | 'osw';
+export type AdminSection = 'social' | 'kyc' | 'redemptions' | 'bounty-disputes' | 'bounty-repos' | 'bounty-settings' | 'ecosystems' | 'osw';
 
 export const ADMIN_SECTIONS: { id: AdminSection; label: string }[] = [
   { id: 'social', label: 'Social follow review' },
   { id: 'kyc', label: 'Verification review' },
   { id: 'redemptions', label: 'Redemptions' },
+  { id: 'bounty-disputes', label: 'Bounty disputes' },
   { id: 'bounty-repos', label: 'Bounty repositories' },
   { id: 'bounty-settings', label: 'Bounty draw settings' },
   { id: 'ecosystems', label: 'Ecosystems' },

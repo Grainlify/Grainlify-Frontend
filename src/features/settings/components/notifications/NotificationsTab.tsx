@@ -74,6 +74,21 @@ const NOTIFICATION_TYPE_INFO: Record<string, NotificationTypeInfo> = {
     title: 'Your deadline moved',
     description: 'When the deadline for opening a pull request on a bounty you hold is changed, either way, with the reason.',
   },
+  bounty_funded_assigned: {
+    section: 'Bounties',
+    title: 'Assigned a funded bounty',
+    description: 'When a maintainer who funded a bounty assigns it to you, with the wallet it pays and the escrow deadline.',
+  },
+  bounty_unassign_proposed: {
+    section: 'Bounties',
+    title: 'Asked to end an assignment',
+    description: 'When the other side of a funded bounty proposes ending an assignment with an open pull request. Silence for seven days counts as agreeing.',
+  },
+  bounty_unassign_refused: {
+    section: 'Bounties',
+    title: 'Your proposal was refused',
+    description: 'When a proposal you made to end an assignment is refused. Nothing else changes; the escrow deadline still decides.',
+  },
   bounty_review_posted: {
     section: 'Bounties',
     title: 'Agent reviewed your pull request',

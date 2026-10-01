@@ -27,6 +27,7 @@ import {
   FolderGit2,
   SlidersHorizontal,
   CalendarDays,
+  Scale,
 } from "lucide-react";
 import { ADMIN_SECTIONS, adminTabId, sectionForTab, type AdminSection } from "../admin/sections";
 
@@ -34,6 +35,7 @@ const ADMIN_SECTION_ICONS: Record<AdminSection, typeof AtSign> = {
   social: AtSign,
   kyc: BadgeCheck,
   redemptions: Banknote,
+  "bounty-disputes": Scale,
   "bounty-repos": FolderGit2,
   "bounty-settings": SlidersHorizontal,
   ecosystems: Globe,

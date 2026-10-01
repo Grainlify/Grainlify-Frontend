@@ -159,6 +159,9 @@ describe('NotificationsTab: sections', () => {
     ['bounty_review_posted', 'Agent reviewed your pull request'],
     ['bounty_unassigned', 'Your assignment ended'],
     ['bounty_deadline_changed', 'Your deadline moved'],
+    ['bounty_funded_assigned', 'Assigned a funded bounty'],
+    ['bounty_unassign_proposed', 'Asked to end an assignment'],
+    ['bounty_unassign_refused', 'Your proposal was refused'],
   ]
 
   it('shows a control for every bounty notification type', async () => {

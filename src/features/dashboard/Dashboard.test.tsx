@@ -482,7 +482,7 @@ describe('Dashboard', () => {
       // rail icon for a day, and nothing else navigated to it, so a submitted
       // proof sat on a screen no admin could open without typing ?tab=admin.
       await waitFor(() => {
-        expect(railIds()).toEqual(['data', 'grainhack', 'admin-social', 'admin-kyc', 'admin-redemptions', 'admin-bounty-repos', 'admin-bounty-settings', 'admin-ecosystems', 'admin-osw'])
+        expect(railIds()).toEqual(['data', 'grainhack', 'admin-social', 'admin-kyc', 'admin-redemptions', 'admin-bounty-disputes', 'admin-bounty-repos', 'admin-bounty-settings', 'admin-ecosystems', 'admin-osw'])
       })
       for (const gone of ['discover', 'browse', 'ecosystems', 'leaderboard', 'blog', 'my-grainhack']) {
         expect(railIds()).not.toContain(gone)

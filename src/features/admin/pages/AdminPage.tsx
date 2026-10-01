@@ -9,6 +9,7 @@ import { SocialFollowReview } from '../components/SocialFollowReview';
 import { KYCReview } from '../components/KYCReview';
 import { RedemptionsReview } from '../components/RedemptionsReview';
 import { BountyDrawSettings } from '../components/BountyDrawSettings';
+import { BountyDisputes } from '../components/BountyDisputes';
 import type { AdminSection } from '../sections';
 import { BountyRepos } from '../components/BountyRepos';
 
@@ -973,6 +974,23 @@ export function AdminPage({ section = 'social' }: { section?: AdminSection }) {
             }`}>Points-to-USDC requests awaiting payout or rejection.</p>
         </div>
         <RedemptionsReview />
+      </div>
+      </>)}
+
+      {section === 'bounty-disputes' && (<>
+      {/* Funded bounties only, and only the case the deadline cannot settle by
+          itself: a contributor saying deliverable work is being held back. */}
+      <div className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-8 max-sm:p-4 transition-colors ${theme === 'dark'
+        ? 'bg-white/[0.08] border-white/10'
+        : 'bg-white/[0.15] border-white/20'
+        }`}>
+        <div className="mb-6">
+          <h2 className={`text-[24px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
+            }`}>Bounty disputes</h2>
+          <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
+            }`}>Funded bounties where one side refused to end an assignment after a pull request was opened. The escrow deadline settles every one of these without you; you are here only when a contributor says deliverable work is being held back.</p>
+        </div>
+        <BountyDisputes />
       </div>
       </>)}
 
