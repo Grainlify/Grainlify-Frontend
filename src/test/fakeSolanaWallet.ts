@@ -11,12 +11,16 @@ export interface FakeWalletOptions {
   connect?: () => Promise<void>
   signMessage?: (message: Uint8Array) => Promise<Uint8Array>
   noSignMessage?: boolean
+  /** Also offer solana:signAndSendTransaction, as a funder's wallet must. */
+  canSend?: boolean
+  sendTransaction?: (tx: Uint8Array, chain: string) => Promise<Uint8Array>
 }
 
 export function registerFakeWallet(o: FakeWalletOptions) {
   const address = o.address ?? 'H4AbmvyPav1oLUgcKGQUpsSdk1Uh7EkYLQX7qHJdUCmu'
   const account: WalletAccount = { address, publicKey: new Uint8Array(32), chains: ['solana:devnet'], features: ['solana:signMessage'] }
   const signed: string[] = []
+  const sent: { bytes: Uint8Array; chain: string }[] = []
   const features: Record<string, unknown> = {
     'standard:connect': {
       version: '1.0.0',
@@ -36,6 +40,17 @@ export function registerFakeWallet(o: FakeWalletOptions) {
       },
     }
   }
+  if (o.canSend) {
+    features['solana:signAndSendTransaction'] = {
+      version: '1.0.0',
+      supportedTransactionVersions: ['legacy'],
+      signAndSendTransaction: async ({ transaction, chain }: { transaction: Uint8Array; chain: string }) => {
+        sent.push({ bytes: transaction, chain })
+        const signature = o.sendTransaction ? await o.sendTransaction(transaction, chain) : new Uint8Array(64).fill(9)
+        return [{ signature }]
+      },
+    }
+  }
   const wallet = {
     version: '1.0.0',
     name: o.name,
@@ -45,5 +60,5 @@ export function registerFakeWallet(o: FakeWalletOptions) {
     features,
   } as unknown as Wallet
   const unregister = getWallets().register(wallet)
-  return { unregister, signed, address }
+  return { unregister, signed, sent, address }
 }

@@ -17,16 +17,23 @@
  *  has no equivalent, so there the page opens itself inside the wallet app's
  *  own browser through the wallet's universal link.
  *
- *  Only this module talks to wallets, and only the link page imports it, so
- *  none of this reaches any other page's bundle. Nothing here sends a
- *  transaction: the only request made of a wallet is to sign one plain-text
- *  message, which the wallet shows the person in full.
+ *  Only this module talks to wallets, and only the pages that need a wallet
+ *  import it (the link page, and the funded-bounty screens a funder uses), so
+ *  none of this reaches any other page's bundle.
+ *
+ *  Two requests are ever made of a wallet: sign one plain-text message, which
+ *  the wallet shows in full; and, for a funder, sign and send a transaction
+ *  that Grainlify built but cannot sign - locking, assigning, unassigning or
+ *  taking back their own escrow. The wallet shows that transaction too, and
+ *  nothing is sent unless they approve it there.
  */
 
 import { getWallets } from '@wallet-standard/app';
 import type { Wallet, WalletAccount } from '@wallet-standard/base';
 import {
+  SolanaSignAndSendTransaction,
   SolanaSignMessage,
+  type SolanaSignAndSendTransactionFeature,
   type SolanaSignMessageFeature,
 } from '@solana/wallet-standard-features';
 
@@ -113,6 +120,35 @@ export async function signText(wallet: SolanaWallet, account: WalletAccount, tex
     const [out] = await feature.signMessage({ account, message: new TextEncoder().encode(text) });
     if (!out?.signature || out.signature.length !== 64) throw new Error(`${wallet.name} returned no signature.`);
     return out.signature;
+  } catch (e) {
+    throw asRejection(e, wallet.name);
+  }
+}
+
+/** Can this wallet send a transaction, not just sign a message? */
+export function canSendTransactions(wallet: SolanaWallet): boolean {
+  return SolanaSignAndSendTransaction in wallet.raw.features;
+}
+
+/** The chain id a wallet expects, from the agent's network name. */
+export function chainFor(network: string): `solana:${string}` {
+  return network === 'solana-mainnet' ? 'solana:mainnet' : network === 'solana-devnet' ? 'solana:devnet' : 'solana:localnet';
+}
+
+/**
+ * Sign and send a transaction Grainlify built (base64, unsigned) from this
+ * account. Returns the transaction signature in base58, the form an explorer
+ * and the agent use. The wallet shows the person what it does before they
+ * approve; declining throws WalletRejectedError.
+ */
+export async function sendTransaction(wallet: SolanaWallet, account: WalletAccount, transactionBase64: string, network: string): Promise<string> {
+  if (!canSendTransactions(wallet)) throw new Error(`${wallet.name} cannot send transactions from this page. Try Phantom or Solflare.`);
+  const feature = (wallet.raw.features as unknown as SolanaSignAndSendTransactionFeature)[SolanaSignAndSendTransaction];
+  const bytes = Uint8Array.from(atob(transactionBase64), (c) => c.charCodeAt(0));
+  try {
+    const [out] = await feature.signAndSendTransaction({ account, transaction: bytes, chain: chainFor(network), options: { commitment: 'confirmed' } });
+    if (!out?.signature || out.signature.length !== 64) throw new Error(`${wallet.name} returned no signature.`);
+    return base58(out.signature);
   } catch (e) {
     throw asRejection(e, wallet.name);
   }

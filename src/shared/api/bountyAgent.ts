@@ -81,6 +81,24 @@ export interface PublicBounty {
   applicantBucket: 'none' | 'few' | 'many' | null;
   /** Exact size, released once the window closes. */
   applicantCount: number | null;
+  /** A maintainer-funded bounty: who funded it, how it is assigned, the escrow
+   *  anyone can read, and the funder's public record. Optional: an older agent
+   *  does not send it. */
+  funded?: {
+    by: string;
+    mode: 'draw' | 'self_assign';
+    escrow: string;
+    escrowUrl: string;
+    deadlineAt: string;
+    profile: FunderRecord | null;
+  } | null;
+}
+
+/** A funder's public record: three numbers side by side, because one alone misleads. */
+export interface FunderRecord {
+  bountiesFunded: number;
+  unassignedBeforePr: number;
+  disputesRaised: number;
 }
 
 export type LedgerEventKind = 'bounty_posted' | 'inference' | 'gate_passed' | 'gate_refused' | 'payout';

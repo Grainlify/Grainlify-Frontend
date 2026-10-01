@@ -1120,11 +1120,29 @@ export interface MyBountyApplication {
   appliedAt: string;
 }
 
+/** A proposal to end an assignment once its pull request is open, on a funded bounty. */
+export interface UnassignProposal {
+  id: string;
+  proposedBy: 'funder' | 'contributor';
+  proposerLogin: string;
+  reason: string;
+  status: 'pending' | 'accepted' | 'accepted_by_silence' | 'refused' | 'withdrawn' | string;
+  respondBy: string | null;
+  response: string | null;
+}
+
+export interface MyBountyAssignment {
+  status: string;
+  staleAt: string;
+  /** Present on a funded bounty: the wallet its escrow will pay, and any proposal to end it. */
+  funded?: { wallet: string | null; prNumber: number | null; proposal: UnassignProposal | null };
+}
+
 export interface MyBountyState {
   githubLogin?: string;
   /** Keyed by bounty id. */
   applications: Record<string, MyBountyApplication>;
-  assignments: Record<string, { status: string; staleAt: string }>;
+  assignments: Record<string, MyBountyAssignment>;
 }
 
 /** What this contributor has applied for and holds, from the server.
@@ -1252,8 +1270,20 @@ export interface MaintainerBountyView {
  *  permission. The tab used to filter the public list against the caller's
  *  Grainlify projects, which is a different question and hid any repository
  *  they maintain without having registered it. */
+export interface MaintainerBountyEntry {
+  bountyId: string;
+  repo: string;
+  issueNumber: number;
+  issueTitle?: string | null;
+  /** 'funding' only ever appears for the person funding it. */
+  status?: string;
+  /** Funded by a maintainer: run from the funded controls, not the draw controls. */
+  funded?: boolean;
+  youFunded?: boolean;
+}
+
 export const getMaintainerBounties = () =>
-  apiRequest<{ bounties: { bountyId: string; repo: string; issueNumber: number }[] }>('/maintainer/bounties', { requiresAuth: true });
+  apiRequest<{ bounties: MaintainerBountyEntry[] }>('/maintainer/bounties', { requiresAuth: true });
 
 /** What a maintainer may see about one bounty. Whether they maintain it is the
  *  agent's decision, from GitHub permission on the bounty's own repository -
@@ -1284,6 +1314,163 @@ export const maintainerSetDeadline = (bountyId: string, deadline: string, reason
   apiRequest<{ ok: true; previousAt: string; staleAt: string }>(
     `/maintainer/bounties/${encodeURIComponent(bountyId)}/deadline`,
     { method: 'POST', requiresAuth: true, body: JSON.stringify({ deadline, reason }) });
+
+// ---------------------------------------------------------------- funded bounties
+//
+// A maintainer putting their own money behind an issue. Nothing here moves
+// money: the agent builds transactions the funder's own wallet signs, and
+// reads the chain afterwards. Every refusal carries a sentence written for the
+// person (`detail`), which is what these surface.
+
+export interface FundedStatus {
+  /** Whether this person can fund bounties: everybody once switched on, named testers before. */
+  available: boolean;
+  network: string;
+  currencies: { currency: string; decimals: number; maxMinor: string }[];
+  minDeadlineDays: number;
+  maxDeadlineDays: number;
+  respondDays: number;
+  attestorReady: boolean;
+}
+
+export interface FundedQuote {
+  amountMinor: string;
+  feeBps: number;
+  feeMinimumMinor: string;
+  feeAmountMinor: string;
+  totalMinor: string;
+  effectiveRate: number;
+  flooredByMinimum: boolean;
+}
+
+export interface FundedPrepared {
+  bountyId: string;
+  escrow: string;
+  transaction: string;
+  amountMinor: string;
+  feeAmountMinor: string;
+  totalMinor: string;
+  decimals: number;
+  network: string;
+}
+
+export interface FundedView {
+  bountyId: string;
+  repo: string;
+  issueNumber: number;
+  issueTitle: string | null;
+  bountyStatus: string;
+  mode: 'draw' | 'self_assign';
+  escrow: {
+    address: string; network: string; state: string; funderWallet: string; contributorWallet: string | null;
+    amountMinor: string; feeAmountMinor: string; totalMinor: string; currency: string; decimals: number;
+    deadlineAt: string; fundTx: string | null;
+  };
+  applicants: {
+    githubLogin: string; status: string; fit: string | null; appliedAt: string;
+    completions: number; abandons: number; firstApplication: boolean; assignable: boolean;
+  }[];
+  assignment: {
+    githubLogin: string; status: string; assignedAt: string; prNumber: number | null; prOpen: boolean;
+    wallet: string | null; onChain: boolean;
+  } | null;
+  proposal: (UnassignProposal & { respondedAt: string | null; awaitingFunderSignature: boolean }) | null;
+  canDraw: boolean;
+  drawUnavailableReason: string | null;
+  profile: { login: string } & import('./bountyAgent').FunderRecord;
+}
+
+/** A transaction for the funder's wallet, or an action that is already done. */
+export interface FundedUnassignResult {
+  contributor: string;
+  needsSignature: boolean;
+  transaction?: string;
+  funderWallet?: string;
+}
+
+/** Rethrows with the sentence the agent wrote for the person, not its code. */
+async function funded<T>(path: string, init: RequestInit & { requiresAuth?: boolean } = {}): Promise<T> {
+  try {
+    return await apiRequest<T>(path, { requiresAuth: true, ...init });
+  } catch (e) {
+    const detail = (e as ApiError)?.data?.detail;
+    if (typeof detail === 'string' && detail) throw new ApiError(detail, (e as ApiError).status, (e as ApiError).data);
+    throw e;
+  }
+}
+const post = (body: unknown = {}) => ({ method: 'POST', body: JSON.stringify(body) });
+const fid = (id: string) => encodeURIComponent(id);
+
+export const getFundedStatus = () => funded<FundedStatus>('/maintainer/funded-status');
+export const getFundedQuote = (amountMinor: string) =>
+  funded<FundedQuote>(`/bounties/escrow/quote?amount_minor=${encodeURIComponent(amountMinor)}`);
+export const prepareFundedBounty = (input: {
+  repo: string; issueNumber: number; amountMinor: string; currency: string; mode: 'draw' | 'self_assign'; deadline: string; funderWallet: string;
+}) =>
+  funded<FundedPrepared>('/maintainer/funded', post({
+    repo: input.repo, issue_number: input.issueNumber, amount_minor: input.amountMinor, currency: input.currency,
+    mode: input.mode, deadline: input.deadline, funder_wallet: input.funderWallet,
+  }));
+/** The signature is optional: coming back after the page closed, the chain is what is checked. */
+export const confirmFundedBounty = (bountyId: string, signature?: string) =>
+  funded<{ bountyId: string; state: string; already: boolean }>(`/maintainer/funded/${fid(bountyId)}/confirm`, post({ signature: signature ?? '' }));
+export const getFundedView = (bountyId: string) => funded<FundedView>(`/maintainer/funded/${fid(bountyId)}`);
+export const fundedAssign = (bountyId: string, applicant: string) =>
+  funded<{ transaction: string; contributor: string; wallet: string; funderWallet: string }>(`/maintainer/funded/${fid(bountyId)}/assign`, post({ applicant }));
+export const fundedAssignConfirm = (bountyId: string, applicant: string, signature: string) =>
+  funded<{ contributor: string }>(`/maintainer/funded/${fid(bountyId)}/assign/confirm`, post({ applicant, signature }));
+export const fundedDraw = (bountyId: string) =>
+  funded<{ draw: DrawResultView; onChain: string | null; onChainError?: string | null }>(`/maintainer/funded/${fid(bountyId)}/draw`, post({ simulate: false }));
+export const fundedUnassign = (bountyId: string, reason: string) =>
+  funded<FundedUnassignResult>(`/maintainer/funded/${fid(bountyId)}/unassign`, post({ reason }));
+export const fundedUnassignConfirm = (bountyId: string, reason: string, signature: string) =>
+  funded<{ already: boolean }>(`/maintainer/funded/${fid(bountyId)}/unassign/confirm`, post({ reason, signature }));
+export const fundedPropose = (bountyId: string, reason: string) =>
+  funded<{ proposalId: string; respondBy: string }>(`/maintainer/funded/${fid(bountyId)}/propose`, post({ reason }));
+export const fundedAnswer = (proposalId: string, answer: 'accept' | 'refuse' | 'withdraw', reason = '') =>
+  funded<{ status?: string; carriedOut?: boolean; awaitingFunderSignature?: boolean }>(`/maintainer/funded-proposals/${fid(proposalId)}/${answer}`, post({ reason }));
+export const fundedReclaim = (bountyId: string) =>
+  funded<{ kind: 'cancel' | 'refund'; transaction: string; funderWallet: string }>(`/maintainer/funded/${fid(bountyId)}/reclaim`, post());
+export const fundedReclaimConfirm = (bountyId: string) =>
+  funded<{ outcome: 'cancelled' | 'refunded' }>(`/maintainer/funded/${fid(bountyId)}/reclaim/confirm`, post());
+
+/** The contributor's side of a proposal, on their own assignment. */
+export const contributorPropose = (bountyId: string, reason: string) =>
+  funded<{ proposalId: string; respondBy: string }>(`/bounties/${fid(bountyId)}/unassign/propose`, post({ reason }));
+export const contributorAnswer = (proposalId: string, answer: 'accept' | 'refuse' | 'withdraw', reason = '') =>
+  funded<{ status?: string }>(`/bounties/unassign-proposals/${fid(proposalId)}/${answer}`, post({ reason }));
+
+export interface BountyDispute {
+  id: string;
+  bountyId: string;
+  repo: string;
+  issueNumber: number;
+  issueTitle: string | null;
+  funder: string;
+  contributor: string;
+  prNumber: number | null;
+  prUrl: string | null;
+  escrow: { address: string; network: string; currency: string; amountMinor: string; feeAmountMinor: string; deadlineAt: string };
+  proposedBy: 'funder' | 'contributor';
+  funderSays: string;
+  contributorSays: string;
+  refusedAt: string | null;
+  arbitration: 'left_to_deadline' | 'release_requested' | null;
+  arbitratedBy: string | null;
+  arbitratedAt: string | null;
+  stillHeld: boolean;
+}
+
+export interface BountyDisputeDetail extends BountyDispute {
+  timeline: { at: string; actor: string; action: string; detail: Record<string, unknown> }[];
+  conductNotes: { note: string; by: string; at: string }[];
+  funderProfile: { login: string } & import('./bountyAgent').FunderRecord;
+}
+
+export const getBountyDisputes = () => funded<{ disputes: BountyDispute[] }>('/admin/bounty-disputes');
+export const getBountyDispute = (id: string) => funded<BountyDisputeDetail>(`/admin/bounty-disputes/${fid(id)}`);
+export const leaveDisputeToDeadline = (id: string) => funded<{ ok: true }>(`/admin/bounty-disputes/${fid(id)}/leave`, post());
+export const recordConductNote = (id: string, note: string) => funded<{ ok: true }>(`/admin/bounty-disputes/${fid(id)}/note`, post({ note }));
 
 export const getDrawSettings = () => apiRequest<{ settings: DrawSetting[] }>('/admin/bounty-draw/settings', { requiresAuth: true });
 export const setDrawSetting = (key: string, value: string) =>
