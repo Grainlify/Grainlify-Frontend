@@ -67,6 +67,11 @@ export function BountyDisputes() {
   const strong = isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]';
   const muted = isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
 
+  // Not configured is a state, not a failure: with no escrow wired up there
+  // can be no funded bounties, so no disputes either.
+  if ((loadError as { status?: number } | null)?.status === 503) {
+    return <p className={`text-[13.5px] ${muted}`}>Funded bounties are not set up on this deployment, so there is nothing to dispute.</p>;
+  }
   if (loadError) return <LoadFailed what="bounty disputes" error={loadError} onRetry={() => setAttempt((n) => n + 1)} />;
   if (!list) return <div aria-busy="true" className={`animate-pulse h-24 rounded-[16px] ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />;
 

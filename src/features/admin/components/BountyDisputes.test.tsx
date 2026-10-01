@@ -21,6 +21,12 @@ const dispute: BountyDispute = {
 beforeEach(() => vi.resetAllMocks())
 
 describe('the dispute view', () => {
+  it('says plainly when funded bounties are not set up, rather than reporting a failure', async () => {
+    vi.mocked(getBountyDisputes).mockRejectedValue(Object.assign(new Error('escrow_not_configured'), { status: 503 }))
+    renderWithProviders(<BountyDisputes />)
+    expect(await screen.findByText(/Funded bounties are not set up on this deployment/)).toBeInTheDocument()
+  })
+
   it('states, as a rule, that an admin cannot end a dispute early in the funder\'s favour', async () => {
     vi.mocked(getBountyDisputes).mockResolvedValue({ disputes: [] })
     renderWithProviders(<BountyDisputes />)
