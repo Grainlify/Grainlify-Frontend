@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { humanDate } from '../../../shared/utils/humanDate';
 import { ExternalLink, FlaskConical, Sprout } from 'lucide-react';
-import { applyForBounty, type MyBountyApplication } from '../../../shared/api/client';
+import { applyForBounty, type MyBountyApplication, type MyBountyAssignment } from '../../../shared/api/client';
 import { formatBountyAmount, type PublicBounty } from '../../../shared/api/bountyAgent';
+import { FundedAssignmentActions, FundedNotice } from './FundedNotice';
 
 const STATUS_LABELS: Record<string, string> = {
   posted: 'Open',
@@ -54,8 +55,17 @@ export function callToAction(b: PublicBounty, now: Date): { kind: 'apply' | 'wai
   if (b.assignedTo) {
     return {
       kind: 'held',
-      line: `Assigned to ${b.assignedTo}. If no pull request arrives by the deadline it is drawn again.`,
+      line: b.funded
+        ? `Assigned to ${b.assignedTo} by the funder.`
+        : `Assigned to ${b.assignedTo}. If no pull request arrives by the deadline it is drawn again.`,
     };
+  }
+  // A funded bounty has no window: it is open until its funder draws or
+  // assigns. "Applications close in 14 days" would be untrue - that date is
+  // the escrow's deadline, not the end of applying.
+  if (b.funded && b.applicationState === 'open') {
+    const base = b.funded.mode === 'draw' ? 'Open until the funder runs the draw.' : 'Open until the funder assigns it.';
+    return { kind: 'apply', line: base };
   }
   if (b.applicationState === 'open') {
     const left = timeUntil(b.applicationsCloseAt, now);
@@ -118,6 +128,8 @@ export const APPLY_REFUSALS: Record<string, Refusal> = {
     fixable: false,
   },
   already_applied: { line: 'You have already applied for this bounty.', fixable: false },
+  own_bounty: { line: 'You funded this bounty, so you cannot apply for it.', fixable: false },
+  assigned: { line: 'Somebody holds this bounty at the moment, so it is not taking applications.', fixable: false },
   applications_closed: { line: 'Applications have closed. The draw runs next.', fixable: false },
   not_open: { line: 'This bounty is not open for applications.', fixable: false },
   no_such_bounty: { line: 'That bounty no longer exists.', fixable: false },
@@ -170,6 +182,8 @@ interface BountyRowProps {
   canApply: boolean;
   /** This viewer's application, from the server. */
   mine?: MyBountyApplication;
+  /** This viewer's assignment on it, if they hold it. */
+  held?: MyBountyAssignment;
   /** True until the server has said whether this viewer has applied. An Apply
    *  button shown before that is a guess, and it was wrong often enough to
    *  matter: it appeared, then turned into a refusal a moment later. */
@@ -177,7 +191,7 @@ interface BountyRowProps {
   onApplied?: () => void;
 }
 
-export function BountyRow({ bounty: b, isDark, canApply, mine, mineLoading = false, onApplied }: BountyRowProps) {
+export function BountyRow({ bounty: b, isDark, canApply, mine, held, mineLoading = false, onApplied }: BountyRowProps) {
   const [text, setText] = useState('');
   const [applying, setApplying] = useState(false);
   // Held only until the refreshed server state arrives, so the row says
@@ -185,7 +199,12 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, mineLoading = fal
   const [justApplied, setJustApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cta = callToAction(b, new Date());
-  const serverLine = applicationLine(mine);
+  // On a self-assign funded bounty there is no draw to be in or win.
+  const serverLine = b.funded?.mode === 'self_assign' && mine?.status === 'applied'
+    ? 'You have applied. The funder picks who to assign, and you will be told either way.'
+    : b.funded?.mode === 'self_assign' && mine?.status === 'won'
+      ? 'The funder assigned this bounty to you. Open a pull request that closes the issue.'
+      : applicationLine(mine);
   const applied = isSettled(mine) || justApplied;
   const refusal = mine?.status === 'rejected_gate' ? refusalFor(mine.gateFailureReason) : null;
 
@@ -280,6 +299,16 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, mineLoading = fal
           </a>
         </div>
       </div>
+
+      {b.funded && (
+        <p className={`text-[12.5px] -mt-1 ${muted}`}>
+          Funded by <b className={strong}>{b.funded.by}</b> · not by Grainlify
+        </p>
+      )}
+      {b.funded && b.status !== 'paid' && <FundedNotice bounty={b} isDark={isDark} />}
+      {b.funded && held?.funded && (
+        <FundedAssignmentActions bountyId={b.id} assignment={held} isDark={isDark} onChanged={() => onApplied?.()} />
+      )}
 
       {cta.kind === 'apply' && !applied && canApply && (
         <div>

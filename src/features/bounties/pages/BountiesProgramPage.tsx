@@ -106,6 +106,7 @@ export function BountiesProgramPage({ ledgerHref }: BountiesProgramPageProps) {
       isDark={isDark}
       canApply={canApply}
       mine={mine?.applications[b.id]}
+      held={mine?.assignments[b.id]}
       mineLoading={mineLoading}
       onApplied={() => setAttempt((n) => n + 1)}
     />
