@@ -8,7 +8,7 @@ import { createEcosystem, getAdminEcosystems, getAdminEcosystem, deleteEcosystem
 import { SocialFollowReview } from '../components/SocialFollowReview';
 import { KYCReview } from '../components/KYCReview';
 import { RedemptionsReview } from '../components/RedemptionsReview';
-import { BountyDrawControls } from '../components/BountyDrawControls';
+import { BountyDrawSettings } from '../components/BountyDrawSettings';
 import { BountyRepos } from '../components/BountyRepos';
 
 interface EcosystemLink {
@@ -1004,11 +1004,11 @@ export function AdminPage() {
         }`}>
         <div className="mb-6">
           <h2 className={`text-[24px] font-bold mb-2 transition-colors ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'
-            }`}>Bounty Draw</h2>
+            }`}>Bounty draw settings</h2>
           <p className={`text-[14px] transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'
-            }`}>Application counts, the weighted draw and the settings behind it. Changes here take effect without a deploy.</p>
+            }`}>Window lengths, weights and the automatic draw, for every bounty. Changes here take effect without a deploy. Running the draw, unassigning and deadlines are the maintainer's, on each bounty in the Maintainer tab.</p>
         </div>
-        <BountyDrawControls />
+        <BountyDrawSettings />
       </div>
 
       {/* Which repositories may have bounties at all. Above the draw controls

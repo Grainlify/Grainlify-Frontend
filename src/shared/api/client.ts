@@ -1229,6 +1229,12 @@ export interface MaintainerBountyView {
   bountyId: string;
   repo: string;
   issueNumber: number;
+  /** posted, in_review, payable, paid, cancelled - the bounty's own status. */
+  bountyStatus: string;
+  /** Somebody unassigned the holder: nobody is drawn until a person redraws. */
+  awaitingRedraw: boolean;
+  /** Who holds it now, if anybody - public already on the bounty list. */
+  assignment: { githubLogin: string; status: 'active' | 'pr_submitted' | string; staleAt: string | null; prNumber: number | null } | null;
   windowOpen: boolean;
   applicationsCloseAt: string | null;
   /** Always false. Stated by the server so the UI never has to infer it. */
@@ -1249,39 +1255,43 @@ export interface MaintainerBountyView {
 export const getMaintainerBounties = () =>
   apiRequest<{ bounties: { bountyId: string; repo: string; issueNumber: number }[] }>('/maintainer/bounties', { requiresAuth: true });
 
-export const getMaintainerBountyView = (bountyId: string, repo: string) =>
-  apiRequest<MaintainerBountyView>(
-    `/maintainer/bounties/${encodeURIComponent(bountyId)}/applications?repo=${encodeURIComponent(repo)}`,
-    { requiresAuth: true },
-  );
+/** What a maintainer may see about one bounty. Whether they maintain it is the
+ *  agent's decision, from GitHub permission on the bounty's own repository -
+ *  there is no repository to name here, deliberately. */
+export const getMaintainerBountyView = (bountyId: string) =>
+  apiRequest<MaintainerBountyView>(`/maintainer/bounties/${encodeURIComponent(bountyId)}/applications`, { requiresAuth: true });
+
+// The controls on a bounty somebody maintains. Each is checked per bounty by
+// the agent; a refusal comes back as not_your_bounty.
+
+/** Run (or simulate) the draw. staleHours is omitted, not sent as 0, so a
+ *  draw without one keeps the global window. */
+export const maintainerRunDraw = (bountyId: string, simulate: boolean, staleHours?: number) =>
+  apiRequest<DrawResultView>(`/maintainer/bounties/${encodeURIComponent(bountyId)}/run`, {
+    method: 'POST',
+    requiresAuth: true,
+    body: JSON.stringify(staleHours ? { simulate, stale_hours: staleHours } : { simulate }),
+  });
+
+/** End an assignment by choice. The reason reaches the contributor. */
+export const maintainerUnassign = (bountyId: string, reason: string) =>
+  apiRequest<{ ok: true; contributor: string; reason: string }>(
+    `/maintainer/bounties/${encodeURIComponent(bountyId)}/unassign`,
+    { method: 'POST', requiresAuth: true, body: JSON.stringify({ reason }) });
+
+/** Move the pull-request deadline on a live assignment. */
+export const maintainerSetDeadline = (bountyId: string, deadline: string, reason: string) =>
+  apiRequest<{ ok: true; previousAt: string; staleAt: string }>(
+    `/maintainer/bounties/${encodeURIComponent(bountyId)}/deadline`,
+    { method: 'POST', requiresAuth: true, body: JSON.stringify({ deadline, reason }) });
 
 export const getDrawSettings = () => apiRequest<{ settings: DrawSetting[] }>('/admin/bounty-draw/settings', { requiresAuth: true });
 export const setDrawSetting = (key: string, value: string) =>
   apiRequest<{ ok: true; settings: DrawSetting[] }>('/admin/bounty-draw/settings', { method: 'POST', requiresAuth: true, body: JSON.stringify({ key, value }) });
 export const resetDrawSetting = (key: string) =>
   apiRequest<{ ok: true; settings: DrawSetting[] }>('/admin/bounty-draw/settings/reset', { method: 'POST', requiresAuth: true, body: JSON.stringify({ key }) });
-export const getBountyDrawState = (bountyId: string) =>
-  apiRequest<BountyDrawState>(`/admin/bounty-draw/${encodeURIComponent(bountyId)}/state`, { requiresAuth: true });
-export const runBountyDraw = (bountyId: string, simulate: boolean, staleHours?: number) =>
-  apiRequest<DrawResultView>(`/admin/bounty-draw/${encodeURIComponent(bountyId)}/run`, {
-    method: 'POST',
-    requiresAuth: true,
-    // stale_hours is omitted rather than sent as 0, or every draw would
-    // override the global setting with nothing.
-    body: JSON.stringify(staleHours ? { simulate, stale_hours: staleHours } : { simulate }),
-  });
 
-/** End an assignment by choice. The reason reaches the contributor. */
-export const unassignBounty = (bountyId: string, reason: string) =>
-  apiRequest<{ ok: true; contributor: string; reason: string }>(
-    `/admin/bounty-draw/${encodeURIComponent(bountyId)}/unassign`,
-    { method: 'POST', requiresAuth: true, body: JSON.stringify({ reason }) });
 
-/** Move the pull-request deadline on a live assignment. */
-export const setBountyDeadline = (bountyId: string, deadline: string, reason: string) =>
-  apiRequest<{ ok: true; previousAt: string; staleAt: string }>(
-    `/admin/bounty-draw/${encodeURIComponent(bountyId)}/deadline`,
-    { method: 'POST', requiresAuth: true, body: JSON.stringify({ deadline, reason }) });
 
 export async function postBountyWalletLink(body: { message: string; countersignature: string; walletSignature: string }) {
   try {

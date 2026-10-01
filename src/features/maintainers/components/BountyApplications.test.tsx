@@ -11,7 +11,7 @@ vi.mock('../../../shared/api/client', async (orig) => {
 
 const view = (o: Partial<MaintainerBountyView> = {}): MaintainerBountyView => ({
   bountyId: 'b1', repo: 'Grainlify/sandbox', issueNumber: 3,
-  windowOpen: true, applicationsCloseAt: '2026-09-28T10:00:00Z',
+  bountyStatus: 'posted', awaitingRedraw: false, assignment: null, windowOpen: true, applicationsCloseAt: '2026-09-28T10:00:00Z',
   canAssign: false, assignmentIsByDraw: true,
   applicantBucket: 'few', applicantCount: null, applications: null, draw: null, ...o,
 })

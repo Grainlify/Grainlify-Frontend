@@ -27,7 +27,16 @@ const BUCKET: Record<string, string> = {
  * window closes, at which point exactness harms nothing and the full list
  * appears.
  */
-export function BountyApplications({ bountyId, repo }: { bountyId: string; repo: string }) {
+export function BountyApplications({
+  bountyId,
+  repo,
+  view: given,
+}: {
+  bountyId: string;
+  repo: string;
+  /** Already loaded by the card, which shares it with the draw controls. */
+  view?: MaintainerBountyView;
+}) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [view, setView] = useState<MaintainerBountyView | null>(null);
@@ -35,17 +44,22 @@ export function BountyApplications({ bountyId, repo }: { bountyId: string; repo:
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (given) {
+      setView(given);
+      setLoading(false);
+      return;
+    }
     let live = true;
     setLoading(true);
     setError(null);
-    getMaintainerBountyView(bountyId, repo)
+    getMaintainerBountyView(bountyId)
       .then((v) => live && setView(v))
       .catch((e) => live && setError(e instanceof Error ? e.message : String(e)))
       .finally(() => live && setLoading(false));
     return () => {
       live = false;
     };
-  }, [bountyId, repo]);
+  }, [bountyId, repo, given]);
 
   const strong = isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]';
   const muted = isDark ? 'text-[#b8a898]' : 'text-[#7a6b5a]';
@@ -80,7 +94,7 @@ export function BountyApplications({ bountyId, repo }: { bountyId: string; repo:
         {/* The difference from the GrainHack review screen, said plainly. */}
         <p className={`text-[12.5px] leading-[1.5] ${muted}`}>
           <span className={`font-semibold ${strong}`}>This is a view, not a review.</span> Bounties are assigned by a weighted draw. Unlike
-          GrainHack applications, there is nothing here to accept or reject — and nothing you do can change who is assigned.
+          GrainHack applications, there is nothing here to accept or reject, and you cannot choose who is drawn.
         </p>
       </div>
 

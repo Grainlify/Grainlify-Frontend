@@ -3,8 +3,9 @@ import { Coins } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { formatBountyAmount, getBounties, type PublicBounty } from '../../../shared/api/bountyAgent';
-import { getMaintainerBounties } from '../../../shared/api/client';
+import { getMaintainerBounties, getMaintainerBountyView, type MaintainerBountyView } from '../../../shared/api/client';
 import { BountyApplications } from './BountyApplications';
+import { BountyControls } from './BountyControls';
 
 /** Bounties on the repositories this maintainer selected, and who applied.
  *
@@ -67,8 +68,9 @@ export function BountiesTab() {
           <h2 className={`text-[16px] font-bold ${strong}`}>Bounties on your repositories</h2>
         </div>
         <p className={`text-[13px] ${muted}`}>
-          You can see who applied and how the draw went. You cannot assign, reject, or influence it — that is what makes the draw worth
-          trusting. Issues you assign yourself are on the Issues tab and work the way they always have.
+          You can see who applied and how the draw went, run the draw, end an assignment, and move a deadline. You cannot choose who is
+          drawn: every draw is the same weighted draw. Each change is recorded, and the contributor is told why. Issues you assign
+          yourself are on the Issues tab and work the way they always have.
         </p>
       </div>
 
@@ -86,10 +88,35 @@ export function BountiesTab() {
               <p className={`text-[14px] font-semibold ${strong}`}>{b.issueTitle || `Issue #${b.issueNumber}`}</p>
               <span className={`text-[15px] font-extrabold tabular-nums ${strong}`}>{formatBountyAmount(b)}</span>
             </div>
-            <BountyApplications bountyId={b.id} repo={b.repo} />
+            <MaintainerBountyCard bountyId={b.id} repo={b.repo} />
           </div>
         ))
       )}
+    </div>
+  );
+}
+
+/**
+ * One bounty: who applied, and the controls for it. One load serves both,
+ * and an action reloads it, so the controls always offer what applies now -
+ * a held bounty, an open pull request, or one waiting to be drawn.
+ */
+function MaintainerBountyCard({ bountyId, repo }: { bountyId: string; repo: string }) {
+  const [view, setView] = useState<MaintainerBountyView | undefined>(undefined);
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    let live = true;
+    getMaintainerBountyView(bountyId)
+      .then((v) => live && setView(v))
+      .catch(() => live && setView(undefined));
+    return () => {
+      live = false;
+    };
+  }, [bountyId, version]);
+  return (
+    <div className="space-y-3">
+      <BountyApplications bountyId={bountyId} repo={repo} view={view} />
+      {view && <BountyControls view={view} onChanged={() => setVersion((n) => n + 1)} />}
     </div>
   );
 }

@@ -26,7 +26,6 @@ vi.mock('../../../shared/api/client', () => ({
   getDrawSettings: vi.fn().mockResolvedValue({ settings: [] }),
   setDrawSetting: vi.fn(),
   resetDrawSetting: vi.fn(),
-  getBountyDrawState: vi.fn(),
   runBountyDraw: vi.fn(),
   getBountyRepos: vi.fn().mockResolvedValue({ projects: [], agent: [] }),
   setBountyRepo: vi.fn(),

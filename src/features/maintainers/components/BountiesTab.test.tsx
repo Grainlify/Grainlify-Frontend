@@ -26,7 +26,7 @@ const bounty = (o: Partial<PublicBounty> = {}): PublicBounty => ({
 beforeEach(() => {
   vi.resetAllMocks()
   vi.mocked(getMaintainerBountyView).mockResolvedValue({
-    bountyId: 'b1', repo: 'Grainlify/grainlify-agent-sandbox', issueNumber: 3, windowOpen: false,
+    bountyId: 'b1', repo: 'Grainlify/grainlify-agent-sandbox', issueNumber: 3, bountyStatus: 'posted', awaitingRedraw: false, assignment: null, windowOpen: false,
     applicationsCloseAt: null, canAssign: false, assignmentIsByDraw: true,
     applicantBucket: null, applicantCount: 0, applications: [], draw: null,
   })
