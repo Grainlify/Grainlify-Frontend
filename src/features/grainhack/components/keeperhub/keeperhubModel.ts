@@ -1,4 +1,4 @@
-import type { KeeperHubLeg, KeeperHubLegStatus, KeeperHubRunView } from '../../../../shared/api/client';
+import type { HackathonSettlementPreview, KeeperHubLeg, KeeperHubLegStatus, KeeperHubRunView } from '../../../../shared/api/client';
 
 /** Presentation rules for the KeeperHub payout panel, kept out of the component
  *  so each can be tested on its own.
@@ -181,4 +181,138 @@ export const EXCLUSION_REASON: Record<string, string> = {
 export function attemptsAwaitingRead(view: KeeperHubRunView) {
   const waiting = new Set(view.legs.filter((l) => l.status === 'dispatched').map((l) => l.last_attempt_id));
   return view.attempts.filter((a) => waiting.has(a.id)).sort((a, b) => b.ordinal - a.ordinal);
+}
+
+// ---- the first release -------------------------------------------------------
+
+/** The EVM chains a KeeperHub run can pay on, as chain_configs seeds them
+ *  (Grainlify-Backend migrations 20260916090100 and 20260916090600). There is
+ *  no endpoint listing chain configs, so these are mirrored here; a chain the
+ *  server doesn't have is refused by release with chain_not_evm. */
+export interface PayoutNetwork {
+  chainId: string;
+  name: string;
+  network: 'testnet' | 'mainnet';
+  evmChainId: number;
+  asset: string;
+}
+
+export const PAYOUT_NETWORKS: PayoutNetwork[] = [
+  { chainId: 'base-sepolia', name: 'Base Sepolia', network: 'testnet', evmChainId: 84532, asset: 'test USDC' },
+  { chainId: 'base', name: 'Base', network: 'mainnet', evmChainId: 8453, asset: 'USDC' },
+];
+
+export function payoutNetwork(chainId: string): PayoutNetwork | undefined {
+  return PAYOUT_NETWORKS.find((n) => n.chainId === chainId);
+}
+
+/** "Base Sepolia (testnet, chain 84532)". */
+export function networkLabel(n: PayoutNetwork): string {
+  return `${n.name} (${n.network}, chain ${n.evmChainId})`;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isUuid(v: string): boolean {
+  return UUID_RE.test(v.trim());
+}
+
+export const PHASE_LABEL: Record<string, string> = {
+  draft: 'Draft',
+  application_period: 'Application period',
+  issue_prep: 'Issue prep',
+  live: 'Live',
+  closed: 'Closed',
+  results_published: 'Results published',
+  settled: 'Settled',
+};
+
+export type StartState =
+  | { kind: 'phase_unknown' }
+  | { kind: 'not_settled'; phase: string }
+  | { kind: 'loading' }
+  | { kind: 'preview_failed'; code: string }
+  | { kind: 'nothing_to_settle'; reason: string }
+  | { kind: 'settled_on_aptos'; settlementId: string | null }
+  | { kind: 'does_not_sum' }
+  | { kind: 'ready'; preview: Extract<HackathonSettlementPreview, { lines: unknown }> };
+
+/** Whether "Start payout" can be offered when an event has no run yet.
+ *
+ *  Only the checks the frontend can see. Shadow mode, the appeal window being
+ *  closed out, the computation being current, KYC, addresses and the wallet's
+ *  balance are checked by release itself, and each refusal is mapped by
+ *  releaseFailure. */
+export function startState(
+  phase: string | undefined,
+  preview: HackathonSettlementPreview | undefined,
+  previewError: string | null,
+): StartState {
+  if (!phase) return { kind: 'phase_unknown' };
+  if (phase !== 'settled') return { kind: 'not_settled', phase };
+  if (previewError !== null) return { kind: 'preview_failed', code: previewError };
+  if (!preview) return { kind: 'loading' };
+  if (preview.nothing_to_settle) return { kind: 'nothing_to_settle', reason: preview.reason };
+  if (preview.already_settled) return { kind: 'settled_on_aptos', settlementId: preview.settlement_id };
+  if (!preview.sums_to_pool) return { kind: 'does_not_sum' };
+  return { kind: 'ready', preview };
+}
+
+/** One plain sentence for each name release refuses with
+ *  (Grainlify-Backend internal/handlers/admin_keeperhub_payout.go keeperhubError).
+ *  `starting` is the first release of an event, where the run is planned in
+ *  the same call. */
+export function releaseFailure(code: string, detail: string, opts: { starting?: boolean } = {}): string {
+  switch (code) {
+    case 'dispatch_outcome_unknown':
+      return "KeeperHub's answer never came back, so the legs in this send may have paid. They are now marked May have paid: check the explorer before anything else.";
+    case 'dispatch_rejected':
+      return "KeeperHub refused the request, so nothing was sent. The legs stay failed and can be sent once that's fixed.";
+    case 'concurrent_release':
+      return 'Another send for this run is already in progress. Nothing new was sent.';
+    case 'unreconciled_legs':
+      return 'Nothing was sent: a leg may have paid or is still awaiting its result.';
+    case 'nothing_unpaid':
+      return opts.starting
+        ? "Nothing was sent: the run was prepared, but nobody in it can be paid yet. Everyone was excluded (no linked GitHub account, identity not verified, or no verified address on this network); they're listed below."
+        : 'Nothing was sent: every leg is already paid.';
+    case 'keeperhub_not_configured':
+      return "Nothing was sent: KeeperHub isn't configured on this server.";
+    case 'payout_not_releasable':
+      if (/shadow mode/i.test(detail)) {
+        return 'Nothing was sent: this event is in shadow mode, which computes payouts but pays nothing. Turn judging_shadow_mode off under Rule overrides for this event first.';
+      }
+      // Phase first: its detail also mentions the appeal window.
+      if (/phase 6|has settled/i.test(detail)) {
+        return 'Nothing was sent: payouts start once the event is settled.';
+      }
+      if (/appeal window has not been closed/i.test(detail)) {
+        return "Nothing was sent: the appeal window hasn't been closed out, so the post-appeal amounts haven't been computed yet.";
+      }
+      return `Nothing was sent: the event isn't ready to pay.${detail ? ` ${detail}` : ''}`;
+    case 'invalid_payout_run_id':
+      return "Nothing was sent: the computation id isn't a valid id.";
+    case 'payout_run_not_current':
+      return "Nothing was sent: that isn't this event's current payout computation. An upheld appeal recomputes into a new one; use the newest.";
+    case 'run_mismatch':
+      return 'Nothing was sent: this event already has a payout run on a different network or computation. Reload to see it.';
+    case 'chain_not_evm':
+      return "Nothing was sent: that network isn't an enabled EVM chain on this server.";
+    case 'settled_on_aptos_rail':
+      return "Nothing was sent: this pool is already settled on the Aptos rail, so it can't also be paid through KeeperHub.";
+    case 'pool_unsupported':
+      return 'Nothing was sent: only the contributor pool is paid through KeeperHub.';
+    case 'nothing_to_settle':
+      return 'Nothing was sent: there is nothing to pay. No submission carries a positive weight, or the pool is unset.';
+    case 'run_failed':
+      return 'Nothing was sent: this run has failed and needs a person before anything more is sent.';
+    case 'preflight_would_revert':
+      return "Nothing was sent: KeeperHub's simulation says a transfer would fail. The usual causes are a payout wallet short of USDC or gas, or a bad address. The legs stay unsent and can be sent once that's fixed.";
+    case 'preflight_unavailable':
+      return "Nothing was sent: KeeperHub's transfer simulation couldn't be reached, and nothing is sent unsimulated. Try again shortly.";
+    case 'chain_mismatch':
+      return 'Nothing was sent: a transaction was reported on a different chain than this run pays on. Check the run before anything else.';
+    default:
+      return `Nothing was sent${code ? ` (${code})` : ''}.${detail ? ` ${detail}` : ''}`;
+  }
 }

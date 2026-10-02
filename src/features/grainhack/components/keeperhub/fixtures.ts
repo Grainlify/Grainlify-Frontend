@@ -1,4 +1,4 @@
-import type { KeeperHubLeg, KeeperHubRunView } from '../../../../shared/api/client';
+import type { HackathonSettlementPreview, KeeperHubLeg, KeeperHubRunView } from '../../../../shared/api/client';
 
 /** Response fixtures in #561's shape, for tests.
  *
@@ -178,4 +178,32 @@ export function allPaid(): KeeperHubRunView {
   v.run.state = 'complete'
   v.resume = { ...v.resume, reason: 'nothing_unpaid', detail: 'every leg is confirmed', blocking_leg_ids: [] }
   return v
+}
+
+/** GET .../settlement-preview for a settled event with no run yet: three
+ *  people paid, one rounded to nothing. Amounts sum to the pool. */
+export const PAYOUT_COMPUTATION = '4f6c2a1e-9b0d-4c3a-8e21-7d5b6a9c0e11'
+
+export function settlementPreview(over: Partial<Extract<HackathonSettlementPreview, { lines: unknown }>> = {}): HackathonSettlementPreview {
+  return {
+    hackathon_id: 'h-1',
+    pool: 'contributor',
+    chain_id: 'base-sepolia',
+    pool_minor: '3750001',
+    pool_usdc: '3.750001',
+    total_weight: '15/2',
+    line_count: 4,
+    payable_count: 3,
+    allocated_minor: '3750001',
+    sums_to_pool: true,
+    lines: [
+      { user_id: '0b6e1d1c-1111-4a00-9000-00000000000a', raw_weight: '2', multiplier: '1', effective_weight: '2', amount_minor: '1000001', amount_usdc: '1.000001' },
+      { user_id: '0b6e1d1c-2222-4a00-9000-00000000000b', raw_weight: '4', multiplier: '1', effective_weight: '4', amount_minor: '2000000', amount_usdc: '2.000000' },
+      { user_id: '0b6e1d1c-3333-4a00-9000-00000000000c', raw_weight: '3', multiplier: '1/2', effective_weight: '3/2', amount_minor: '750000', amount_usdc: '0.750000' },
+      { user_id: '0b6e1d1c-4444-4a00-9000-00000000000d', raw_weight: '0', multiplier: '1', effective_weight: '0', amount_minor: '0', amount_usdc: '0.000000' },
+    ],
+    already_settled: false,
+    settlement_id: null,
+    ...over,
+  }
 }

@@ -2535,7 +2535,7 @@ export const submitOrgRating = (
 export interface Hackathon {
   id: string;
   name: string;
-  phase: "draft" | "application_period" | "issue_prep" | "live";
+  phase: "draft" | "application_period" | "issue_prep" | "live" | "closed" | "results_published" | "settled";
   announced_at: string | null;
   application_period_start: string | null;
   application_period_end: string | null;
@@ -3425,12 +3425,49 @@ export const getKeeperHubRun = async (hackathonId: string, pool = 'contributor')
   }
 };
 
+/** GET /admin/hackathons/:id/settlement-preview - what the event would pay,
+ *  computed and returned without writing anything. Mirrors
+ *  settlementPreviewDTO (Grainlify-Backend internal/handlers/admin_hackathon_settlement.go).
+ *  Lines carry a user id and an amount only: no login, no address and no
+ *  eligibility, which are decided when a KeeperHub run is planned. */
+export type HackathonSettlementPreview =
+  | {
+      nothing_to_settle?: false;
+      hackathon_id: string;
+      pool: string;
+      chain_id: string;
+      pool_minor: string;
+      pool_usdc: string;
+      total_weight: string;
+      line_count: number;
+      payable_count: number;
+      allocated_minor: string;
+      sums_to_pool: boolean;
+      lines: Array<{
+        user_id: string;
+        raw_weight: string;
+        multiplier: string;
+        effective_weight: string;
+        amount_minor: string;
+        amount_usdc: string;
+      }>;
+      already_settled: boolean;
+      settlement_id: string | null;
+    }
+  | { nothing_to_settle: true; hackathon_id: string; pool: string; reason: string };
+
+export const getHackathonSettlementPreview = (hackathonId: string, chainId: string, pool = 'contributor') =>
+  apiRequest<HackathonSettlementPreview>(
+    `/admin/hackathons/${encodeURIComponent(hackathonId)}/settlement-preview?pool=${encodeURIComponent(pool)}&chain_id=${encodeURIComponent(chainId)}`,
+    { requiresAuth: true },
+  );
+
 /** 202: KeeperHub ACCEPTED the run. Nobody is paid until results are read. */
 export const releaseKeeperHubRun = (
   hackathonId: string,
   input: { payoutRunId: string; chainId: string; pool: string },
 ) =>
-  apiRequest<{ release: { attempt_id: string; execution_id: string; dispatched_leg_ids: string[]; ack_status: string }; note: string }>(
+  apiRequest<{ release: { run_id?: string; planned?: boolean; attempt_id: string; execution_id: string; dispatched_leg_ids: string[]; exclusions?: Array<{ user_id: string; amount_minor: string; reason: string }> | null; ack_status: string }; note: string }>(
     `/admin/hackathons/${encodeURIComponent(hackathonId)}/keeperhub/release`,
     {
       requiresAuth: true,
