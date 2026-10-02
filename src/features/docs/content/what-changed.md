@@ -1,8 +1,14 @@
 ---
-updated: 2026-09-27
+updated: 2026-10-02
 ---
 
 Things that were added, renamed, moved or retired, newest first. If you're looking for something you remember from an earlier visit, it's probably here.
+
+## Maintainers run the bounty draw
+
+Running a bounty's draw, simulating it, ending an assignment and moving a deadline moved from the admin pages to the maintainers of the bounty's repository, on the **Bounties** tab in **Maintainers**. Every real draw and unassign is listed publicly under **Draw history** on the bounty. Admins keep the draw settings, on their own **Bounty draw settings** page. See [Bounties on your repositories](/docs/maintainers/bounties).
+
+The Bounties pages now need you to be signed in. The [bounty rules page](/bounties/rules) stays public.
 
 ## The docs moved into the app
 
@@ -19,7 +25,7 @@ See [Get help](/docs/contributors/getting-help).
 
 ## Grainlify Bounties launched
 
-Bounties are fixed amounts posted on open-source issues by the Grainlify bounty agent, funded by GRAIN creator fees and paid in USDC or $ANSEM on Solana. They have their own **Bounties** icon on the rail, a public rules page at [/bounties/rules](/bounties/rules), and a ledger of every payment. The top of the **Bounties** page says whether bounties are paying on mainnet yet.
+Bounties are fixed amounts posted on open-source issues through the Grainlify bounty agent, and paid in USDC on Solana. They have their own **Bounties** icon on the rail, a public rules page at [/bounties/rules](/bounties/rules), and a ledger of every payment. The top of the **Bounties** page says whether bounties are paying on mainnet yet.
 
 See [How Grainlify Bounties work](/docs/contributors/bounties).
 

@@ -1,23 +1,22 @@
 ---
-updated: 2026-09-29
+updated: 2026-10-02
 ---
 
-Grainlify Bounties pay contributors for fixing selected issues. On a repository where bounties are switched on, the Grainlify bounty agent posts bounties, reviews the pull requests that claim them, and reports on each merge. You stay in charge of your code: nothing is paid unless you merge, and a person approves every payout. This page covers what you'll see as the maintainer, on GitHub and on the **Bounties** tab in **Maintainers**. For the contributor's side, read [How Grainlify Bounties work](/docs/contributors/bounties).
+Grainlify Bounties pay contributors for fixing selected issues. So far, bounties have been posted only on Grainlify's own repositories. A Grainlify operator posts each one through the Grainlify bounty agent; the agent then assesses the applicants, reviews the pull requests that claim the bounty, and reports on each merge. You stay in charge of your code: nothing is paid unless you merge, and a person approves every payout. This page covers what you'll see as the maintainer, on GitHub and on the **Bounties** tab in **Maintainers**, and what you can do there. For the contributor's side, read [How Grainlify Bounties work](/docs/contributors/bounties).
 
 ## Which repositories have bounties
 
 A repository can have bounties when all of these are true:
 
 - It's a verified project on Grainlify, with the Grainlify GitHub App installed. See [Add your repositories](/docs/maintainers/add-repositories).
-- It's on the bounty agent's allowlist.
 - A Grainlify admin has switched bounties on for it.
 
 You don't switch bounties on yourself. A Grainlify admin does it, and only for a repository that meets the first condition. Every change they make is recorded with who made it. If the project stops being verified or the App is removed, it no longer qualifies. To ask about bounties on your repository, [get help](/support).
 
 ## What you'll see, step by step
 
-1. **The bounty is posted.** It appears on the **Bounties** page in Grainlify with a window for applications. The agent may also post a comment on the issue headed **Bounty:** with the amount, how to claim it, the rules, and its estimate of the effort.
-2. **A contributor is drawn.** Contributors apply on Grainlify while the window is open, and one is drawn. You don't choose who gets a bounty, and there's nothing to assign. The **Bounties** page shows **Assigned to** and the contributor's name, and the **Bounties** tab in **Maintainers** shows how the draw went.
+1. **The bounty is posted.** It appears on the **Bounties** page in Grainlify with a set amount and a window for applications. Nothing is posted on the GitHub issue itself.
+2. **A contributor is drawn.** Contributors apply on Grainlify while the window is open, and when it closes one is drawn. You can't choose who is drawn. The **Bounties** page shows **Assigned to** and the contributor's name, and the **Bounties** tab in **Maintainers** shows how the draw went. You can run the draw early, end an assignment or move its deadline: see [What you can do](#what-you-can-do).
 
    ![The Bounties page, showing a bounty on your repository and who it's assigned to](shot:bounties-maintainer-row "A bounty on one of your repositories")
 
@@ -30,7 +29,7 @@ The agent's comments end with a line signed **Grainlify Agent**.
 
 ## The Bounties tab
 
-Switch to **MAINTAINER** and choose the **Bounties** tab in **Maintainers**. It lists the bounties on every repository you have write access to on GitHub, whatever you've chosen in **Select repositories**. Each bounty shows its issue title and amount. If none of your repositories has a bounty, the tab says **No bounties on the repositories you have selected.**
+Switch to **MAINTAINER** and choose the **Bounties** tab in **Maintainers**. Under **Bounties on your repositories**, it lists the bounties on every repository you have write, maintain or admin access to on GitHub, whatever you've chosen in **Select repositories**. Each bounty shows its issue title and amount. If none of your repositories has a bounty, the tab says **No bounties on the repositories you maintain.**
 
 What you can see about the people who applied depends on where the bounty is.
 
@@ -62,9 +61,38 @@ The tab shows **Drawn:** and the winner's GitHub login, or **No winner** and the
 
 ![A drawn bounty showing the winner, the seed and each applicant's tickets and share](shot:maint-bounties-drawn?desktop "After the draw")
 
-### Why there's nothing to click
+## What you can do
 
-Every bounty on the tab says **This is a view, not a review.** There's nothing to accept or reject, and nothing you do there can change who is assigned. This is different from GrainHack applications, which you do accept or reject: bounties are assigned by the weighted draw, and a draw nobody can influence, including the maintainer, is what makes it worth trusting.
+You can't pick who wins a bounty: every draw is the same weighted draw, whoever starts it. What you can do is start a draw, end an assignment, and move a deadline. These controls appear on a bounty in the **Bounties** tab for anyone with write, maintain or admin access to its repository on GitHub. Each change is recorded, and the contributor is told.
+
+### Run the draw now, or simulate it
+
+When a bounty's application window has closed and nobody holds it, the bounty shows **Simulate** and **Run the draw now**.
+
+- **Simulate** runs the draw on the real pool of applicants and shows the result, but assigns nobody. Confirm with **Yes, simulate**. You'll see **Simulated. Nobody was assigned.**
+- **Run the draw now** runs the real draw. Confirm with **Yes, run the draw**. One applicant is assigned and told, with their deadline. The draw also runs by itself when applications close, so you only need this if it hasn't.
+- **Deadline (hours, optional)** sets how long the winner has to open a pull request. Leave it empty for the default on the [bounty rules page](/bounties/rules).
+
+### End an assignment
+
+While a contributor holds a bounty and hasn't opened a pull request, you can end the assignment.
+
+1. **Write the reason** in the box marked **Why — the contributor is shown this**. A reason is required.
+2. **Choose Unassign.**
+
+The contributor is told why. Nothing is counted against them: no abandon is recorded and their odds on later bounties are unchanged. Nobody is drawn until you run the draw again; the button then reads **Redraw now**, and that draw skips the person you unassigned, this once.
+
+### Move the deadline
+
+While a contributor holds a bounty and hasn't opened a pull request, you can change when their assignment runs out. Pick the new date and time, write the reason in **Why — the contributor is told this too**, and choose **Move the deadline**. The new deadline can't be in the past. The contributor is told the old and new deadline.
+
+### Once a pull request is open
+
+When the contributor's pull request closing the issue is open, the bounty shows **Held by** their name and no controls. Their deadline no longer applies, and the pull request is reviewed and merged the normal way.
+
+### Every draw and unassign is public
+
+Each bounty on the **Bounties** page has a **Draw history**: every real draw, whether it ran automatically or who ran it, who was drawn, and every unassign with who made it. Simulations are not listed, and the reason for an unassign is shown only to the contributor. Redrawing until a preferred contributor wins would happen in plain sight.
 
 Issues you assign yourself are on the **Issues** tab and work as before. See [Review applications](/docs/maintainers/managing-applications).
 
@@ -81,4 +109,4 @@ Anyone with write, maintain or admin access to a repository is turned away when 
 
 ## Test bounties
 
-A bounty that isn't on Solana mainnet says so in its comment and pays test tokens with no value. The top of the **Bounties** page says whether bounties are paying on mainnet yet. Every payment is listed in [the bounty ledger](/docs/contributors/bounty-ledger).
+A bounty that isn't on Solana mainnet shows its amount with the word "test", such as "25 test USDC", and pays test tokens with no value. The top of the **Bounties** page says whether bounties are paying on mainnet yet. Every payment is listed in [the bounty ledger](/docs/contributors/bounty-ledger).

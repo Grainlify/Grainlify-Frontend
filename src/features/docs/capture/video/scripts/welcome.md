@@ -19,7 +19,7 @@ Say: [calm] Maintainers choose who works on each issue. [pause] Once you're assi
 Do: Click **Back**. Hover the **Contributors** icon on the rail so its label shows, then click it to show the **Contributions** tab.
 
 ## 5
-Say: [upbeat] Some work is also paid. Bounties are funded by creator fees from the GRAIN token and paid on Solana. The top of the page always says whether bounties are paying on mainnet yet.
+Say: [upbeat] Some work is also paid. Bounties are paid in USDC on Solana. The top of the page always says whether bounties are paying on mainnet yet.
 Do: Click **Bounties** on the rail. Hold on the header and the status line under it.
 
 ## 6

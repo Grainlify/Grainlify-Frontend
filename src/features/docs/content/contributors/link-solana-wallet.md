@@ -1,8 +1,8 @@
 ---
-updated: 2026-09-29
+updated: 2026-10-02
 ---
 
-Bounties are paid in USDC or $ANSEM on Solana, to the wallet linked to your GitHub account. You link it once by signing a message. Signing costs nothing and sends no transaction.
+Bounties are paid in USDC on Solana, to the wallet linked to your GitHub account. You link it once by signing a message. Signing costs nothing and sends no transaction.
 
 ![Link your Solana wallet](video:contributors/link-solana-wallet "1:17")
 

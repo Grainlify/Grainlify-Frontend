@@ -11,7 +11,7 @@ Say: [matter-of-fact] The top of this page says whether bounties are paying on m
 Do: Point at the status notice at the top, then scroll to the open bounties list.
 
 ## 3
-Say: [friendly] You don't choose who gets a bounty. Contributors apply here, and one is drawn when the window closes. The page shows who holds it.
+Say: [friendly] You can't choose who gets a bounty. Contributors apply here, and one is drawn when the window closes. The page shows who holds it, and on the Maintainer tab you can run the draw, end an assignment, or move a deadline.
 Do: Point at the bounty on tidewater-labs/ledgerline #240 showing **Assigned to** jun-okafor.
 
 ## 4

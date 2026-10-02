@@ -1,8 +1,8 @@
 ---
-updated: 2026-09-27
+updated: 2026-10-02
 ---
 
-Contributors follow Grainlify on LinkedIn and X and submit a screenshot of each, together. Approving a submission grants eligibility for the [Founding Contributor Pool](/docs/rewards). You review them in **Social Follow Review** on the **Reviews** page. One decision covers both screenshots.
+Contributors follow Grainlify on LinkedIn and X and submit a screenshot of each, together. Approving a submission grants eligibility for the [Founding Contributor Pool](/docs/rewards). You review them in **Social follow review**, its own entry in the admin sidebar. One decision covers both screenshots.
 
 ## Filter the queue
 

@@ -1,26 +1,27 @@
 ---
-updated: 2026-09-27
+updated: 2026-10-02
 ---
 
 Grainlify Bounties pay a fixed amount for fixing a specific issue on an open-source repository. This page explains where bounties come from, who pays for them, and how to read the **Bounties** page. When you're ready to take one, go to [Apply for a bounty](/docs/contributors/apply-for-a-bounty).
 
 ## Where bounties come from
 
-The Grainlify bounty agent posts bounties on issues in repositories that are listed for bounties. A repository is listed when it's a verified Grainlify project with the Grainlify GitHub App installed, and bounties have been switched on for it.
+Bounties are posted on issues in repositories that are listed for bounties. So far that means Grainlify's own repositories. A repository can be listed when it's a verified Grainlify project with the Grainlify GitHub App installed, and a Grainlify admin has switched bounties on for it.
 
-- **The agent** prices each issue, posts the bounty, and reviews the pull request that comes in. Its review is advice only.
+- **A Grainlify operator** posts each bounty through the Grainlify bounty agent, at a set amount.
+- **The agent** assesses each applicant's fit for the issue, and reviews the pull request that comes in. Each assessment and review is an inference call the agent buys on UsePod, paying over x402. Its review is advice only.
 - **A maintainer** of the repository decides whether to merge.
 - **A person** approves every payout before it's sent. The agent can't approve one.
 
-Bounties are funded by creator fees from the GRAIN token. They're paid on Solana, in USDC or $ANSEM, to the wallet [linked to your GitHub account](/docs/contributors/link-solana-wallet). What the agent spends and every payout it makes are recorded on [the bounty ledger](/docs/contributors/bounty-ledger), each with a link to its proof.
+Bounties are paid in USDC on Solana mainnet, to the wallet [linked to your GitHub account](/docs/contributors/link-solana-wallet). No bounty has been paid yet; the status banner on the **Bounties** page changes when the first one is. What the agent spends on inference, and every payout, is recorded on [the bounty ledger](/docs/contributors/bounty-ledger), each with a link to its proof. Inference spending is capped at $5 for the agent's whole lifetime.
 
 ## Not first come, first served
 
-A bounty is assigned by a weighted draw before anyone writes code. You apply while its window is open, one applicant is drawn when it closes, and only that person's pull request can be paid. Applying early gives you no advantage. [Apply for a bounty](/docs/contributors/apply-for-a-bounty) explains the draw.
+A bounty is assigned by a weighted draw before anyone writes code. You apply while its window is open, one applicant is drawn when it closes, and only that person's pull request can be paid. Applying early gives you no advantage. A maintainer of the repository can end an assignment before a pull request is opened, with a reason the contributor is shown; the next draw then skips that person once. Every real draw and unassign is listed publicly under **Draw history** on the bounty. [Apply for a bounty](/docs/contributors/apply-for-a-bounty) explains the draw.
 
 ## Read the Bounties page
 
-Choose **Bounties** in the rail.
+Choose **Bounties** in the rail. The Bounties pages need you to be signed in; only the [bounty rules page](/bounties/rules) is public.
 
 ![The Bounties page: the status banner, the wallet card, and the list of open bounties](shot:bounties-overview "Bounties")
 

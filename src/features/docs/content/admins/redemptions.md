@@ -1,8 +1,8 @@
 ---
-updated: 2026-09-27
+updated: 2026-10-02
 ---
 
-The retired points programme let contributors ask for their points to be paid out in USDC. Nobody can make a new request any more: the programme has been replaced by the [Founding Contributor Pool](/docs/rewards). Requests made before it closed may still be waiting, and **Redemption Requests** on the **Reviews** page is where you finish them.
+The retired points programme let contributors ask for their points to be paid out in USDC. Nobody can make a new request any more: the programme has been replaced by the [Founding Contributor Pool](/docs/rewards). Requests made before it closed may still be waiting, and **Redemptions**, its own entry in the admin sidebar, is where you finish them.
 
 ## The queue
 

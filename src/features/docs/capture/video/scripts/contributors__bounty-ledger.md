@@ -15,11 +15,11 @@ Say: [reassuring] The inference budget shows the agent's spending against each p
 Do: Pan to **Inference budget**.
 
 ## 4
-Say: [confident] The receipt chain follows the most recently paid bounty from start to finish: posted, priced, reviewed, checked, and paid.
+Say: [confident] The receipt chain follows the most recently paid bounty from start to finish: posted, assessed, reviewed, checked, and paid.
 Do: Pan to **Receipt chain · latest paid bounty** and scroll down its rows.
 
 ## 5
-Say: [friendly] Filter the events by period and by type... Here are the payouts from the last thirty days.
+Say: [friendly] Filter the events by period and by type... Choose a type to see only those events.
 Do: Click **30 days**, then **Payouts**.
 
 ## 6
@@ -27,5 +27,5 @@ Say: [calm] Each row has a time in U T C, what happened, the amount, and a proof
 Do: Hover a row's link in the **Proof** column.
 
 ## 7
-Say: [measured] Gate passed and gate refused are the payout checks on a merged pull request... Rows marked test are the devnet run, paid in test tokens with no value.
+Say: [measured] Gate passed and gate refused are the payout checks on a merged pull request... Rows marked test were paid in test tokens with no value.
 Do: Click **All time**, then **Bounties**. Point at a **Gate passed** row, then at an event marked "test".

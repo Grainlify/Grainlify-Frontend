@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-29
+updated: 2026-10-02
 ---
 
 Grainlify is where open-source projects list work and people do it. You sign in with your GitHub account, find an issue on a project that wants help, and apply for it. When a maintainer assigns it to you, you open a pull request on GitHub as usual. Once it's merged, it counts on your Grainlify profile and on the leaderboard. Some work is also paid.
@@ -22,8 +22,8 @@ There are three ways, each with its own rules.
 
 | Programme | Who funds it | How it pays |
 | --- | --- | --- |
-| **Bounties** | Creator fees from the GRAIN token | USDC or $ANSEM on Solana, to the wallet you link |
-| **GrainHack** | The event's sponsors | USDC from the event's pool, shared by contributors whose work is accepted |
+| **Bounties** | Grainlify | USDC on Solana mainnet, to the wallet you link. No bounty has been paid yet. |
+| **GrainHack** | The event's sponsors | USDC from the event's pool, shared by contributors whose work is accepted. The one event so far ran on the Base Sepolia testnet; its two contributors were paid 4 USDC each there on 19 September 2026. |
 | **Founding Contributor Pool** | Grainlify | A fixed USDC pool, shared by early contributors who qualify |
 
 A person approves every bounty payout before it's sent. Nothing about a payout is decided by how many followers or stars you have.

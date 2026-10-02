@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-27
+updated: 2026-10-02
 ---
 
 Grainlify uses two chains, for different things. This page lists which wallets work with each, and on which devices.
@@ -7,7 +7,7 @@ Grainlify uses two chains, for different things. This page lists which wallets w
 | Chain | What it's for | Wallets | Where you set it up |
 | --- | --- | --- | --- |
 | Solana | Grainlify Bounties: bounties are paid to the wallet you link | Phantom, Solflare, Backpack, and on Android the Mobile Wallet Adapter | [grainlify.com/bounties/link](/bounties/link) |
-| Aptos | Your payout address, for payouts made on Aptos | Petra | **Settings → Payout Preferences** |
+| Aptos | Your payout address, for payouts made on Aptos once claims are switched on | Petra | **Settings → Payout Preferences** |
 
 In both cases you connect the wallet and sign one message to prove you control it. Signing costs nothing, sends no transaction and can't move funds. Grainlify never asks for your recovery phrase.
 
@@ -39,4 +39,4 @@ Registering a different address replaces the old one for that network. A payout 
 ## Which one do I need?
 
 - To take bounties, you need a Solana wallet.
-- For payouts made on Aptos, you need a payout address registered with Petra. [How payouts work](/docs/contributors/payouts) explains which programme pays on which chain.
+- For payouts made on Aptos, you need a payout address registered with Petra. Claims on Aptos are built but not switched on yet. [How payouts work](/docs/contributors/payouts) explains which programme pays on which chain.

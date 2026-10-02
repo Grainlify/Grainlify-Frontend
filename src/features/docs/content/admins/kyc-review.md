@@ -1,8 +1,8 @@
 ---
-updated: 2026-09-27
+updated: 2026-10-02
 ---
 
-Contributors whose identity verification needs a person's decision wait in **Verification Review** on the **Reviews** page. You decide the case in Didit, then use this queue to tell the contributor what to fix and let them verify again.
+Contributors whose identity verification needs a person's decision wait in **Verification review**, its own entry in the admin sidebar. You decide the case in Didit, then use this queue to tell the contributor what to fix and let them verify again.
 
 ## What the queue shows
 

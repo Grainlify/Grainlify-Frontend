@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-27
+updated: 2026-10-02
 ---
 
 This section is for Grainlify staff who hold the admin role. This page covers how to reach the admin pages, what the admin view changes, and what to do when your access changes.
@@ -10,7 +10,7 @@ This section is for Grainlify staff who hold the admin role. This page covers ho
 
    ![The role switcher with the ADMIN pill selected](shot:admin-role-switcher?desktop "The ADMIN pill only appears for admins")
 
-2. **You land on Reviews.** Choosing ADMIN opens the **Admin Panel**, where the review queues, ecosystem management, the bounty draw and the bounty repositories are.
+2. **You land on the first queue.** Choosing ADMIN opens **Social follow review**. Each admin area is its own entry in the rail; the screenshot below shows the older single **Admin Panel** page.
 
    ![The top of the Admin Panel, with the Admin Access badge](shot:admin-reviews-header "Reviews: the Admin Panel")
 
@@ -20,10 +20,12 @@ The admin view hides the contributor and maintainer shortcuts from the rail, so 
 
 | Rail item | What it holds | Pages in this section |
 | --- | --- | --- |
-| **Reviews** | Ecosystem Management, Social Follow Review, Verification Review, Redemption Requests, Bounty Draw, Bounty Repositories | [Ecosystems](/docs/admins/ecosystems), [Social follow](/docs/admins/social-follow-review), [Verification](/docs/admins/kyc-review), [Redemptions](/docs/admins/redemptions), [Bounty draw](/docs/admins/bounty-draw), [Bounty repositories](/docs/admins/bounty-repositories) |
+| **Social follow review**, **Verification review**, **Redemptions** | The review queues | [Social follow](/docs/admins/social-follow-review), [Verification](/docs/admins/kyc-review), [Redemptions](/docs/admins/redemptions) |
+| **Bounty disputes**, **Bounty repositories**, **Bounty draw settings** | Disputes on maintainer-funded bounties (not set up yet), which repositories have bounties, and the settings every bounty draw uses | [Bounty repositories](/docs/admins/bounty-repositories), [Bounty draw settings](/docs/admins/bounty-draw) |
+| **Ecosystems** | Ecosystem management | [Ecosystems](/docs/admins/ecosystems) |
 | **GrainHack admin** | The **Hackathons**, **Global Defaults** and **Global Audit** tabs | [Create an event](/docs/admins/grainhack-events), [Applications](/docs/admins/grainhack-applications), [Draws](/docs/admins/grainhack-draws), [Verdicts and appeals](/docs/admins/grainhack-verdicts), [Audit log](/docs/admins/audit-log) |
 
-**Reviews** and **GrainHack admin** stay in your rail in every view, not only while ADMIN is selected.
+These entries are in your rail only while ADMIN is selected. In the contributor and maintainer views you see what a contributor or maintainer sees.
 
 > [!NOTE]
 > The admin pages work on a phone, but some are easier to read on a computer. On a phone, the ticket table in a draw result scrolls sideways: swipe it to see every column. The screenshots of draw results, the **Draws** list and pending project applications are taken at desktop width.

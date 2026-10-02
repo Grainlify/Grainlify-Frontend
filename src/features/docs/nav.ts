@@ -61,7 +61,7 @@ export const DOCS_NAV: DocSection[] = [
       {
         title: 'Bounties',
         pages: [
-          p('contributors/bounties', 'How Grainlify Bounties work', 'Bounties posted by the agent, funded by GRAIN creator fees and paid on Solana.'),
+          p('contributors/bounties', 'How Grainlify Bounties work', 'Bounties posted through the agent at a set amount, and paid in USDC on Solana.'),
           p('contributors/link-solana-wallet', 'Link your Solana wallet', 'Connect Phantom, Solflare or Backpack and sign one message. One wallet per GitHub account.'),
           p('contributors/apply-for-a-bounty', 'Apply for a bounty', 'Apply while the window is open. The draw is weighted, not first-come.'),
           p('contributors/bounty-payment', 'From pull request to payment', 'Closes #N, an advisory review, a maintainer merges, a person approves the payout.'),
@@ -83,7 +83,7 @@ export const DOCS_NAV: DocSection[] = [
       {
         title: 'Get paid',
         pages: [
-          p('contributors/payouts', 'How payouts work', 'Solana for bounties; Aptos for GrainHack and the Founding Contributor Pool.'),
+          p('contributors/payouts', 'How payouts work', 'Which programme pays on which chain, and what you set up for each.'),
           p('contributors/verifying-your-identity', 'Verify your identity', 'Identity verification with Didit, and what it unlocks.'),
           p('contributors/payout-address', 'Register your payout address', 'Connect Petra and sign to register an Aptos address.'),
           p('contributors/payout-readiness', 'Payout readiness', 'What the readiness card tells you and how to fix each state.'),
@@ -123,7 +123,7 @@ export const DOCS_NAV: DocSection[] = [
       p('maintainers/reviewing-pull-requests', 'The pull requests feed', 'Recent pull requests across your repositories, filtered by state.'),
       p('maintainers/keeping-projects-in-sync', 'Keep projects in sync', 'How sync works, and removing a repository on GitHub.'),
       p('maintainers/organization-page', 'Your organization page', 'Community links you can edit, and reviews from contributors.'),
-      p('maintainers/bounties', 'Bounties on your repositories', 'What the agent does on your repositories. You cannot win your own.'),
+      p('maintainers/bounties', 'Bounties on your repositories', 'What the agent does, and running a draw, unassigning and moving a deadline.'),
       p('maintainers/grainhack', 'GrainHack for maintainers', 'Labels, acceptance criteria, difficulty and pool scoring.'),
     ],
   },
@@ -137,7 +137,7 @@ export const DOCS_NAV: DocSection[] = [
       p('admins/social-follow-review', 'Social follow review', 'Approve, reject, revoke or bulk-approve follow proofs.'),
       p('admins/ecosystems', 'Ecosystem management', 'Add, edit and remove ecosystems, with a logo.'),
       p('admins/bounty-repositories', 'Switch bounties on for a repository', 'Turn bounties on or off per repository, and what each state means.'),
-      p('admins/bounty-draw', 'Run a bounty draw', 'Simulate a draw, run one by hand, and change the draw settings.'),
+      p('admins/bounty-draw', 'Bounty draw settings', 'Change the settings every bounty draw uses. Running a draw is the maintainer\'s.'),
       p('admins/grainhack-events', 'GrainHack: create an event', 'Create and configure an event and advance its phases.'),
       p('admins/grainhack-applications', 'GrainHack: project applications', 'Accept, reject or ask for more information.'),
       p('admins/grainhack-draws', 'GrainHack: draws and simulations', 'Read the ticket breakdown and replay a draw with its seed.'),

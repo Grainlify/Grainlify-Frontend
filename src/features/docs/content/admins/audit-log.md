@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-27
+updated: 2026-10-02
 ---
 
 GrainHack keeps an audit trail of every rule change and every phase move, with who made it and when. Use it to answer "why did this event behave that way?" long after the fact. There are two views of it in **GrainHack admin**.
@@ -35,4 +35,4 @@ It lists the most recent 100 entries across Grainlify: changes to the global def
 When nothing has been recorded yet, the trail says **No changes recorded yet.** If it could not be loaded, it says so and offers a retry rather than showing an empty trail.
 
 > [!NOTE]
-> The bounty draw settings on the **Reviews** page are not part of this trail. Each overridden bounty setting shows who changed it, both there and on the public [bounty rules page](/bounties/rules).
+> The **Bounty draw settings** page is not part of this trail. Each overridden bounty setting shows who changed it, both there and on the public [bounty rules page](/bounties/rules).

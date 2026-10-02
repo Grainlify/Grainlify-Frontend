@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-27
+updated: 2026-10-02
 ---
 
 Short definitions of the words you'll meet on Grainlify, in alphabetical order. Each one links to the page that explains it in full.
@@ -14,11 +14,11 @@ Short definitions of the words you'll meet on Grainlify, in alphabetical order. 
 
 **Assignment.** Being given an issue to work on. On an ordinary issue the maintainer assigns you. On a bounty or a GrainHack issue, the draw does. See [After you apply](/docs/contributors/after-you-apply).
 
-**Bounty.** A fixed amount posted on a GitHub issue by the Grainlify bounty agent, funded by GRAIN creator fees and paid on Solana after a maintainer merges your pull request and a person approves the payout. See [How Grainlify Bounties work](/docs/contributors/bounties).
+**Bounty.** A fixed amount posted on a GitHub issue through the Grainlify bounty agent, paid in USDC on Solana after a maintainer merges your pull request and a person approves the payout. See [How Grainlify Bounties work](/docs/contributors/bounties).
 
-**Claim.** Collecting a payout on Aptos with the wallet at your registered payout address. Each payout has a claim window, and Grainlify reminds you before it closes. See [How payouts work](/docs/contributors/payouts).
+**Claim.** Collecting a payout on Aptos with the wallet at your registered payout address. Each payout has a claim window, and Grainlify reminds you before it closes. Claiming is built but not switched on yet, so nothing has been claimed. See [How payouts work](/docs/contributors/payouts).
 
-**Draw.** How bounties and GrainHack issues are assigned. Applications stay open for a set window, then one applicant is picked at random, weighted by their tickets. See [The draw: tickets and weights](/docs/contributors/grainhack-draw).
+**Draw.** How bounties and GrainHack issues are assigned. Applications stay open for a set window, then one applicant is picked at random, weighted by their tickets. See [Apply for a bounty](/docs/contributors/apply-for-a-bounty) for the bounty draw and [The draw: tickets and weights](/docs/contributors/grainhack-draw) for GrainHack's.
 
 ## E to L
 
@@ -32,7 +32,7 @@ Short definitions of the words you'll meet on Grainlify, in alphabetical order. 
 
 **GrainHack.** Grainlify's time-boxed events. Each has a sponsor-funded pool, its issues are assigned by draw, and accepted work is paid from the pool. See [What GrainHack is](/docs/contributors/grainhack).
 
-**Ledger.** The public record of Grainlify Bounties money: every GRAIN creator fee in, every inference call bought, and every bounty paid, each linked to its transaction or receipt. See [The bounty ledger](/docs/contributors/bounty-ledger).
+**Ledger.** The public record of Grainlify Bounties money: GRAIN creator fees in once they're tracked, every inference call bought, and every bounty paid, each linked to its transaction or receipt. See [The bounty ledger](/docs/contributors/bounty-ledger).
 
 ## M to R
 

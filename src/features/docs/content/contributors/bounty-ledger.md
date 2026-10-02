@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-29
+updated: 2026-10-02
 ---
 
 The bounty ledger is the record of the programme's money: bounties posted, the model calls the agent pays for, the checks merged pull requests go through, and payouts. Every row links to its proof, so you can check a payout without taking anyone's word for it.
@@ -27,7 +27,7 @@ Under **All time** there are four figures:
 
 **Inference budget** shows what the agent has spent against each phase's allocation. The agent's inference spending has a fixed lifetime ceiling, stated on the panel, and the agent and its payment signer each stop at it on their own.
 
-**Receipt chain · latest paid bounty** shows every event for the most recently paid bounty, oldest first, from the bounty being posted to the payout.
+**Receipt chain · latest paid bounty** shows every event for the most recently paid bounty, oldest first, from the bounty being posted to the payout. Until the first bounty is paid, it says **No bounty has been paid yet.**
 
 ![The receipt chain for the latest paid bounty](shot:ledger-receipt-chain "Receipt chain")
 
