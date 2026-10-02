@@ -684,7 +684,11 @@ export function DataPage() {
               <Info className="w-5 h-5 text-[#c9983a] flex-shrink-0 mt-0.5" />
               <p className={`text-[14px] leading-relaxed transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#4a3f2f]'
                 }`}>
-                Only data from contributors who have completed a KYC are included. Contributors without a completed KYC are excluded from the map.
+                {/* This said only contributors with a completed KYC were included and the
+                    rest were excluded from the map. Nothing filters on KYC: every figure
+                    here is sample data declared in this file, and no backend query
+                    filters contributors by kyc_status. */}
+                Sample data. Every figure, chart and the map on this page are placeholders written into the app, not read from Grainlify's data. No identity-verification data is used here.
               </p>
             </div>
           </div>

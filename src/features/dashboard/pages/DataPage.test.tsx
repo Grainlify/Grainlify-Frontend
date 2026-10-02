@@ -59,7 +59,7 @@ describe('DataPage', () => {
     expect(screen.getByText('Contributors with billing profile')).toBeInTheDocument()
     expect(screen.getByText('0 / 0')).toBeInTheDocument()
     expect(
-      screen.getByText(/Only data from contributors who have completed a KYC are included/),
+      screen.getByText(/Sample data\. Every figure, chart and the map on this page are placeholders/),
     ).toBeInTheDocument()
 
     // Switching the (purely cosmetic — no section is conditionally rendered per
