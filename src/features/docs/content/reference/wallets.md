@@ -2,14 +2,15 @@
 updated: 2026-10-02
 ---
 
-Grainlify uses two chains, for different things. This page lists which wallets work with each, and on which devices.
+Grainlify uses three chains, for different things. This page lists which wallets work with each, and on which devices.
 
 | Chain | What it's for | Wallets | Where you set it up |
 | --- | --- | --- | --- |
 | Solana | Grainlify Bounties: bounties are paid to the wallet you link | Phantom, Solflare, Backpack, and on Android the Mobile Wallet Adapter | [grainlify.com/bounties/link](/bounties/link) |
-| Aptos | Your payout address, for payouts made on Aptos once claims are switched on | Petra | **Settings → Payout Preferences** |
+| Base | Your Base payout address, for GrainHack payouts. The one event so far paid on the Base Sepolia testnet | Any regular Ethereum wallet | **Settings → Payout Preferences** |
+| Aptos | Your Aptos payout address, for payouts made on Aptos once claims are switched on | Petra | **Settings → Payout Preferences** |
 
-In both cases you connect the wallet and sign one message to prove you control it. Signing costs nothing, sends no transaction and can't move funds. Grainlify never asks for your recovery phrase.
+In each case you connect the wallet and sign one message to prove you control it. Signing costs nothing, sends no transaction and can't move funds. Grainlify never asks for your recovery phrase.
 
 ## Solana, for bounties
 
@@ -26,6 +27,16 @@ In both cases you connect the wallet and sign one message to prove you control i
 
 One wallet can be linked to one GitHub account, and each GitHub account has one wallet. Linking a new one replaces the old. The steps are in [Link your Solana wallet](/docs/contributors/link-solana-wallet).
 
+## Base, for GrainHack payouts
+
+Any regular Ethereum wallet installed in your browser works. The card lists the wallets it finds under **Choose a wallet**.
+
+- Use an address you control directly, not an exchange deposit address.
+- Smart-contract wallets such as Safe can't be verified yet.
+- The signing request lasts ten minutes. If it expires, start again.
+
+The steps are in [Register your Base payout address](/docs/contributors/payout-address#base-payout-address-for-grainhack).
+
 ## Aptos, for your payout address
 
 Use Petra. It's the wallet Grainlify has tested end to end for payout addresses. If no wallet is found, the page asks you to install Petra and reload.
@@ -39,4 +50,5 @@ Registering a different address replaces the old one for that network. A payout 
 ## Which one do I need?
 
 - To take bounties, you need a Solana wallet.
+- For GrainHack payouts, you need a Base payout address registered with an Ethereum wallet.
 - For payouts made on Aptos, you need a payout address registered with Petra. Claims on Aptos are built but not switched on yet. [How payouts work](/docs/contributors/payouts) explains which programme pays on which chain.

@@ -13,7 +13,7 @@ No. Browsing, applying for issues and listing your repositories are free for con
 No. You sign in with your GitHub account, and the first sign-in creates your Grainlify account. See [Create your account](/docs/create-your-account).
 
 **Do I need a crypto wallet?**
-Not to browse, apply or contribute. You need one only to be paid: a Solana wallet for bounties. Payouts on Aptos, which use a Petra wallet, are built but not switched on yet. See [Supported wallets and chains](/docs/reference/wallets).
+Not to browse, apply or contribute. You need one only to be paid: a Solana wallet for bounties, and an Ethereum wallet for a Base payout address for GrainHack. Payouts on Aptos, which use a Petra wallet, are built but not switched on yet. See [Supported wallets and chains](/docs/reference/wallets).
 
 **Can I use Grainlify on my phone?**
 Yes. The header's controls move into the menu behind the button at the top right, and you can link a Solana wallet from your phone too. See [Find your way around](/docs/find-your-way-around).

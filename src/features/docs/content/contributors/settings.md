@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-29
+updated: 2026-10-02
 ---
 
 Settings is where you manage your account: your profile, what you're told about, your referrals, your Founding Contributor Pool place and where payouts go. This page gives each tab a short tour and links to the page that covers it in full.
@@ -38,9 +38,10 @@ See [Founding Contributor Pool](/docs/rewards) and [Social follow](/docs/contrib
 
 Where GrainHack and Founding Contributor Pool payouts are sent. From the top:
 
-- Any payouts that have been published for you.
+- Any payouts that have been published for you on Aptos.
 - The payout readiness card, when you have something to do or were left out of a payout.
-- Your Aptos payout address, registered with Petra, and the optional payout contact field.
+- Your Aptos payout address, registered with Petra, for the Founding Contributor Pool, and the optional payout contact field.
+- Your **Base payout address**, registered with an Ethereum wallet, for GrainHack.
 
 See [How payouts work](/docs/contributors/payouts), [Register your payout address](/docs/contributors/payout-address) and [Payout readiness](/docs/contributors/payout-readiness). Bounties are paid to a Solana wallet you link elsewhere: see [Link your Solana wallet](/docs/contributors/link-solana-wallet).
 

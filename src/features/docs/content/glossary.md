@@ -38,7 +38,7 @@ Short definitions of the words you'll meet on Grainlify, in alphabetical order. 
 
 **Maintainer.** Someone who owns a project on Grainlify, by adding it with the GitHub App. Maintainers review applications and assign issues on their own projects. See [Contributor, maintainer and admin views](/docs/views).
 
-**Payout address.** The Aptos address you register in **Settings → Payout Preferences** by signing a message with Petra. A payout is locked to the address registered when it was published. See [Register your payout address](/docs/contributors/payout-address).
+**Payout address.** An address you register in **Settings → Payout Preferences** by signing a message: a Base address, from an Ethereum wallet, for GrainHack, and an Aptos address, from Petra, for the Founding Contributor Pool. A payout is locked to the address registered when it was prepared or published. See [Register your payout address](/docs/contributors/payout-address).
 
 **Rank.** Your place on the leaderboard for the current season, from pull requests merged on projects listed on Grainlify. It places you in a tier. It is a public record, not money. See [Ranks and the leaderboard](/docs/contributors/ranks-and-leaderboard).
 

@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-27
+updated: 2026-10-02
 ---
 
 The payout readiness card tells you whether you still need to do anything before a payout can reach you. It matters because a payout can be published at any time, and one published before you've registered a payout address leaves you out.
@@ -48,4 +48,4 @@ While it checks, the card says **Checking whether you need to do anything…** I
 
 ## GrainHack payouts
 
-The card's reminder to register comes from your pool position. If you take part in GrainHack, register a payout address anyway: a GrainHack payout is locked to the address you had when it was published, in the same way. See [How payouts work](/docs/contributors/payouts).
+This card is about your Aptos payout address and the Founding Contributor Pool. It doesn't check GrainHack. GrainHack pays to the separate **Base payout address** card on the same tab, and a GrainHack share is locked to the Base address you had when the payout was prepared. If you take part in GrainHack, [register a Base payout address](/docs/contributors/payout-address#base-payout-address-for-grainhack). See [How payouts work](/docs/contributors/payouts).
