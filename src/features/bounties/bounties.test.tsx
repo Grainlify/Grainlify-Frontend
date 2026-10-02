@@ -56,7 +56,7 @@ describe('BountiesProgramPage', () => {
     // The heading states the currencies; the body states, plainly, that no
     // mainnet payout has happened. "Mainnet is switched on" and "a mainnet
     // payout has settled" are different claims and the page must not blur them.
-    expect(screen.getByText('Bounties pay real USDC and $ANSEM on Solana')).toBeInTheDocument()
+    expect(screen.getByText('Bounties pay real USDC on Solana')).toBeInTheDocument()
     expect(screen.getByText(/No mainnet payout has happened yet/)).toBeInTheDocument()
     expect(screen.queryByText('Devnet test run')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'transaction' })).toHaveAttribute('href', 'https://solscan.io/tx/sig?cluster=devnet')

@@ -69,7 +69,7 @@ export function StatusNotice({
       <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${isDark ? 'text-[#e8c571]' : 'text-[#5c4214]'}`} />
       <div>
         <p className={`text-[15px] font-bold ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>
-          {status ? 'Bounties pay real USDC and $ANSEM on Solana' : 'Status unavailable'}
+          {status ? 'Bounties pay real USDC on Solana' : 'Status unavailable'}
         </p>
         <p className={`text-[13px] leading-[1.5] ${isDark ? 'text-[#d4d4d4]' : 'text-[#2d2820]'}`}>
           {!status
