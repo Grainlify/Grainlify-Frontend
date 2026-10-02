@@ -5,7 +5,7 @@ import { parseDoc, formatUpdated, headingsOf, plainText } from './doc';
 import { buildSearchIndex, search, markMatches, snippetAround, tokenize, type SearchEntry } from './search';
 import { DOCS_NAV, findPage, publishedNav, publishedPages } from './nav';
 import { searchEntries } from './entries';
-import { articleHtml, describe as describePage, pageHtml } from './prerender';
+import { articleHtml, describe as describePage, pageHtml, sitemapXml, PUBLIC_APP_ROUTES } from './prerender';
 import { MEDIA_BASE, PUBLISHED_VIDEOS } from './media';
 import published from './capture/published.json';
 
@@ -182,6 +182,50 @@ describe('the prerendered HTML', () => {
     expect(() => pageHtml('<html></html>', { slug: '', title: 't', description: 'd', content: '' }, nav)).toThrow(/root/);
   });
 
+  it("drops the home page's own preview tags, so a docs page carries only its own", () => {
+    // The real index.html, which carries the home page's description and
+    // Open Graph tags between the home-meta markers.
+    const real = readFileSync(path.join(__dirname, '../../../index.html'), 'utf8');
+    expect(real).toContain('<!-- home-meta:');
+    const html = pageHtml(real, { slug: 'welcome', title: 'Welcome to Grainlify', description: 'Docs description', content: '<p>Hi</p>' }, nav);
+    expect(html.match(/<meta name="description"/g)).toHaveLength(1);
+    expect(html.match(/property="og:title"/g)).toHaveLength(1);
+    expect(html.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(html).toContain('<link rel="canonical" href="https://grainlify.com/docs/welcome" />');
+    expect(html).not.toContain('home-meta');
+    expect(html).not.toContain('og-home.png');
+  });
+
+  it('refuses an index.html whose home-meta block is not closed', () => {
+    const broken = template.replace('</title>', '</title><!-- home-meta: x -->');
+    expect(() => pageHtml(broken, { slug: '', title: 't', description: 'd', content: '' }, nav)).toThrow(/home-meta/);
+  });
+});
+
+describe('the sitemap', () => {
+  const pages = publishedPages(available, false).map(({ page }) => ({ slug: page.slug, updated: docs[page.slug].updated }));
+  const xml = sitemapXml(pages);
+  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+
+  it('lists the public app routes, the docs home and every public docs page', () => {
+    for (const r of PUBLIC_APP_ROUTES) expect(locs).toContain(`https://grainlify.com${r}`);
+    expect(locs).toContain('https://grainlify.com/docs');
+    for (const p of pages) expect(locs).toContain(`https://grainlify.com/docs/${p.slug}`);
+    expect(locs).toHaveLength(PUBLIC_APP_ROUTES.length + 1 + pages.length);
+  });
+
+  it('leaves out admin pages and pages that are not written', () => {
+    expect(locs.some((l) => l.includes('/docs/admins/'))).toBe(false);
+    for (const section of DOCS_NAV) {
+      for (const page of [...(section.pages ?? []), ...(section.groups ?? []).flatMap((g) => g.pages)]) {
+        if (!available.has(page.slug)) expect(locs).not.toContain(`https://grainlify.com/docs/${page.slug}`);
+      }
+    }
+  });
+
+  it('dates each docs page by its updated line', () => {
+    expect(xml).toContain(`<loc>https://grainlify.com/docs/welcome</loc><lastmod>${docs.welcome.updated}</lastmod>`);
+  });
 });
 
 describe('links into the docs from the rest of the app', () => {

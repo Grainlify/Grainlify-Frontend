@@ -93,6 +93,12 @@ export function pageHtml(template: string, page: PageOut, nav: PageRef[]): strin
 </div>`;
 
   if (!template.includes('<div id="root"></div>')) throw new Error('docs prerender: <div id="root"></div> not found in index.html');
+  // The home page's own description and preview tags. Left in, a docs page
+  // would carry two descriptions, two og:titles and the home canonical link,
+  // and a crawler would take whichever it read first.
+  const HOME_META = /[ \t]*<!-- home-meta:[\s\S]*?<!-- \/home-meta -->\n?/;
+  if (template.includes('<!-- home-meta:') && !HOME_META.test(template)) throw new Error('docs prerender: unterminated home-meta block in index.html');
+  template = template.replace(HOME_META, '');
   if (!/<title>[^<]*<\/title>/.test(template)) throw new Error('docs prerender: <title> not found in index.html');
   return template
     .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(title)}</title>\n    ${head}`)
@@ -145,6 +151,36 @@ export function docsPrerender(contentDir: string): Plugin {
           source: pageHtml(template, page, pages),
         });
       }
+
+      // The sitemap, from the same list of published pages, so it cannot name
+      // a docs page that was not written or miss one that was.
+      this.emitFile({
+        type: 'asset',
+        fileName: 'sitemap.xml',
+        source: sitemapXml(pages.map(({ page }) => ({ slug: page.slug, updated: docs[page.slug].updated }))),
+      });
     },
   };
+}
+
+/**
+ * The public, signed-out pages that are worth a search result. The rest of
+ * the app is behind sign-in (/dashboard and the /bounties aliases into it),
+ * or is a sign-in step itself.
+ */
+export const PUBLIC_APP_ROUTES = ['/', '/bounties/rules', '/support'];
+
+export function sitemapXml(docsPages: { slug: string; updated?: string | null }[]): string {
+  const url = (loc: string, lastmod?: string | null) =>
+    `  <url><loc>${escapeHtml(`${SITE}${loc}`)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}</url>`;
+  const newest = docsPages.map((p) => p.updated ?? '').sort().pop() || null;
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ...PUBLIC_APP_ROUTES.map((r) => url(r)),
+    url('/docs', newest),
+    ...docsPages.map((p) => url(`/docs/${p.slug}`, p.updated)),
+    '</urlset>',
+    '',
+  ].join('\n');
 }
