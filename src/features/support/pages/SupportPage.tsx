@@ -17,35 +17,31 @@ import { useAuth } from '../../../shared/contexts/AuthContext';
  * sent is to ask in Telegram.
  */
 
-// Every URL here was checked against the live docs site, not derived from a
-// path pattern. The first version of this list guessed one - /docs/founding-pool,
-// /docs/getting-started, /docs/reference/kyc, /docs/reference/referrals - and
-// all four 404'd. They had not moved and were not archived; they never existed.
-// The docs use /docs/contributors/... and /docs/maintainers/..., not a flat
-// namespace.
-//
-// docsLinks.test.ts resolves each of these against the live site and fails on
-// anything that is not 200.
+// Pages of the docs at /docs, which replaced docs.grainlify.com. Each slug is
+// one the docs navigation declares and has a written page for; docs.test.ts
+// fails if a link here points at a slug with no page. The first version of
+// this list guessed paths - /docs/founding-pool, /docs/reference/kyc - and
+// they 404'd, so these are checked rather than derived.
 const DOC_LINKS = [
   {
     title: 'Claiming a founding spot',
     description: 'How the Founding Contributor Pool works, who is eligible, and how shares are earned.',
-    href: 'https://docs.grainlify.com/docs/rewards',
+    href: '/docs/rewards',
   },
   {
     title: 'Registering a project',
     description: 'Connecting your project, and finishing setup so it goes live.',
-    href: 'https://docs.grainlify.com/docs/maintainers',
+    href: '/docs/maintainers',
   },
   {
     title: 'Verifying your identity',
-    description: 'What verification asks for, how long it takes, and what happens if a check is flagged.',
-    href: 'https://docs.grainlify.com/docs/contributors/verifying-your-identity',
+    description: 'Where to start verification, what it asks for, and what each status means.',
+    href: '/docs/contributors/verifying-your-identity',
   },
   {
     title: 'Referrals',
     description: 'How referral credit is attributed and when it counts.',
-    href: 'https://docs.grainlify.com/docs/contributors/referrals',
+    href: '/docs/contributors/referrals',
   },
 ];
 

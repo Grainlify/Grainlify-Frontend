@@ -181,4 +181,34 @@ describe('the prerendered HTML', () => {
   it('refuses an index.html it does not recognise, rather than writing a broken page', () => {
     expect(() => pageHtml('<html></html>', { slug: '', title: 't', description: 'd', content: '' }, nav)).toThrow(/root/);
   });
+
+});
+
+describe('links into the docs from the rest of the app', () => {
+  // Collected from source, so a link is checked the day it is added. The docs
+  // moved from docs.grainlify.com to /docs on this site; four links on the
+  // support page once 404'd because their paths were guessed, not read.
+  const SRC = path.join(__dirname, '../..');
+  const files = (dir: string): string[] =>
+    readdirSync(dir).flatMap((name) => {
+      const full = path.join(dir, name);
+      if (statSync(full).isDirectory()) return full === __dirname ? [] : files(full);
+      return /\.(tsx?)$/.test(name) && !/\.test\.tsx?$/.test(name) ? [full] : [];
+    });
+  const sources = files(SRC).map((f) => ({ f: path.relative(SRC, f), text: readFileSync(f, 'utf8') }));
+
+  it('never points at the retired docs host', () => {
+    const hits = sources.filter(({ text }) => /https?:\/\/docs\.grainlify\.com/.test(text)).map(({ f }) => f);
+    expect(hits).toEqual([]);
+  });
+
+  it('points only at docs pages a signed-out reader can open', () => {
+    const open = new Set(publishedPages(available, false).map((p) => `/docs/${p.page.slug}`));
+    const links = sources.flatMap(({ f, text }) =>
+      [...text.matchAll(/['"`](\/docs\/[a-z0-9/-]+)/g)].map((m) => ({ f, href: m[1].replace(/\/$/, '') })),
+    );
+    // Guards against the pattern silently matching nothing.
+    expect(links.length).toBeGreaterThanOrEqual(8);
+    expect(links.filter(({ href }) => !open.has(href)).map(({ f, href }) => `${f} -> ${href}`)).toEqual([]);
+  });
 });
