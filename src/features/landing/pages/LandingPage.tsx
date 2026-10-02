@@ -169,7 +169,7 @@ function Features() {
       icon: Zap,
       title: "Notifications",
       description:
-        "Hear when you're assigned, when a draw goes to someone else, and when a bounty is paid - in the app, and by email where you switch it on.",
+        "Hear when you're assigned, when a draw goes to someone else, and when a bounty is paid - in the app.",
     },
     {
       icon: Users,
