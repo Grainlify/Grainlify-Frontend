@@ -2,7 +2,7 @@ import { useState, useRef, type ReactNode } from 'react';
 import { CheckCircle2, ExternalLink } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 
-const LAST_UPDATED = 'August 6, 2026';
+const LAST_UPDATED = 'October 2, 2026';
 const ACCEPTED_STORAGE_KEY = 'grainlify_terms_accepted';
 
 interface SectionData {
@@ -90,17 +90,62 @@ const SECTIONS: SectionData[] = [
     title: 'Identity Verification (KYC) and Anti-Money Laundering',
     body: (
       <>
+        {/* What follows is what the backend does today (Grainlify-Backend, origin/main,
+            2 Oct 2026): internal/didit/client.go, internal/handlers/kyc.go,
+            didit_webhook.go, kyc_admin.go, kyc_review_alert.go, user_profile.go and
+            migrations 000011, 000062, 000070, 000072. The previous text said we kept
+            only a status and "the minimum extracted data", which understated it. */}
         <p>
-          Before redeeming points for cryptocurrency, you must complete identity verification ("KYC") through our
-          third-party verification provider, Didit. During this process you will be asked to submit government-issued
-          identification and related personal information directly to that provider.
+          Some payouts require you to verify your identity first: GrainHack payouts, and a place and payouts in the
+          Founding Contributor Pool. A referral also counts only once the person you referred has verified. Bounties
+          do not require verification. Verification is carried out by our third-party provider, Didit. You submit
+          your identity document and a selfie directly to Didit, in a window Didit operates. Didit&apos;s checks can
+          also include a liveness check and an analysis of the IP address you connect from.
         </p>
         <p>
-          We do not store your raw identity documents; we receive and store a verification status and the minimum
-          extracted data needed to administer redemptions (such as your verified name). We may decline, delay, or
-          reverse a redemption if verification fails, is incomplete, or if we reasonably suspect fraud, money
-          laundering, or sanctions exposure. You authorize us to share information with Didit and, where legally
-          required, with regulators or law enforcement.
+          <strong>What we send to Didit.</strong> To start a verification we send Didit an internal identifier for
+          your Grainlify account and the address Didit should notify when your verification is decided. We do not
+          send Didit your name, your email address or your GitHub username.
+        </p>
+        <p>
+          <strong>What we store.</strong> On your account we store your verification status, Didit&apos;s identifier
+          for your verification session, and the date you were verified. We also store the decision record Didit
+          returns for your session, as Didit returns it, without removing anything from it. It contains the details
+          Didit reads from your identity document (your first and last name, address, date of birth, age, document
+          type and document number) and the score and result of the face match. Depending on the checks Didit runs,
+          it can also contain the other information Didit includes in its decision, such as your nationality, links
+          to the document and selfie images it captured, the outcome of the liveness check, and the IP address and
+          location you verified from. We do not download or keep copies of the images themselves.
+        </p>
+        <p>
+          <strong>Where it appears.</strong>
+        </p>
+        <ul>
+          <li>The details read from your document are shown back to you in Settings &rarr; Billing Profiles, and are
+            copied into the billing profile your browser keeps on your device.</li>
+          <li>Whether your account is verified is public: it is shown as a badge on your profile and returned by our
+            public profile API.</li>
+          <li>Grainlify administrators reviewing verifications see your GitHub username and picture, your status,
+            how long you have waited and Didit&apos;s identifiers for your session, but not your name, document details
+            or images. To look at a submission, they use Didit&apos;s own console.</li>
+          <li>Alerts to our administrators about verifications waiting for review are sent through Telegram. They
+            contain your GitHub username, your verification status, how long you have waited, the name of the check
+            that needs review, Didit&apos;s warning codes and the session identifier, but not your name, document
+            details or images.</li>
+          <li>Our application logs record the decision Didit returns each time your status is checked.</li>
+          <li>People who operate Grainlify and have access to its database or logs can read the stored record.</li>
+        </ul>
+        <p>
+          <strong>How long we keep it.</strong> We keep your verification record for as long as your account exists.
+          There is no automatic deletion. Each new decision from Didit, and each new verification you start,
+          replaces the stored decision record.
+          If an administrator resets your verification, a copy of the decision record at that moment is kept with
+          the record of the reset, and is kept even if your account is later removed.
+        </p>
+        <p>
+          We may decline, delay, or reverse a payout or redemption if verification fails, is incomplete, or if we
+          reasonably suspect fraud, money laundering, or sanctions exposure. You authorize us to share information
+          with Didit and, where legally required, with regulators or law enforcement.
         </p>
       </>
     ),
@@ -332,8 +377,10 @@ const SECTIONS: SectionData[] = [
       <>
         <p><strong>What we collect.</strong> Your GitHub profile (username, avatar, public profile data), the primary
           email address on your GitHub account, contribution activity synced from repositories you interact with
-          through the Platform, points and redemption history, billing-profile details you provide, and a
-          verification status (not raw documents) from our KYC provider.</p>
+          through the Platform, points and redemption history, billing-profile details you provide, and, if you
+          verify your identity, your verification status and the decision record our KYC provider returns, including
+          the personal details read from your identity document. See Identity Verification above for exactly what
+          that record contains.</p>
         <p><strong>Your email address.</strong> When you sign in with GitHub we store the primary email address on
           your GitHub account. We use it for one thing: sending you the notifications you have switched on in
           Settings &rarr; Notifications. We never show it to maintainers or to other contributors, we do not share
@@ -347,16 +394,18 @@ const SECTIONS: SectionData[] = [
         <p><strong>How we use it.</strong> To operate your account, calculate and display rankings, process
           redemption requests, comply with KYC/AML obligations, prevent fraud, and communicate with you about your
           account.</p>
-        <p><strong>Who we share it with.</strong> Didit (for identity verification), infrastructure providers that
-          host the Platform, and regulators or law enforcement where legally required. We do not sell your personal
-          information.</p>
+        <p><strong>Who we share it with.</strong> Didit (for identity verification), Telegram (which carries alerts to
+          our administrators about verifications waiting for review, as described under Identity Verification above),
+          infrastructure providers that host the Platform, and regulators or law enforcement where legally required.
+          We do not sell your personal information.</p>
         <p><strong>Your rights.</strong> You may request a copy of the personal data we hold about you or request its
           deletion, subject to records we are legally required to retain (for example, KYC and redemption records for
           AML compliance). Contact us using the details below to exercise these rights.</p>
         <p><strong>Retention.</strong> We retain account and redemption data for as long as your account is active
           and for a reasonable period afterward to meet legal, tax, and anti-fraud obligations. Your email address
           is not part of that: when you delete it we erase it from your account and keep no separate copy of it,
-          though it may persist in routine encrypted database backups until those age out.</p>
+          though it may persist in routine encrypted database backups until those age out. Your identity-verification
+          record is kept as described under Identity Verification above.</p>
       </>
     ),
   },

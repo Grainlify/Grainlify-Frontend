@@ -11,7 +11,7 @@ describe('TermsTab', () => {
   it('renders without crashing and shows real, platform-specific terms content', () => {
     renderWithProviders(<TermsTab />)
     expect(screen.getByText('Terms and Conditions')).toBeInTheDocument()
-    expect(screen.getByText('Last updated August 6, 2026')).toBeInTheDocument()
+    expect(screen.getByText('Last updated October 2, 2026')).toBeInTheDocument()
 
     // Section titles grounded in what the platform actually does, not generic
     // boilerplate - regression coverage for the old thin 4-paragraph version.
