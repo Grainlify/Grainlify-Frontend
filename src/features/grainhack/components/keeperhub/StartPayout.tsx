@@ -129,9 +129,7 @@ export function StartPayout({
   const payoutRunId = reported ?? computationId.trim();
   const idReady = reported !== null || isUuid(computationId);
   const computedAt = latestPayoutRun?.createdAt ? format(new Date(latestPayoutRun.createdAt), 'd MMM yyyy, HH:mm') : null;
-  const computationLabel = reported
-    ? `${shortId(reported)}${computedAt ? ` · computed ${computedAt}` : ''}`
-    : payoutRunId;
+  const computationLabel = reported ? shortId(reported) : payoutRunId;
 
   const start = async () => {
     setSending(true);
@@ -273,6 +271,7 @@ export function StartPayout({
           payable={payable}
           money={money}
           computation={computationLabel}
+          computedAt={computedAt}
           computationId={payoutRunId}
           busy={sending}
           onCancel={() => setConfirmOpen(false)}
@@ -289,6 +288,7 @@ function ConfirmStart({
   payable,
   money,
   computation,
+  computedAt,
   computationId,
   busy,
   onCancel,
@@ -299,6 +299,7 @@ function ConfirmStart({
   payable: ReadyPreview['lines'];
   money: (m: string) => string;
   computation: string;
+  computedAt: string | null;
   computationId: string;
   busy: boolean;
   onCancel: () => void;
@@ -345,6 +346,7 @@ function ConfirmStart({
         </p>
         <p className={t.muted}>
           Computation <span className="font-mono" title={computationId}>{computation}</span>
+          {computedAt && ` · computed ${computedAt}`}
         </p>
       </div>
 
