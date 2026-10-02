@@ -25,6 +25,7 @@ import {
   legName,
   nonClosure,
   plural,
+  releaseFailure,
   sendState,
   shortAddress,
   shortHash,
@@ -35,6 +36,7 @@ import {
   type SendState,
   type Tone,
 } from './keeperhubModel';
+import { StartPayout } from './StartPayout';
 import { Code, ConfirmShell, PrimaryButton, SecondaryButton, tokens, type Tokens } from './keeperhubUi';
 
 /** The contributor pool's KeeperHub payout, for one event.
@@ -50,7 +52,7 @@ import { Code, ConfirmShell, PrimaryButton, SecondaryButton, tokens, type Tokens
  *
  *  Dashboard surface: no motion anywhere, including the confirmation dialog.
  */
-export function KeeperHubPayoutPanel({ hackathonId }: { hackathonId: string }) {
+export function KeeperHubPayoutPanel({ hackathonId, phase }: { hackathonId: string; phase?: string }) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
   const t = tokens(dark);
@@ -112,8 +114,7 @@ export function KeeperHubPayoutPanel({ hackathonId }: { hackathonId: string }) {
     return shell(
       <>
         {title}
-        <p className={`text-[13px] ${t.muted}`}>No KeeperHub payout run for this event&apos;s contributor pool yet.</p>
-        <Code t={t}>404 not_found</Code>
+        <StartPayout t={t} hackathonId={hackathonId} phase={phase} onDone={load} />
       </>,
       'no-run',
     );
@@ -139,7 +140,7 @@ export function KeeperHubPayoutPanel({ hackathonId }: { hackathonId: string }) {
         `KeeperHub accepted ${plural(res.release.dispatched_leg_ids.length, 'leg', 'legs')}. Accepted is not paid: read the results once the execution finishes.`,
       );
     } catch (e) {
-      toast.error(releaseFailure(e));
+      toast.error(releaseFailureOf(e));
     } finally {
       setSending(false);
       setConfirmOpen(false);
@@ -573,7 +574,7 @@ export function KeeperHubPayoutPanel({ hackathonId }: { hackathonId: string }) {
       {confirmOpen && (
         <ConfirmSend
           t={t}
-          chain={`${run.chain_id} (chain ${run.evm_chain_id})`}
+          chain={`${run.chain_id} (${run.network ? `${run.network}, ` : ''}chain ${run.evm_chain_id})`}
           sendable={sendable}
           paid={paid.filter((l) => !unpaidNames.has(l.id))}
           excluded={view.exclusions.map((e) => legName(e))}
@@ -611,25 +612,10 @@ function joinWords(words: string[]): string {
   return words.length <= 1 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
 }
 
-function releaseFailure(e: unknown): string {
+function releaseFailureOf(e: unknown, opts: { starting?: boolean } = {}): string {
   const code = isApiError(e) && typeof e.data?.error === 'string' ? e.data.error : '';
   const detail = isApiError(e) && typeof e.data?.detail === 'string' ? e.data.detail : '';
-  switch (code) {
-    case 'dispatch_outcome_unknown':
-      return "KeeperHub's answer never came back, so the legs in this send may have paid. They are now marked May have paid: check the explorer before anything else.";
-    case 'dispatch_rejected':
-      return "KeeperHub refused the request, so nothing was sent. The legs stay failed and can be sent once that's fixed.";
-    case 'concurrent_release':
-      return 'Another send for this run is already in progress. Nothing new was sent.';
-    case 'unreconciled_legs':
-      return 'Nothing was sent: a leg may have paid or is still awaiting its result.';
-    case 'nothing_unpaid':
-      return 'Nothing was sent: every leg is already paid.';
-    case 'keeperhub_not_configured':
-      return "Nothing was sent: KeeperHub isn't configured on this server.";
-    default:
-      return `Nothing was sent${code ? ` (${code})` : ''}.${detail ? ` ${detail}` : ''}`;
-  }
+  return releaseFailure(code, detail, opts);
 }
 
 // ---- small components --------------------------------------------------------

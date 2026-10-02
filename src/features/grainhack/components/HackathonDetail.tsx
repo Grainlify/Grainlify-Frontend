@@ -23,6 +23,9 @@ const PHASE_LABELS: Record<string, string> = {
   application_period: 'Application period',
   issue_prep: 'Issue prep',
   live: 'Live',
+  closed: 'Closed',
+  results_published: 'Results published',
+  settled: 'Settled',
 };
 
 interface HackathonDetailProps {
@@ -187,7 +190,7 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
         <AppealsReview hackathonId={hackathonId} />
       </div>
 
-      <KeeperHubPayoutPanel hackathonId={hackathonId} />
+      <KeeperHubPayoutPanel hackathonId={hackathonId} phase={hackathon.phase} />
 
       <div
         className={`backdrop-blur-[40px] rounded-[24px] border shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 max-sm:p-4 transition-colors ${
