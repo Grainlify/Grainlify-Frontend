@@ -135,6 +135,22 @@ describe('BountyLedger', () => {
     expect(within(table).queryByText(/Inference/)).not.toBeInTheDocument()
     expect(within(table).getByText('Payout · test')).toBeInTheDocument()
   })
+
+  // An erasure is an event of its own, so the change in what the ledger shows
+  // (an erased account's login) is on the record rather than silent.
+  it('lists an account erasure as an event, naming nobody', async () => {
+    vi.mocked(getBountyLedger).mockResolvedValue({
+      ...ledger,
+      events: [
+        { at: '2026-10-10T10:00:00.000Z', kind: 'erasure', bountyId: null, test: false, detail: "An account was erased at its owner's request. Entries are unchanged, except that its GitHub login is now shown as \"erased account\".", amount: null, proof: { label: 'owner request', url: null } },
+        ...ledger.events,
+      ],
+    })
+    renderWithProviders(<BountyLedger />)
+    const table = await screen.findByLabelText('Ledger events')
+    expect(within(table).getByText('Account erased')).toBeInTheDocument()
+    expect(within(table).getByText(/erased at its owner's request/)).toBeInTheDocument()
+  })
 })
 
 describe('WalletLinkPage', () => {

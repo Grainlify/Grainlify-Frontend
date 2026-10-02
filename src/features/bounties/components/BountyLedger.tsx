@@ -22,10 +22,11 @@ const KIND_LABEL: Record<LedgerEventKind, string> = {
   gate_passed: 'Gate passed',
   gate_refused: 'Gate refused',
   payout: 'Payout',
+  erasure: 'Account erased',
 };
 
 type Tone = 'neutral' | 'gold' | 'green' | 'red';
-const KIND_TONE: Record<LedgerEventKind, Tone> = { bounty_posted: 'gold', inference: 'neutral', gate_passed: 'green', gate_refused: 'red', payout: 'green' };
+const KIND_TONE: Record<LedgerEventKind, Tone> = { bounty_posted: 'gold', inference: 'neutral', gate_passed: 'green', gate_refused: 'red', payout: 'green', erasure: 'neutral' };
 
 const PERIODS = [
   { id: 'all', label: 'All time', days: Infinity },
@@ -94,7 +95,7 @@ export function BountyLedger() {
     const paid = ledger.events.find((e) => e.kind === 'payout' && e.bountyId);
     if (!paid) return [];
     // Oldest first; events in the same minute keep the loop's order (posted, priced, reviewed, gated, paid).
-    const order: LedgerEventKind[] = ['bounty_posted', 'inference', 'gate_passed', 'gate_refused', 'payout'];
+    const order: LedgerEventKind[] = ['bounty_posted', 'inference', 'gate_passed', 'gate_refused', 'payout', 'erasure'];
     return ledger.events
       .filter((e) => e.bountyId === paid.bountyId)
       .slice()

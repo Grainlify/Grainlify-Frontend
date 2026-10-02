@@ -105,7 +105,10 @@ export interface FunderRecord {
   disputesRaised: number;
 }
 
-export type LedgerEventKind = 'bounty_posted' | 'inference' | 'gate_passed' | 'gate_refused' | 'payout';
+// 'erasure' is an account erased at its owner's request. It names nobody; it is
+// there so the change in what the ledger shows (that account's login replaced
+// by "erased account") is itself on the record.
+export type LedgerEventKind = 'bounty_posted' | 'inference' | 'gate_passed' | 'gate_refused' | 'payout' | 'erasure';
 
 export interface LedgerEvent {
   at: string;
