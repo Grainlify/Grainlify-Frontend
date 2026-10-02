@@ -70,6 +70,8 @@ Didit holds your document and selfie. Grainlify stores your verification status 
 
 - **Other people** see only whether you're verified: a shield on your [public profile](/docs/contributors/profile).
 - **You** see your status and the details read from your document on your billing profile.
-- **Grainlify admins** see your status and the Didit case reference, and read the case itself in Didit.
+- **Grainlify admins** see your status and the Didit case reference, and read the case itself in Didit. Alerts about verifications waiting for review reach them through Telegram, with your GitHub username, status and Didit's warning codes, but not your details.
+
+Grainlify keeps Didit's decision as Didit returns it, so it can hold more than the details above, such as links to the images Didit captured. It also appears in Grainlify's application logs. It's kept for as long as your account exists; there's no automatic deletion. The **Terms and Conditions** tab in **Settings** sets out exactly what is stored.
 
 Still stuck? [Get help](/support) and choose **Verification**.
