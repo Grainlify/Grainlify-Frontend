@@ -11,23 +11,23 @@ Say: [curious] Discover shows active projects and open issues from them. Browse 
 Do: Hover the **Discover** icon on the rail so its label shows, then click **Browse**. Open the **Language** filter, then close it again.
 
 ## 3
-Say: [friendly] When you find an issue you want, you apply for it. Your application is posted on the GitHub issue, where the maintainer already works.
+Say: [friendly] When you find an issue you want, you apply for it. On most issues, your application is posted on the GitHub issue, where the maintainer already works.
 Do: Go back to **Discover** and click an open issue. Scroll to the **Apply for this issue** button and point at it without clicking.
 
 ## 4
-Say: [calm] Maintainers choose who works on each issue. [pause] Once you're assigned, you open a pull request on GitHub as usual, and the maintainer reviews it.
+Say: [calm] The maintainer chooses who works on it. [pause] Once you're assigned, you open a pull request on GitHub as usual, and the maintainer reviews it.
 Do: Click **Back**. Hover the **Contributors** icon on the rail so its label shows, then click it to show the **Contributions** tab.
 
 ## 5
-Say: [upbeat] Some work is also paid. Bounties are paid in USDC on Solana. The top of the page always says whether bounties are paying on mainnet yet.
+Say: [upbeat] Some work is also paid. Bounties pay a set amount in USDC on Solana, and a draw picks who gets each one. The top of the page says whether bounties are paying on mainnet yet.
 Do: Click **Bounties** on the rail. Hold on the header and the status line under it.
 
 ## 6
-Say: [matter-of-fact] GrainHack events are funded by sponsors, and share a pool among contributors whose work is accepted... There's also the Founding Contributor Pool for early contributors.
+Say: [matter-of-fact] GrainHack events are funded by sponsors, and share a pool among contributors whose work is accepted... The one event so far paid on a testnet. There's also the Founding Contributor Pool for early contributors.
 Do: Hover the **GrainHack** icon on the rail, then the **My GrainHack** icon, so each label shows. Do not open the GrainHack page.
 
 ## 7
-Say: [confident] Every merged pull request on a listed project counts toward your rank. It's a public record of your work, and NOBODY can buy or boost it.
+Say: [confident] Pull requests merged into listed projects count toward your rank. It's a public record of your work, and NOBODY can buy or boost it.
 Do: Click **Leaderboard** on the rail, with **This season** selected. Hold on the table.
 
 ## 8
