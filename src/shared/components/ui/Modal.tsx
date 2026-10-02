@@ -204,6 +204,8 @@ export function ModalButton({
 }
 
 interface ModalInputProps {
+  /** Ties the label to the field, so it is announced and can be found by it. */
+  id?: string;
   label?: string;
   type?: string;
   value: string;
@@ -218,6 +220,7 @@ interface ModalInputProps {
 }
 
 export function ModalInput({
+  id,
   label,
   type = 'text',
   value,
@@ -252,7 +255,7 @@ export function ModalInput({
   return (
     <div>
       {label && (
-        <label className={`block text-[13px] font-medium mb-2 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[var(--brand-ink-muted)]'
+        <label htmlFor={id} className={`block text-[13px] font-medium mb-2 transition-colors ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[var(--brand-ink-muted)]'
           }`}>
           {label}
           {/* The UI gold measured 1.54 on the light modal panel - the worst
@@ -265,6 +268,7 @@ export function ModalInput({
       )}
       {rows ? (
         <textarea
+          id={id}
           rows={rows}
           required={required}
           value={value}
@@ -276,6 +280,7 @@ export function ModalInput({
         />
       ) : (
         <input
+          id={id}
           type={type}
           required={required}
           value={value}
