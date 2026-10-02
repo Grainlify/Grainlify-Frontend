@@ -45,7 +45,11 @@ export interface BountyAgentStatus {
 
 export type BountyHistoryEntry =
   | { kind: 'draw'; at: string; by: string; drawn: string | null }
-  | { kind: 'unassign'; at: string; by: string; contributor: string };
+  | { kind: 'unassign'; at: string; by: string; contributor: string }
+  // A bounty put back to open because the pull request on it closed without
+  // merging. Sent by the agent from the release that records it; until then
+  // there are none.
+  | { kind: 'reopened'; at: string; by: string; reason: string; prNumber: number | null; contributor: string | null };
 
 export interface PublicBounty {
   id: string;

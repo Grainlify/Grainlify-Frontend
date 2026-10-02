@@ -389,7 +389,14 @@ export function BountyRow({ bounty: b, isDark, canApply, mine, held, mineLoading
                 {' — '}
                 {h.kind === 'draw'
                   ? <>{h.by === 'automatic' ? 'drawn automatically' : <>drawn by <b className={strong}>{h.by}</b></>}: {h.drawn ? <b className={strong}>{h.drawn}</b> : 'nobody was eligible'}</>
-                  : <><b className={strong}>{h.by}</b> unassigned <b className={strong}>{h.contributor}</b></>}
+                  : h.kind === 'unassign'
+                    ? <><b className={strong}>{h.by}</b> unassigned <b className={strong}>{h.contributor}</b></>
+                    // Anything else is named for what it is. Read as an
+                    // unassign, a reopen would put words in a maintainer's
+                    // mouth: "maint unassigned alice" when nobody did.
+                    : h.kind === 'reopened'
+                      ? <>reopened by <b className={strong}>{h.by}</b>{h.prNumber !== null ? <> after pull request #{h.prNumber}</> : null}: {h.reason}</>
+                      : <>{(h as { kind: string }).kind}</>}
               </li>
             ))}
           </ol>

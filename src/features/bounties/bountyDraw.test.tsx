@@ -326,6 +326,25 @@ describe('the public draw history', () => {
     ])
   })
 
+  it('names a reopen as a reopen, never as an unassign', async () => {
+    renderWithProviders(
+      <BountyRow
+        bounty={bounty({
+          history: [
+            { kind: 'draw', at: '2026-10-01T10:00:00Z', by: 'automatic', drawn: 'first' },
+            { kind: 'reopened', at: '2026-10-02T18:00:00Z', by: 'maint', reason: 'pull request closed without merging', prNumber: 37, contributor: 'first' },
+          ],
+        })}
+        isDark={false}
+        canApply={false}
+      />,
+    )
+    await userEvent.click(screen.getByText('Draw history (2)'))
+    const items = screen.getAllByRole('listitem').map((li) => li.textContent)
+    expect(items[1]).toBe('2 October 2026 at 18:00 UTC — reopened by maint after pull request #37: pull request closed without merging')
+    expect(items.join(' ')).not.toMatch(/unassigned/)
+  })
+
   it('shows nothing when there is no history, or the agent does not send one', () => {
     renderWithProviders(<BountyRow bounty={bounty({ history: [] })} isDark={false} canApply={false} />)
     expect(screen.queryByText(/Draw history/)).not.toBeInTheDocument()
