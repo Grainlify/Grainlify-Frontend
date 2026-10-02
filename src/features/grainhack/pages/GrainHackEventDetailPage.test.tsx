@@ -3,11 +3,15 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { GrainHackEventDetailPage } from './GrainHackEventDetailPage'
-import { getHackathon, getHackathonIssues, type PublicHackathonIssue } from '../../../shared/api/client'
+import { getHackathon, getHackathonIssues, getMyHackathonApplications, getMyProjects, type PublicHackathonIssue } from '../../../shared/api/client'
 
 vi.mock('../../../shared/api/client', () => ({
   getHackathon: vi.fn(),
   getHackathonIssues: vi.fn(),
+  // The project-application panel's reads; covered in its own test file.
+  getMyProjects: vi.fn(),
+  getMyHackathonApplications: vi.fn(),
+  applyToHackathon: vi.fn(),
 }))
 
 const mockedGetHackathon = vi.mocked(getHackathon)
@@ -52,6 +56,8 @@ function makeIssue(overrides: Partial<PublicHackathonIssue> & Pick<PublicHackath
 describe('GrainHackEventDetailPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    vi.mocked(getMyProjects).mockResolvedValue([])
+    vi.mocked(getMyHackathonApplications).mockResolvedValue({ applications: [] })
   })
 
   it('shows the issue_prep empty state exactly as designed when there are no published issues', async () => {

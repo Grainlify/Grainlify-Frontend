@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Wrench } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { ApplicationWindow } from '../components/ApplicationWindow';
+import { ProjectApplicationPanel } from '../components/ProjectApplicationPanel';
 import { formatUsdAmount } from '../../../shared/utils/usd';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
 import {
@@ -146,6 +147,8 @@ export function GrainHackEventDetailPage({ eventId, eventName, onBack, onIssueCl
               </div>
             )}
           </div>
+
+          {hackathon && <ProjectApplicationPanel hackathonId={hackathon.id} hackathonName={title} phase={phase} />}
 
           {issues.length === 0 ? (
             <div
