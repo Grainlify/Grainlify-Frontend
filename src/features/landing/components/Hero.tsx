@@ -4,18 +4,19 @@ import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { useLandingStats } from "../../../shared/hooks/useLandingStats";
+import { PayoutStatus } from "./PayoutStatus";
 
 // Aceternity's "Hero Section With Noise Background", recoloured to the warm
-// palette and gold #c9983a. Two deliberate departures from the block:
+// palette and gold #c9983a. Deliberate departures from the block:
 //
 //  1. Its `dark:` variants are gone. This app is Tailwind v4 with no
 //     `@custom-variant dark`, so `dark:` resolves to prefers-color-scheme -
 //     the OS setting - while the page's own toggle drives `theme` from
 //     ThemeContext. Ported verbatim, the hero would have followed the OS
 //     while everything around it followed the switch.
-//  2. Its product-shot mask fades from 40% of the image height. Our
-//     screenshot is cropped to its content, so that fade erased the card
-//     itself; it starts at 85% here.
+//  2. No product shot. A screenshot of live state (bounties with a countdown)
+//     is false as soon as the state moves on; a payout status panel sits in
+//     its place.
 //
 // Its typo'd classes (`dark:hover:bg-fuschia-600`, `darhk:text-white`) and two
 // invalid hex colours in the button shadows are dropped rather than ported.
@@ -59,10 +60,10 @@ export function Hero() {
           {/* Scoped before the claim, deliberately.
               This read "Assignment by weighted draw / Rewards decided after
               the work", which describes GrainHack as though it were the
-              platform. Outside a funded event the maintainer chooses, and
-              nothing has been paid on any chain - so a reader who stopped at
-              line one had been told two things that are not true of ordinary
-              issues. Scoping first means the short read is still correct. */}
+              platform. Outside GrainHack and Grainlify Bounties the maintainer
+              chooses - so a reader who stopped at line one had been told
+              something that is not true of ordinary issues. Scoping first
+              means the short read is still correct. */}
           <span className="bg-gradient-to-r from-[#c9983a] to-[#d4af37] bg-clip-text text-transparent">
             Funded issues
           </span>{" "}
@@ -80,8 +81,9 @@ export function Hero() {
             isDark ? "text-[#b8a898]" : "text-[#7a6b5a]"
           }`}
         >
-          Every allocation rule is published &mdash; all 102. Nobody wins an issue
-          by refreshing fastest, and nobody can compute a payout in advance.
+          GrainHack events and Grainlify Bounties both assign work by a weighted
+          draw, under rules published before anyone applies. Nobody wins an issue
+          by refreshing fastest.
         </motion.p>
 
         <motion.div
@@ -97,10 +99,8 @@ export function Hero() {
             <span>Start contributing</span>
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
-          <a
-            href="https://docs.grainlify.com/docs/contributors/grainhack"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to="/docs/contributors/grainhack"
             className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-[16px] backdrop-blur-[30px] border font-medium transition-all inline-flex items-center justify-center ${
               isDark
                 ? "bg-white/[0.08] border-white/15 text-[#e8dfd0] hover:bg-white/[0.12] hover:border-[#c9983a]/30"
@@ -108,44 +108,37 @@ export function Hero() {
             }`}
           >
             Read the rules
-          </a>
+          </Link>
         </motion.div>
 
-        {/* The product shot: the real Bounties page, captured from the deployed
-            dashboard against the live bounty list rather than mocked up. It
-            replaced the GrainHack event page when bounties went live on
-            mainnet - the hero should show the thing somebody can act on today. */}
-        <div className="mt-12 flex w-full justify-center">
-          <motion.div
-            initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 20, filter: "blur(10px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={reduceMotion ? undefined : { duration: 0.5, delay: 0.4 }}
-            className={`relative w-full max-w-5xl overflow-hidden rounded-[20px] border shadow-[0_24px_60px_rgba(0,0,0,0.35)] [mask-image:linear-gradient(to_bottom,white,white_85%,transparent)] ${
-              isDark ? "border-white/10" : "border-black/10"
+        {/* Where the product shot was. The screenshot showed bounties
+            "closing in 4 hours" that were later cancelled: a picture of live
+            state is false within a day. This says which chain pays what,
+            from history and from the live ledger. */}
+        <motion.div {...rise(0.4)} className="mt-12 sm:mt-16 w-full max-w-5xl mx-auto">
+          <h2
+            className={`text-sm font-semibold tracking-wide uppercase mb-4 ${
+              isDark ? "text-[#e8c571]" : "text-[#7a5a1c]"
             }`}
           >
-            <img
-              src={isDark ? "/bounties-open-dark.webp" : "/bounties-open-light.webp"}
-              alt="The Bounties page in the Grainlify dashboard, showing three open bounties on Grainlify/grainlify-bounty-agent, each worth 1 USDC: #34 Record the real network fee in the ledger, not only the capped estimate; #35 Expose inference cost metrics on the public ledger endpoint; #36 Generate a human-readable x402 error reference from the recorded fixtures. Each row carries a countdown to when applications close, a note that everyone who applies in time goes into the draw, and an Apply for this bounty button."
-              className="h-auto w-full object-cover"
-              width={1440}
-              height={900}
-              loading="eager"
-            />
-          </motion.div>
-        </div>
+            Where payouts happen today
+          </h2>
+          <PayoutStatus />
+        </motion.div>
 
-        {/* Kept from the previous hero. Grants Distributed reads $0 because no
-            funded event has run - that is true of the product and stays
-            visible rather than being dropped to make the page look busier. */}
+        {/* Two figures, each labelled as what the API counts. "Projects
+            Funded" and "Active Users" were the same two numbers under labels
+            they did not mean: the first is verified projects, the second is
+            distinct GitHub authors of issues and pull requests in them. The
+            "Grants Distributed" tile is gone - the API hard-codes it to 0
+            because no grants table exists, so it measured nothing. */}
         <motion.div
           {...rise(0.5)}
-          className="mt-12 sm:mt-16 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-4xl mx-auto px-2"
+          className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-5xl mx-auto"
         >
           {[
-            { label: "Active Projects", value: display.activeProjects },
-            { label: "Contributors", value: display.contributors },
-            { label: "Grants Distributed", value: display.grantsDistributed },
+            { label: "Verified projects listed", value: display.activeProjects },
+            { label: "GitHub contributors to those projects", value: display.contributors },
           ].map((stat) => (
             <div
               key={stat.label}

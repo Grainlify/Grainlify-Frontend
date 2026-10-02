@@ -3,13 +3,35 @@ import { screen, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '../../../test/renderWithProviders'
 import { Hero } from './Hero'
 import { getLandingStats } from '../../../shared/api/client'
+import { getBountyLedger } from '../../../shared/api/bountyAgent'
 
-// Hero calls useLandingStats() for the stat grid; nothing else here fetches.
+// Hero calls useLandingStats() for the stat grid, and the payout panel reads
+// the bounty agent's public ledger.
 vi.mock('../../../shared/api/client', () => ({
   getLandingStats: vi.fn(),
 }))
+vi.mock('../../../shared/api/bountyAgent', () => ({
+  getBountyLedger: vi.fn(),
+}))
 
 const mockedGetLandingStats = vi.mocked(getLandingStats)
+const mockedGetBountyLedger = vi.mocked(getBountyLedger)
+
+const ledger = (paidMainnet: number, mainnetLive = true) =>
+  ({
+    status: { network: 'solana-mainnet', mainnetLive, inferenceMode: 'live', statusLine: '' },
+    totals: {
+      bountiesPosted: 1,
+      bountiesPaidMainnet: paidMainnet,
+      bountiesPaidTest: 0,
+      inferenceCalls: 14,
+      inferenceSpendMicro: 120756,
+      inferenceCeilingMicro: 5000000,
+      feesInMicro: null,
+    },
+    budget: [],
+    events: [],
+  }) as Awaited<ReturnType<typeof getBountyLedger>>
 
 const norm = (s: string) => s.replace(/\s+/g, ' ').trim()
 
@@ -21,6 +43,7 @@ describe('Hero', () => {
       contributors: 2165,
       grants_distributed_usd: 0,
     })
+    mockedGetBountyLedger.mockResolvedValue(ledger(0))
   })
 
   // The heading has been narrowed once (5ebdd2ef) and rewritten once since.
@@ -68,22 +91,52 @@ describe('Hero', () => {
     })
   })
 
-  it('makes no claim that anything has been paid', async () => {
+  it('says which chain pays what, and only what has happened', async () => {
     renderWithProviders(<Hero />)
-    await waitFor(() => expect(mockedGetLandingStats).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByText('Live. No bounty has been paid yet.')).toBeInTheDocument())
 
-    const body = norm(document.body.textContent ?? '')
-    // "in advance" is the approved construction: it speaks to predictability,
-    // not to money having moved.
-    expect(body).toContain('nobody can compute a payout in advance')
-    for (const claimed of [/rewards? (have been |were )?paid/i, /payouts? (have been |were )?(made|sent)/i, /already (paid|distributed)/i]) {
-      expect(body).not.toMatch(claimed)
-    }
+    const panel = norm(screen.getByLabelText('Where payouts happen today').textContent ?? '')
+    // GrainHack: the one event paid on testnet, and nothing on mainnet.
+    expect(panel).toContain('Base Sepolia testnet')
+    expect(panel).toContain('paid 4 USDC each on the testnet')
+    expect(panel).toContain('No GrainHack payout has been made on mainnet yet')
+    // Bounties: Solana mainnet, USDC.
+    expect(panel).toContain('Solana mainnet · USDC')
+    // Aptos: built, not live.
+    expect(panel).toContain('Built, not live')
+    // Stellar has never paid anything, and the old screenshot is gone.
+    expect(norm(document.body.textContent ?? '')).not.toMatch(/Stellar/i)
+    expect(document.querySelector('img[src*="bounties-open"]')).toBeNull()
   })
 
-  it('shows the live distributed figure rather than hiding a zero', async () => {
+  it('reads the bounty payout count from the ledger, so it changes when a bounty is paid', async () => {
+    mockedGetBountyLedger.mockResolvedValue(ledger(2))
     renderWithProviders(<Hero />)
-    await waitFor(() => expect(screen.getByText('$0')).toBeInTheDocument())
-    expect(screen.getByText('Grants Distributed')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('Live. 2 bounties paid so far.')).toBeInTheDocument())
+    expect(screen.queryByText(/No bounty has been paid yet/)).not.toBeInTheDocument()
+  })
+
+  it('does not guess the bounty count when the ledger cannot be read', async () => {
+    mockedGetBountyLedger.mockRejectedValue(new Error('down'))
+    renderWithProviders(<Hero />)
+    await waitFor(() => expect(screen.getByText(/payout count could not be loaded/)).toBeInTheDocument())
+    expect(screen.queryByText(/No bounty has been paid yet/)).not.toBeInTheDocument()
+  })
+
+  it('labels the two figures as what the API counts, and drops the hard-coded grants tile', async () => {
+    renderWithProviders(<Hero />)
+    await waitFor(() => expect(screen.getByText('468')).toBeInTheDocument())
+    expect(screen.getByText('Verified projects listed')).toBeInTheDocument()
+    expect(screen.getByText('GitHub contributors to those projects')).toBeInTheDocument()
+    // /stats/landing returns grants_distributed_usd: 0 from a constant - no
+    // grants table exists - so the figure measured nothing.
+    expect(screen.queryByText('Grants Distributed')).not.toBeInTheDocument()
+    expect(screen.queryByText('$0')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Projects Funded|Active Projects/)).not.toBeInTheDocument()
+  })
+
+  it('links the rules to the docs on this site, not the retired docs host', () => {
+    renderWithProviders(<Hero />)
+    expect(screen.getByRole('link', { name: 'Read the rules' })).toHaveAttribute('href', '/docs/contributors/grainhack')
   })
 })

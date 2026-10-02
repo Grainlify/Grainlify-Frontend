@@ -10,18 +10,18 @@ interface FAQItem {
 
 // Grounded in the platform's actual mechanics rather than generic SaaS FAQ
 // filler - and in what is true TODAY. Four of these answers previously
-// described the points-to-USDC redemption programme, which was retired: there
-// are no points to hold, no threshold to clear and no redemption to request.
+// described the points-to-USDC redemption programme, which was retired, and
+// three said payouts settle on Stellar, where nothing has ever been paid.
 const FAQS: FAQItem[] = [
   {
     question: "How do I actually get paid for contributing?",
     answer:
-      "There is no per-task rate. Accepted work earns a share of a pool, and the pool is divided after the event against rules published before it starts - so what a contribution earns depends on what everyone else contributed. Payouts settle in USDC on Stellar. No event has completed yet, so nothing has been paid out.",
+      "It depends on the programme. A Grainlify bounty pays the USDC amount posted on it, on Solana mainnet, to the wallet you linked - after a maintainer merges your pull request and a person approves the payout. No bounty has been paid yet. A GrainHack event has no per-task rate: its pool is divided after the event across accepted work, against rules published before it starts. The one event so far ran on the Base Sepolia testnet, and its two contributors were paid 4 USDC each there on 19 September 2026. Ordinary issues carry no payment.",
   },
   {
     question: "Why do you need KYC?",
     answer:
-      "Because real money will move through the platform. We use a third-party provider (Didit) to verify identity before a first payout, which keeps the reward pool compliant and protects against fraud - it's a one-time step, not something you repeat.",
+      "Identity verification, through a third-party provider (Didit), is required before you can be paid from a GrainHack event or the Founding Contributor Pool, and for a referral to count. Bounties do not require it. You verify once, from Settings; if the provider later withdraws its approval, you would need to verify again before the next such payout.",
   },
   {
     question: "I maintain a project - how do I list it?",
@@ -31,17 +31,17 @@ const FAQS: FAQItem[] = [
   {
     question: "Do I need any crypto experience to start?",
     answer:
-      "No. You sign in with GitHub, apply to issues, and contribute like you normally would. The only place crypto comes in is at payout, when you provide a Stellar wallet address to receive USDC.",
+      "No. You sign in with GitHub, apply to issues, and contribute like you normally would. Crypto comes in only at payout: to win a bounty you link a Solana wallet such as Phantom, Solflare or Backpack, by signing one message.",
   },
   {
     question: "How is an issue assigned?",
     answer:
-      "It depends on whether the issue is funded. In a GrainHack event, by a weighted draw, not first-come: applications open for a fixed window, and when it closes one applicant is drawn. Weight comes from fit for that specific issue, plus a bonus for contributors who have never been assigned one. Your follower count, star count, total pull requests and merge rate are deliberately not counted - they are farmable, and they push newcomers down. Outside a GrainHack event there is no prize pool on the issue, so the project maintainer reviews the applications and chooses who gets it.",
+      "It depends on whether the issue is funded. A Grainlify bounty or a GrainHack issue is assigned by a weighted draw, not first-come: applications open for a fixed window, and when it closes one applicant is drawn. Your follower count, star count, total pull requests and merge rate are deliberately not counted - they are farmable, and they push newcomers down. On a bounty, an AI agent assesses each applicant's fit for the issue; in GrainHack that assessment is built but switched off, so the weights come from the published rules, such as a bonus for first-time applicants. Outside those programmes there is no money on the issue, so the project maintainer reviews the applications and chooses who gets it.",
   },
   {
     question: "Is Grainlify free to use?",
     answer:
-      "Yes, for both contributors and maintainers. There's no cost to browse issues, apply, or list a repository. A platform fee can be taken from a sponsor's total before an event's pool is set; the rate and the amount are published on the event's rules page rather than buried.",
+      "Yes, for both contributors and maintainers. There's no cost to browse issues, apply, or list a repository. A platform fee can be taken from a sponsor's total before a GrainHack event's pool is set; the rate is published with the event's rules, and it was 0% for the first event.",
   },
 ];
 

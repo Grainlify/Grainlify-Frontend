@@ -91,11 +91,15 @@ export function EcosystemNetwork() {
               Chain-Agnostic by Design
             </span>
             <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${isDark ? "text-[#e8dfd0]" : "text-[#2d2820]"}`}>
-              Built for Every Blockchain Ecosystem
+              Not Tied to One Network
             </h2>
+            {/* Was "one points balance, and a clear path to real payouts": the
+                points programme is retired, and each programme pays on its own
+                chain. */}
             <p className={`text-xl mb-10 transition-colors ${isDark ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>
-              Grainlify isn't tied to a single network. Wherever your project lives, contributors get one profile,
-              one points balance, and a clear path to real payouts.
+              Projects are grouped by the ecosystem they belong to, and contributors keep one profile across all of
+              them. Each programme pays on its own chain: GrainHack has paid on the Base Sepolia testnet, bounties pay
+              on Solana, and Aptos claims are built but not switched on.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -107,10 +111,10 @@ export function EcosystemNetwork() {
                 <Globe2 className="w-5 h-5 text-[#c9983a] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className={`font-semibold text-sm mb-1 ${isDark ? "text-[#e8dfd0]" : "text-[#2d2820]"}`}>
-                    Any Blockchain
+                    Any Ecosystem
                   </div>
                   <div className={`text-sm ${isDark ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>
-                    Not limited to one network or ecosystem.
+                    Ecosystems are added by Grainlify admins, not built into the code.
                   </div>
                 </div>
               </div>
@@ -122,10 +126,10 @@ export function EcosystemNetwork() {
                 <CalendarDays className="w-5 h-5 text-[#c9983a] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className={`font-semibold text-sm mb-1 ${isDark ? "text-[#e8dfd0]" : "text-[#2d2820]"}`}>
-                    Monthly Hackathons
+                    GrainHack Events
                   </div>
                   <div className={`text-sm ${isDark ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>
-                    Regular events to kickstart new contributions.
+                    Run by Grainlify admins. One has run so far, on the Base Sepolia testnet.
                   </div>
                 </div>
               </div>

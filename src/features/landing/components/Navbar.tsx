@@ -24,6 +24,7 @@ import grainlifyLogo from "../../../assets/grainlify_log.svg";
 // when lucide-react is already installed.
 
 const LINKS = [
+  { label: "Bounties", href: "#bounties" },
   { label: "Features", href: "#features" },
   { label: "How it Works", href: "#how-it-works" },
   { label: "Why Choose Us", href: "#why-choose-us" },

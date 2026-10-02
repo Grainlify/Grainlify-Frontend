@@ -20,6 +20,7 @@ interface FooterLink {
 }
 
 const PRODUCT_LINKS: FooterLink[] = [
+  { label: "Bounties", href: "#bounties" },
   { label: "Features", href: "#features" },
   { label: "How it Works", href: "#how-it-works" },
   { label: "Why Grainlify", href: "#why-choose-us" },
@@ -27,7 +28,7 @@ const PRODUCT_LINKS: FooterLink[] = [
 ];
 
 const COMMUNITY_LINKS: FooterLink[] = [
-  { label: "Documentation", href: "https://docs.grainlify.com", external: true },
+  { label: "Documentation", href: "/docs" },
   { label: "GitHub", href: "https://github.com/Grainlify", external: true },
   // The route out for somebody who cannot sign in, and the reason the "Get
   // help" trigger could be taken out of the navbar rather than simply
@@ -75,7 +76,7 @@ export function Footer() {
               </span>
             </div>
             <p className={`max-w-xs mb-6 transition-colors ${isDark ? "text-[#b8a898]" : "text-[#7a6b5a]"}`}>
-              Connecting talent with opportunity in the open-source ecosystem - contribute, get matched, get paid.
+              Open-source issues, assigned by published rules - apply, contribute, and get paid on the funded ones.
             </p>
             <div className="flex items-center gap-3">
               {SOCIAL_LINKS.map((social) => (

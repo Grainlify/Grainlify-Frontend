@@ -4,6 +4,7 @@ import { renderWithProviders } from '../../../test/renderWithProviders'
 import { LandingPage } from './LandingPage'
 import { getLandingStats } from '../../../shared/api/client'
 import { ApiError } from '../../../shared/api/apiError'
+import { getBountyLedger } from '../../../shared/api/bountyAgent'
 
 // LandingPage itself fetches nothing directly, but two of the sections it
 // renders (Hero and WhyChooseUs) each call the shared useLandingStats() hook,
@@ -24,7 +25,30 @@ vi.mock('../../../shared/api/client', () => ({
   getCurrentUser: vi.fn(),
 }))
 
+// The payout panel, the Bounties section, Built/Planned and the right-hand
+// tiles all read the bounty agent's public ledger, through one provider.
+vi.mock('../../../shared/api/bountyAgent', () => ({
+  getBountyLedger: vi.fn(),
+}))
+
 const mockedGetLandingStats = vi.mocked(getLandingStats)
+const mockedGetBountyLedger = vi.mocked(getBountyLedger)
+
+const ledger = (paidMainnet: number) =>
+  ({
+    status: { network: 'solana-mainnet', mainnetLive: true, inferenceMode: 'live', statusLine: '' },
+    totals: {
+      bountiesPosted: 1,
+      bountiesPaidMainnet: paidMainnet,
+      bountiesPaidTest: 0,
+      inferenceCalls: 14,
+      inferenceSpendMicro: 120756,
+      inferenceCeilingMicro: 5000000,
+      feesInMicro: null,
+    },
+    budget: [],
+    events: [],
+  }) as Awaited<ReturnType<typeof getBountyLedger>>
 
 const STUB_STATS = {
   active_projects: 1,
@@ -35,6 +59,7 @@ const STUB_STATS = {
 describe('LandingPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockedGetBountyLedger.mockResolvedValue(ledger(0))
   })
 
   it('renders the hero and main sections, replacing the placeholder dashes with the real fetched stats', async () => {
@@ -46,21 +71,23 @@ describe('LandingPage', () => {
 
     renderWithProviders(<LandingPage />, { withAuth: true })
 
-    expect(screen.getByText(/Every allocation rule is published/i)).toBeInTheDocument()
-    expect(screen.getByText('Built for Every Blockchain Ecosystem')).toBeInTheDocument()
+    expect(screen.getByText(/assign work by a weighted\s+draw, under rules published before anyone applies/i)).toBeInTheDocument()
+    expect(screen.getByText('Not Tied to One Network')).toBeInTheDocument()
+    expect(screen.getByText('Bounties, run by an agent')).toBeInTheDocument()
     // The mechanism and the built/planned split are what the page leads with
     // for a reviewer; if either disappears the page is a feature list again.
-    expect(screen.getByText("Why this isn't another bounty board")).toBeInTheDocument()
+    expect(screen.getByText('How a GrainHack event allocates')).toBeInTheDocument()
     expect(screen.getByText('Built, and planned')).toBeInTheDocument()
-    // The status note tracks what has actually happened: an event has run and
-    // been judged, and nothing has been paid. It must never claim a payout.
+    // The status note tracks what has actually happened: one event ran on
+    // the Base Sepolia testnet and its contributors were paid there.
     expect(screen.getByText(/The first GrainHack event has run, on the Base Sepolia testnet/i)).toBeInTheDocument()
-    expect(screen.getByText(/Payouts are\s+next and have not been sent/i)).toBeInTheDocument()
-    expect(screen.queryByText(/No event has run yet/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/^First GrainHack event$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/have not been sent|not sent yet/i)).not.toBeInTheDocument()
     const status = screen.getByText('Built, and planned').closest('section')?.textContent ?? ''
     expect(status).toContain('judged accepted')
-    expect(status).not.toMatch(/\b(were paid|have been paid|paid out to|payouts? (were|have been) sent)\b/i)
+    expect(status).toMatch(/paid 4 USDC each on that\s+testnet/)
+    expect(status).toMatch(/No GrainHack payout has been made on mainnet/)
+    // Soroban is not built: its configuration was deleted.
+    expect(status).not.toMatch(/Soroban/)
     expect(screen.getByText('Everything You Need to Succeed')).toBeInTheDocument()
     expect(screen.getByText('How It Works')).toBeInTheDocument()
     expect(screen.getByText('Why Choose Grainlify?')).toBeInTheDocument()
@@ -74,13 +101,54 @@ describe('LandingPage', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
 
     await waitFor(() => {
-      expect(screen.getByText('$1,250,000')).toBeInTheDocument()
+      expect(screen.getAllByText('342').length).toBeGreaterThan(0)
     })
     // contributors and active_projects each render twice (Hero's stat grid and
-    // WhyChooseUs's summary tiles); grants_distributed_usd only renders in Hero.
-    expect(screen.getAllByText('342').length).toBeGreaterThan(0)
+    // WhyChooseUs's summary tiles). grants_distributed_usd is not shown at
+    // all: the API hard-codes it to 0.
+    expect(screen.queryByText('$1,250,000')).not.toBeInTheDocument()
     expect(screen.getAllByText('15,890').length).toBeGreaterThan(0)
     expect(screen.queryAllByText('—').length).toBe(0)
+  })
+
+  it('makes none of the claims it used to make without backing', async () => {
+    mockedGetLandingStats.mockResolvedValue(STUB_STATS)
+    renderWithProviders(<LandingPage />, { withAuth: true })
+    await waitFor(() => expect(screen.getAllByText('Live. No bounty has been paid yet.').length).toBeGreaterThan(0))
+
+    const body = document.body.textContent ?? ''
+    for (const gone of [
+      /98%/, /Satisfaction Rate/, /24\/7/, /Support Available/, /\+45%/, /Growing Ecosystem/,
+      /Grants Distributed/, /Projects Funded/, /Active Users/, /Stellar/, /Soroban/, /points balance/,
+      /Monthly Hackathons/, /mentorship/i, /grant distribution/i,
+    ]) {
+      expect(body, String(gone)).not.toMatch(gone)
+    }
+    // No link to the retired docs host, or to raw JSON.
+    const hrefs = [...document.querySelectorAll('a')].map((a) => a.getAttribute('href') ?? '')
+    expect(hrefs.filter((h) => h.includes('docs.grainlify.com') || h.includes('api.grainlify.com'))).toEqual([])
+  })
+
+  it('moves the first bounty payout from Planned to Built once the ledger shows one', async () => {
+    mockedGetLandingStats.mockResolvedValue(STUB_STATS)
+    mockedGetBountyLedger.mockResolvedValue(ledger(1))
+    renderWithProviders(<LandingPage />, { withAuth: true })
+    await waitFor(() => expect(screen.getByText('1 bounty paid in USDC on Solana mainnet')).toBeInTheDocument())
+    expect(screen.queryByText('The first bounty payout on Solana mainnet')).not.toBeInTheDocument()
+  })
+
+  it('lists the first bounty payout as planned while the ledger shows none', async () => {
+    mockedGetLandingStats.mockResolvedValue(STUB_STATS)
+    renderWithProviders(<LandingPage />, { withAuth: true })
+    await waitFor(() => expect(screen.getByText('The first bounty payout on Solana mainnet')).toBeInTheDocument())
+  })
+
+  it('links the Bounties section to the Bounties page, which signs a visitor in first', async () => {
+    mockedGetLandingStats.mockResolvedValue(STUB_STATS)
+    renderWithProviders(<LandingPage />, { withAuth: true })
+    expect(screen.getByRole('link', { name: /See open bounties/ })).toHaveAttribute('href', '/dashboard?tab=bounties')
+    expect(screen.getAllByRole('link', { name: 'The bounty rules' })[0]).toHaveAttribute('href', '/bounties/rules')
+    await waitFor(() => expect(mockedGetLandingStats).toHaveBeenCalled())
   })
 
   it('says the stats are unavailable, instead of leaving the loading dash up forever, when the stats fetch fails', async () => {
