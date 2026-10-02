@@ -89,6 +89,13 @@ describe('startState', () => {
 
   it('is ready on a settled event whose amounts sum to the pool', () => {
     expect(startState('settled', settlementPreview(), null).kind).toBe('ready')
+    expect(startState('settled', settlementPreview(), null, { id: PAYOUT_COMPUTATION, createdAt: null }).kind).toBe('ready')
+  })
+
+  it('refuses a settled event with no payout computation, but only when the backend reports it', () => {
+    expect(startState('settled', settlementPreview(), null, { id: null, createdAt: null })).toEqual({ kind: 'no_computation' })
+    expect(startState('settled', settlementPreview(), null, undefined).kind).toBe('ready')
+    expect(startState('live', undefined, null, { id: null, createdAt: null }).kind).toBe('not_settled')
   })
 })
 

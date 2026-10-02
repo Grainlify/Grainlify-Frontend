@@ -1,4 +1,4 @@
-import type { HackathonSettlementPreview, KeeperHubLeg, KeeperHubLegStatus, KeeperHubRunView } from '../../../../shared/api/client';
+import type { HackathonSettlementPreview, KeeperHubLeg, KeeperHubLegStatus, KeeperHubRunView, LatestPayoutRun } from '../../../../shared/api/client';
 
 /** Presentation rules for the KeeperHub payout panel, kept out of the component
  *  so each can be tested on its own.
@@ -230,6 +230,7 @@ export const PHASE_LABEL: Record<string, string> = {
 export type StartState =
   | { kind: 'phase_unknown' }
   | { kind: 'not_settled'; phase: string }
+  | { kind: 'no_computation' }
   | { kind: 'loading' }
   | { kind: 'preview_failed'; code: string }
   | { kind: 'nothing_to_settle'; reason: string }
@@ -247,9 +248,12 @@ export function startState(
   phase: string | undefined,
   preview: HackathonSettlementPreview | undefined,
   previewError: string | null,
+  latestPayoutRun?: LatestPayoutRun,
 ): StartState {
   if (!phase) return { kind: 'phase_unknown' };
   if (phase !== 'settled') return { kind: 'not_settled', phase };
+  // Undefined is an older backend that doesn't report it: the id is typed.
+  if (latestPayoutRun && latestPayoutRun.id === null) return { kind: 'no_computation' };
   if (previewError !== null) return { kind: 'preview_failed', code: previewError };
   if (!preview) return { kind: 'loading' };
   if (preview.nothing_to_settle) return { kind: 'nothing_to_settle', reason: preview.reason };

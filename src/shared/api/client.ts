@@ -3408,19 +3408,54 @@ export interface KeeperHubRunView {
   /** The sending wallet as configured on the server now (not recorded per
    *  attempt). `address` is null when the server has none configured. */
   payout_wallet: { address: string | null; note: string };
+  /** The event's newest payout computation (hackathon_payout_runs), the one
+   *  release accepts. Absent on a backend older than the field. */
+  latest_payout_run_id?: string | null;
+  latest_payout_run_created_at?: string | null;
+}
+
+/** The newest payout computation, as the run endpoint reports it. `id` is null
+ *  when the event has none yet. */
+export interface LatestPayoutRun {
+  id: string | null;
+  createdAt: string | null;
+}
+
+export interface KeeperHubRunState {
+  /** Null when the event has no KeeperHub run for the pool. */
+  view: KeeperHubRunView | null;
+  /** Undefined when the response doesn't carry latest_payout_run_id at all
+   *  (a backend from before the field), as distinct from null (no computation). */
+  latestPayoutRun: LatestPayoutRun | undefined;
+}
+
+/** Reads latest_payout_run_id / _created_at off any run-endpoint body - the
+ *  run itself, or the 404 that says there is none. */
+export function latestPayoutRunOf(body: unknown): LatestPayoutRun | undefined {
+  if (!body || typeof body !== 'object' || !('latest_payout_run_id' in body)) return undefined;
+  const b = body as { latest_payout_run_id?: unknown; latest_payout_run_created_at?: unknown };
+  return {
+    id: typeof b.latest_payout_run_id === 'string' && b.latest_payout_run_id ? b.latest_payout_run_id : null,
+    createdAt: typeof b.latest_payout_run_created_at === 'string' ? b.latest_payout_run_created_at : null,
+  };
 }
 
 export type KeeperHubLeg = KeeperHubRunView['legs'][number];
 
-/** Resolves to null when the event has no run for the pool (404 not_found). */
-export const getKeeperHubRun = async (hackathonId: string, pool = 'contributor'): Promise<KeeperHubRunView | null> => {
+/** The event's run, or `view: null` when it has none for the pool (404
+ *  not_found, or a body whose run is null). Either way it carries the newest
+ *  payout computation when the backend reports one. */
+export const getKeeperHubRun = async (hackathonId: string, pool = 'contributor'): Promise<KeeperHubRunState> => {
   try {
-    return await apiRequest<KeeperHubRunView>(
+    const body = await apiRequest<KeeperHubRunView>(
       `/admin/hackathons/${encodeURIComponent(hackathonId)}/keeperhub/run?pool=${encodeURIComponent(pool)}`,
       { requiresAuth: true },
     );
+    return { view: body && body.run ? body : null, latestPayoutRun: latestPayoutRunOf(body) };
   } catch (e) {
-    if (e instanceof ApiError && e.status === 404 && e.data?.error === 'not_found') return null;
+    if (e instanceof ApiError && e.status === 404 && e.data?.error === 'not_found') {
+      return { view: null, latestPayoutRun: latestPayoutRunOf(e.data) };
+    }
     throw e;
   }
 };

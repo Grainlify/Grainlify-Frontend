@@ -27,8 +27,12 @@ import { KeeperHubPayoutPanel } from './KeeperHubPayoutPanel'
 
 const panel = () => screen.getByTestId('keeperhub-panel')
 
-async function renderWith(v: unknown, phase?: string) {
-  h.getKeeperHubRun.mockResolvedValue(v)
+/** The run endpoint's state: the run (or null) and, when the backend reports
+ *  it, the newest payout computation. Omitted = an older backend. */
+const state = (view: unknown, latestPayoutRun?: { id: string | null; createdAt: string | null }) => ({ view, latestPayoutRun })
+
+async function renderWith(v: unknown, phase?: string, latestPayoutRun?: { id: string | null; createdAt: string | null }) {
+  h.getKeeperHubRun.mockResolvedValue(state(v, latestPayoutRun))
   renderWithProviders(<KeeperHubPayoutPanel hackathonId="h-1" phase={phase} />)
   await waitFor(() => expect(panel().dataset.state).not.toBe('loading'))
 }
@@ -225,7 +229,7 @@ describe('KeeperHubPayoutPanel', () => {
   })
 })
 
-describe('KeeperHubPayoutPanel: starting the first payout', () => {
+describe('KeeperHubPayoutPanel: starting the first payout (backend without latest_payout_run_id)', () => {
   const startBox = () => screen.getByTestId('keeperhub-start-box')
   const startButton = () => within(startBox()).getByRole('button', { name: 'Start payout' })
 
@@ -347,7 +351,7 @@ describe('KeeperHubPayoutPanel: starting the first payout', () => {
     h.releaseKeeperHubRun.mockRejectedValue(new ApiError('preflight_would_revert', 409, { error: 'preflight_would_revert' }))
     await renderNoRun('settled')
     await waitFor(() => expect(startBox()).toBeInTheDocument())
-    h.getKeeperHubRun.mockResolvedValue(resumable())
+    h.getKeeperHubRun.mockResolvedValue(state(resumable()))
     const dialog = await openConfirm()
     fireEvent.click(within(dialog).getByRole('button', { name: /Start payout on/ }))
     await waitFor(() => expect(panel().dataset.state).toBe('allowed'))
@@ -370,5 +374,51 @@ describe('KeeperHubPayoutPanel: starting the first payout', () => {
     await waitFor(() => expect(panel()).toHaveTextContent("couldn't be read, so a payout can't be started from here"))
     expect(panel()).toHaveTextContent('settlement: allocation mismatch')
     expect(screen.queryByRole('button', { name: /Start payout/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('KeeperHubPayoutPanel: starting the first payout from the reported computation', () => {
+  const AT = '2026-10-01T09:30:00Z'
+  const startBox = () => screen.getByTestId('keeperhub-start-box')
+
+  async function renderReported(id: string | null, preview: unknown = settlementPreview()) {
+    h.getHackathonSettlementPreview.mockResolvedValue(preview)
+    await renderWith(null, 'settled', { id, createdAt: id ? AT : null })
+  }
+
+  it('uses the newest computation without asking for an id, and shows it read-only', async () => {
+    h.releaseKeeperHubRun.mockResolvedValue({ release: { attempt_id: 'x', execution_id: 'y', dispatched_leg_ids: ['l1'], ack_status: 'running' }, note: '' })
+    await renderReported(PAYOUT_COMPUTATION)
+    await waitFor(() => expect(startBox()).toBeInTheDocument())
+    expect(screen.queryByLabelText(/Payout computation id/)).not.toBeInTheDocument()
+    const shown = screen.getByTestId('keeperhub-start-computation')
+    expect(shown).toHaveTextContent('Pays computation')
+    expect(shown).toHaveTextContent(/4f6c2a1e… · computed 1 Oct 2026, \d\d:\d\d/)
+    const start = within(startBox()).getByRole('button', { name: 'Start payout' })
+    expect(start).toBeEnabled()
+
+    fireEvent.click(start)
+    const dialog = screen.getByTestId('keeperhub-start-confirm')
+    expect(dialog).toHaveTextContent(/Computation 4f6c2a1e… · computed 1 Oct 2026, \d\d:\d\d/)
+    expect(dialog).toHaveTextContent('Start the payout on Base Sepolia (testnet)?')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Start payout on Base Sepolia' }))
+    await waitFor(() =>
+      expect(h.releaseKeeperHubRun).toHaveBeenCalledWith('h-1', { payoutRunId: PAYOUT_COMPUTATION, chainId: 'base-sepolia', pool: 'contributor' }),
+    )
+  })
+
+  it('no computation yet: says why, offers no start, and reads no preview', async () => {
+    await renderReported(null)
+    await waitFor(() => expect(panel()).toHaveTextContent('This event has no payout computation yet, so there is nothing to start.'))
+    expect(panel()).toHaveTextContent('It is written once, when the event moves to Settled')
+    expect(panel()).toHaveTextContent('latest_payout_run_id null')
+    expect(screen.queryByTestId('keeperhub-start-box')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Start payout/ })).not.toBeInTheDocument()
+    expect(h.getHackathonSettlementPreview).not.toHaveBeenCalled()
+  })
+
+  it('before settlement the computation changes nothing', async () => {
+    await renderWith(null, 'closed', { id: null, createdAt: null })
+    expect(panel()).toHaveTextContent('A payout can start once the event is settled; it is Closed now.')
   })
 })

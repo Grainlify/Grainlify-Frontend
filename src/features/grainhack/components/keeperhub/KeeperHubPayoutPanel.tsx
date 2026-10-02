@@ -12,6 +12,7 @@ import {
   type KeeperHubLeg,
   type KeeperHubLegStatus,
   type KeeperHubRunView,
+  type LatestPayoutRun,
 } from '../../../../shared/api/client';
 import {
   ATTEMPT_STATE_LABEL,
@@ -58,6 +59,7 @@ export function KeeperHubPayoutPanel({ hackathonId, phase }: { hackathonId: stri
   const t = tokens(dark);
 
   const [view, setView] = useState<KeeperHubRunView | null | undefined>(undefined);
+  const [latestPayoutRun, setLatestPayoutRun] = useState<LatestPayoutRun | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -66,7 +68,9 @@ export function KeeperHubPayoutPanel({ hackathonId, phase }: { hackathonId: stri
 
   const load = useCallback(async () => {
     try {
-      setView(await getKeeperHubRun(hackathonId));
+      const state = await getKeeperHubRun(hackathonId);
+      setView(state.view);
+      setLatestPayoutRun(state.latestPayoutRun);
       setLoadError(null);
     } catch (e) {
       setLoadError(isApiError(e) && typeof e.data?.error === 'string' ? e.data.error : 'load_failed');
@@ -114,7 +118,7 @@ export function KeeperHubPayoutPanel({ hackathonId, phase }: { hackathonId: stri
     return shell(
       <>
         {title}
-        <StartPayout t={t} hackathonId={hackathonId} phase={phase} onDone={load} />
+        <StartPayout t={t} hackathonId={hackathonId} phase={phase} latestPayoutRun={latestPayoutRun} onDone={load} />
       </>,
       'no-run',
     );

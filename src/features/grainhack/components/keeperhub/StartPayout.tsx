@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { AlertTriangle, Send } from 'lucide-react';
 import { isApiError } from '../../../../shared/api/apiError';
@@ -6,6 +7,7 @@ import {
   getHackathonSettlementPreview,
   releaseKeeperHubRun,
   type HackathonSettlementPreview,
+  type LatestPayoutRun,
 } from '../../../../shared/api/client';
 import {
   PAYOUT_NETWORKS,
@@ -34,16 +36,22 @@ type ReadyPreview = Extract<HackathonSettlementPreview, { lines: unknown }>;
  *  is, it reads the settlement preview (which writes nothing) and offers
  *  "Start payout": the first POST .../keeperhub/release, which plans the run
  *  - freezing each person's address and any exclusions - simulates every
- *  transfer, and only then sends. */
+ *  transfer, and only then sends.
+ *
+ *  The computation it pays is the event's newest, as the run endpoint reports
+ *  it (latest_payout_run_id). Only a backend too old to report it gets a typed
+ *  id instead, so this ships ahead of or behind that field. */
 export function StartPayout({
   t,
   hackathonId,
   phase,
+  latestPayoutRun,
   onDone,
 }: {
   t: Tokens;
   hackathonId: string;
   phase: string | undefined;
+  latestPayoutRun: LatestPayoutRun | undefined;
   onDone: () => Promise<void> | void;
 }) {
   const [preview, setPreview] = useState<HackathonSettlementPreview | undefined>(undefined);
@@ -55,7 +63,7 @@ export function StartPayout({
   const [lastError, setLastError] = useState<{ message: string; code: string } | null>(null);
 
   useEffect(() => {
-    if (phase !== 'settled') return;
+    if (phase !== 'settled' || latestPayoutRun?.id === null) return;
     let cancelled = false;
     setPreviewError(null);
     // The chain only labels the preview; amounts are the same on every chain.
@@ -68,9 +76,9 @@ export function StartPayout({
     return () => {
       cancelled = true;
     };
-  }, [hackathonId, phase]);
+  }, [hackathonId, phase, latestPayoutRun?.id]);
 
-  const state = startState(phase, preview, previewError);
+  const state = startState(phase, preview, previewError, latestPayoutRun);
   const quiet = (text: string, code?: string) => (
     <>
       <p className={`text-[13px] ${t.muted}`}>{text}</p>
@@ -85,6 +93,11 @@ export function StartPayout({
       return quiet(
         `No KeeperHub payout run for this event's contributor pool yet. A payout can start once the event is settled; it is ${PHASE_LABEL[state.phase] ?? state.phase} now.`,
         `phase ${state.phase}`,
+      );
+    case 'no_computation':
+      return quiet(
+        "This event has no payout computation yet, so there is nothing to start. It is written once, when the event moves to Settled: that step closes the appeal window and divides the pool. On a settled event its absence means that recompute failed - for example because an appeal was still pending - while the phase change went through.",
+        'latest_payout_run_id null',
       );
     case 'loading':
       return quiet('No payout run yet. Reading what this event would pay…');
@@ -111,12 +124,19 @@ export function StartPayout({
   const network = payoutNetwork(chainId) ?? PAYOUT_NETWORKS[0];
   const payable = p.lines.filter((l) => BigInt(l.amount_minor) > 0n);
   const money = (minor: string) => formatMinor(minor, DECIMALS, 'USDC');
-  const idReady = isUuid(computationId);
+  // The server's computation when it reports one; otherwise the typed id.
+  const reported = latestPayoutRun?.id ?? null;
+  const payoutRunId = reported ?? computationId.trim();
+  const idReady = reported !== null || isUuid(computationId);
+  const computedAt = latestPayoutRun?.createdAt ? format(new Date(latestPayoutRun.createdAt), 'd MMM yyyy, HH:mm') : null;
+  const computationLabel = reported
+    ? `${shortId(reported)}${computedAt ? ` · computed ${computedAt}` : ''}`
+    : payoutRunId;
 
   const start = async () => {
     setSending(true);
     try {
-      const res = await releaseKeeperHubRun(hackathonId, { payoutRunId: computationId.trim(), chainId, pool: 'contributor' });
+      const res = await releaseKeeperHubRun(hackathonId, { payoutRunId, chainId, pool: 'contributor' });
       const excluded = res.release.exclusions?.length ?? 0;
       toast.success(
         `KeeperHub accepted ${plural(res.release.dispatched_leg_ids.length, 'leg', 'legs')} on ${network.name} (${network.network}).` +
@@ -191,28 +211,41 @@ export function StartPayout({
           )}
         </fieldset>
 
-        <label className="flex flex-col gap-1.5" htmlFor="keeperhub-start-computation">
-          <span className={`text-[13px] font-semibold ${t.strong}`}>
-            Payout computation id <span className={`font-normal ${t.muted}`}>(required)</span>
-          </span>
-          <span className={`text-[12px] ${t.muted}`}>
-            The id of this event&apos;s newest payout computation, written when the appeal window was closed out. The
-            server doesn&apos;t show it on any screen yet; it&apos;s the newest hackathon_payout_runs row for this event.
-          </span>
-          <input
-            id="keeperhub-start-computation"
-            value={computationId}
-            onChange={(e) => setComputationId(e.target.value)}
-            placeholder="00000000-0000-0000-0000-000000000000"
-            spellCheck={false}
-            className={`min-h-[44px] rounded-[12px] border px-3 font-mono text-[12px] ${t.input}`}
-          />
-          {computationId.trim() !== '' && !idReady && (
-            <span className={`text-[12px] ${t.toneText.red}`} data-testid="keeperhub-start-id-hint">
-              That isn&apos;t an id: it should look like 8-4-4-4-12 hexadecimal characters.
+        {reported !== null ? (
+          <div className="flex flex-col gap-1" data-testid="keeperhub-start-computation">
+            <span className={`text-[13px] font-semibold ${t.strong}`}>Pays computation</span>
+            <span className={`text-[13px] ${t.body}`}>
+              <span className="font-mono" title={reported}>{shortId(reported)}</span>
+              {computedAt && <span className={t.muted}> · computed {computedAt}</span>}
             </span>
-          )}
-        </label>
+            <span className={`text-[12px] ${t.muted}`}>
+              The event&apos;s newest payout computation, written when it moved to Settled. Release pays only this one.
+            </span>
+          </div>
+        ) : (
+          <label className="flex flex-col gap-1.5" htmlFor="keeperhub-start-computation">
+            <span className={`text-[13px] font-semibold ${t.strong}`}>
+              Payout computation id <span className={`font-normal ${t.muted}`}>(required)</span>
+            </span>
+            <span className={`text-[12px] ${t.muted}`}>
+              This server doesn&apos;t report the event&apos;s payout computation, so give its id: the newest
+              hackathon_payout_runs row for this event, written when it moved to Settled.
+            </span>
+            <input
+              id="keeperhub-start-computation"
+              value={computationId}
+              onChange={(e) => setComputationId(e.target.value)}
+              placeholder="00000000-0000-0000-0000-000000000000"
+              spellCheck={false}
+              className={`min-h-[44px] rounded-[12px] border px-3 font-mono text-[12px] ${t.input}`}
+            />
+            {computationId.trim() !== '' && !idReady && (
+              <span className={`text-[12px] ${t.toneText.red}`} data-testid="keeperhub-start-id-hint">
+                That isn&apos;t an id: it should look like 8-4-4-4-12 hexadecimal characters.
+              </span>
+            )}
+          </label>
+        )}
 
         {lastError && (
           <div data-testid="keeperhub-start-error" className={`flex flex-col gap-1 rounded-[12px] border px-3 py-2.5 text-[13px] ${t.errorBox}`}>
@@ -239,7 +272,8 @@ export function StartPayout({
           network={network}
           payable={payable}
           money={money}
-          computationId={computationId.trim()}
+          computation={computationLabel}
+          computationId={payoutRunId}
           busy={sending}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={() => void start()}
@@ -254,6 +288,7 @@ function ConfirmStart({
   network,
   payable,
   money,
+  computation,
   computationId,
   busy,
   onCancel,
@@ -263,6 +298,7 @@ function ConfirmStart({
   network: PayoutNetwork;
   payable: ReadyPreview['lines'];
   money: (m: string) => string;
+  computation: string;
   computationId: string;
   busy: boolean;
   onCancel: () => void;
@@ -308,7 +344,7 @@ function ConfirmStart({
           a bad address), nothing is sent.
         </p>
         <p className={t.muted}>
-          Computation <span className="font-mono">{computationId}</span>
+          Computation <span className="font-mono" title={computationId}>{computation}</span>
         </p>
       </div>
 

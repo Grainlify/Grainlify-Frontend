@@ -11,6 +11,8 @@ import {
   captureReferralCodeFromURL,
   readStoredReferralCode,
   submitSupportRequest,
+  getKeeperHubRun,
+  latestPayoutRunOf,
 } from './client'
 
 // This codebase's convention is 100% manual fetch mocking (no msw). The base
@@ -348,5 +350,44 @@ describe('referral code capture and injection', () => {
   it('getGitHubLoginUrl omits "ref" when no code was ever captured', () => {
     const url = new URL(getGitHubLoginUrl())
     expect(url.searchParams.has('ref')).toBe(false)
+  })
+})
+
+
+describe('getKeeperHubRun: the newest payout computation', () => {
+  const RUN = '4f6c2a1e-9b0d-4c3a-8e21-7d5b6a9c0e11'
+  const AT = '2026-10-01T09:30:00Z'
+
+  beforeEach(() => localStorage.setItem('patchwork_jwt', 'tok-kh'))
+
+  it('reads it off the 404 that says there is no KeeperHub run', async () => {
+    fetchMock.mockResolvedValueOnce(nonOkJsonResponse(404, { error: 'not_found', latest_payout_run_id: RUN, latest_payout_run_created_at: AT }))
+    await expect(getKeeperHubRun('h-1')).resolves.toEqual({ view: null, latestPayoutRun: { id: RUN, createdAt: AT } })
+  })
+
+  it('reports null when the event has no computation, and undefined when the backend predates the field', async () => {
+    fetchMock.mockResolvedValueOnce(nonOkJsonResponse(404, { error: 'not_found', latest_payout_run_id: null, latest_payout_run_created_at: null }))
+    await expect(getKeeperHubRun('h-1')).resolves.toEqual({ view: null, latestPayoutRun: { id: null, createdAt: null } })
+    fetchMock.mockResolvedValueOnce(nonOkJsonResponse(404, { error: 'not_found' }))
+    await expect(getKeeperHubRun('h-1')).resolves.toEqual({ view: null, latestPayoutRun: undefined })
+  })
+
+  it('treats a 200 without a run as no run, and keeps a run with the field', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ run: null, latest_payout_run_id: RUN, latest_payout_run_created_at: AT }))
+    await expect(getKeeperHubRun('h-1')).resolves.toEqual({ view: null, latestPayoutRun: { id: RUN, createdAt: AT } })
+    const body = { run: { id: 'r' }, legs: [], latest_payout_run_id: RUN, latest_payout_run_created_at: AT }
+    fetchMock.mockResolvedValueOnce(jsonResponse(body))
+    await expect(getKeeperHubRun('h-1')).resolves.toEqual({ view: body, latestPayoutRun: { id: RUN, createdAt: AT } })
+  })
+
+  it('still throws any other failure', async () => {
+    fetchMock.mockResolvedValueOnce(nonOkJsonResponse(503, { error: 'database_not_configured' }))
+    await expect(getKeeperHubRun('h-1')).rejects.toMatchObject({ status: 503 })
+  })
+
+  it('latestPayoutRunOf ignores bodies without the field', () => {
+    expect(latestPayoutRunOf(undefined)).toBeUndefined()
+    expect(latestPayoutRunOf({ error: 'not_found' })).toBeUndefined()
+    expect(latestPayoutRunOf({ latest_payout_run_id: '' })).toEqual({ id: null, createdAt: null })
   })
 })
