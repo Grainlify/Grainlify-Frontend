@@ -15,7 +15,7 @@ Say: [reassuring] The inference budget shows the agent's spending against each p
 Do: Pan to **Inference budget**.
 
 ## 4
-Say: [confident] The receipt chain follows the most recently paid bounty from start to finish: posted, reviewed, checked, and paid. [pause] So far, only test bounties have been paid.
+Say: [confident] When a bounty is paid, the receipt chain follows it from start to finish: posted, reviewed, checked, and paid. [pause] The totals say how many have been paid so far.
 Do: Pan to **Receipt chain · latest paid bounty** and scroll down its rows.
 
 ## 5
@@ -27,5 +27,5 @@ Say: [calm] Each row has a time in U T C, what happened, the amount, and a proof
 Do: Hover a row's link in the **Proof** column.
 
 ## 7
-Say: [measured] Gate passed and gate refused are the payout checks on a merged pull request... Rows marked test belong to the devnet run, with test tokens that have no value.
+Say: [measured] Gate passed and gate refused are the payout checks on a merged pull request... Rows marked test are test runs, in test tokens that have no value.
 Do: Click **All time**, then **Bounties**. Point at a **Gate passed** row, then at an event marked "test".
