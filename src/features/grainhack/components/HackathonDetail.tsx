@@ -11,6 +11,7 @@ import { HackathonConfigSettings } from './HackathonConfigSettings';
 import { AuditLog } from './AuditLog';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { KeeperHubPayoutPanel } from './keeperhub/KeeperHubPayoutPanel';
+import { GrainHackPayoutsPanel } from './payouts/GrainHackPayoutsPanel';
 import {
   getAdminHackathon,
   transitionHackathon,
@@ -189,6 +190,10 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
         <h3 className={`text-[16px] font-bold mb-4 ${isDark ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>Appeals</h3>
         <AppealsReview hackathonId={hackathonId} />
       </div>
+
+      {/* The Solana path, beside KeeperHub until KeeperHub is removed. One
+          rail per pool: the backend refuses whichever is second. */}
+      <GrainHackPayoutsPanel hackathonId={hackathonId} />
 
       <KeeperHubPayoutPanel hackathonId={hackathonId} phase={hackathon.phase} />
 

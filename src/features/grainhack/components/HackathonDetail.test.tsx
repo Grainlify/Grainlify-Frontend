@@ -26,6 +26,7 @@ vi.mock('./DrawResults', () => ({ DrawResults: () => <div data-testid="draw-resu
 vi.mock('./VerdictsReview', () => ({ VerdictsReview: () => <div data-testid="verdicts-review" /> }))
 vi.mock('./AppealsReview', () => ({ AppealsReview: () => <div data-testid="appeals-review" /> }))
 vi.mock('./keeperhub/KeeperHubPayoutPanel', () => ({ KeeperHubPayoutPanel: () => <div data-testid="payout-panel" /> }))
+vi.mock('./payouts/GrainHackPayoutsPanel', () => ({ GrainHackPayoutsPanel: () => <div data-testid="grainhack-payouts" /> }))
 
 const HACKATHON = {
   id: 'hack-1',
@@ -60,6 +61,14 @@ describe('HackathonDetail', () => {
     expect(await screen.findByText('Draft')).toBeInTheDocument()
     expect(screen.getByText('Set an announcement date first.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /move to application period/i })).toBeDisabled()
+  })
+
+  it('shows the Solana payouts panel directly before the KeeperHub panel', async () => {
+    mockGetAdminHackathon.mockResolvedValue({ hackathon: HACKATHON, next_phase: '', blocking_reasons: [] })
+    renderWithProviders(<HackathonDetail hackathonId="hack-1" onBack={vi.fn()} />)
+    const solana = await screen.findByTestId('grainhack-payouts')
+    const keeperhub = screen.getByTestId('payout-panel')
+    expect(solana.compareDocumentPosition(keeperhub) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('enables the transition button once readiness has no blocking reasons, and calls the API on click', async () => {
