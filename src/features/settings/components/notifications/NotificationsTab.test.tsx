@@ -188,6 +188,20 @@ describe('NotificationsTab: sections', () => {
     expect(await screen.findByText('GrainHack')).toBeInTheDocument()
   })
 
+  it('shows the three GrainHack payout notifications under GrainHack, by name', async () => {
+    mockGetPreferences.mockResolvedValue({
+      preferences: ['grainhack_paid', 'grainhack_payout_held_kyc', 'grainhack_link_wallet'].map((type) => ({ type, in_app: true, email: false })),
+    })
+    renderWithProviders(<NotificationsTab />)
+
+    expect(await screen.findByText('GrainHack')).toBeInTheDocument()
+    expect(screen.getByText('GrainHack prize paid')).toBeInTheDocument()
+    expect(screen.getByText('Payout held for verification')).toBeInTheDocument()
+    expect(screen.getByText('Link a wallet to be paid')).toBeInTheDocument()
+    // Not the raw type: a missing entry would fall back to it.
+    expect(screen.queryByText('grainhack_paid')).not.toBeInTheDocument()
+  })
+
   it('"Disable all" reaches the bounty types too', async () => {
     const user = userEvent.setup()
     mockGetPreferences.mockResolvedValue({

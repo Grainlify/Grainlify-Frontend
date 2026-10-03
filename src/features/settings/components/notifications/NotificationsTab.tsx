@@ -64,6 +64,21 @@ const NOTIFICATION_TYPE_INFO: Record<string, NotificationTypeInfo> = {
     title: 'Assignment about to expire',
     description: 'A warning before a GrainHack assignment lapses. Letting it lapse counts as an abandon.',
   },
+  grainhack_paid: {
+    section: 'GrainHack',
+    title: 'GrainHack prize paid',
+    description: 'When your GrainHack payout is confirmed on Solana, with the amount, the network and the transaction.',
+  },
+  grainhack_payout_held_kyc: {
+    section: 'GrainHack',
+    title: 'Payout held for verification',
+    description: "When you have won a GrainHack payout but your identity isn't verified yet. It is held, not lost: it is paid once verification clears.",
+  },
+  grainhack_link_wallet: {
+    section: 'GrainHack',
+    title: 'Link a wallet to be paid',
+    description: 'When you have a GrainHack payout waiting and no Solana wallet linked to receive it.',
+  },
   bounty_unassigned: {
     section: 'Bounties',
     title: 'Your assignment ended',

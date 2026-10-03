@@ -123,7 +123,12 @@ export function matchesQuery(n: AppNotification, query: string): boolean {
 export function linkLabel(type: string): string {
   switch (type) {
     case 'kyc_reset':
+    case 'grainhack_payout_held_kyc':
       return 'Go to verification';
+    case 'grainhack_link_wallet':
+      return 'Link a wallet';
+    case 'grainhack_paid':
+      return 'Go to GrainHack';
     case 'referral_completed':
     case 'social_follow_completed':
     case 'founding_position':

@@ -123,6 +123,12 @@ describe('linkLabel', () => {
     expect(linkLabel('pr_merged')).toBe('Go to the project')
   })
 
+  it('names where each GrainHack payout notification leads', () => {
+    expect(linkLabel('grainhack_payout_held_kyc')).toBe('Go to verification')
+    expect(linkLabel('grainhack_link_wallet')).toBe('Link a wallet')
+    expect(linkLabel('grainhack_paid')).toBe('Go to GrainHack')
+  })
+
   it('falls back to something honest for a type added later', () => {
     expect(linkLabel('grainhack_assigned')).toBe('Open')
   })
