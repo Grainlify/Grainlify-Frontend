@@ -64,12 +64,30 @@ describe('GrainHackPayoutsPanel', () => {
     expect(h.toast.success).toHaveBeenCalledWith(expect.stringContaining('Nobody is paid until an approver runs approve-event'))
   })
 
-  it('says why the backend refused', async () => {
+  it('says why the backend refused, and keeps saying it', async () => {
     await renderWith(noStatementState)
-    h.issueResultsStatement.mockRejectedValue(new ApiError('x', 409, { error: 'keeperhub_run_exists', detail: 'Run 1 is on base-sepolia.' }))
+    h.issueResultsStatement.mockRejectedValue(new ApiError('x', 409, { error: 'paid_on_other_rail', rail: 'keeperhub', detail: 'refused: run 1' }))
     fireEvent.click(screen.getByRole('button', { name: /Issue statement/ }))
     fireEvent.click(within(screen.getByTestId('grainhack-issue-confirm')).getByRole('button', { name: /Issue statement/ }))
-    await waitFor(() => expect(h.toast.error).toHaveBeenCalledWith(expect.stringMatching(/One rail per pool\. Run 1 is on base-sepolia\.$/)))
+    await waitFor(() => expect(h.toast.error).toHaveBeenCalledWith(expect.stringMatching(/KeeperHub \(Base\) rail.*one rail only\.$/)))
+    const box = await screen.findByTestId('grainhack-refusal')
+    expect(box.dataset.code).toBe('paid_on_other_rail')
+    expect(box).toHaveTextContent('refused: run 1')
+  })
+
+  it('lists the winners without a GitHub account when that is the refusal', async () => {
+    await renderWith(noStatementState)
+    h.issueResultsStatement.mockRejectedValue(
+      new ApiError('x', 409, {
+        error: 'winners_without_github',
+        winners: [{ user_id: '11111111-2222-4333-8444-555555555555', verdict_logins: ['sample-zed'], amount_minor: '4000000' }],
+        detail: 'refused: 1 winner(s) have no linked GitHub account',
+      }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Issue statement/ }))
+    fireEvent.click(within(screen.getByTestId('grainhack-issue-confirm')).getByRole('button', { name: /Issue statement/ }))
+    const list = await screen.findByTestId('grainhack-refusal-winners')
+    expect(list).toHaveTextContent('@sample-zed · 4.000000 test USDC · user id 11111111-2222-4333-8444-555555555555')
   })
 
   it('shows the statement: status, version, supersedes, chain, and the admin who issued it', async () => {

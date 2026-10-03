@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ApiError } from '../../../../shared/api/apiError'
 import { getResultsStatement, issueResultsStatement } from '../../../../shared/api/client'
 import { adminView, agentPayouts, COMPUTATION, HACKATHON_ID, publicWinner, SIG, STATEMENT_1 } from './fixtures'
-import { agentBehind, agentImported, approveCommand, payoutTotals, statementRefusal, usdc, winnerRows } from './payoutsModel'
+import { agentBehind, agentImported, approveCommand, payoutTotals, statementRefusal, usdc, winnerRows, winnerWithoutGitHubName } from './payoutsModel'
 
 const fetchMock = vi.fn()
 
@@ -156,10 +156,50 @@ describe('labels', () => {
     expect(approveCommand('abc-123')).toBe('pnpm approve-event abc-123')
   })
 
-  it('explains each refusal and names unknown codes', () => {
-    expect(statementRefusal('not_releasable', '')).toMatch(/appeals closed/)
-    expect(statementRefusal('winner_without_github', 'user 9 has no GitHub account')).toMatch(/user 9 has no GitHub account$/)
-    expect(statementRefusal('keeperhub_run_exists', '')).toMatch(/One rail per pool/)
-    expect(statementRefusal('teapot', '')).toBe("The statement wasn't issued (teapot).")
+  it('names unknown refusal codes so they can be looked up', () => {
+    expect(statementRefusal('teapot').message).toBe("The statement wasn't issued (teapot).")
+    expect(statementRefusal('').message).toBe("The statement wasn't issued.")
+  })
+})
+
+describe('statementRefusal', () => {
+  // Every code internal/handlers/grainhack_payout.go can answer the issue call
+  // with, and a word each sentence must carry to be the right one.
+  const cases: Array<[string, RegExp]> = [
+    ['payout_not_releasable', /settled \(phase 6\) with its appeal window closed, and not in shadow mode/],
+    ['winners_without_github', /no linked GitHub account/],
+    ['paid_on_other_rail', /one rail only/],
+    ['nothing_to_supersede', /nothing to supersede/],
+    ['computation_changed', /payout computation has changed/],
+    ['settlement_changed', /amount no longer matches/],
+    ['network_changed', /GRAINHACK_PAYOUT_NETWORK/],
+    ['payout_run_not_current', /Reload to see the current figures/],
+    ['no_computation', /no payout computation yet/],
+    ['nothing_to_settle', /nothing to settle/i],
+    ['concurrent_issue', /at the same moment/],
+    ['pool_unsupported', /Only the contributor pool/],
+    ['grainhack_results_unconfigured', /GRAINHACK_RESULTS_SIGNING_KEY/],
+  ]
+  it.each(cases)('says what %s means in a plain sentence', (code, words) => {
+    const r = statementRefusal(code, { error: code, detail: 'backend words' })
+    expect(r.message).toMatch(words)
+    expect(r.message).not.toContain(code)
+    expect(r.detail).toBe('backend words')
+  })
+
+  it('names the rail already paying the pool', () => {
+    expect(statementRefusal('paid_on_other_rail', { rail: 'keeperhub' }).message).toMatch(/^This pool is already being paid on the KeeperHub \(Base\) rail/)
+    expect(statementRefusal('paid_on_other_rail', { rail: 'aptos' }).message).toMatch(/the Aptos rail/)
+  })
+
+  it('carries the winners a statement would drop, by verdict login or user id', () => {
+    const winners = [
+      { user_id: '11111111-2222-4333-8444-555555555555', verdict_logins: ['old-login', 'new-login'], amount_minor: '4000000' },
+      { user_id: '66666666-7777-4888-8999-000000000000', verdict_logins: [], amount_minor: '1000000' },
+    ]
+    const r = statementRefusal('winners_without_github', { error: 'winners_without_github', winners, detail: 'refused: 2 winner(s)' })
+    expect(r.winners).toEqual(winners)
+    expect(winnerWithoutGitHubName(winners[0])).toBe('@old-login / @new-login')
+    expect(winnerWithoutGitHubName(winners[1])).toBe('user 66666666…')
   })
 })

@@ -196,27 +196,72 @@ export function approveCommand(hackathonId: string): string {
   return `pnpm approve-event ${hackathonId}`;
 }
 
-/** Why the backend refused to issue, in words for the admin. Unknown codes are
- *  named so they can be looked up. */
-export function statementRefusal(code: string, detail: string): string {
-  const tail = detail ? ` ${detail}` : '';
-  switch (code) {
-    case 'not_releasable':
-      return `Not releasable yet: the event must be confirmed, not a shadow event, settled, with appeals closed.${tail}`;
-    case 'winner_without_github':
-      return `A winner has no GitHub account, so this path can't pay them. Resolve it, then issue.${tail}`;
-    case 'other_rail':
-    case 'keeperhub_run_exists':
-      return `This pool already has a KeeperHub run or an Aptos settlement. One rail per pool.${tail}`;
-    case 'nothing_changed':
-      return 'Nothing has changed since the latest statement, so there is nothing to supersede it with.';
-    case 'signing_key_not_configured':
-      return "The backend has no results signing key configured, so it can't sign a statement.";
-    case 'no_computation':
-      return `The event has no payout computation yet.${tail}`;
-    default:
-      return `The statement wasn't issued${code ? ` (${code})` : ''}.${tail}`;
+/** A winner the backend could not put on a statement (WinnerWithoutGitHub). */
+export interface WinnerWithoutGitHub {
+  user_id: string;
+  /** The GitHub logins their verdicts were recorded under; may be empty. */
+  verdict_logins: string[];
+  amount_minor: string;
+}
+
+export interface StatementRefusal {
+  code: string;
+  /** One plain sentence (or two) for the admin. */
+  message: string;
+  /** The backend's own wording, kept for whoever has to look into it. */
+  detail: string | null;
+  /** Set on winners_without_github: who the statement would have dropped. */
+  winners: WinnerWithoutGitHub[];
+}
+
+/** What each refusal from POST /admin/hackathons/:id/results-statement means,
+ *  from internal/handlers/grainhack_payout.go grainhackError and the errors it
+ *  maps (internal/grainhack/issue.go, hackathon.GuardPayoutRelease,
+ *  hackathon.SettlementFor). */
+const REFUSAL: Record<string, string> = {
+  payout_not_releasable:
+    "The event can't be paid yet. A statement is a payout release, so the event must be settled (phase 6) with its appeal window closed, and not in shadow mode.",
+  winners_without_github:
+    "Some winners have no linked GitHub account, so this path can't pay them and nothing was issued. Link or resolve each one below, then issue again.",
+  paid_on_other_rail:
+    'This pool is already being paid on another rail, so nothing was issued. An event pool is paid on one rail only.',
+  nothing_to_supersede:
+    "Nothing has changed since the latest statement: every winner's KYC status and login is as it was. There is nothing to supersede it with.",
+  computation_changed:
+    "The event's payout computation has changed since the latest statement. A superseding statement may only change a winner's status, not the figures, so nothing was issued; decide what the new computation means for anyone already paid first.",
+  settlement_changed:
+    "The pool or a winner's amount no longer matches the latest statement. A superseding statement may only change a winner's status, so nothing was issued.",
+  network_changed:
+    "The backend's payout network (GRAINHACK_PAYOUT_NETWORK) has changed since the latest statement, so a statement superseding it can't be issued.",
+  payout_run_not_current:
+    'The payout computation changed while this page was open (an appeal recompute landed). Reload to see the current figures, then issue again.',
+  no_computation: 'The event has no payout computation yet, so there is nothing to put on a statement.',
+  nothing_to_settle:
+    'There is nothing to settle: the contributor pool is zero or unset, or no submission carried a positive weight.',
+  concurrent_issue: 'Another statement was issued for this event at the same moment, so this one was not. Reload to see it.',
+  pool_unsupported: 'Only the contributor pool is paid by results statement.',
+  grainhack_results_unconfigured:
+    "The backend can't sign statements: its results signing key (GRAINHACK_RESULTS_SIGNING_KEY) or payout network (GRAINHACK_PAYOUT_NETWORK) isn't configured.",
+  invalid_payout_run_id: "The payout computation id this page sent isn't valid. Reload and issue again.",
+};
+
+const RAIL_NAME: Record<string, string> = { keeperhub: 'KeeperHub (Base)', aptos: 'Aptos' };
+
+/** Why the backend refused to issue, in words for the admin. An unknown code
+ *  is named so it can be looked up. */
+export function statementRefusal(code: string, data?: Record<string, unknown>): StatementRefusal {
+  const detail = typeof data?.detail === 'string' && data.detail ? data.detail : null;
+  const winners = Array.isArray(data?.winners) ? (data.winners as WinnerWithoutGitHub[]) : [];
+  let message = REFUSAL[code] ?? `The statement wasn't issued${code ? ` (${code})` : ''}.`;
+  if (code === 'paid_on_other_rail' && typeof data?.rail === 'string') {
+    message = `This pool is already being paid on the ${RAIL_NAME[data.rail] ?? data.rail} rail, so nothing was issued. An event pool is paid on one rail only.`;
   }
+  return { code, message, detail, winners };
+}
+
+/** "@a / @b" for a winner without GitHub, or their user id when no login was recorded. */
+export function winnerWithoutGitHubName(w: WinnerWithoutGitHub): string {
+  return w.verdict_logins?.length ? w.verdict_logins.map((l) => `@${l}`).join(' / ') : `user ${shortUuid(w.user_id)}`;
 }
 
 export function shortUuid(id: string): string {

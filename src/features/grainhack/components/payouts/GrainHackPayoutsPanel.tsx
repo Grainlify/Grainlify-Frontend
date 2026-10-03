@@ -21,7 +21,9 @@ import {
   statementRefusal,
   usdc,
   winnerRows,
+  winnerWithoutGitHubName,
   type AgentRead,
+  type StatementRefusal,
   type WinnerRow,
   type WinnerStatus,
 } from './payoutsModel';
@@ -44,6 +46,7 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [issuing, setIssuing] = useState(false);
+  const [refusal, setRefusal] = useState<StatementRefusal | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -68,6 +71,7 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
 
   const issue = async () => {
     setIssuing(true);
+    setRefusal(null);
     try {
       const next = await issueResultsStatement(hackathonId, { payoutRunId: state?.currentPayoutRunId ?? null });
       toast.success(
@@ -77,8 +81,9 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
       );
     } catch (e) {
       const code = isApiError(e) && typeof e.data?.error === 'string' ? e.data.error : '';
-      const detail = isApiError(e) && typeof e.data?.detail === 'string' ? e.data.detail : '';
-      toast.error(statementRefusal(code, detail));
+      const r = statementRefusal(code, isApiError(e) ? e.data : undefined);
+      setRefusal(r);
+      toast.error(r.message);
     } finally {
       setIssuing(false);
       setConfirmOpen(false);
@@ -121,6 +126,23 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
       <div className="flex flex-wrap items-center gap-2">{chips}</div>
     </div>
   );
+
+  const refusalBox = (network: string | null) =>
+    refusal && (
+      <div data-testid="grainhack-refusal" data-code={refusal.code} role="alert" className={`flex flex-col gap-2 rounded-[12px] border px-3 py-2.5 text-[13px] ${t.errorBox}`}>
+        <p className="font-semibold">{refusal.message}</p>
+        {refusal.winners.length > 0 && (
+          <ul className="flex list-disc flex-col gap-1 pl-5" data-testid="grainhack-refusal-winners">
+            {refusal.winners.map((w) => (
+              <li key={w.user_id}>
+                {winnerWithoutGitHubName(w)} · {usdc(w.amount_minor, network)} · user id <span className="font-mono">{w.user_id}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {refusal.detail && <p className="text-[12px] opacity-80">{refusal.detail}</p>}
+      </div>
+    );
 
   if (loadError) {
     return shell(
@@ -180,6 +202,7 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
             <span className={`text-[12px] ${t.muted}`}>Opens a confirmation first</span>
           </div>
         </div>
+        {refusalBox(null)}
         {confirm}
       </>,
       'no-statement',
@@ -402,6 +425,7 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
           )}
         </div>
       )}
+      {refusalBox(s.network)}
       {confirm}
     </>,
     'issued',
