@@ -11,6 +11,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // CI runs the suite with coverage on a 2-core runner, and v8
+    // instrumentation makes the slower page-level tests take 5-6 s - just
+    // over vitest's 5 s default, so different tests failed on different
+    // runs. 15 s leaves room without hiding a test that genuinely hangs.
+    testTimeout: 15_000,
     exclude: [
       '**/node_modules/**',
       '**/dist/**',

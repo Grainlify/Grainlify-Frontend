@@ -33,10 +33,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # No version here: the action reads packageManager from package.json
+      # (pnpm@10.33.0, pinned in b29fd72). Naming one here as well made every
+      # run since 29 Sep fail with "Multiple versions of pnpm specified", so
+      # neither the tests nor the deploy below ran.
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -84,10 +86,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # No version here: the action reads packageManager from package.json
+      # (pnpm@10.33.0, pinned in b29fd72). Naming one here as well made every
+      # run since 29 Sep fail with "Multiple versions of pnpm specified", so
+      # neither the tests nor the deploy below ran.
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
