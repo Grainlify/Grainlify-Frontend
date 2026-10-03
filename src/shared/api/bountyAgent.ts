@@ -108,7 +108,18 @@ export interface FunderRecord {
 // 'erasure' is an account erased at its owner's request. It names nobody; it is
 // there so the change in what the ledger shows (that account's login replaced
 // by "erased account") is itself on the record.
-export type LedgerEventKind = 'bounty_posted' | 'inference' | 'gate_passed' | 'gate_refused' | 'payout' | 'erasure';
+export type LedgerEventKind =
+  | 'bounty_posted'
+  | 'inference'
+  | 'gate_passed'
+  | 'gate_refused'
+  | 'payout'
+  | 'erasure'
+  // GrainHack's Solana payout path (payout contract §3): a deposit to the
+  // GrainHack float, and one payment per winner. Event 1's two KeeperHub legs
+  // are carried as grainhack_payout rows on base-sepolia, marked as history.
+  | 'grainhack_pool_funded'
+  | 'grainhack_payout';
 
 export interface LedgerEvent {
   at: string;
@@ -120,6 +131,14 @@ export interface LedgerEvent {
   detail: string;
   amount: string | null;
   proof: { label: string; url: string | null };
+  /** GrainHack rows only, all optional so an older agent still parses.
+   *  `network` is 'solana-devnet' | 'solana-mainnet' | 'base-sepolia'. */
+  network?: string | null;
+  hackathonId?: string | null;
+  /** The transaction, for building an explorer link when proof.url is null. */
+  txSignature?: string | null;
+  /** An archived row from before this path existed (event 1's KeeperHub legs). */
+  history?: boolean;
 }
 
 export interface BountyLedger {

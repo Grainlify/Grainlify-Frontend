@@ -6,6 +6,7 @@ import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { formatMicroUsd, getBountyLedger, type BountyLedger as Ledger, type LedgerEvent, type LedgerEventKind } from '../../../shared/api/bountyAgent';
 import { LeaderboardTable, RankChip, ScorePill, useHeaderText, type LeaderboardColumn } from '../../leaderboard/components/LeaderboardTable';
 import { StatusNotice } from './StatusNotice';
+import { isTestNetwork, networkLabel, txExplorerUrl } from '../../../shared/utils/payoutNetwork';
 
 /** The Bounties ledger: every bounty, inference call, gate result and payout,
  * each linked to its proof. Static on purpose (a Tier B/C surface: people read
@@ -23,10 +24,40 @@ const KIND_LABEL: Record<LedgerEventKind, string> = {
   gate_refused: 'Gate refused',
   payout: 'Payout',
   erasure: 'Account erased',
+  grainhack_pool_funded: 'GrainHack pool funded',
+  grainhack_payout: 'GrainHack payout',
 };
 
 type Tone = 'neutral' | 'gold' | 'green' | 'red';
-const KIND_TONE: Record<LedgerEventKind, Tone> = { bounty_posted: 'gold', inference: 'neutral', gate_passed: 'green', gate_refused: 'red', payout: 'green', erasure: 'neutral' };
+const KIND_TONE: Record<LedgerEventKind, Tone> = {
+  bounty_posted: 'gold',
+  inference: 'neutral',
+  gate_passed: 'green',
+  gate_refused: 'red',
+  payout: 'green',
+  erasure: 'neutral',
+  grainhack_pool_funded: 'gold',
+  grainhack_payout: 'green',
+};
+
+/** A kind added on the agent before this page knows it still shows, by name. */
+const kindLabel = (k: string) => KIND_LABEL[k as LedgerEventKind] ?? k;
+const kindTone = (k: string): Tone => KIND_TONE[k as LedgerEventKind] ?? 'neutral';
+const isGrainHack = (e: LedgerEvent) => e.kind === 'grainhack_pool_funded' || e.kind === 'grainhack_payout';
+
+/** Where a GrainHack row's money actually was, said plainly: "Base Sepolia
+ *  testnet · history" for event 1's archived KeeperHub legs, "Solana devnet ·
+ *  test" for a devnet run. Null for a real mainnet row and for other kinds,
+ *  which keep their " · test" suffix. */
+export function grainhackNetworkNote(e: LedgerEvent): string | null {
+  if (!isGrainHack(e)) return null;
+  const test = e.history === true || e.test || (e.network != null && isTestNetwork(e.network));
+  if (!test) return null;
+  return [e.network ? networkLabel(e.network) : null, e.history ? 'history' : 'test'].filter(Boolean).join(' · ');
+}
+
+/** The proof link: the agent's, or one built from the transaction and network. */
+const proofUrl = (e: LedgerEvent) => e.proof.url ?? txExplorerUrl(e.network, e.txSignature);
 
 const PERIODS = [
   { id: 'all', label: 'All time', days: Infinity },
@@ -38,6 +69,7 @@ const KINDS = [
   { id: 'bounties', label: 'Bounties', kinds: ['bounty_posted', 'gate_passed', 'gate_refused'] },
   { id: 'inference', label: 'Inference', kinds: ['inference'] },
   { id: 'payouts', label: 'Payouts', kinds: ['payout'] },
+  { id: 'grainhack', label: 'GrainHack', kinds: ['grainhack_pool_funded', 'grainhack_payout'] },
 ] as const;
 
 export function Chip({ tone, children }: { tone: Tone; children: string }) {
@@ -116,7 +148,16 @@ export function BountyLedger() {
   const columns: LeaderboardColumn<LedgerEvent & { n: number }>[] = [
     { key: 'n', header: '#', headerClassName: `col-span-1 ${headerText} max-sm:col-span-1 max-sm:col-start-1 max-sm:row-start-1`, cellClassName: 'col-span-1 flex items-center max-sm:col-span-1 max-sm:col-start-1 max-sm:row-start-1 max-sm:self-start', render: (e) => <RankChip rank={e.n} /> },
     { key: 'time', header: 'Time (UTC)', headerClassName: `col-span-2 ${headerText} max-sm:hidden`, cellClassName: `col-span-2 flex items-center text-[13px] tabular-nums ${dark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'} max-sm:col-span-1 max-sm:col-start-3 max-sm:row-start-2 max-sm:justify-end max-sm:text-[12px]`, render: (e) => fmtTime(e.at) },
-    { key: 'event', header: 'Event', headerClassName: `col-span-2 ${headerText} max-sm:hidden`, cellClassName: 'col-span-2 flex items-center max-sm:col-span-1 max-sm:col-start-2 max-sm:row-start-2', render: (e) => <Chip tone={KIND_TONE[e.kind]}>{`${KIND_LABEL[e.kind]}${e.test ? ' · test' : ''}`}</Chip> },
+    { key: 'event', header: 'Event', headerClassName: `col-span-2 ${headerText} max-sm:hidden`, cellClassName: 'col-span-2 flex items-center max-sm:col-span-1 max-sm:col-start-2 max-sm:row-start-2', render: (e) => {
+      const note = grainhackNetworkNote(e);
+      if (!isGrainHack(e)) return <Chip tone={kindTone(e.kind)}>{`${kindLabel(e.kind)}${e.test ? ' · test' : ''}`}</Chip>;
+      return (
+        <span className="flex min-w-0 flex-col items-start gap-1">
+          <Chip tone={kindTone(e.kind)}>{kindLabel(e.kind)}</Chip>
+          {note && <span data-testid="ledger-network-note" className={`text-[11.5px] font-semibold leading-tight ${muted}`}>{note}</span>}
+        </span>
+      );
+    } },
     { key: 'detail', header: 'Detail', headerClassName: `col-span-3 ${headerText} max-sm:col-span-1 max-sm:col-start-2 max-sm:row-start-1`, cellClassName: 'col-span-3 flex items-center min-w-0 max-sm:col-span-1 max-sm:col-start-2 max-sm:row-start-1', render: (e) => <span title={e.detail} className={`min-w-0 text-[13.5px] font-bold truncate max-sm:whitespace-normal max-sm:line-clamp-2 max-sm:leading-snug ${strong}`}>{e.detail}</span> },
     { key: 'amount', header: 'Amount', headerClassName: `col-span-2 ${headerText} text-right max-sm:col-span-1 max-sm:col-start-3 max-sm:row-start-1`, cellClassName: 'col-span-2 flex items-center justify-end max-sm:col-span-1 max-sm:col-start-3 max-sm:row-start-1', render: (e) => <ScorePill>{e.amount ?? (e.kind === 'inference' ? 'mock' : '—')}</ScorePill> },
     {
@@ -125,8 +166,8 @@ export function BountyLedger() {
       headerClassName: `col-span-2 ${headerText} max-sm:hidden`,
       cellClassName: 'col-span-2 flex items-center min-w-0 max-sm:col-start-2 max-sm:col-span-2 max-sm:row-start-3',
       render: (e) =>
-        e.proof.url ? (
-          <a href={e.proof.url} target="_blank" rel="noreferrer" className={`min-w-0 truncate font-mono text-[12px] underline underline-offset-2 ${link}`}>{e.proof.label}</a>
+        proofUrl(e) ? (
+          <a href={proofUrl(e)!} target="_blank" rel="noreferrer" className={`min-w-0 truncate font-mono text-[12px] underline underline-offset-2 ${link}`}>{e.proof.label}</a>
         ) : (
           <span className={`min-w-0 truncate font-mono text-[12px] ${muted}`}>{e.proof.label}</span>
         ),
@@ -153,7 +194,7 @@ export function BountyLedger() {
             <span style={{ textShadow: '0 2px 8px rgba(201, 152, 58, 0.3), 0 0 20px rgba(201, 152, 58, 0.2)' }}>Ledger</span>
           </h1>
           <p className={`mt-3 text-[14px] max-w-2xl mx-auto leading-relaxed ${dark ? 'text-[#d4d4d4]' : 'text-[#6b5d4d]'}`}>
-            Every GRAIN creator fee in, every inference call bought on UsePod, every bounty paid. Each row links to its transaction or receipt.
+            Every GRAIN creator fee in, every inference call bought on UsePod, every bounty and GrainHack payout. Each row links to its transaction or receipt.
           </p>
         </div>
       </GlassCard>
@@ -200,7 +241,7 @@ export function BountyLedger() {
           ) : (
             chain.map((e, i) => (
               <div key={i} className={`flex flex-col gap-2 rounded-[16px] border p-4 sm:grid sm:grid-cols-[150px_minmax(0,1fr)_auto] sm:items-center sm:gap-4 ${dark ? 'border-white/10 bg-white/[0.06]' : 'border-white/30 bg-white/[0.22]'}`}>
-                <span className="justify-self-start"><Chip tone={KIND_TONE[e.kind]}>{KIND_LABEL[e.kind]}</Chip></span>
+                <span className="justify-self-start"><Chip tone={kindTone(e.kind)}>{kindLabel(e.kind)}</Chip></span>
                 <div className="flex min-w-0 flex-col">
                   <span className={`text-[14px] font-semibold ${strong}`}>{e.detail}</span>
                   {e.proof.url ? (
@@ -239,6 +280,11 @@ export function BountyLedger() {
       />
       {ledger && events.length === 0 && <p className={`text-[13px] ${muted}`}>No events in this range.</p>}
       <p className={`text-[12px] ${dark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Rows marked "test" are the devnet run: test tokens with no value, and inference against a test gateway. They never count toward the real $5.00.</p>
+      {ledger?.events.some(isGrainHack) && (
+        <p data-testid="ledger-grainhack-note" className={`text-[12px] ${dark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
+          GrainHack rows marked "history" are the first event&apos;s two payments, made through KeeperHub on the Base Sepolia testnet on 19 September 2026: test USDC with no value. GrainHack now pays USDC on Solana; rows marked "test" there are devnet.
+        </p>
+      )}
     </div>
   );
 }
