@@ -127,8 +127,10 @@ export function linkLabel(type: string): string {
       return 'Go to verification';
     case 'grainhack_link_wallet':
       return 'Link a wallet';
+    // The backend links it to the public ledger (BountyLedgerLink), where the
+    // payment is listed with its transaction.
     case 'grainhack_paid':
-      return 'Go to GrainHack';
+      return 'See it on the ledger';
     case 'referral_completed':
     case 'social_follow_completed':
     case 'founding_position':

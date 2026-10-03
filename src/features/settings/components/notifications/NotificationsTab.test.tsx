@@ -195,7 +195,7 @@ describe('NotificationsTab: sections', () => {
     renderWithProviders(<NotificationsTab />)
 
     expect(await screen.findByText('GrainHack')).toBeInTheDocument()
-    expect(screen.getByText('GrainHack prize paid')).toBeInTheDocument()
+    expect(screen.getByText('GrainHack payout sent')).toBeInTheDocument()
     expect(screen.getByText('Payout held for verification')).toBeInTheDocument()
     expect(screen.getByText('Link a wallet to be paid')).toBeInTheDocument()
     // Not the raw type: a missing entry would fall back to it.

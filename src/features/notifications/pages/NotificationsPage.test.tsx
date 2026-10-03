@@ -216,22 +216,24 @@ describe('NotificationsPage · GrainHack payout notifications', () => {
     mockCount.mockResolvedValue({ count: 3 })
   })
 
-  // Bodies as the backend is expected to write them (payout contract §1); the
-  // page renders whatever it is sent, so the point here is each type's link.
-  it('renders paid, held for KYC and link-a-wallet, each with its own link', async () => {
+  // Titles, bodies and links exactly as the backend writes them
+  // (internal/grainhack/issue.go notifyHeld, reports.go ReportPayment and
+  // RemindLinkWallet, notice.go; links from internal/notifications/links.go).
+  it('renders paid, held for KYC and link-a-wallet, each following the link the backend built', async () => {
     mockGet.mockResolvedValue({
       notifications: [
-        row({ id: 'g1', type: 'grainhack_paid', title: 'Your GrainHack prize was paid', body: '100 test USDC (Solana devnet) for GrainHack October. Transaction: https://explorer.solana.com/tx/5hK2?cluster=devnet', link_path: '/dashboard?tab=my-grainhack&subtab=results' }),
-        row({ id: 'g2', type: 'grainhack_payout_held_kyc', title: 'Your GrainHack payout is held', body: 'You won 50 USDC in GrainHack October. It is held until your identity is verified, not lost.', link_path: '/dashboard?tab=settings&subtab=billing' }),
-        row({ id: 'g3', type: 'grainhack_link_wallet', title: 'Link a Solana wallet to be paid', body: 'Your GrainHack October payout of 25 USDC is waiting for a wallet.', link_path: '/bounties/link' }),
+        row({ id: 'g1', type: 'grainhack_paid', title: 'Your GrainHack payout has been sent', body: '4 USDC for GrainHack October has been sent to your Solana wallet 7xKX…sAsU. This was a Solana devnet test payment, not real money. Transaction: https://explorer.solana.com/tx/5hK2?cluster=devnet', link_path: '/bounties/ledger' }),
+        row({ id: 'g2', type: 'grainhack_payout_held_kyc', title: 'Your GrainHack payout is held until you verify your identity', body: 'Your share of the GrainHack October contributor pool is 50 USDC. It is held, not cancelled: GrainHack pays verified contributors only. Verify your identity under Settings, Billing; once it clears, your payout is released in a new results statement.', link_path: '/dashboard?tab=settings&subtab=billing' }),
+        row({ id: 'g3', type: 'grainhack_link_wallet', title: 'Link a Solana wallet to receive your GrainHack payout', body: 'Your share of the GrainHack October contributor pool is 25 USDC, paid in USDC on Solana. There is no Solana wallet linked to your account, so it cannot be sent yet. Link one once at grainlify.com/bounties/link; the same wallet is used for Bounties.', link_path: '/bounties/link' }),
       ],
     })
     renderWithProviders(<NotificationsPage />)
-    expect(await screen.findByText('Your GrainHack prize was paid')).toBeInTheDocument()
+    expect(await screen.findByText('Your GrainHack payout has been sent')).toBeInTheDocument()
     expect(screen.getByText(/Transaction: https:\/\/explorer\.solana\.com/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Go to GrainHack' })).toHaveAttribute('href', '/dashboard?tab=my-grainhack&subtab=results')
+    expect(screen.getByText('Your GrainHack payout is held until you verify your identity')).toBeInTheDocument()
+    expect(screen.getByText('Link a Solana wallet to receive your GrainHack payout')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'See it on the ledger' })).toHaveAttribute('href', '/bounties/ledger')
     expect(screen.getByRole('link', { name: 'Go to verification' })).toHaveAttribute('href', '/dashboard?tab=settings&subtab=billing')
     expect(screen.getByRole('link', { name: 'Link a wallet' })).toHaveAttribute('href', '/bounties/link')
-    expect(linkLabel('grainhack_link_wallet')).toBe('Link a wallet')
   })
 })

@@ -126,7 +126,7 @@ describe('linkLabel', () => {
   it('names where each GrainHack payout notification leads', () => {
     expect(linkLabel('grainhack_payout_held_kyc')).toBe('Go to verification')
     expect(linkLabel('grainhack_link_wallet')).toBe('Link a wallet')
-    expect(linkLabel('grainhack_paid')).toBe('Go to GrainHack')
+    expect(linkLabel('grainhack_paid')).toBe('See it on the ledger')
   })
 
   it('falls back to something honest for a type added later', () => {

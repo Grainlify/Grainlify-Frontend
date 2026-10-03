@@ -66,18 +66,18 @@ const NOTIFICATION_TYPE_INFO: Record<string, NotificationTypeInfo> = {
   },
   grainhack_paid: {
     section: 'GrainHack',
-    title: 'GrainHack prize paid',
-    description: 'When your GrainHack payout is confirmed on Solana, with the amount, the network and the transaction.',
+    title: 'GrainHack payout sent',
+    description: 'When your GrainHack payout has been sent to your Solana wallet, with the amount and the transaction.',
   },
   grainhack_payout_held_kyc: {
     section: 'GrainHack',
     title: 'Payout held for verification',
-    description: "When you have won a GrainHack payout but your identity isn't verified yet. It is held, not lost: it is paid once verification clears.",
+    description: "When you have won a GrainHack payout but your identity isn't verified yet. It is held, not cancelled: once verification clears, it is released.",
   },
   grainhack_link_wallet: {
     section: 'GrainHack',
     title: 'Link a wallet to be paid',
-    description: 'When you have a GrainHack payout waiting and no Solana wallet linked to receive it.',
+    description: 'When you have a GrainHack payout waiting and no Solana wallet linked to receive it, or when where GrainHack pays changes.',
   },
   bounty_unassigned: {
     section: 'Bounties',
