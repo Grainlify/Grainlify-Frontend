@@ -158,6 +158,40 @@ export const getBounties = () => get<{ status: BountyAgentStatus; bounties: Publ
 export const getBounty = (id: string) => get<{ status: BountyAgentStatus; bounty: PublicBounty }>(`/public/bounties/${encodeURIComponent(id)}`);
 export const getBountyLedger = () => get<BountyLedger>('/public/ledger');
 
+/** One winner's payment as the agent publishes it (payout contract §3).
+ *  Publicly a winner held for KYC and one with no wallet are both `waiting`:
+ *  KYC status is never in public output. */
+export type GrainHackPublicStatus = 'waiting' | 'awaiting_approval' | 'paid' | 'unknown' | 'failed';
+
+export interface GrainHackPublicPayouts {
+  hackathonId: string;
+  network: string;
+  currency: string;
+  decimals: number;
+  statementId: string | null;
+  winners: Array<{
+    login: string;
+    /** Present when the agent sends it; matching falls back to login. */
+    githubUserId?: number | null;
+    amountMinor: string;
+    status: GrainHackPublicStatus | string;
+    txSignature: string | null;
+    txUrl: string | null;
+    paidAt: string | null;
+  }>;
+}
+
+/** GET /public/grainhack/:hackathon_id. Null when the agent has not imported a
+ *  statement for the event (404): an answer, not a failure. */
+export async function getGrainHackPayouts(hackathonId: string): Promise<GrainHackPublicPayouts | null> {
+  try {
+    return await get<GrainHackPublicPayouts>(`/public/grainhack/${encodeURIComponent(hackathonId)}`);
+  } catch (e) {
+    if (e instanceof BountyAgentError && e.status === 404) return null;
+    throw e;
+  }
+}
+
 export interface BountyRuleSetting {
   key: string;
   type: string;

@@ -3538,3 +3538,103 @@ export const resolveKeeperHubLeg = (
       body: JSON.stringify({ status: input.status, tx_hash: input.txHash, note: input.note }),
     },
   );
+
+// ---- GrainHack results statement (Solana payout path) ------------------------
+//
+// Built against drafts/grainhack-payout-contract.md §1 before the backend
+// endpoints landed. Every shape the backend is expected to return is named
+// here and nowhere else, and the raw body is turned into these types by
+// parseResultsStatementBody below, so a change on the backend is a change in
+// this block only.
+
+export type GrainHackStatementLineStatus = 'payable' | 'held_kyc';
+
+/** The signed statement, parsed from its canonical JSON. Money is integer
+ *  minor units (6 decimals for USDC) as decimal strings, never numbers. */
+export interface GrainHackResultsStatement {
+  v: number;
+  kind: 'grainhack_results';
+  statement_id: string;
+  supersedes: string | null;
+  hackathon_id: string;
+  hackathon_name: string;
+  pool: string;
+  computation_id: string;
+  currency: string;
+  /** 'solana-devnet' | 'solana-mainnet'. Kept a string: a network this page
+   *  doesn't know is shown verbatim rather than dropped. */
+  network: string;
+  pool_minor: string;
+  lines: Array<{
+    github_user_id: number;
+    login: string;
+    amount_minor: string;
+    status: GrainHackStatementLineStatus | string;
+  }>;
+  issued_at: string;
+}
+
+export interface GrainHackStatementState {
+  /** Null when no statement has been issued for the pool. */
+  statement: GrainHackResultsStatement | null;
+  /** The canonical JSON exactly as signed; null with no statement. */
+  canonical: string | null;
+  signature: string | null;
+  /** Who issued it, when the backend says. */
+  issuedBy: string | null;
+  /** GRAINHACK_PAYOUT_NETWORK as the backend reports it, so the panel can
+   *  label the network before any statement exists. Null when not reported. */
+  configuredNetwork: string | null;
+}
+
+/** Reads the GET/POST body: `{ statement: <canonical json string>, signature,
+ *  issued_by?, network? }`. `statement` may also arrive already parsed. */
+export function parseResultsStatementBody(body: unknown): GrainHackStatementState {
+  const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
+  const raw = b.statement;
+  let statement: GrainHackResultsStatement | null = null;
+  let canonical: string | null = null;
+  if (typeof raw === 'string' && raw) {
+    canonical = raw;
+    statement = JSON.parse(raw) as GrainHackResultsStatement;
+  } else if (raw && typeof raw === 'object') {
+    statement = raw as GrainHackResultsStatement;
+  }
+  return {
+    statement,
+    canonical,
+    signature: typeof b.signature === 'string' && b.signature ? b.signature : null,
+    issuedBy: typeof b.issued_by === 'string' && b.issued_by ? b.issued_by : null,
+    configuredNetwork:
+      typeof b.network === 'string' && b.network ? b.network : statement?.network ?? null,
+  };
+}
+
+/** GET /admin/hackathons/:id/results-statement - the latest statement and its
+ *  signature, or `statement: null` (404 not_found) when none is issued. */
+export const getResultsStatement = async (hackathonId: string, pool = 'contributor'): Promise<GrainHackStatementState> => {
+  try {
+    const body = await apiRequest<unknown>(
+      `/admin/hackathons/${encodeURIComponent(hackathonId)}/results-statement?pool=${encodeURIComponent(pool)}`,
+      { requiresAuth: true },
+    );
+    return parseResultsStatementBody(body);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404 && e.data?.error === 'not_found') {
+      return parseResultsStatementBody({ ...e.data, statement: null });
+    }
+    throw e;
+  }
+};
+
+/** POST /admin/hackathons/:id/results-statement - issues a statement, or a new
+ *  one superseding the latest (the backend decides which). Refusals carry
+ *  `error` (see statementRefusal in the payouts panel model). */
+export const issueResultsStatement = async (hackathonId: string, pool = 'contributor'): Promise<GrainHackStatementState> =>
+  parseResultsStatementBody(
+    await apiRequest<unknown>(`/admin/hackathons/${encodeURIComponent(hackathonId)}/results-statement`, {
+      requiresAuth: true,
+      method: 'POST',
+      body: JSON.stringify({ pool, confirm: true }),
+    }),
+  );
