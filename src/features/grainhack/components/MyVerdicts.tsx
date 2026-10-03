@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { Modal, ModalFooter, ModalButton } from '../../../shared/components/ui/Modal';
+import { Event1PaidNote, isEvent1 } from './Event1PaidNote';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
 import {
   getMyGrainHackVerdicts,
@@ -144,6 +145,8 @@ export function MyVerdicts() {
     <div className="space-y-4">
       {/* A refresh after an appeal failed: the list below predates it. */}
       {loadError != null && <LoadFailed what="your latest results" error={loadError} onRetry={load} />}
+      {/* Once, however many of your results are from event 1. */}
+      {entries.some((e) => isEvent1(e.verdict.hackathon_id)) && <Event1PaidNote />}
       {entries.map((entry) => {
         const v = entry.verdict;
         const bucket = v.final_bucket ?? v.judge_bucket ?? null;

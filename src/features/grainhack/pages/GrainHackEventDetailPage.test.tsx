@@ -80,6 +80,27 @@ describe('GrainHackEventDetailPage', () => {
     expect(screen.getByText('$8.00')).toBeInTheDocument()
   })
 
+  it("says what event 1 actually paid, next to its published pool, and only for event 1", async () => {
+    const EVENT_1 = 'e11e77b0-8d8d-40c5-a8dd-b525a491374b'
+    mockedGetHackathon.mockResolvedValue(makeHackathon({ id: EVENT_1, name: 'First GrainHack Event (Base Sepolia)', phase: 'settled' }))
+    mockedGetHackathonIssues.mockResolvedValue({ issues: [] })
+    const { unmount } = renderWithProviders(
+      <GrainHackEventDetailPage eventId={EVENT_1} eventName="First GrainHack Event (Base Sepolia)" onBack={vi.fn()} onIssueClick={vi.fn()} />,
+    )
+    const note = await screen.findByTestId('event1-paid-note')
+    expect(note).toHaveTextContent('What was paid')
+    expect(note).toHaveTextContent('Each of the two contributors received 4 USDC on the Base Sepolia testnet on 19 September 2026, splitting the pool pro rata.')
+    expect(note).toHaveTextContent('applied a $50 floor; they stay as published.')
+    // The published figure itself is unchanged.
+    expect(screen.getByText('$8.00')).toBeInTheDocument()
+    unmount()
+
+    mockedGetHackathon.mockResolvedValue(makeHackathon({ id: 'hack-9', name: 'Later event', phase: 'settled' }))
+    renderWithProviders(<GrainHackEventDetailPage eventId="hack-9" eventName="Later event" onBack={vi.fn()} onIssueClick={vi.fn()} />)
+    await screen.findByText('Later event')
+    expect(screen.queryByTestId('event1-paid-note')).not.toBeInTheDocument()
+  })
+
   it('says the event could not be loaded instead of "No issues were published"', async () => {
     mockedGetHackathon.mockResolvedValue(makeHackathon({ id: 'hack-1', name: 'First GrainHack Event (Base Sepolia)', phase: 'live' }))
     mockedGetHackathonIssues.mockRejectedValue(new Error('network down'))

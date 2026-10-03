@@ -74,6 +74,27 @@ describe('MyVerdicts', () => {
     expect(screen.getByText(/Small but correct change/)).toBeInTheDocument()
   })
 
+  it("notes once what event 1 actually paid, above that event's results", async () => {
+    const EVENT_1 = 'e11e77b0-8d8d-40c5-a8dd-b525a491374b'
+    mockGetMyGrainHackVerdicts.mockResolvedValue({
+      verdicts: [
+        { verdict: { ...verdict, hackathon_id: EVENT_1 }, phase: 'settled' },
+        { verdict: { ...verdict, id: 'v-2', pr_number: 13, hackathon_id: EVENT_1 }, phase: 'settled' },
+      ],
+    })
+    renderWithProviders(<MyVerdicts />)
+    const notes = await screen.findAllByTestId('event1-paid-note')
+    expect(notes).toHaveLength(1)
+    expect(notes[0]).toHaveTextContent('4 USDC on the Base Sepolia testnet')
+  })
+
+  it('shows no event 1 note for other events', async () => {
+    mockGetMyGrainHackVerdicts.mockResolvedValue({ verdicts: [{ verdict, phase: 'results_published' }] })
+    renderWithProviders(<MyVerdicts />)
+    await screen.findByText(/Small but correct change/)
+    expect(screen.queryByTestId('event1-paid-note')).not.toBeInTheDocument()
+  })
+
   it('links each citation into the diff at that line, so an appeal can be checked', async () => {
     mockGetMyGrainHackVerdicts.mockResolvedValue({
       verdicts: [{ verdict, phase: 'results_published' }],

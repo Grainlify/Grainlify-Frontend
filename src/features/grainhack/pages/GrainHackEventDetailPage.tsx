@@ -5,6 +5,7 @@ import { ApplicationWindow } from '../components/ApplicationWindow';
 import { ProjectApplicationPanel } from '../components/ProjectApplicationPanel';
 import { formatUsdAmount } from '../../../shared/utils/usd';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
+import { Event1PaidNote, isEvent1 } from '../components/Event1PaidNote';
 import {
   getHackathon,
   getHackathonIssues,
@@ -147,6 +148,9 @@ export function GrainHackEventDetailPage({ eventId, eventName, onBack, onIssueCl
               </div>
             )}
           </div>
+
+          {/* Event 1 only: what was actually paid, beside the published figures. */}
+          {isEvent1(hackathon?.id) && <Event1PaidNote />}
 
           {hackathon && <ProjectApplicationPanel hackathonId={hackathon.id} hackathonName={title} phase={phase} />}
 
