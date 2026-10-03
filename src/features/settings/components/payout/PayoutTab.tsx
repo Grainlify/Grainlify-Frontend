@@ -2,6 +2,7 @@ import { PayoutAddressCard } from './PayoutAddressCard';
 import { BaseAddressCard } from './BaseAddressCard';
 import { PayoutReadinessCard } from './PayoutReadinessCard';
 import { ClaimsCard } from './ClaimsCard';
+import { SolanaPayoutWalletCard } from './SolanaPayoutWalletCard';
 
 /** Everything a contributor needs to be paid, and nothing that pretends to be.
  *
@@ -30,6 +31,10 @@ export function PayoutTab() {
           tab matters if we have nowhere to pay. */}
       <ClaimsCard />
       <PayoutReadinessCard />
+      {/* The wallet Bounties and GrainHack pay: the one live payout path, so
+          it comes before the Aptos and Base cards. It says the Base address
+          is below, so it must stay above the Base card. */}
+      <SolanaPayoutWalletCard />
       <PayoutAddressCard />
       {/* Base pays straight to the address, so it is a separate card rather
           than a chain switch on the Aptos one. */}

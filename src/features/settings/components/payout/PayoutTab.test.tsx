@@ -5,16 +5,19 @@ vi.mock('./ClaimsCard', () => ({ ClaimsCard: () => <div>claims-card</div> }))
 vi.mock('./PayoutReadinessCard', () => ({ PayoutReadinessCard: () => <div>readiness-card</div> }))
 vi.mock('./PayoutAddressCard', () => ({ PayoutAddressCard: () => <div>address-card</div> }))
 vi.mock('./BaseAddressCard', () => ({ BaseAddressCard: () => <div>base-address-card</div> }))
+vi.mock('./SolanaPayoutWalletCard', () => ({ SolanaPayoutWalletCard: () => <div>solana-wallet-card</div> }))
 
 import { PayoutTab } from './PayoutTab'
 
 describe('PayoutTab', () => {
-  it('renders the four payout cards', () => {
+  it('renders the five payout cards, the Solana wallet above the Base card', () => {
     renderWithProviders(<PayoutTab />)
     expect(screen.getByText('claims-card')).toBeInTheDocument()
     expect(screen.getByText('readiness-card')).toBeInTheDocument()
     expect(screen.getByText('address-card')).toBeInTheDocument()
-    expect(screen.getByText('base-address-card')).toBeInTheDocument()
+    const solana = screen.getByText('solana-wallet-card')
+    const base = screen.getByText('base-address-card')
+    expect(solana.compareDocumentPosition(base) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   // The regression this file exists for.
