@@ -131,13 +131,12 @@ export interface LedgerEvent {
   detail: string;
   amount: string | null;
   proof: { label: string; url: string | null };
-  /** GrainHack rows only, all optional so an older agent still parses.
-   *  `network` is 'solana-devnet' | 'solana-mainnet' | 'base-sepolia'. */
-  network?: string | null;
-  hackathonId?: string | null;
-  /** The transaction, for building an explorer link when proof.url is null. */
-  txSignature?: string | null;
-  /** An archived row from before this path existed (event 1's KeeperHub legs). */
+  /** GrainHack rows only (grainhackLedgerEvent): the event they belong to.
+   *  Absent on bounty rows. No network and no bare transaction are sent: the
+   *  agent puts the explorer link in proof.url and says "test" in `test`. */
+  hackathonId?: string;
+  /** GrainHack rows only: carried over from before the Solana path, i.e. event
+   *  1's two KeeperHub legs on Base Sepolia. */
   history?: boolean;
 }
 
@@ -153,6 +152,12 @@ export interface BountyLedger {
     inferenceCeilingMicro: number;
     /** null until GRAIN launches and fees are tracked. */
     feesInMicro: number | null;
+    /** GrainHack ledger row counts. Optional: an agent from before the
+     *  GrainHack path does not send them. Test counts include event 1's
+     *  Base Sepolia history rows. */
+    grainhackPaidMainnet?: number;
+    grainhackPaidTest?: number;
+    grainhackPoolsFunded?: number;
   };
   budget: { phase: string; allocationMicro: number; spentMicro: number }[];
   events: LedgerEvent[];

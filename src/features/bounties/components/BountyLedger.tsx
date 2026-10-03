@@ -6,7 +6,6 @@ import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { formatMicroUsd, getBountyLedger, type BountyLedger as Ledger, type LedgerEvent, type LedgerEventKind } from '../../../shared/api/bountyAgent';
 import { LeaderboardTable, RankChip, ScorePill, useHeaderText, type LeaderboardColumn } from '../../leaderboard/components/LeaderboardTable';
 import { StatusNotice } from './StatusNotice';
-import { isTestNetwork, networkLabel, txExplorerUrl } from '../../../shared/utils/payoutNetwork';
 
 /** The Bounties ledger: every bounty, inference call, gate result and payout,
  * each linked to its proof. Static on purpose (a Tier B/C surface: people read
@@ -45,19 +44,16 @@ const kindLabel = (k: string) => KIND_LABEL[k as LedgerEventKind] ?? k;
 const kindTone = (k: string): Tone => KIND_TONE[k as LedgerEventKind] ?? 'neutral';
 const isGrainHack = (e: LedgerEvent) => e.kind === 'grainhack_pool_funded' || e.kind === 'grainhack_payout';
 
-/** Where a GrainHack row's money actually was, said plainly: "Base Sepolia
- *  testnet · history" for event 1's archived KeeperHub legs, "Solana devnet ·
- *  test" for a devnet run. Null for a real mainnet row and for other kinds,
- *  which keep their " · test" suffix. */
+/** What a GrainHack row's money was, said plainly: "testnet history" for event
+ *  1's archived KeeperHub legs on Base Sepolia, "test" for a devnet payment or
+ *  deposit. Null for a real mainnet row and for other kinds, which keep their
+ *  " · test" suffix. The agent sends no network on ledger rows, only `test`
+ *  and `history`; its detail and proof link say which chain. */
 export function grainhackNetworkNote(e: LedgerEvent): string | null {
   if (!isGrainHack(e)) return null;
-  const test = e.history === true || e.test || (e.network != null && isTestNetwork(e.network));
-  if (!test) return null;
-  return [e.network ? networkLabel(e.network) : null, e.history ? 'history' : 'test'].filter(Boolean).join(' · ');
+  if (e.history) return 'testnet history';
+  return e.test ? 'test' : null;
 }
-
-/** The proof link: the agent's, or one built from the transaction and network. */
-const proofUrl = (e: LedgerEvent) => e.proof.url ?? txExplorerUrl(e.network, e.txSignature);
 
 const PERIODS = [
   { id: 'all', label: 'All time', days: Infinity },
@@ -166,8 +162,8 @@ export function BountyLedger() {
       headerClassName: `col-span-2 ${headerText} max-sm:hidden`,
       cellClassName: 'col-span-2 flex items-center min-w-0 max-sm:col-start-2 max-sm:col-span-2 max-sm:row-start-3',
       render: (e) =>
-        proofUrl(e) ? (
-          <a href={proofUrl(e)!} target="_blank" rel="noreferrer" className={`min-w-0 truncate font-mono text-[12px] underline underline-offset-2 ${link}`}>{e.proof.label}</a>
+        e.proof.url ? (
+          <a href={e.proof.url} target="_blank" rel="noreferrer" className={`min-w-0 truncate font-mono text-[12px] underline underline-offset-2 ${link}`}>{e.proof.label}</a>
         ) : (
           <span className={`min-w-0 truncate font-mono text-[12px] ${muted}`}>{e.proof.label}</span>
         ),
@@ -182,6 +178,15 @@ export function BountyLedger() {
     { label: 'Inference spend', value: t ? (t.inferenceSpendMicro == null ? '$0.00' : formatMicroUsd(t.inferenceSpendMicro)) : '…', hint: t?.inferenceSpendMicro == null ? 'no real spend yet: test gateway' : `of ${formatMicroUsd(t.inferenceCeilingMicro)} lifetime` },
     { label: 'Bounties paid', value: t ? String(t.bountiesPaidMainnet) : '…', hint: t ? `mainnet · ${t.bountiesPaidTest} devnet test` : '' },
     { label: 'Inference calls', value: t ? String(t.inferenceCalls) : '…', hint: 'each with its own receipt' },
+    ...(t && typeof t.grainhackPaidMainnet === 'number'
+      ? [
+          {
+            label: 'GrainHack payouts',
+            value: String(t.grainhackPaidMainnet),
+            hint: `mainnet · ${t.grainhackPaidTest ?? 0} test · ${t.grainhackPoolsFunded ?? 0} pool ${t.grainhackPoolsFunded === 1 ? 'deposit' : 'deposits'}`,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -203,7 +208,7 @@ export function BountyLedger() {
 
       <section aria-label="Totals" className={panel}>
         <p className={`text-[12px] font-semibold uppercase tracking-[0.04em] ${muted}`}>All time</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 sm:gap-3">
+        <div className={`grid grid-cols-1 gap-2 sm:gap-3 ${tiles.length > 4 ? 'sm:grid-cols-3 lg:grid-cols-5' : 'sm:grid-cols-4'}`}>
           {tiles.map((k) => (
             <div key={k.label} className={`${tile} flex items-center justify-between gap-3 sm:flex-col sm:items-start sm:gap-1`}>
               <div className="flex flex-col">
@@ -282,7 +287,7 @@ export function BountyLedger() {
       <p className={`text-[12px] ${dark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>Rows marked "test" are the devnet run: test tokens with no value, and inference against a test gateway. They never count toward the real $5.00.</p>
       {ledger?.events.some(isGrainHack) && (
         <p data-testid="ledger-grainhack-note" className={`text-[12px] ${dark ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
-          GrainHack rows marked "history" are the first event&apos;s two payments, made through KeeperHub on the Base Sepolia testnet on 19 September 2026: test USDC with no value. GrainHack now pays USDC on Solana; rows marked "test" there are devnet.
+          GrainHack rows marked "testnet history" are the first event&apos;s two payments, made through KeeperHub on the Base Sepolia testnet on 19 September 2026: test USDC with no value. GrainHack now pays USDC on Solana; rows marked "test" there are devnet.
         </p>
       )}
     </div>
