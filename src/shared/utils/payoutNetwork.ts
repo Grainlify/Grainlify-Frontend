@@ -49,6 +49,23 @@ export function explorerName(network: string | null | undefined): string {
   return 'explorer';
 }
 
+/** The explorer a link points at, by its host, for link text. The backend
+ *  links Solana transactions to Solana Explorer and the agent to Solscan, so
+ *  the name follows the link rather than the network. */
+export function explorerNameForUrl(url: string | null | undefined): string {
+  if (!url) return 'explorer';
+  let host = '';
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return 'explorer';
+  }
+  if (host === 'solscan.io' || host.endsWith('.solscan.io')) return 'Solscan';
+  if (host === 'explorer.solana.com') return 'Solana Explorer';
+  if (host === 'basescan.org' || host.endsWith('.basescan.org')) return 'Basescan';
+  return 'explorer';
+}
+
 /** First 6 and last 4: enough to recognise a signature or hash. */
 export function shortTx(tx: string): string {
   return tx.length > 14 ? `${tx.slice(0, 6)}…${tx.slice(-4)}` : tx;

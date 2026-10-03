@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { explorerName, isTestNetwork, networkLabel, shortTx, txExplorerUrl } from './payoutNetwork'
+import { explorerName, explorerNameForUrl, isTestNetwork, networkLabel, shortTx, txExplorerUrl } from './payoutNetwork'
 
 describe('payoutNetwork', () => {
   it('names each network, and an unknown one verbatim', () => {
@@ -27,6 +27,14 @@ describe('payoutNetwork', () => {
     expect(txExplorerUrl('solana-devnet', null)).toBeNull()
     expect(explorerName('base-sepolia')).toBe('Basescan')
     expect(explorerName('solana-devnet')).toBe('Solana Explorer')
+  })
+
+  it('names the explorer a link actually points at', () => {
+    expect(explorerNameForUrl('https://explorer.solana.com/tx/abc?cluster=devnet')).toBe('Solana Explorer')
+    expect(explorerNameForUrl('https://solscan.io/tx/abc?cluster=devnet')).toBe('Solscan')
+    expect(explorerNameForUrl('https://sepolia.basescan.org/tx/0x12')).toBe('Basescan')
+    expect(explorerNameForUrl('(aptos-testnet) 0x12')).toBe('explorer')
+    expect(explorerNameForUrl(null)).toBe('explorer')
   })
 
   it('shortens long signatures only', () => {

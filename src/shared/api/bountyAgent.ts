@@ -180,31 +180,78 @@ export const getBounties = () => get<{ status: BountyAgentStatus; bounties: Publ
 export const getBounty = (id: string) => get<{ status: BountyAgentStatus; bounty: PublicBounty }>(`/public/bounties/${encodeURIComponent(id)}`);
 export const getBountyLedger = () => get<BountyLedger>('/public/ledger');
 
-/** One winner's payment as the agent publishes it (payout contract §3).
- *  Publicly a winner held for KYC and one with no wallet are both `waiting`:
- *  KYC status is never in public output. */
-export type GrainHackPublicStatus = 'waiting' | 'awaiting_approval' | 'paid' | 'unknown' | 'failed';
+/** A winner's payment status as the agent publishes it
+ *  (apps/agent/src/grainhack/ledger.ts publicStatus). Three values only:
+ *  `waiting` covers held for KYC, no wallet linked yet and awaiting approval
+ *  alike, because KYC status is never in public output; `sending` covers a
+ *  submitted transaction and one whose outcome nobody has confirmed yet. */
+export type GrainHackPublicStatus = 'waiting' | 'sending' | 'paid';
 
-export interface GrainHackPublicPayouts {
-  hackathonId: string;
-  network: string;
-  currency: string;
+/** One row of the agent's public per-event view: a winner under the current
+ *  statement, or (with `history: true`) a payment carried over from before
+ *  the Solana path, i.e. event 1's two KeeperHub legs on Base Sepolia. */
+export interface GrainHackPublicWinner {
+  login: string;
+  amountMinor: string;
   decimals: number;
-  statementId: string | null;
-  winners: Array<{
-    login: string;
-    /** Present when the agent sends it; matching falls back to login. */
-    githubUserId?: number | null;
-    amountMinor: string;
-    status: GrainHackPublicStatus | string;
-    txSignature: string | null;
-    txUrl: string | null;
-    paidAt: string | null;
-  }>;
+  currency: string;
+  /** 'solana-devnet' | 'solana-mainnet', or 'base-sepolia' on history rows. */
+  network: string;
+  /** Formatted by the agent, e.g. "4.00 test USDC". */
+  amount: string;
+  status: GrainHackPublicStatus;
+  /** Set only once paid. */
+  txSignature: string | null;
+  txUrl: string | null;
+  paidAt: string | null;
+  /** True on any network other than solana-mainnet: tokens with no value. */
+  test: boolean;
+  history: boolean;
+  note: string | null;
 }
 
-/** GET /public/grainhack/:hackathon_id. Null when the agent has not imported a
- *  statement for the event (404): an answer, not a failure. */
+export interface GrainHackPublicFunding {
+  amountMinor: string;
+  decimals: number;
+  currency: string;
+  network: string;
+  amount: string;
+  txSignature: string;
+  txUrl: string;
+  at: string;
+  test: boolean;
+}
+
+/** GET /public/grainhack/:hackathon_id, exactly as the agent builds it
+ *  (publicGrainhackEvent). No KYC information, and no github ids: winners are
+ *  identified by login only. */
+export interface GrainHackPublicPayouts {
+  hackathonId: string;
+  hackathonName: string | null;
+  pool: 'contributor';
+  network: string | null;
+  test: boolean;
+  currency: string | null;
+  /** The agent's current (not superseded) imported statement, or null. Its id
+   *  is not published; issuedAt is what tells two statements apart. */
+  statement: { issuedAt: string; poolMinor: string } | null;
+  winners: GrainHackPublicWinner[];
+  history: GrainHackPublicWinner[];
+  funding: GrainHackPublicFunding[];
+  totals: {
+    poolMinor: string | null;
+    paidMinor: string;
+    waitingMinor: string;
+    paidCount: number;
+    waitingCount: number;
+    fundedMinor: string;
+    historyPaidMinor: string;
+  };
+}
+
+/** GET /public/grainhack/:hackathon_id. Null on 404, which the agent answers
+ *  when it has no statement, payout or ledger row for the event: an answer,
+ *  not a failure. */
 export async function getGrainHackPayouts(hackathonId: string): Promise<GrainHackPublicPayouts | null> {
   try {
     return await get<GrainHackPublicPayouts>(`/public/grainhack/${encodeURIComponent(hackathonId)}`);

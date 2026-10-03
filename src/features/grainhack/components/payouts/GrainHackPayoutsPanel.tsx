@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { AlertTriangle, CheckCircle2, CircleHelp, Clock, Copy, ExternalLink, FileSignature, PauseCircle, Terminal, Wallet, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleHelp, Clock, Copy, ExternalLink, FileSignature, PauseCircle, ShieldCheck, Terminal, Wallet } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { isApiError } from '../../../../shared/api/apiError';
 import { getResultsStatement, issueResultsStatement, type GrainHackStatementState } from '../../../../shared/api/client';
 import { getGrainHackPayouts } from '../../../../shared/api/bountyAgent';
-import { explorerName, isTestNetwork, networkLabel, shortTx } from '../../../../shared/utils/payoutNetwork';
+import { explorerNameForUrl, isTestNetwork, networkLabel, shortTx } from '../../../../shared/utils/payoutNetwork';
 import { plural } from '../keeperhub/keeperhubModel';
 import { Code, ConfirmShell, PrimaryButton, SecondaryButton, tokens, type Tokens } from '../keeperhub/keeperhubUi';
 import {
   WINNER_STATUS_HINT,
   WINNER_STATUS_LABEL,
   WINNER_STATUS_TONE,
+  agentBehind,
+  agentImported,
   approveCommand,
   payoutTotals,
   shortUuid,
@@ -48,7 +50,7 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
       const s = await getResultsStatement(hackathonId);
       setState(s);
       setLoadError(null);
-      if (s.statement) {
+      if (s.view) {
         // The agent's read is separate on purpose: a statement is worth
         // showing even when the agent can't be reached.
         setAgent(await getGrainHackPayouts(hackathonId).catch(() => 'unavailable' as const));
@@ -67,9 +69,9 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
   const issue = async () => {
     setIssuing(true);
     try {
-      const next = await issueResultsStatement(hackathonId);
+      const next = await issueResultsStatement(hackathonId, { payoutRunId: state?.currentPayoutRunId ?? null });
       toast.success(
-        next.statement?.supersedes
+        next.view?.supersedes
           ? 'New statement issued. It supersedes the previous one; nobody already paid is paid again.'
           : 'Results statement issued and signed. Nobody is paid until an approver runs approve-event.',
       );
@@ -139,18 +141,18 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
   const confirm = confirmOpen && (
     <ConfirmIssue
       t={t}
-      superseding={state.statement !== null}
-      network={state.configuredNetwork}
+      superseding={state.view !== null}
+      network={state.view?.network ?? null}
       busy={issuing}
       onCancel={() => setConfirmOpen(false)}
       onConfirm={() => void issue()}
     />
   );
 
-  if (!state.statement) {
+  if (!state.view) {
     return shell(
       <>
-        {header('Contributor pool · no statement yet', networkChip(state.configuredNetwork))}
+        {header('Contributor pool · no statement yet', null)}
         <div data-testid="grainhack-issue-box" className={`flex flex-col gap-4 rounded-[16px] border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5 ${t.banner.gold}`}>
           <div className="flex min-w-0 flex-1 gap-3">
             <FileSignature className={`mt-0.5 h-5 w-5 shrink-0 ${t.muted}`} aria-hidden />
@@ -163,6 +165,11 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
               <p className={`text-[12px] ${t.muted}`}>
                 Refused until the event is settled with appeals closed, and refused for a pool that already has a KeeperHub run.
               </p>
+              {state.currentPayoutRunId === null && (
+                <p data-testid="grainhack-no-computation" className={`text-[12px] ${t.muted}`}>
+                  The event has no payout computation yet, so there is nothing to put on a statement.
+                </p>
+              )}
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:items-end">
@@ -179,14 +186,16 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
     );
   }
 
-  const s = state.statement;
-  const rows = winnerRows(s, agent ?? null);
+  const s = state.view;
+  const canon = state.canonical;
+  const agentRead = agent ?? null;
+  const rows = winnerRows(s, agentRead);
   const totals = payoutTotals(s.pool_minor, rows);
   const money = (minor: string) => usdc(minor, s.network);
-  const held = rows.filter((r) => r.status === 'held_kyc');
-  const awaiting = rows.filter((r) => r.status === 'awaiting_approval');
-  const agentStatement = agent && agent !== 'unavailable' ? agent.statementId : null;
-  const agentBehind = agentStatement !== null && agentStatement !== s.statement_id;
+  const held = rows.filter((r) => r.status === 'held_kyc' || r.status === 'held_kyc_cleared');
+  const waiting = rows.filter((r) => r.status === 'waiting');
+  const behind = agentBehind(s, agentRead);
+  const chainAt = s.chain.indexOf(s.statement_id);
 
   const fact = (label: string, value: ReactNode, testId?: string) => (
     <div className="flex min-w-0 flex-col gap-0.5" data-testid={testId}>
@@ -209,15 +218,27 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
             <CopyButton t={t} value={s.statement_id} label="Copy statement id" />
           </span>,
         )}
-        {fact('Format', `v${s.v} · ${s.kind}`, 'grainhack-statement-version')}
+        {fact('Format', canon ? `v${canon.v} · ${canon.kind}` : 'Unreadable', 'grainhack-statement-version')}
         {fact(
           'Supersedes',
           s.supersedes ? <span className="font-mono">{shortUuid(s.supersedes)}</span> : <span className={t.muted}>Nothing: the first statement</span>,
           'grainhack-statement-supersedes',
         )}
-        {fact('Issued', `${format(new Date(s.issued_at), 'd MMM yyyy, HH:mm')}${state.issuedBy ? ` · @${state.issuedBy}` : ''}`)}
+        {fact(
+          'Issued',
+          <>
+            {format(new Date(s.issued_at), 'd MMM yyyy, HH:mm')} · by admin <span className="font-mono">{shortUuid(s.issued_by)}</span>
+          </>,
+          'grainhack-statement-issued',
+        )}
         {fact('Computation', <span className="font-mono">{shortUuid(s.computation_id)}</span>)}
-        {fact('Signature', state.signature ? <span className="font-mono">{shortTx(state.signature)}</span> : <span className={t.muted}>Not returned</span>)}
+        {fact(
+          'Chain',
+          s.chain.length > 1 && chainAt >= 0 ? `Statement ${chainAt + 1} of ${s.chain.length}` : 'The only statement',
+          'grainhack-statement-chain',
+        )}
+        {fact('Signature', s.signature ? <span className="font-mono">{shortTx(s.signature)}</span> : <span className={t.muted}>Not returned</span>)}
+        {fact('SHA-256', <span className="font-mono">{shortTx(s.statement_sha256)}</span>)}
       </dl>
     </div>
   );
@@ -229,13 +250,13 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
         {[
           { key: 'pool', label: 'Pool', value: money(totals.poolMinor), hint: plural(rows.length, 'winner', 'winners'), tone: 'neutral' as const },
           { key: 'paid', label: 'Paid', value: money(totals.paidMinor), hint: 'confirmed on chain', tone: 'green' as const },
-          { key: 'unknown', label: 'Outcome unknown', value: money(totals.unknownMinor), hint: 'neither paid nor unpaid', tone: 'amber' as const },
+          { key: 'sending', label: 'Sending', value: money(totals.sendingMinor), hint: 'sent, not yet confirmed or reported', tone: 'amber' as const },
           { key: 'outstanding', label: 'Not paid yet', value: money(totals.outstandingMinor), hint: 'held, waiting or awaiting approval', tone: 'neutral' as const },
         ].map((k) => (
           <li
             key={k.key}
             data-total={k.key}
-            className={`flex items-center justify-between gap-3 rounded-[12px] border px-3 py-2.5 sm:flex-col sm:items-start sm:justify-start sm:gap-1 sm:rounded-[14px] sm:p-3.5 ${k.key === 'unknown' && totals.unknownMinor !== '0' ? t.tileAlert : t.tile}`}
+            className={`flex items-center justify-between gap-3 rounded-[12px] border px-3 py-2.5 sm:flex-col sm:items-start sm:justify-start sm:gap-1 sm:rounded-[14px] sm:p-3.5 ${k.key === 'sending' && totals.sendingMinor !== '0' ? t.tileAlert : t.tile}`}
           >
             <span className={`text-[12px] font-bold ${t.toneText[k.tone]}`}>{k.label}</span>
             <span className="flex flex-col items-end gap-0.5 sm:items-start">
@@ -247,7 +268,7 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
       </ul>
       {totals.sumsToPool ? (
         <p className={`text-[12px] ${t.muted}`} data-testid="grainhack-sums">
-          Every line, payable and held, adds up to the pool exactly. Paid, unknown and not paid yet add up to it too.
+          Every line, payable and held, adds up to the pool exactly. Paid, sending and not paid yet add up to it too.
         </p>
       ) : (
         <p data-testid="grainhack-sums" className={`rounded-[12px] border px-3 py-2.5 text-[13px] ${t.errorBox}`}>
@@ -260,12 +281,14 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
 
   const command = approveCommand(s.hackathon_id);
   const approveBox = (
-    <div data-testid="grainhack-approve" className={`flex flex-col gap-3 rounded-[16px] border p-4 sm:p-5 ${awaiting.length > 0 ? t.banner.gold : t.banner.neutral}`}>
+    <div data-testid="grainhack-approve" className={`flex flex-col gap-3 rounded-[16px] border p-4 sm:p-5 ${waiting.length > 0 ? t.banner.gold : t.banner.neutral}`}>
       <div className="flex gap-3">
         <Terminal className={`mt-0.5 h-5 w-5 shrink-0 ${t.muted}`} aria-hidden />
         <div className="flex min-w-0 flex-col gap-1.5">
           <p className={`text-[15px] font-bold ${t.strong}`}>
-            {awaiting.length > 0 ? `${plural(awaiting.length, 'winner is', 'winners are')} awaiting approval` : 'Nobody is awaiting approval right now'}
+            {waiting.length > 0
+              ? `${plural(waiting.length, 'payable winner is', 'payable winners are')} waiting for a wallet or approval`
+              : 'Nobody payable is waiting right now'}
           </p>
           <p className={`text-[13px] leading-[1.5] ${t.body}`}>
             Payments are approved in the agent repo, on the approver&apos;s own machine: the key never leaves it. The command lists
@@ -289,15 +312,17 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
         Couldn&apos;t read the agent&apos;s payouts. Held winners are known from the statement; everyone else&apos;s payment status
         isn&apos;t known from this page until it can be read.
       </p>
-    ) : agent === null ? (
+    ) : !agentImported(agentRead) ? (
       <p data-testid="grainhack-agent-note" className={`rounded-[12px] border px-3 py-2.5 text-[13px] ${t.note} ${t.body}`}>
         The agent hasn&apos;t imported this statement yet. It does so on its own poll, or run{' '}
         <Code t={t}>pnpm cli grainhack import {s.statement_id}</Code> in the agent repo.
       </p>
-    ) : agentBehind ? (
+    ) : behind ? (
       <p data-testid="grainhack-agent-note" className={`rounded-[12px] border px-3 py-2.5 text-[13px] ${t.warnBox}`}>
-        The agent is still on statement {shortUuid(agentStatement!)}, not this one. Until it imports{' '}
-        <span className="font-mono">{shortUuid(s.statement_id)}</span> the statuses below are from the older statement.
+        The agent is still on an older statement (issued{' '}
+        {format(new Date((agentRead as Exclude<AgentRead, null | 'unavailable'>).statement!.issuedAt), 'd MMM yyyy, HH:mm')}), not this
+        one. Until it imports <span className="font-mono">{shortUuid(s.statement_id)}</span> its waiting and sending statuses below
+        are from the older statement.
       </p>
     ) : null;
 
@@ -306,30 +331,35 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
       key={r.github_user_id}
       data-testid="grainhack-winner"
       data-status={r.status}
-      className={`flex flex-col gap-2 rounded-[16px] p-4 ${r.status === 'unknown' ? t.legAlert : t.leg}`}
+      className={`flex flex-col gap-2 rounded-[16px] p-4 ${r.status === 'sending' ? t.legAlert : t.leg}`}
     >
       <div className="grid grid-cols-[auto_1fr] items-start gap-x-2 gap-y-2 sm:grid-cols-[190px_minmax(0,1fr)_minmax(0,1.2fr)_150px] sm:items-center sm:gap-4">
-        <StatusPill t={t} status={r.status} raw={r.rawStatus} />
+        <StatusPill t={t} status={r.status} />
         <span className={`justify-self-end whitespace-nowrap text-[13px] font-semibold tabular-nums sm:order-last sm:text-[14px] ${t.strong}`}>{money(r.amount_minor)}</span>
         <span className={`col-span-2 text-[14px] font-semibold sm:col-span-1 ${t.strong}`}>@{r.login}</span>
         <div className={`col-span-2 flex flex-col gap-0.5 text-[12px] sm:col-span-1 ${t.muted}`}>
           {r.txSignature ? (
             r.txUrl ? (
               <a href={r.txUrl} target="_blank" rel="noreferrer" className={`inline-flex min-h-[32px] items-center gap-1.5 underline-offset-2 hover:underline sm:min-h-0 ${t.link}`}>
-                <span className="font-mono">{shortTx(r.txSignature)}</span> {explorerName(s.network)}
+                <span className="font-mono">{shortTx(r.txSignature)}</span> {explorerNameForUrl(r.txUrl)}
                 <ExternalLink className="h-3 w-3" aria-hidden />
               </a>
             ) : (
               <span className="font-mono">{shortTx(r.txSignature)}</span>
             )
           ) : null}
-          <span>{r.rawStatus ? `The agent reports "${r.rawStatus}".` : WINNER_STATUS_HINT[r.status]}</span>
+          <span>{WINNER_STATUS_HINT[r.status]}</span>
+          {r.kycLapsed && (
+            <span data-testid="grainhack-kyc-lapsed" className={t.toneText.amber}>
+              Their KYC is no longer verified. The signer still pays a payable line; a superseding statement would hold it.
+            </span>
+          )}
         </div>
       </div>
     </li>
   );
 
-  const order: WinnerStatus[] = ['unknown', 'failed', 'awaiting_approval', 'awaiting_wallet', 'held_kyc', 'not_imported', 'agent_unavailable', 'paid'];
+  const order: WinnerStatus[] = ['sending', 'paid_unreported', 'held_kyc_cleared', 'waiting', 'held_kyc', 'not_imported', 'agent_unavailable', 'paid'];
   const sorted = rows.slice().sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
 
   return shell(
@@ -349,18 +379,27 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
         <ul className="flex flex-col gap-2">{sorted.map(winnerRow)}</ul>
       </div>
       {approveBox}
-      {held.length > 0 && (
-        <div data-testid="grainhack-supersede" className={`flex flex-col gap-3 rounded-[16px] border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5 ${t.banner.neutral}`}>
+      {(s.supersede_available || held.length > 0) && (
+        <div
+          data-testid="grainhack-supersede"
+          data-available={s.supersede_available ? 'yes' : 'no'}
+          className={`flex flex-col gap-3 rounded-[16px] border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5 ${s.supersede_available ? t.banner.gold : t.banner.neutral}`}
+        >
           <div className="flex min-w-0 flex-col gap-1">
-            <p className={`text-[14px] font-bold ${t.strong}`}>When a held winner&apos;s KYC clears</p>
+            <p className={`text-[14px] font-bold ${t.strong}`}>
+              {s.supersede_available ? "A winner's KYC has changed since this statement" : "When a held winner's KYC clears"}
+            </p>
             <p className={`text-[13px] leading-[1.5] ${t.body}`}>
-              Issue a new statement. It supersedes this one with the same computation and marks them payable. Anyone already paid stays
-              paid and is never paid twice.
+              {s.supersede_available
+                ? 'Issue a new statement. It supersedes this one with the same computation and amounts, with each line held or payable as their KYC is now. Anyone already paid stays paid and is never paid twice.'
+                : 'Nothing has changed yet. Once their KYC is verified, this offers a new statement that supersedes this one and marks them payable.'}
             </p>
           </div>
-          <SecondaryButton t={t} onClick={() => setConfirmOpen(true)} disabled={issuing}>
-            Issue a superseding statement
-          </SecondaryButton>
+          {s.supersede_available && (
+            <SecondaryButton t={t} onClick={() => setConfirmOpen(true)} disabled={issuing}>
+              Issue a superseding statement
+            </SecondaryButton>
+          )}
         </div>
       )}
       {confirm}
@@ -369,19 +408,19 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
   );
 }
 
-function StatusPill({ t, status, raw }: { t: Tokens; status: WinnerStatus; raw: string | null }) {
+function StatusPill({ t, status }: { t: Tokens; status: WinnerStatus }) {
   const Icon =
-    status === 'paid' ? CheckCircle2
-      : status === 'failed' ? XCircle
-        : status === 'unknown' ? CircleHelp
-          : status === 'held_kyc' ? PauseCircle
-            : status === 'awaiting_wallet' ? Wallet
+    status === 'paid' || status === 'paid_unreported' ? CheckCircle2
+      : status === 'sending' ? CircleHelp
+        : status === 'held_kyc' ? PauseCircle
+          : status === 'held_kyc_cleared' ? ShieldCheck
+            : status === 'waiting' ? Wallet
               : status === 'agent_unavailable' ? AlertTriangle
                 : Clock;
   return (
     <span className={`inline-flex items-center gap-1.5 justify-self-start whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-bold ${t.chip[WINNER_STATUS_TONE[status]]}`}>
       <Icon className="h-3.5 w-3.5" aria-hidden />
-      {raw ?? WINNER_STATUS_LABEL[status]}
+      {WINNER_STATUS_LABEL[status]}
     </span>
   );
 }

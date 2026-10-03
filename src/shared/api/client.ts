@@ -3541,100 +3541,123 @@ export const resolveKeeperHubLeg = (
 
 // ---- GrainHack results statement (Solana payout path) ------------------------
 //
-// Built against drafts/grainhack-payout-contract.md §1 before the backend
-// endpoints landed. Every shape the backend is expected to return is named
-// here and nowhere else, and the raw body is turned into these types by
-// parseResultsStatementBody below, so a change on the backend is a change in
-// this block only.
+// Mirrors the backend exactly: internal/grainhack/issue.go (Issued, IssuedLine)
+// and view.go (AdminView, AdminLine), served by
+// internal/handlers/grainhack_payout.go. Every shape is named here and nowhere
+// else, so a change on the backend is a change in this block only.
 
 export type GrainHackStatementLineStatus = 'payable' | 'held_kyc';
 
-/** The signed statement, parsed from its canonical JSON. Money is integer
- *  minor units (6 decimals for USDC) as decimal strings, never numbers. */
-export interface GrainHackResultsStatement {
+/** One winner as the admin view shows it (AdminLine). Money is integer minor
+ *  units (6 decimals for USDC) as decimal strings, never numbers. */
+export interface GrainHackAdminLine {
+  github_user_id: number;
+  user_id: string;
+  login: string;
+  amount_minor: string;
+  status: GrainHackStatementLineStatus;
+  /** The person's KYC status now, which may differ from the line's status
+   *  when the statement was issued; that difference is what a superseding
+   *  statement settles. */
+  kyc_verified_now: boolean;
+  /** The payment the agent reported to the backend for this winner, if any. */
+  paid_tx_signature: string | null;
+  paid_tx_url: string | null;
+}
+
+/** The signed statement, parsed from its canonical JSON. Only what the admin
+ *  view does not already carry at the top level is read from it. */
+export interface GrainHackCanonicalStatement {
   v: number;
   kind: 'grainhack_results';
+  hackathon_name: string;
+}
+
+/** GET/POST /admin/hackathons/:id/results-statement's answer (AdminView, with
+ *  Issued embedded). */
+export interface GrainHackAdminStatementView {
+  /** The canonical JSON exactly as signed. */
+  statement: string;
+  signature: string;
+  public_key: string;
+  statement_sha256: string;
   statement_id: string;
   supersedes: string | null;
   hackathon_id: string;
-  hackathon_name: string;
   pool: string;
-  computation_id: string;
-  currency: string;
-  /** 'solana-devnet' | 'solana-mainnet'. Kept a string: a network this page
-   *  doesn't know is shown verbatim rather than dropped. */
   network: string;
+  currency: string;
   pool_minor: string;
-  lines: Array<{
-    github_user_id: number;
-    login: string;
-    amount_minor: string;
-    status: GrainHackStatementLineStatus | string;
-  }>;
+  computation_id: string;
+  /** The issuing admin's user id (a uuid, not a login). */
+  issued_by: string;
   issued_at: string;
+  lines: GrainHackAdminLine[];
+  /** Every statement for the event pool, oldest first; the last is this one. */
+  chain: string[];
+  /** Some line's status no longer matches the person's KYC now, so issuing
+   *  again would produce a superseding statement. */
+  supersede_available: boolean;
+  current_payout_run_id: string | null;
 }
 
 export interface GrainHackStatementState {
-  /** Null when no statement has been issued for the pool. */
-  statement: GrainHackResultsStatement | null;
-  /** The canonical JSON exactly as signed; null with no statement. */
-  canonical: string | null;
-  signature: string | null;
-  /** Who issued it, when the backend says. */
-  issuedBy: string | null;
-  /** GRAINHACK_PAYOUT_NETWORK as the backend reports it, so the panel can
-   *  label the network before any statement exists. Null when not reported. */
-  configuredNetwork: string | null;
+  /** Null when no statement has been issued for the pool (404 not_found). */
+  view: GrainHackAdminStatementView | null;
+  /** Parsed from view.statement; null with no statement or if it won't parse. */
+  canonical: GrainHackCanonicalStatement | null;
+  /** The event's current payout computation, sent back when issuing so the
+   *  backend refuses (payout_run_not_current) if the figures moved meanwhile.
+   *  Null when nothing is computed yet. */
+  currentPayoutRunId: string | null;
 }
 
-/** Reads the GET/POST body: `{ statement: <canonical json string>, signature,
- *  issued_by?, network? }`. `statement` may also arrive already parsed. */
-export function parseResultsStatementBody(body: unknown): GrainHackStatementState {
-  const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
-  const raw = b.statement;
-  let statement: GrainHackResultsStatement | null = null;
-  let canonical: string | null = null;
-  if (typeof raw === 'string' && raw) {
-    canonical = raw;
-    statement = JSON.parse(raw) as GrainHackResultsStatement;
-  } else if (raw && typeof raw === 'object') {
-    statement = raw as GrainHackResultsStatement;
+function stateFromView(view: GrainHackAdminStatementView): GrainHackStatementState {
+  let canonical: GrainHackCanonicalStatement | null = null;
+  try {
+    canonical = JSON.parse(view.statement) as GrainHackCanonicalStatement;
+  } catch {
+    canonical = null;
   }
-  return {
-    statement,
-    canonical,
-    signature: typeof b.signature === 'string' && b.signature ? b.signature : null,
-    issuedBy: typeof b.issued_by === 'string' && b.issued_by ? b.issued_by : null,
-    configuredNetwork:
-      typeof b.network === 'string' && b.network ? b.network : statement?.network ?? null,
-  };
+  return { view, canonical, currentPayoutRunId: view.current_payout_run_id ?? null };
 }
 
-/** GET /admin/hackathons/:id/results-statement - the latest statement and its
- *  signature, or `statement: null` (404 not_found) when none is issued. */
+/** GET /admin/hackathons/:id/results-statement - the latest statement, or
+ *  `view: null` when none is issued (404 `{error: "not_found",
+ *  current_payout_run_id}`). */
 export const getResultsStatement = async (hackathonId: string, pool = 'contributor'): Promise<GrainHackStatementState> => {
   try {
-    const body = await apiRequest<unknown>(
-      `/admin/hackathons/${encodeURIComponent(hackathonId)}/results-statement?pool=${encodeURIComponent(pool)}`,
-      { requiresAuth: true },
+    return stateFromView(
+      await apiRequest<GrainHackAdminStatementView>(
+        `/admin/hackathons/${encodeURIComponent(hackathonId)}/results-statement?pool=${encodeURIComponent(pool)}`,
+        { requiresAuth: true },
+      ),
     );
-    return parseResultsStatementBody(body);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404 && e.data?.error === 'not_found') {
-      return parseResultsStatementBody({ ...e.data, statement: null });
+      const current = e.data.current_payout_run_id;
+      return { view: null, canonical: null, currentPayoutRunId: typeof current === 'string' && current ? current : null };
     }
     throw e;
   }
 };
 
-/** POST /admin/hackathons/:id/results-statement - issues a statement, or a new
- *  one superseding the latest (the backend decides which). Refusals carry
+/** POST /admin/hackathons/:id/results-statement `{confirm: true, pool,
+ *  payout_run_id?}` - issues a statement, or the one superseding the latest
+ *  (the backend decides which). 201 with the admin view. Refusals carry
  *  `error` (see statementRefusal in the payouts panel model). */
-export const issueResultsStatement = async (hackathonId: string, pool = 'contributor'): Promise<GrainHackStatementState> =>
-  parseResultsStatementBody(
-    await apiRequest<unknown>(`/admin/hackathons/${encodeURIComponent(hackathonId)}/results-statement`, {
+export const issueResultsStatement = async (
+  hackathonId: string,
+  opts: { pool?: string; payoutRunId?: string | null } = {},
+): Promise<GrainHackStatementState> =>
+  stateFromView(
+    await apiRequest<GrainHackAdminStatementView>(`/admin/hackathons/${encodeURIComponent(hackathonId)}/results-statement`, {
       requiresAuth: true,
       method: 'POST',
-      body: JSON.stringify({ pool, confirm: true }),
+      body: JSON.stringify({
+        confirm: true,
+        pool: opts.pool ?? 'contributor',
+        ...(opts.payoutRunId ? { payout_run_id: opts.payoutRunId } : {}),
+      }),
     }),
   );
