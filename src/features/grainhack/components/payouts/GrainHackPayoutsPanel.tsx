@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { AlertTriangle, CheckCircle2, CircleHelp, Clock, Copy, ExternalLink, FileSignature, PauseCircle, ShieldCheck, Terminal, Wallet } from 'lucide-react';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { isApiError } from '../../../../shared/api/apiError';
-import { getResultsStatement, issueResultsStatement, type GrainHackStatementState } from '../../../../shared/api/client';
+import { getGrainHackResultsKey, getResultsStatement, issueResultsStatement, type GrainHackStatementState } from '../../../../shared/api/client';
 import { getGrainHackPayouts } from '../../../../shared/api/bountyAgent';
 import { explorerNameForUrl, isTestNetwork, networkLabel, shortTx } from '../../../../shared/utils/payoutNetwork';
 import { plural } from '../keeperhub/keeperhubModel';
@@ -43,6 +43,10 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
 
   const [state, setState] = useState<GrainHackStatementState | undefined>(undefined);
   const [agent, setAgent] = useState<AgentRead | undefined>(undefined);
+  /** GET /grainhack/results-key, read only while no statement exists, to name
+   *  the network a statement would be issued on. undefined = not known (not
+   *  read yet, or unreachable); null = the backend says signing is unconfigured. */
+  const [keyNetwork, setKeyNetwork] = useState<string | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [issuing, setIssuing] = useState(false);
@@ -59,6 +63,13 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
         setAgent(await getGrainHackPayouts(hackathonId).catch(() => 'unavailable' as const));
       } else {
         setAgent(null);
+        // The 404 carries no network; the public results key does.
+        setKeyNetwork(
+          await getGrainHackResultsKey().then(
+            (k) => k?.network ?? null,
+            () => undefined,
+          ),
+        );
       }
     } catch (e) {
       setLoadError(isApiError(e) && typeof e.data?.error === 'string' ? e.data.error : 'load_failed');
@@ -164,7 +175,7 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
     <ConfirmIssue
       t={t}
       superseding={state.view !== null}
-      network={state.view?.network ?? null}
+      network={state.view?.network ?? keyNetwork ?? null}
       busy={issuing}
       onCancel={() => setConfirmOpen(false)}
       onConfirm={() => void issue()}
@@ -174,7 +185,7 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
   if (!state.view) {
     return shell(
       <>
-        {header('Contributor pool · no statement yet', null)}
+        {header('Contributor pool · no statement yet', keyNetwork ? networkChip(keyNetwork) : null)}
         <div data-testid="grainhack-issue-box" className={`flex flex-col gap-4 rounded-[16px] border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5 ${t.banner.gold}`}>
           <div className="flex min-w-0 flex-1 gap-3">
             <FileSignature className={`mt-0.5 h-5 w-5 shrink-0 ${t.muted}`} aria-hidden />
@@ -187,6 +198,11 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
               <p className={`text-[12px] ${t.muted}`}>
                 Refused until the event is settled with appeals closed, and refused for a pool that already has a KeeperHub run.
               </p>
+              {keyNetwork === null && (
+                <p data-testid="grainhack-signing-unconfigured" className={`text-[12px] font-semibold ${t.toneText.amber}`}>
+                  The backend&apos;s results signing isn&apos;t configured, so issuing will be refused until it is.
+                </p>
+              )}
               {state.currentPayoutRunId === null && (
                 <p data-testid="grainhack-no-computation" className={`text-[12px] ${t.muted}`}>
                   The event has no payout computation yet, so there is nothing to put on a statement.
@@ -202,7 +218,7 @@ export function GrainHackPayoutsPanel({ hackathonId }: { hackathonId: string }) 
             <span className={`text-[12px] ${t.muted}`}>Opens a confirmation first</span>
           </div>
         </div>
-        {refusalBox(null)}
+        {refusalBox(keyNetwork ?? null)}
         {confirm}
       </>,
       'no-statement',

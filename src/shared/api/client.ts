@@ -3661,3 +3661,22 @@ export const issueResultsStatement = async (
       }),
     }),
   );
+
+/** GET /grainhack/results-key (public): the key that signs statements, its
+ *  signature domain, and GRAINHACK_PAYOUT_NETWORK. */
+export interface GrainHackResultsKey {
+  public_key: string;
+  domain: string;
+  network: string;
+}
+
+/** The backend's results key and payout network, or null when it answers 503
+ *  grainhack_results_unconfigured (no signing key, or a bad network). */
+export const getGrainHackResultsKey = async (): Promise<GrainHackResultsKey | null> => {
+  try {
+    return await apiRequest<GrainHackResultsKey>('/grainhack/results-key');
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 503) return null;
+    throw e;
+  }
+};

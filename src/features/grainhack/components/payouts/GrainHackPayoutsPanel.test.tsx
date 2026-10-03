@@ -7,6 +7,7 @@ import { adminView, agentPayouts, COMPUTATION, HACKATHON_ID, issuedState, noStat
 const h = vi.hoisted(() => ({
   getResultsStatement: vi.fn(),
   issueResultsStatement: vi.fn(),
+  getGrainHackResultsKey: vi.fn(),
   getGrainHackPayouts: vi.fn(),
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), message: vi.fn() },
 }))
@@ -16,6 +17,7 @@ vi.mock('../../../../shared/api/client', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getResultsStatement: h.getResultsStatement,
   issueResultsStatement: h.issueResultsStatement,
+  getGrainHackResultsKey: h.getGrainHackResultsKey,
 }))
 vi.mock('../../../../shared/api/bountyAgent', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -26,7 +28,10 @@ import { GrainHackPayoutsPanel } from './GrainHackPayoutsPanel'
 
 const panel = () => screen.getByTestId('grainhack-payouts-panel')
 
-async function renderWith(state: unknown, agent: unknown = agentPayouts()) {
+const DEVNET_KEY = { public_key: 'q1W2', domain: 'grainlify-grainhack-results:v1\n', network: 'solana-devnet' }
+
+async function renderWith(state: unknown, agent: unknown = agentPayouts(), key: unknown = DEVNET_KEY) {
+  h.getGrainHackResultsKey.mockResolvedValue(key)
   h.getResultsStatement.mockResolvedValue(state)
   if (agent instanceof Error) h.getGrainHackPayouts.mockRejectedValue(agent)
   else h.getGrainHackPayouts.mockResolvedValue(agent)
@@ -37,12 +42,26 @@ async function renderWith(state: unknown, agent: unknown = agentPayouts()) {
 beforeEach(() => vi.clearAllMocks())
 
 describe('GrainHackPayoutsPanel', () => {
-  it('offers to issue a statement when none exists, and never asks the agent', async () => {
+  it('offers to issue a statement when none exists, labelled with the network from the results key, and never asks the agent', async () => {
     await renderWith(noStatementState)
     expect(panel().dataset.state).toBe('no-statement')
+    await waitFor(() => expect(screen.getByTestId('grainhack-network-chip')).toHaveTextContent('Solana devnet · test USDC, no value'))
+    expect(h.getGrainHackResultsKey).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId('grainhack-signing-unconfigured')).not.toBeInTheDocument()
     expect(screen.getByTestId('grainhack-issue-box')).toHaveTextContent('Issuing pays nobody.')
     expect(screen.queryByTestId('grainhack-no-computation')).not.toBeInTheDocument()
     expect(h.getGrainHackPayouts).not.toHaveBeenCalled()
+  })
+
+  it('labels mainnet before any statement as real USDC', async () => {
+    await renderWith(noStatementState, null, { ...DEVNET_KEY, network: 'solana-mainnet' })
+    await waitFor(() => expect(screen.getByTestId('grainhack-network-chip')).toHaveTextContent('Solana mainnet · real USDC'))
+  })
+
+  it('says so when the backend cannot sign statements', async () => {
+    await renderWith(noStatementState, null, null)
+    await waitFor(() => expect(screen.getByTestId('grainhack-signing-unconfigured')).toHaveTextContent("results signing isn't configured"))
+    expect(screen.queryByTestId('grainhack-network-chip')).not.toBeInTheDocument()
   })
 
   it('says so when the event has nothing computed yet', async () => {
@@ -58,6 +77,7 @@ describe('GrainHackPayoutsPanel', () => {
     expect(h.issueResultsStatement).not.toHaveBeenCalled()
     const dialog = screen.getByTestId('grainhack-issue-confirm')
     expect(dialog).toHaveTextContent('Issue the results statement?')
+    expect(dialog).toHaveTextContent('Solana devnet, test USDC with no value')
     fireEvent.click(within(dialog).getByRole('button', { name: /Issue statement/ }))
     await waitFor(() => expect(h.issueResultsStatement).toHaveBeenCalledWith(HACKATHON_ID, { payoutRunId: COMPUTATION }))
     await waitFor(() => expect(panel().dataset.state).toBe('issued'))
@@ -185,6 +205,7 @@ describe('GrainHackPayoutsPanel', () => {
 
   it('keeps the statement on screen when the agent cannot be read', async () => {
     await renderWith(issuedState(), new Error('down'))
+    expect(h.getGrainHackResultsKey).not.toHaveBeenCalled()
     expect(screen.getByTestId('grainhack-agent-note')).toHaveTextContent("Couldn't read the agent's payouts")
     expect(screen.getAllByTestId('grainhack-winner').map((w) => w.dataset.status)).toContain('agent_unavailable')
   })

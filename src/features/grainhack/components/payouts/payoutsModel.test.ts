@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ApiError } from '../../../../shared/api/apiError'
-import { getResultsStatement, issueResultsStatement } from '../../../../shared/api/client'
+import { getGrainHackResultsKey, getResultsStatement, issueResultsStatement } from '../../../../shared/api/client'
 import { adminView, agentPayouts, COMPUTATION, HACKATHON_ID, publicWinner, SIG, STATEMENT_1 } from './fixtures'
 import { agentBehind, agentImported, approveCommand, payoutTotals, statementRefusal, usdc, winnerRows, winnerWithoutGitHubName } from './payoutsModel'
 
@@ -54,6 +54,28 @@ describe('results statement client', () => {
     expect(err).toBeInstanceOf(ApiError)
     expect(err.status).toBe(409)
     expect(err.data.error).toBe('nothing_to_supersede')
+  })
+})
+
+describe('results key client', () => {
+  beforeEach(() => {
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('reads the public key, domain and payout network, without signing in', async () => {
+    const key = { public_key: 'q1W2', domain: 'grainlify-grainhack-results:v1\n', network: 'solana-devnet' }
+    fetchMock.mockResolvedValue(json(200, key))
+    expect(await getGrainHackResultsKey()).toEqual(key)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toMatch(/\/grainhack\/results-key$/)
+    expect(init.headers.Authorization).toBeUndefined()
+  })
+
+  it('answers null when the backend says signing is unconfigured (503)', async () => {
+    fetchMock.mockResolvedValue(json(503, { error: 'grainhack_results_unconfigured', detail: 'GRAINHACK_RESULTS_SIGNING_KEY is not set' }))
+    expect(await getGrainHackResultsKey()).toBeNull()
   })
 })
 
