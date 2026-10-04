@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ApiError } from '../../../../shared/api/apiError'
 import { getGrainHackResultsKey, getResultsStatement, issueResultsStatement } from '../../../../shared/api/client'
+import { getGrainHackPayouts } from '../../../../shared/api/bountyAgent'
 import { adminView, agentPayouts, COMPUTATION, HACKATHON_ID, publicWinner, SIG, STATEMENT_1 } from './fixtures'
 import { agentBehind, agentImported, approveCommand, payoutTotals, statementRefusal, usdc, winnerRows, winnerWithoutGitHubName } from './payoutsModel'
 
@@ -35,6 +36,26 @@ describe('results statement client', () => {
     expect(await getResultsStatement(HACKATHON_ID)).toEqual({ view: null, canonical: null, currentPayoutRunId: COMPUTATION })
     fetchMock.mockResolvedValue(json(404, { error: 'not_found', current_payout_run_id: null }))
     expect((await getResultsStatement(HACKATHON_ID)).currentPayoutRunId).toBeNull()
+  })
+
+  it('refuses a 200 that is not a statement view instead of handing the panel undefined fields', async () => {
+    // The regression suite's generic stub answered {settings: [], ...}; reading
+    // statement_id off it took the whole admin event page down.
+    for (const body of [{}, { settings: [], entries: [] }, { ...adminView(), statement_id: undefined }, { ...adminView(), chain: null }]) {
+      fetchMock.mockResolvedValue(json(200, body))
+      await expect(getResultsStatement(HACKATHON_ID)).rejects.toThrow(/not a results statement/)
+    }
+    fetchMock.mockResolvedValue(json(201, {}))
+    await expect(issueResultsStatement(HACKATHON_ID, { payoutRunId: COMPUTATION })).rejects.toThrow(/not a results statement/)
+  })
+
+  it("refuses an agent answer without a winners list, so the panel shows the agent as unavailable", async () => {
+    fetchMock.mockResolvedValue(json(200, { settings: [], payouts: [] }))
+    await expect(getGrainHackPayouts(HACKATHON_ID)).rejects.toThrow(/not a GrainHack payouts view/)
+    fetchMock.mockResolvedValue(json(200, agentPayouts()))
+    expect((await getGrainHackPayouts(HACKATHON_ID))?.winners.length).toBeGreaterThan(0)
+    fetchMock.mockResolvedValue(json(404, { error: 'not_found' }))
+    expect(await getGrainHackPayouts(HACKATHON_ID)).toBeNull()
   })
 
   it('issues with confirm, the pool and the computation the admin looked at', async () => {

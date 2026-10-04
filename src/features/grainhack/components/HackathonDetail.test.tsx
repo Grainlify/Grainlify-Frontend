@@ -26,7 +26,13 @@ vi.mock('./DrawResults', () => ({ DrawResults: () => <div data-testid="draw-resu
 vi.mock('./VerdictsReview', () => ({ VerdictsReview: () => <div data-testid="verdicts-review" /> }))
 vi.mock('./AppealsReview', () => ({ AppealsReview: () => <div data-testid="appeals-review" /> }))
 vi.mock('./keeperhub/KeeperHubPayoutPanel', () => ({ KeeperHubPayoutPanel: () => <div data-testid="payout-panel" /> }))
-vi.mock('./payouts/GrainHackPayoutsPanel', () => ({ GrainHackPayoutsPanel: () => <div data-testid="grainhack-payouts" /> }))
+const mockPayoutsPanel = { throws: false }
+vi.mock('./payouts/GrainHackPayoutsPanel', () => ({
+  GrainHackPayoutsPanel: () => {
+    if (mockPayoutsPanel.throws) throw new TypeError("Cannot read properties of undefined (reading 'slice')")
+    return <div data-testid="grainhack-payouts" />
+  },
+}))
 
 const HACKATHON = {
   id: 'hack-1',
@@ -69,6 +75,21 @@ describe('HackathonDetail', () => {
     const solana = await screen.findByTestId('grainhack-payouts')
     const keeperhub = screen.getByTestId('payout-panel')
     expect(solana.compareDocumentPosition(keeperhub) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('keeps the event page and the KeeperHub panel when the Solana payouts panel fails to render', async () => {
+    mockGetAdminHackathon.mockResolvedValue({ hackathon: HACKATHON, next_phase: '', blocking_reasons: [] })
+    mockPayoutsPanel.throws = true
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      renderWithProviders(<HackathonDetail hackathonId="hack-1" onBack={vi.fn()} />)
+      expect(await screen.findByTestId('payout-panel')).toBeInTheDocument()
+      expect(screen.getByText(/GrainHack payouts/)).toBeInTheDocument()
+      expect(screen.queryByTestId('grainhack-payouts')).not.toBeInTheDocument()
+    } finally {
+      mockPayoutsPanel.throws = false
+      err.mockRestore()
+    }
   })
 
   it('enables the transition button once readiness has no blocking reasons, and calls the API on click', async () => {

@@ -3612,7 +3612,17 @@ export interface GrainHackStatementState {
   currentPayoutRunId: string | null;
 }
 
-function stateFromView(view: GrainHackAdminStatementView): GrainHackStatementState {
+/** The fields the panel reads without checking. A 200 without them is not a
+ *  statement, whatever produced it (a proxy page, a stub, a changed backend),
+ *  and must surface as an error the panel can show, not crash the event page. */
+function isAdminStatementView(v: unknown): v is GrainHackAdminStatementView {
+  const o = v as Record<string, unknown> | null;
+  return !!o && typeof o === 'object' && typeof o.statement === 'string' && typeof o.signature === 'string'
+    && typeof o.statement_id === 'string' && Array.isArray(o.chain);
+}
+
+function stateFromView(view: unknown): GrainHackStatementState {
+  if (!isAdminStatementView(view)) throw new Error('The backend answered with something that is not a results statement.');
   let canonical: GrainHackCanonicalStatement | null = null;
   try {
     canonical = JSON.parse(view.statement) as GrainHackCanonicalStatement;

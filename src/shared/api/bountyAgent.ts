@@ -259,7 +259,10 @@ export interface GrainHackPublicPayouts {
  *  not a failure. */
 export async function getGrainHackPayouts(hackathonId: string): Promise<GrainHackPublicPayouts | null> {
   try {
-    return await get<GrainHackPublicPayouts>(`/public/grainhack/${encodeURIComponent(hackathonId)}`);
+    const r = await get<GrainHackPublicPayouts>(`/public/grainhack/${encodeURIComponent(hackathonId)}`);
+    // Without a winners list this is not the agent's view; the panel reads it as unavailable.
+    if (!r || !Array.isArray(r.winners)) throw new Error('The bounty agent answered with something that is not a GrainHack payouts view.');
+    return r;
   } catch (e) {
     if (e instanceof BountyAgentError && e.status === 404) return null;
     throw e;

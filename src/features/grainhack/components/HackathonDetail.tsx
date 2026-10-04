@@ -12,6 +12,7 @@ import { AuditLog } from './AuditLog';
 import { LoadFailed } from '../../../shared/components/LoadFailed';
 import { KeeperHubPayoutPanel } from './keeperhub/KeeperHubPayoutPanel';
 import { GrainHackPayoutsPanel } from './payouts/GrainHackPayoutsPanel';
+import { ErrorBoundary } from '../../../shared/components/ErrorBoundary';
 import {
   getAdminHackathon,
   transitionHackathon,
@@ -192,8 +193,11 @@ export function HackathonDetail({ hackathonId, onBack }: HackathonDetailProps) {
       </div>
 
       {/* The Solana path, beside KeeperHub until KeeperHub is removed. One
-          rail per pool: the backend refuses whichever is second. */}
-      <GrainHackPayoutsPanel hackathonId={hackathonId} />
+          rail per pool: the backend refuses whichever is second. Its own
+          boundary: a failure in it must not take the KeeperHub panel with it. */}
+      <ErrorBoundary surface="GrainHack payouts">
+        <GrainHackPayoutsPanel hackathonId={hackathonId} />
+      </ErrorBoundary>
 
       <KeeperHubPayoutPanel hackathonId={hackathonId} phase={hackathon.phase} />
 
