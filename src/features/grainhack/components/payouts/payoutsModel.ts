@@ -186,9 +186,13 @@ export function payoutTotals(poolMinor: string, rows: WinnerRow[]): PayoutTotals
   };
 }
 
-/** USDC has 6 decimals. Devnet tokens have no value, and the label says so. */
+/** USDC has 6 decimals. Devnet tokens have no value, and the label says so.
+ *  Trailing zeros past the cents are dropped, never rounded: 250.000000 reads
+ *  250.00 and 62.500000 reads 62.50, while 4.123456 keeps every digit. */
 export function usdc(minor: string, network: string | null | undefined): string {
-  return formatMinor(minor, 6, network === 'solana-mainnet' ? 'USDC' : 'test USDC');
+  const exact = formatMinor(minor, 6, null);
+  const shown = exact.replace(/(\.\d{2}\d*?)0+$/, '$1');
+  return `${shown} ${network === 'solana-mainnet' ? 'USDC' : 'test USDC'}`;
 }
 
 /** The exact command an approver runs, in the agent repo, on their own machine. */

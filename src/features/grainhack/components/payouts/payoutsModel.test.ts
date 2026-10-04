@@ -170,8 +170,17 @@ describe('payoutTotals', () => {
 
 describe('labels', () => {
   it('says test USDC on devnet and USDC on mainnet', () => {
-    expect(usdc('4000000', 'solana-devnet')).toBe('4.000000 test USDC')
-    expect(usdc('4000000', 'solana-mainnet')).toBe('4.000000 USDC')
+    expect(usdc('4000000', 'solana-devnet')).toBe('4.00 test USDC')
+    expect(usdc('4000000', 'solana-mainnet')).toBe('4.00 USDC')
+  })
+
+  it('drops trailing zeros past the cents and never rounds', () => {
+    expect(usdc('250000000', 'solana-devnet')).toBe('250.00 test USDC')
+    expect(usdc('62500000', 'solana-devnet')).toBe('62.50 test USDC')
+    expect(usdc('4123450', 'solana-devnet')).toBe('4.12345 test USDC')
+    expect(usdc('4123456', 'solana-devnet')).toBe('4.123456 test USDC')
+    expect(usdc('1', 'solana-devnet')).toBe('0.000001 test USDC')
+    expect(usdc('0', 'solana-devnet')).toBe('0 test USDC')
   })
 
   it('gives the exact approve command', () => {
