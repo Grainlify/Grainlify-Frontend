@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, Suspense, lazy } from "react";
-import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
@@ -61,34 +60,60 @@ import {
 } from "../../shared/components/ui/Modal";
 import { bootstrapAdmin } from "../../shared/api/client";
 import { AdminAccessRequired } from "./components/AdminAccessRequired";
+import { RouteBoundary, lazyRoute } from "./components/RouteBoundary";
+import {
+  AdminRouteSkeleton,
+  BlogRouteSkeleton,
+  BountiesRouteSkeleton,
+  BrowseRouteSkeleton,
+  ContributorsRouteSkeleton,
+  DataRouteSkeleton,
+  DiscoverRouteSkeleton,
+  EcosystemDetailRouteSkeleton,
+  EcosystemsRouteSkeleton,
+  GrainHackAdminRouteSkeleton,
+  GrainHackEventDetailRouteSkeleton,
+  GrainHackEventsRouteSkeleton,
+  IssueDetailRouteSkeleton,
+  LeaderboardRouteSkeleton,
+  MaintainersRouteSkeleton,
+  MyGrainHackRouteSkeleton,
+  NotificationsRouteSkeleton,
+  OrgProfileRouteSkeleton,
+  ProfileRouteSkeleton,
+  ProjectDetailRouteSkeleton,
+  SearchRouteSkeleton,
+  SettingsRouteSkeleton,
+} from "./components/RouteSkeletons";
 
 // Every "page" here is a currentPage state swap, not a router path (see App.tsx),
 // so without lazy-loading, the entire dashboard - Discover, Browse, Admin, Settings,
 // Blog, every tab - shipped as one bundle regardless of which page a user actually
 // opened. Splitting each into its own chunk means only the active tab's code (plus
-// whatever it imports) downloads.
-const ContributorsPage = lazy(() => import("./pages/ContributorsPage").then((m) => ({ default: m.ContributorsPage })));
-const BrowsePage = lazy(() => import("./pages/BrowsePage").then((m) => ({ default: m.BrowsePage })));
-const DiscoverPage = lazy(() => import("./pages/DiscoverPage").then((m) => ({ default: m.DiscoverPage })));
-const GrainHackEventsPage = lazy(() => import("../grainhack/pages/GrainHackEventsPage").then((m) => ({ default: m.GrainHackEventsPage })));
-const GrainHackEventDetailPage = lazy(() => import("../grainhack/pages/GrainHackEventDetailPage").then((m) => ({ default: m.GrainHackEventDetailPage })));
-const EcosystemsPage = lazy(() => import("./pages/EcosystemsPage").then((m) => ({ default: m.EcosystemsPage })));
-const EcosystemDetailPage = lazy(() => import("./pages/EcosystemDetailPage").then((m) => ({ default: m.EcosystemDetailPage })));
-const MaintainersPage = lazy(() => import("../maintainers/pages/MaintainersPage").then((m) => ({ default: m.MaintainersPage })));
-const ProfilePage = lazy(() => import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
-const OrgProfilePage = lazy(() => import("./pages/OrgProfilePage").then((m) => ({ default: m.OrgProfilePage })));
-const DataPage = lazy(() => import("./pages/DataPage").then((m) => ({ default: m.DataPage })));
-const ProjectDetailPage = lazy(() => import("./pages/ProjectDetailPage").then((m) => ({ default: m.ProjectDetailPage })));
-const IssueDetailPage = lazy(() => import("./pages/IssueDetailPage").then((m) => ({ default: m.IssueDetailPage })));
-const LeaderboardPage = lazy(() => import("../leaderboard/pages/LeaderboardPage").then((m) => ({ default: m.LeaderboardPage })));
-const BountiesTab = lazy(() => import("../bounties/pages/BountiesTab").then((m) => ({ default: m.BountiesTab })));
-const BlogPage = lazy(() => import("../blog/pages/BlogPage").then((m) => ({ default: m.BlogPage })));
-const SettingsPage = lazy(() => import("../settings/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
-const AdminPage = lazy(() => import("../admin/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
-const GrainHackAdminPage = lazy(() => import("../grainhack/pages/GrainHackAdminPage").then((m) => ({ default: m.GrainHackAdminPage })));
-const MyGrainHackPage = lazy(() => import("../grainhack/pages/MyGrainHackPage").then((m) => ({ default: m.MyGrainHackPage })));
-const NotificationsPage = lazy(() => import("../notifications/pages/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
-const SearchPage = lazy(() => import("./pages/SearchPage").then((m) => ({ default: m.SearchPage })));
+// whatever it imports) downloads. Wrapping each with lazyRoute lets its per-route
+// RouteBoundary reset and re-import that route's chunk if a deploy invalidated it.
+const ContributorsPage = lazyRoute(() => import("./pages/ContributorsPage").then((m) => ({ default: m.ContributorsPage })));
+const BrowsePage = lazyRoute(() => import("./pages/BrowsePage").then((m) => ({ default: m.BrowsePage })));
+const DiscoverPage = lazyRoute(() => import("./pages/DiscoverPage").then((m) => ({ default: m.DiscoverPage })));
+const GrainHackEventsPage = lazyRoute(() => import("../grainhack/pages/GrainHackEventsPage").then((m) => ({ default: m.GrainHackEventsPage })));
+const GrainHackEventDetailPage = lazyRoute(() => import("../grainhack/pages/GrainHackEventDetailPage").then((m) => ({ default: m.GrainHackEventDetailPage })));
+const EcosystemsPage = lazyRoute(() => import("./pages/EcosystemsPage").then((m) => ({ default: m.EcosystemsPage })));
+const EcosystemDetailPage = lazyRoute(() => import("./pages/EcosystemDetailPage").then((m) => ({ default: m.EcosystemDetailPage })));
+const MaintainersPage = lazyRoute(() => import("../maintainers/pages/MaintainersPage").then((m) => ({ default: m.MaintainersPage })));
+const ProfilePage = lazyRoute(() => import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const OrgProfilePage = lazyRoute(() => import("./pages/OrgProfilePage").then((m) => ({ default: m.OrgProfilePage })));
+const DataPage = lazyRoute(() => import("./pages/DataPage").then((m) => ({ default: m.DataPage })));
+const ProjectDetailPage = lazyRoute(() => import("./pages/ProjectDetailPage").then((m) => ({ default: m.ProjectDetailPage })));
+const IssueDetailPage = lazyRoute(() => import("./pages/IssueDetailPage").then((m) => ({ default: m.IssueDetailPage })));
+const LeaderboardPage = lazyRoute(() => import("../leaderboard/pages/LeaderboardPage").then((m) => ({ default: m.LeaderboardPage })));
+const BountiesTab = lazyRoute(() => import("../bounties/pages/BountiesTab").then((m) => ({ default: m.BountiesTab })));
+const BlogPage = lazyRoute(() => import("../blog/pages/BlogPage").then((m) => ({ default: m.BlogPage })));
+const SettingsPage = lazyRoute(() => import("../settings/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const AdminPage = lazyRoute(() => import("../admin/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
+const GrainHackAdminPage = lazyRoute(() => import("../grainhack/pages/GrainHackAdminPage").then((m) => ({ default: m.GrainHackAdminPage })));
+const MyGrainHackPage = lazyRoute(() => import("../grainhack/pages/MyGrainHackPage").then((m) => ({ default: m.MyGrainHackPage })));
+const NotificationsPage = lazyRoute(() => import("../notifications/pages/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
+const SearchPage = lazyRoute(() => import("./pages/SearchPage").then((m) => ({ default: m.SearchPage })));
 
 /** The Redeem page was removed with the points programme. Anything still
  *  pointing at it is sent to the rewards settings tab, which explains what
@@ -1135,132 +1160,181 @@ export function Dashboard() {
               72px tall (py-3 around 46px controls), not the 52px it is at lg,
               so 68px left the first card 4px underneath it on phones. */}
           <div className="pt-[88px] lg:pt-[68px]">
-            <Suspense
-              fallback={
-                <div className="flex items-center justify-center min-h-[50vh]">
-                  <div className="w-8 h-8 rounded-full border-2 border-[#c9983a]/30 border-t-[#c9983a] animate-spin" />
-                </div>
-              }
-            >
             {selectedIssue ? (
-              <IssueDetailPage
-                issueId={selectedIssue.issueId}
-                projectId={selectedIssue.projectId}
-                repoFullName={selectedIssue.repoFullName}
-                onClose={() => setSelectedIssue(null)}
-                userRole={userRole}
-                activeRole={activeRole}
-              />
+              <RouteBoundary
+                surface="The issue page"
+                fallback={<IssueDetailRouteSkeleton />}
+                onRetryChunk={IssueDetailPage.reset}
+              >
+                <IssueDetailPage
+                  issueId={selectedIssue.issueId}
+                  projectId={selectedIssue.projectId}
+                  repoFullName={selectedIssue.repoFullName}
+                  onClose={() => setSelectedIssue(null)}
+                  userRole={userRole}
+                  activeRole={activeRole}
+                />
+              </RouteBoundary>
             ) : selectedProjectId ? (
-              <ProjectDetailPage
-                projectId={selectedProjectId}
-                backLabel={
-                  projectBackTarget === "browse"
-                    ? "Back to Browse"
-                    : projectBackTarget === "profile"
-                      ? "Back to Profile"
-                      : projectBackTarget === "leaderboard"
-                        ? "Back to Leaderboard"
-                        : projectBackTarget === "ecosystems"
-                          ? "Back to Ecosystems"
-                          : projectBackTarget === "discover"
-                            ? "Back to Discover"
-                            : projectBackTarget === "org"
-                              ? "Back to Organization"
-                              : "Back"
-                }
-                onBack={() => {
-                  setSelectedProjectId(null);
-                  if (projectBackTarget) {
-                    setCurrentPage(projectBackTarget as any);
+              <RouteBoundary
+                surface="The project page"
+                fallback={<ProjectDetailRouteSkeleton />}
+                onRetryChunk={ProjectDetailPage.reset}
+              >
+                <ProjectDetailPage
+                  projectId={selectedProjectId}
+                  backLabel={
+                    projectBackTarget === "browse"
+                      ? "Back to Browse"
+                      : projectBackTarget === "profile"
+                        ? "Back to Profile"
+                        : projectBackTarget === "leaderboard"
+                          ? "Back to Leaderboard"
+                          : projectBackTarget === "ecosystems"
+                            ? "Back to Ecosystems"
+                            : projectBackTarget === "discover"
+                              ? "Back to Discover"
+                              : projectBackTarget === "org"
+                                ? "Back to Organization"
+                                : "Back"
                   }
-                  setProjectBackTarget(null);
-                }}
-                onIssueClick={(issueId, projectId) =>
-                  setSelectedIssue({ issueId, projectId })
-                }
-              />
+                  onBack={() => {
+                    setSelectedProjectId(null);
+                    if (projectBackTarget) {
+                      setCurrentPage(projectBackTarget as any);
+                    }
+                    setProjectBackTarget(null);
+                  }}
+                  onIssueClick={(issueId, projectId) =>
+                    setSelectedIssue({ issueId, projectId })
+                  }
+                />
+              </RouteBoundary>
             ) : (
               <>
                 {currentPage === "discover" && (
-                  <DiscoverPage
-                    // Discover reports the click; this owns the selection, so
-                    // there is one IssueDetailPage and one URL for it rather
-                    // than a second copy behind ?dIssue=. activeRole is no
-                    // longer forwarded because the overlay it was for lived
-                    // on that page - the shared one below already has it.
-                    onOpenIssue={(issueId, projectId) =>
-                      setSelectedIssue({ issueId, projectId })
-                    }
-                    onGoToBilling={() => {
-                      // SettingsPage/MaintainersPage now own their sub-tab via
-                      // their own ?subtab= read (see those files) - writing it
-                      // here too means it's already in place by the time they
-                      // mount, without Dashboard needing to know their tab types.
-                      const params = new URLSearchParams(location.search);
-                      params.set("tab", "settings");
-                      params.set("subtab", "billing");
-                      setSearchParams(params);
-                      setCurrentPage("settings");
-                    }}
-                    onGoToGrainHack={() => setCurrentPage("osw")}
-                  />
+                  <RouteBoundary
+                    surface="The Discover tab"
+                    fallback={<DiscoverRouteSkeleton />}
+                    onRetryChunk={DiscoverPage.reset}
+                  >
+                    <DiscoverPage
+                      // Discover reports the click; this owns the selection, so
+                      // there is one IssueDetailPage and one URL for it rather
+                      // than a second copy behind ?dIssue=. activeRole is no
+                      // longer forwarded because the overlay it was for lived
+                      // on that page - the shared one below already has it.
+                      onOpenIssue={(issueId, projectId) =>
+                        setSelectedIssue({ issueId, projectId })
+                      }
+                      onGoToBilling={() => {
+                        // SettingsPage/MaintainersPage now own their sub-tab via
+                        // their own ?subtab= read (see those files) - writing it
+                        // here too means it's already in place by the time they
+                        // mount, without Dashboard needing to know their tab types.
+                        const params = new URLSearchParams(location.search);
+                        params.set("tab", "settings");
+                        params.set("subtab", "billing");
+                        setSearchParams(params);
+                        setCurrentPage("settings");
+                      }}
+                      onGoToGrainHack={() => setCurrentPage("osw")}
+                    />
+                  </RouteBoundary>
                 )}
                 {currentPage === "browse" && (
-                  <BrowsePage
-                    onProjectClick={(id) => {
-                      setSelectedProjectId(id);
-                      setProjectBackTarget("browse");
-                    }}
-                    onOrgClick={(org) => {
-                      setViewingOrgLogin(org);
-                      setOrgBackTarget("browse");
-                      setCurrentPage("org");
-                    }}
-                  />
+                  <RouteBoundary
+                    surface="The Browse tab"
+                    fallback={<BrowseRouteSkeleton />}
+                    onRetryChunk={BrowsePage.reset}
+                  >
+                    <BrowsePage
+                      onProjectClick={(id) => {
+                        setSelectedProjectId(id);
+                        setProjectBackTarget("browse");
+                      }}
+                      onOrgClick={(org) => {
+                        setViewingOrgLogin(org);
+                        setOrgBackTarget("browse");
+                        setCurrentPage("org");
+                      }}
+                    />
+                  </RouteBoundary>
                 )}
                 {currentPage === "osw" && !selectedEventId && (
-                  <GrainHackEventsPage
-                    onEventClick={(id, name) => {
-                      setSelectedEventId(id);
-                      setSelectedEventName(name);
-                    }}
-                  />
+                  <RouteBoundary
+                    surface="The GrainHack events tab"
+                    fallback={<GrainHackEventsRouteSkeleton />}
+                    onRetryChunk={GrainHackEventsPage.reset}
+                  >
+                    <GrainHackEventsPage
+                      onEventClick={(id, name) => {
+                        setSelectedEventId(id);
+                        setSelectedEventName(name);
+                      }}
+                    />
+                  </RouteBoundary>
                 )}
                 {currentPage === "osw" &&
                   selectedEventId &&
                   selectedEventName && (
-                    <GrainHackEventDetailPage
-                      eventId={selectedEventId}
-                      eventName={selectedEventName}
-                      onBack={() => {
-                        setSelectedEventId(null);
-                        setSelectedEventName(null);
-                      }}
-                      onIssueClick={(issueId, projectId, repoFullName) =>
-                        setSelectedIssue({ issueId, projectId, repoFullName })
-                      }
-                    />
+                    <RouteBoundary
+                      surface="The GrainHack event page"
+                      fallback={<GrainHackEventDetailRouteSkeleton />}
+                      onRetryChunk={GrainHackEventDetailPage.reset}
+                    >
+                      <GrainHackEventDetailPage
+                        eventId={selectedEventId}
+                        eventName={selectedEventName}
+                        onBack={() => {
+                          setSelectedEventId(null);
+                          setSelectedEventName(null);
+                        }}
+                        onIssueClick={(issueId, projectId, repoFullName) =>
+                          setSelectedIssue({ issueId, projectId, repoFullName })
+                        }
+                      />
+                    </RouteBoundary>
                   )}
                 {currentPage === "ecosystems" && !selectedEcosystemId && (
-                  <EcosystemsPage onEcosystemClick={handleEcosystemClick} />
+                  <RouteBoundary
+                    surface="The Ecosystems tab"
+                    fallback={<EcosystemsRouteSkeleton />}
+                    onRetryChunk={EcosystemsPage.reset}
+                  >
+                    <EcosystemsPage onEcosystemClick={handleEcosystemClick} />
+                  </RouteBoundary>
                 )}
                 {currentPage === "ecosystems" &&
                   selectedEcosystemId &&
                   selectedEcosystemName && (
-                    <EcosystemDetailPage
-                      ecosystemId={selectedEcosystemId}
-                      ecosystemName={selectedEcosystemName}
-                      initialDescription={selectedEcosystemDescription}
-                      initialLogoUrl={selectedEcosystemLogoUrl}
-                      onBack={handleBackFromEcosystem}
-                      onProjectClick={(id) => {
-                        setSelectedProjectId(id);
-                        setProjectBackTarget("ecosystems");
-                      }}
-                    />
+                    <RouteBoundary
+                      surface="The ecosystem page"
+                      fallback={<EcosystemDetailRouteSkeleton />}
+                      onRetryChunk={EcosystemDetailPage.reset}
+                    >
+                      <EcosystemDetailPage
+                        ecosystemId={selectedEcosystemId}
+                        ecosystemName={selectedEcosystemName}
+                        initialDescription={selectedEcosystemDescription}
+                        initialLogoUrl={selectedEcosystemLogoUrl}
+                        onBack={handleBackFromEcosystem}
+                        onProjectClick={(id) => {
+                          setSelectedProjectId(id);
+                          setProjectBackTarget("ecosystems");
+                        }}
+                      />
+                    </RouteBoundary>
                   )}
-                {currentPage === "contributors" && <ContributorsPage />}
+                {currentPage === "contributors" && (
+                  <RouteBoundary
+                    surface="The Contributors tab"
+                    fallback={<ContributorsRouteSkeleton />}
+                    onRetryChunk={ContributorsPage.reset}
+                  >
+                    <ContributorsPage />
+                  </RouteBoundary>
+                )}
                 {/* Gated on activeRole, not only on currentPage.
                     The rail entry was already gated, but the PAGE was not - so
                     landing on ?tab=maintainers by any route (a reload, a link,
@@ -1269,66 +1343,120 @@ export function Dashboard() {
                     the same as gating the destination. */}
                 {currentPage === "maintainers" &&
                   (activeRole === "maintainer" || activeRole === "admin") && (
-                    <MaintainersPage
-                      onNavigate={handleNavigation}
-                      viewMode="maintainer"
-                    />
+                    <RouteBoundary
+                      surface="The Maintainers tab"
+                      fallback={<MaintainersRouteSkeleton />}
+                      onRetryChunk={MaintainersPage.reset}
+                    >
+                      <MaintainersPage
+                        onNavigate={handleNavigation}
+                        viewMode="maintainer"
+                      />
+                    </RouteBoundary>
                   )}
                 {currentPage === "maintainers" &&
                   activeRole === "contributor" && (
                     <MaintainerViewRequired onSwitch={() => setActiveRole("maintainer")} />
                   )}
                 {currentPage === "profile" && (
-                  <ProfilePage
-                    viewingUserId={viewingUserId}
-                    viewingUserLogin={viewingUserLogin}
-                    onBack={() => {
-                      setViewingUserId(null);
-                      setViewingUserLogin(null);
-                      setCurrentPage(profileBackTarget);
-                      setProfileBackTarget("discover");
-                    }}
-                    onProjectClick={(id) => {
-                      setSelectedProjectId(id);
-                      setProjectBackTarget("profile");
-                      setCurrentPage("discover");
-                    }}
-                    onIssueClick={(issueId, projectId) => {
-                      setSelectedProjectId(projectId);
-                      setSelectedIssue({ issueId, projectId });
-                      setCurrentPage("discover");
-                    }}
-                  />
+                  <RouteBoundary
+                    surface="The Profile tab"
+                    fallback={<ProfileRouteSkeleton />}
+                    onRetryChunk={ProfilePage.reset}
+                  >
+                    <ProfilePage
+                      viewingUserId={viewingUserId}
+                      viewingUserLogin={viewingUserLogin}
+                      onBack={() => {
+                        setViewingUserId(null);
+                        setViewingUserLogin(null);
+                        setCurrentPage(profileBackTarget);
+                        setProfileBackTarget("discover");
+                      }}
+                      onProjectClick={(id) => {
+                        setSelectedProjectId(id);
+                        setProjectBackTarget("profile");
+                        setCurrentPage("discover");
+                      }}
+                      onIssueClick={(issueId, projectId) => {
+                        setSelectedProjectId(projectId);
+                        setSelectedIssue({ issueId, projectId });
+                        setCurrentPage("discover");
+                      }}
+                    />
+                  </RouteBoundary>
                 )}
                 {currentPage === "org" && viewingOrgLogin && (
-                  <OrgProfilePage
-                    viewingOrgLogin={viewingOrgLogin}
-                    onBack={() => {
-                      setViewingOrgLogin(null);
-                      setCurrentPage(orgBackTarget);
-                      setOrgBackTarget("discover");
-                    }}
-                    onProjectClick={(id) => {
-                      setSelectedProjectId(id);
-                      setProjectBackTarget("org");
-                    }}
-                  />
+                  <RouteBoundary
+                    surface="The organization profile"
+                    fallback={<OrgProfileRouteSkeleton />}
+                    onRetryChunk={OrgProfilePage.reset}
+                  >
+                    <OrgProfilePage
+                      viewingOrgLogin={viewingOrgLogin}
+                      onBack={() => {
+                        setViewingOrgLogin(null);
+                        setCurrentPage(orgBackTarget);
+                        setOrgBackTarget("discover");
+                      }}
+                      onProjectClick={(id) => {
+                        setSelectedProjectId(id);
+                        setProjectBackTarget("org");
+                      }}
+                    />
+                  </RouteBoundary>
                 )}
                 {currentPage === "data" &&
                   (userRole === "admin" ? (
-                    <DataPage />
+                    <RouteBoundary
+                      surface="The Data tab"
+                      fallback={<DataRouteSkeleton />}
+                      onRetryChunk={DataPage.reset}
+                    >
+                      <DataPage />
+                    </RouteBoundary>
                   ) : (
                     <AdminAccessRequired
                       surface="the Data page"
                       onAuthenticate={openAdminAuthModal}
                     />
                   ))}
-                {currentPage === "leaderboard" && <LeaderboardPage />}
-                {currentPage === "bounties" && <BountiesTab />}
-                {currentPage === "blog" && <BlogPage />}
+                {currentPage === "leaderboard" && (
+                  <RouteBoundary
+                    surface="The Leaderboard tab"
+                    fallback={<LeaderboardRouteSkeleton />}
+                    onRetryChunk={LeaderboardPage.reset}
+                  >
+                    <LeaderboardPage />
+                  </RouteBoundary>
+                )}
+                {currentPage === "bounties" && (
+                  <RouteBoundary
+                    surface="The Bounties tab"
+                    fallback={<BountiesRouteSkeleton />}
+                    onRetryChunk={BountiesTab.reset}
+                  >
+                    <BountiesTab />
+                  </RouteBoundary>
+                )}
+                {currentPage === "blog" && (
+                  <RouteBoundary
+                    surface="The Blog tab"
+                    fallback={<BlogRouteSkeleton />}
+                    onRetryChunk={BlogPage.reset}
+                  >
+                    <BlogPage />
+                  </RouteBoundary>
+                )}
                 {currentPage === "support" && <SupportPage />}
                 {currentPage === "settings" && (
-                  <SettingsPage />
+                  <RouteBoundary
+                    surface="The Settings tab"
+                    fallback={<SettingsRouteSkeleton />}
+                    onRetryChunk={SettingsPage.reset}
+                  >
+                    <SettingsPage />
+                  </RouteBoundary>
                 )}
                 {/* Boundaried because a render throw here unmounts the entire
                     tree - navbar included - and a blank page is
@@ -1336,9 +1464,13 @@ export function Dashboard() {
                     the site is alive and what failed, because they are usually
                     the person who can act on it. */}
                 {adminSection && userRole === "admin" && (
-                  <ErrorBoundary surface="The admin tab">
+                  <RouteBoundary
+                    surface="The admin tab"
+                    fallback={<AdminRouteSkeleton />}
+                    onRetryChunk={AdminPage.reset}
+                  >
                     <AdminPage section={adminSection} />
-                  </ErrorBoundary>
+                  </RouteBoundary>
                 )}
                 {/* isAuthLoading, not just userRole.
                     AuthContext starts isLoading=true with userRole still
@@ -1359,14 +1491,38 @@ export function Dashboard() {
                     onAuthenticate={openAdminAuthModal}
                   />
                 )}
-                {currentPage === "my-grainhack" && <MyGrainHackPage />}
+                {currentPage === "my-grainhack" && (
+                  <RouteBoundary
+                    surface="The My GrainHack tab"
+                    fallback={<MyGrainHackRouteSkeleton />}
+                    onRetryChunk={MyGrainHackPage.reset}
+                  >
+                    <MyGrainHackPage />
+                  </RouteBoundary>
+                )}
                 {/* A dashboard page, not a sibling route. Every signed-in
                     surface here is a ?tab= on /dashboard - stated in the
                     backend's own link builder - and building this as its own
                     route cost it the sidebar and nav, so it read as a different
                     place rather than a deeper part of the same one. */}
-                {currentPage === "notifications" && <NotificationsPage />}
-                {currentPage === "grainhack" && userRole === "admin" && <GrainHackAdminPage />}
+                {currentPage === "notifications" && (
+                  <RouteBoundary
+                    surface="The Notifications tab"
+                    fallback={<NotificationsRouteSkeleton />}
+                    onRetryChunk={NotificationsPage.reset}
+                  >
+                    <NotificationsPage />
+                  </RouteBoundary>
+                )}
+                {currentPage === "grainhack" && userRole === "admin" && (
+                  <RouteBoundary
+                    surface="The GrainHack admin tab"
+                    fallback={<GrainHackAdminRouteSkeleton />}
+                    onRetryChunk={GrainHackAdminPage.reset}
+                  >
+                    <GrainHackAdminPage />
+                  </RouteBoundary>
+                )}
                 {currentPage === "grainhack" && userRole !== "admin" && (
                   <AdminAccessRequired
                     surface="GrainHack administration"
@@ -1374,29 +1530,34 @@ export function Dashboard() {
                   />
                 )}
                 {currentPage === "search" && (
-                  <SearchPage
-                    onBack={() => setCurrentPage("discover")}
-                    onIssueClick={(issueId, projectId) => {
-                      setSelectedProjectId(projectId);
-                      setSelectedIssue({ issueId, projectId });
-                      setCurrentPage("discover");
-                    }}
-                    onProjectClick={(id) => {
-                      setSelectedProjectId(id);
-                      setProjectBackTarget("discover");
-                      setCurrentPage("discover");
-                    }}
-                    onContributorClick={(login) => {
-                      setViewingUserLogin(login);
-                      setViewingUserId(null);
-                      setProfileBackTarget("search");
-                      setCurrentPage("profile");
-                    }}
-                  />
+                  <RouteBoundary
+                    surface="The Search tab"
+                    fallback={<SearchRouteSkeleton />}
+                    onRetryChunk={SearchPage.reset}
+                  >
+                    <SearchPage
+                      onBack={() => setCurrentPage("discover")}
+                      onIssueClick={(issueId, projectId) => {
+                        setSelectedProjectId(projectId);
+                        setSelectedIssue({ issueId, projectId });
+                        setCurrentPage("discover");
+                      }}
+                      onProjectClick={(id) => {
+                        setSelectedProjectId(id);
+                        setProjectBackTarget("discover");
+                        setCurrentPage("discover");
+                      }}
+                      onContributorClick={(login) => {
+                        setViewingUserLogin(login);
+                        setViewingUserId(null);
+                        setProfileBackTarget("search");
+                        setCurrentPage("profile");
+                      }}
+                    />
+                  </RouteBoundary>
                 )}
               </>
             )}
-            </Suspense>
           </div>
         </div>
       </main>
