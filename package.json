@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "mutate": "bash scripts/mutate.sh",
     "social-cards": "node scripts/social-cards/build.mjs",
     "og-image": "node scripts/social-cards/og-home.mjs",
     "verify-deployed": "node scripts/verify-deployed.mjs",
