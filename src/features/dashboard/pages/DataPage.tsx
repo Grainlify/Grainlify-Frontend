@@ -144,7 +144,7 @@ export function DataPage() {
                 <div className="w-3 h-3 rounded-full bg-gradient-to-r from-[#c9983a] to-[#d4af37]" />
                 <span className="text-[12px] text-white/80">Rewarded</span>
               </div>
-              <span className="text-[13px] font-bold text-white">{data.rewarded.toLocaleString()} USD</span>
+              <span className="text-[13px] font-bold text-white">{data.rewarded.toLocaleString('en-GB')} USD</span>
             </div>
           </div>
         </div>

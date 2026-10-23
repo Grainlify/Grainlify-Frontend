@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, ShieldOff, Loader2, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { Modal, ModalFooter, ModalButton, ModalInput } from '../../../shared/components/ui/Modal';
 import {
@@ -389,7 +390,7 @@ export function SocialFollowReview() {
                   )}
                   <span className="min-w-0">
                 <p className={`text-[15px] font-semibold truncate ${strong}`}>{who(s)}</p>
-                <p className={`text-[12px] ${muted}`}>Submitted {new Date(s.created_at).toLocaleDateString()}</p>
+                <p className={`text-[12px] ${muted}`}>Submitted {format(parseISO(s.created_at), 'd MMM yyyy')}</p>
                 {(s.reason_label || s.decision_reason) && (
                   <p className={`text-[12px] mt-1 ${muted}`}>
                     <span className="capitalize">{s.status}</span>:{' '}
@@ -405,7 +406,7 @@ export function SocialFollowReview() {
                 {s.decided_at && (
                   <p className={`text-[12px] mt-0.5 ${muted}`}>
                     {s.decided_by_login ? `Decided by ${s.decided_by_login}` : 'Decided'} on{' '}
-                    {new Date(s.decided_at).toLocaleString()}
+                    {format(parseISO(s.decided_at), 'd MMM yyyy, HH:mm')}
                   </p>
                 )}
                   </span>

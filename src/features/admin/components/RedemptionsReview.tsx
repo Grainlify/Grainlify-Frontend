@@ -98,7 +98,7 @@ export function RedemptionsReview() {
             >
               <div className="flex-1 min-w-0">
                 <p className={`text-[14px] font-semibold ${theme === 'dark' ? 'text-[#f5f5f5]' : 'text-[#2d2820]'}`}>
-                  {r.login ? `@${r.login}` : r.user_id} - {r.points_spent.toLocaleString()} points → ${formatUsdAmount(r.usdc_amount) ?? r.usdc_amount} USDC
+                  {r.login ? `@${r.login}` : r.user_id} - {r.points_spent.toLocaleString('en-GB')} points → ${formatUsdAmount(r.usdc_amount) ?? r.usdc_amount} USDC
                 </p>
                 <button
                   onClick={() => copyWallet(r.stellar_wallet_address)}
@@ -136,7 +136,7 @@ export function RedemptionsReview() {
       <Modal isOpen={!!rejecting} onClose={() => { setRejecting(null); setRejectReason(''); }} title="Reject Redemption" icon={<XCircle className="w-6 h-6 text-[#c9983a]" />} width="md">
         <div className="space-y-4">
           <p className={`text-[13px] ${theme === 'dark' ? 'text-[#d4d4d4]' : 'text-[#7a6b5a]'}`}>
-            The {rejecting?.points_spent.toLocaleString()} points will be refunded to the user's balance.
+            The {rejecting?.points_spent.toLocaleString('en-GB')} points will be refunded to the user's balance.
           </p>
           <ModalInput label="Reason (optional)" value={rejectReason} onChange={setRejectReason} placeholder="e.g. wallet address looks wrong" rows={3} />
           <ModalFooter>

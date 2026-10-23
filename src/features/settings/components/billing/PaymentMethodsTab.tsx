@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Trash2, Copy, CheckCircle2, Star, X, Wallet } from 'lucide-react';
+import { format } from 'date-fns';
 import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import { TokenIcon, StellarIcon } from '../../../../shared/components/icons/TokenIcons';
 import { PaymentMethod, EcosystemType, CryptoType } from '../../types';
@@ -142,7 +143,7 @@ export function PaymentMethodsTab({
                     <p className={`text-[12px] transition-colors ${
                       theme === 'dark' ? 'text-[#8a7e70]' : 'text-[#9a8b7a]'
                     }`}>
-                      Added {new Date(method.createdAt).toLocaleDateString()}
+                      Added {format(new Date(method.createdAt), 'd MMMM yyyy')}
                     </p>
                   </div>
                 </div>

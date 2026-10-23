@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { SkeletonLoader } from '../../../shared/components/SkeletonLoader';
 import {
@@ -22,7 +23,13 @@ function formatValue(key: keyof HackathonApplicationSignals, signal: HackathonAp
   if (!signal.computed) return signal.note || 'Not available';
   const v = signal.value;
   if (key === 'median_time_to_first_review_hours' && typeof v === 'number') return `${v.toFixed(1)}h`;
-  if (key === 'repo_created_at' && typeof v === 'string') return new Date(v).toLocaleDateString();
+  if (key === 'repo_created_at' && typeof v === 'string') {
+    try {
+      return format(parseISO(v), 'd MMMM yyyy');
+    } catch {
+      return v;
+    }
+  }
   if (typeof v === 'boolean') return v ? 'Yes' : 'No';
   if (Array.isArray(v)) return v.length === 0 ? 'None' : `${v.length} prior`;
   return String(v ?? '');
